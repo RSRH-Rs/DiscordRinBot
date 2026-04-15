@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pg-title">小凛 Rin | 全能 Discord 助手</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,800;0,900;1,800&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+    /* ── RESET & ROOT ── */
+    :root {
+        --pink:   #FFB7C5;
+        --pinkd:  #F0607A;
+        --dark:   #1A1210;
+        --dark2:  #2A1F1B;
+        --cream:  #FDF8F4;
+        --warm:   #F5EFE9;
+        --border: #EDE6E0;
+        --mid:    #7A6860;
+        --muted:  #B09888;
+        --green:  #52B870;
+        --surface:#FFFFFF;
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body {
+        font-family:'Nunito','Noto Sans SC',sans-serif;
+        background:var(--cream); color:var(--dark);
+        line-height:1.6; -webkit-font-smoothing:antialiased;
+        overflow-x:hidden;
+    }
+    a { text-decoration:none; transition:.2s; color:inherit; }
+    ul { list-style:none; }
+    .wrap { max-width:1100px; margin:0 auto; padding:0 28px; }
+    .code { font-family:monospace; background:rgba(255,255,255,.15); padding:2px 8px; border-radius:5px; font-size:.88em; }
+    .code-d { font-family:monospace; background:#EDE6E0; padding:2px 8px; border-radius:5px; font-size:.88em; color:var(--dark); }
+
+    /* ── STICKY NAV ── */
+    .snav {
+        position:fixed; top:0; left:0; right:0; z-index:500;
+        transform:translateY(-110%); transition:transform .35s cubic-bezier(.4,0,.2,1);
+        background:rgba(253,248,244,.9); backdrop-filter:blur(20px);
+        border-bottom:1px solid var(--border);
+    }
+    .snav.on { transform:translateY(0); }
+    .snav-i { max-width:1100px; margin:0 auto; padding:12px 28px; display:flex; align-items:center; justify-content:space-between; }
+    .snav-logo { font-weight:900; font-size:1rem; display:flex; align-items:center; gap:8px; }
+    .snav-logo .d { width:8px; height:8px; background:var(--pink); border-radius:50%; }
+    .snav-r { display:flex; align-items:center; gap:8px; }
+
+    /* ── TOP NAV ── */
+    .topnav { padding:26px 0; }
+    .nav-i { display:flex; align-items:center; justify-content:space-between; }
+    .logo { font-weight:900; font-size:1.4rem; letter-spacing:-.4px; display:flex; align-items:center; gap:9px; }
+    .logo .d {
+        width:11px; height:11px; background:var(--pink); border-radius:50%;
+        animation:dp 2.5s infinite;
+    }
+    @keyframes dp {
+        0%,100%{box-shadow:0 0 0 0 rgba(255,183,197,.6);}
+        60%{box-shadow:0 0 0 7px rgba(255,183,197,0);}
+    }
+    .nav-r { display:flex; align-items:center; gap:6px; }
+    .btn-ghost { font-size:.85rem; font-weight:700; color:var(--mid); padding:8px 14px; border-radius:8px; border:none; background:none; cursor:pointer; font-family:inherit; }
+    .btn-ghost:hover { color:var(--dark); }
+    .btn-pill {
+        font-size:.85rem; font-weight:800; color:var(--dark);
+        background:var(--pink); padding:9px 20px; border-radius:50px;
+        box-shadow:0 4px 14px rgba(255,183,197,.4); transition:all .2s;
+    }
+    .btn-pill:hover { background:var(--pinkd); color:#fff; transform:translateY(-2px); box-shadow:0 6px 20px rgba(240,96,122,.35); }
+    .btn-pill-dk {
+        font-size:.85rem; font-weight:800; color:#fff;
+        background:var(--dark); padding:9px 20px; border-radius:50px;
+        box-shadow:0 4px 14px rgba(0,0,0,.2); transition:all .2s;
+    }
+    .btn-pill-dk:hover { background:var(--dark2); transform:translateY(-2px); }
+
+    /* ── HERO ── */
+    .hero {
+        position:relative; padding:70px 0 90px;
+        display:grid; grid-template-columns:1fr 420px; align-items:center; gap:64px;
+        overflow:visible;
+    }
+    /* Gradient orb bg */
+    .hero::before {
+        content:''; position:absolute; pointer-events:none;
+        width:700px; height:700px; border-radius:50%;
+        background:radial-gradient(circle at center, rgba(255,183,197,.22) 0%, transparent 65%);
+        top:-200px; right:-150px; z-index:0;
+    }
+    .hero-text { position:relative; z-index:1; }
+    .hero-badge {
+        display:inline-flex; align-items:center; gap:7px;
+        background:#FFF0F5; border:1px solid #FFDCE6;
+        border-radius:50px; padding:5px 14px 5px 9px;
+        font-size:.72rem; font-weight:800; color:var(--pinkd);
+        letter-spacing:.8px; text-transform:uppercase; margin-bottom:24px;
+    }
+    .hero-badge .pip { width:6px; height:6px; background:var(--green); border-radius:50%; animation:bk 1.8s infinite; }
+    @keyframes bk { 0%,100%{opacity:1;} 50%{opacity:.25;} }
+    .hero h1 {
+        font-size:3.8rem; font-weight:900; line-height:1.02; letter-spacing:-2px;
+        margin-bottom:22px;
+    }
+    .hero h1 em { font-style:normal; color:var(--pinkd); }
+    .hero-sub { font-size:1.05rem; color:var(--mid); line-height:1.75; max-width:460px; margin-bottom:38px; }
+    .hero-btns { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .btn-hero {
+        display:inline-flex; align-items:center; gap:8px;
+        background:var(--dark); color:#fff;
+        font-size:1rem; font-weight:800; padding:14px 32px; border-radius:50px;
+        box-shadow:0 6px 24px rgba(26,18,16,.22); transition:all .22s;
+    }
+    .btn-hero:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(26,18,16,.3); background:var(--dark2); }
+    .btn-hero-ghost { font-size:.92rem; font-weight:800; color:var(--mid); display:flex; align-items:center; gap:5px; }
+    .btn-hero-ghost:hover { color:var(--dark); }
+
+    /* Hero visual */
+    .hero-img-wrap { position:relative; z-index:1; }
+    .hero-img-glow {
+        position:absolute; inset:-30px; border-radius:50%;
+        background:radial-gradient(circle, rgba(255,183,197,.3) 0%, transparent 65%);
+        pointer-events:none;
+    }
+    .hero-img-box {
+        position:relative; border-radius:26px; overflow:hidden;
+        aspect-ratio:1/1;
+        box-shadow:0 30px 80px rgba(26,18,16,.14);
+        border:1px solid rgba(255,183,197,.2);
+    }
+    .hero-img-box img { width:100%; height:100%; object-fit:cover; object-position:center 15%; display:block; }
+    .hero-img-box::after {
+        content:''; position:absolute; inset:0;
+        background:linear-gradient(to bottom, transparent 55%, rgba(26,18,16,.07));
+    }
+    /* Floating UI cards */
+    .fc {
+        position:absolute; z-index:10;
+        background:rgba(255,252,249,.96); backdrop-filter:blur(12px);
+        border:1px solid rgba(255,255,255,.8);
+        border-radius:16px; padding:11px 16px;
+        box-shadow:0 8px 32px rgba(26,18,16,.1);
+    }
+    .fc-online {
+        bottom:24px; left:-28px;
+        display:flex; align-items:center; gap:9px;
+        font-size:.8rem; font-weight:800;
+        border-radius:50px; padding:10px 18px 10px 13px;
+        animation:fl 3.5s ease-in-out infinite;
+    }
+    .fc-online .gd { width:7px; height:7px; background:var(--green); border-radius:50%; box-shadow:0 0 0 3px rgba(82,184,112,.2); }
+    .fc-xp {
+        top:22px; right:-22px; text-align:center;
+        animation:fl 4s ease-in-out infinite reverse;
+    }
+    .fc-xp .lv { font-size:1.05rem; font-weight:900; color:var(--dark); }
+    .fc-xp .lb { font-size:.6rem; font-weight:700; color:var(--muted); margin-top:1px; }
+    .fc-xp .xb { width:52px; height:4px; background:var(--border); border-radius:4px; margin-top:5px; }
+    .fc-xp .xf { width:68%; height:100%; background:var(--pink); border-radius:4px; }
+    @keyframes fl { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-8px);} }
+
+    /* ── STATS BAND ── */
+    .stats-band { background:var(--surface); border-top:1px solid var(--border); border-bottom:1px solid var(--border); padding:30px 0; }
+    .stats-i { display:flex; }
+    .stat { flex:1; text-align:center; position:relative; padding:4px 0; }
+    .stat:not(:last-child)::after { content:''; position:absolute; right:0; top:10%; height:80%; width:1px; background:var(--border); }
+    .stat-n { font-size:2.1rem; font-weight:900; letter-spacing:-1px; line-height:1; }
+    .stat-n em { font-style:normal; color:var(--pinkd); }
+    .stat-l { font-size:.74rem; font-weight:700; color:var(--muted); margin-top:5px; letter-spacing:.3px; }
+
+    /* ── TICKER ── */
+    .ticker { border-bottom:1px solid var(--border); padding:14px 0; overflow:hidden; background:var(--surface); }
+    .ticker-lbl { text-align:center; font-size:.66rem; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--muted); margin-bottom:10px; }
+    .ticker-t { display:flex; gap:36px; animation:tk 24s linear infinite; width:max-content; }
+    .ticker-t:hover { animation-play-state:paused; }
+    .ti { display:flex; align-items:center; gap:7px; font-size:.82rem; font-weight:700; color:var(--muted); white-space:nowrap; }
+    .tp { width:5px; height:5px; background:var(--pink); border-radius:50%; flex-shrink:0; }
+    @keyframes tk { 0%{transform:translateX(0);} 100%{transform:translateX(-50%);} }
+
+    /* ── SECTION HEAD ── */
+    .sh { text-align:center; margin-bottom:60px; }
+    .sh .eye { font-size:.7rem; font-weight:800; letter-spacing:2.5px; text-transform:uppercase; display:block; margin-bottom:11px; }
+    .sh h2 { font-size:2.4rem; font-weight:900; letter-spacing:-.8px; line-height:1.15; }
+    .sh p  { font-size:.97rem; margin-top:11px; max-width:500px; margin-left:auto; margin-right:auto; }
+
+    /* ═══════════════════════
+       BENTO OVERVIEW
+    ═══════════════════════ */
+    .bento-sec { padding:80px 0; }
+    .bento {
+        display:grid;
+        grid-template-columns:repeat(3, 1fr);
+        gap:14px;
+    }
+    .bc {
+        background:var(--surface); border:1px solid var(--border);
+        border-radius:22px; overflow:hidden;
+        transition:transform .3s cubic-bezier(.4,0,.2,1), box-shadow .3s;
+    }
+    .bc:hover { transform:translateY(-5px); box-shadow:0 20px 56px rgba(26,18,16,.09); }
+    .bcp { padding:28px; }
+    .bct { display:inline-flex; align-items:center; gap:6px; font-size:.67rem; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--pinkd); background:#FFF0F5; border:1px solid #FFDCE6; padding:4px 11px; border-radius:50px; margin-bottom:14px; }
+    .bc h3 { font-size:1.3rem; font-weight:900; letter-spacing:-.4px; line-height:1.2; margin-bottom:8px; }
+    .bc .ds { font-size:.84rem; color:var(--mid); line-height:1.65; }
+
+    /* tall music card */
+    .bc-music { grid-column:1/2; grid-row:1/3; }
+    .bc-lvl   { grid-column:2/3; grid-row:1/2; }
+    .bc-util  { grid-column:3/4; grid-row:1/2; }
+    .bc-wide  { grid-column:2/4; grid-row:2/3; display:grid; grid-template-columns:1fr 1fr; }
+    .bc-wide .bcp { border-right:1px solid var(--border); }
+    .bc-wide .bcp:last-child { border-right:none; }
+
+    /* music player */
+    .mv { margin-top:24px; }
+    .plr {
+        background:linear-gradient(135deg,#FFF0F5,#FFE6EE);
+        border:1px solid #FFDCE6; border-radius:16px; padding:18px 20px; margin-bottom:12px;
+    }
+    .plr-h { display:flex; align-items:center; gap:12px; margin-bottom:16px; }
+    .plr-alb {
+        width:48px; height:48px; border-radius:10px; flex-shrink:0;
+        background:linear-gradient(135deg,var(--pink),var(--pinkd));
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.3rem; box-shadow:0 4px 12px rgba(255,183,197,.4);
+    }
+    .plr-title { font-size:.88rem; font-weight:800; margin-bottom:2px; }
+    .plr-sub   { font-size:.72rem; color:var(--mid); }
+    .plr-bar   { height:4px; background:#F0D8DE; border-radius:4px; }
+    .plr-fill  { height:100%; width:52%; border-radius:4px; background:linear-gradient(90deg,var(--pink),var(--pinkd)); animation:bg 12s ease-in-out infinite alternate; }
+    @keyframes bg { 0%{width:12%;} 100%{width:90%;} }
+    .plr-time  { display:flex; justify-content:space-between; font-size:.67rem; font-weight:700; color:var(--muted); margin-top:5px; }
+    .plr-ctr   { display:flex; justify-content:center; gap:12px; margin-top:14px; }
+    .pb { width:32px; height:32px; border-radius:50%; background:#F0E6EC; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:.82rem; transition:.15s; }
+    .pb:hover { background:var(--border); }
+    .pb.play { background:var(--dark); color:#fff; width:38px; height:38px; font-size:.9rem; }
+    .pb.play:hover { background:var(--dark2); }
+    .cmd-hint { display:flex; align-items:center; gap:8px; background:#F5F0ED; border-radius:10px; padding:10px 13px; font-size:.8rem; font-weight:700; color:var(--mid); }
+    .cmd-hint .cc { font-family:monospace; background:#fff; padding:2px 8px; border-radius:5px; color:var(--dark); font-size:.8rem; }
+
+    /* rank */
+    .rv { margin-top:18px; }
+    .rk { background:linear-gradient(135deg,#FFF0F5,#FFE6EE); border:1px solid #FFDCE6; border-radius:14px; padding:16px; }
+    .rk-row { display:flex; align-items:center; gap:10px; }
+    .rk-av { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,var(--pink),var(--pinkd)); display:flex; align-items:center; justify-content:center; font-size:1.05rem; flex-shrink:0; box-shadow:0 3px 10px rgba(255,183,197,.35); }
+    .rk-name { font-size:.86rem; font-weight:800; }
+    .rk-lvl  { font-size:.68rem; color:var(--mid); font-weight:700; }
+    .xpb { height:5px; background:#F0D8DE; border-radius:5px; margin-top:11px; }
+    .xpf { height:100%; width:68%; border-radius:5px; background:linear-gradient(90deg,var(--pink),var(--pinkd)); }
+    .xpt { display:flex; justify-content:space-between; font-size:.66rem; font-weight:700; color:var(--muted); margin-top:4px; }
+    .lb { margin-top:12px; display:flex; flex-direction:column; gap:5px; }
+    .lb-r { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; background:rgba(255,255,255,.6); font-size:.77rem; }
+    .lb-rn { width:16px; font-weight:900; font-size:.7rem; text-align:center; }
+    .lb-rn.g{color:#F5A623;} .lb-rn.s{color:#9B9B9B;} .lb-rn.b{color:#C47D3A;}
+    .lb-nm { flex:1; font-weight:700; }
+    .lb-lv { font-size:.68rem; color:var(--muted); font-weight:600; }
+
+    /* util */
+    .uv { margin-top:18px; display:flex; flex-direction:column; gap:7px; }
+    .ur { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; background:#F8F3F0; border:1px solid var(--border); font-size:.82rem; transition:.15s; }
+    .ur:hover { background:#FFF0F5; border-color:#FFDCE6; }
+    .ui { width:28px; height:28px; border-radius:7px; background:#fff; display:flex; align-items:center; justify-content:center; font-size:.9rem; flex-shrink:0; box-shadow:0 1px 4px rgba(0,0,0,.05); }
+    .un { font-weight:800; flex:1; }
+    .ut { font-size:.6rem; font-weight:800; padding:2px 7px; border-radius:50px; background:#FFF0F5; color:var(--pinkd); white-space:nowrap; }
+
+    /* wide terminal */
+    .term { background:#1A1210; border-radius:14px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,.25); }
+    .term-bar { background:#130E0C; padding:10px 14px; display:flex; align-items:center; gap:7px; }
+    .td { width:10px; height:10px; border-radius:50%; }
+    .td.r{background:#FF6B6B;} .td.y{background:#FFD166;} .td.g{background:#06D6A0;}
+    .term-body { padding:16px 18px; font-family:monospace; font-size:.78rem; line-height:1.9; color:#C4B0A8; }
+    .tp2 { color:#6B5A54; }
+    .tc { color:var(--pink); font-weight:700; }
+    .to { color:#E8D0C8; }
+    .tg { color:#74C69D; }
+    .cur { display:inline-block; width:6px; height:13px; background:var(--pink); animation:cu .9s infinite; vertical-align:middle; }
+    @keyframes cu { 0%,100%{opacity:1;} 50%{opacity:0;} }
+
+    /* ═══════════════════════
+       FEATURE SECTIONS (full-width colored)
+    ═══════════════════════ */
+    .feat-section {
+        padding:100px 0; position:relative; overflow:hidden;
+    }
+    /* Music section - warm pink gradient */
+    .feat-music {
+        background:linear-gradient(160deg, #2A1520 0%, #1A100D 60%, #1A1210 100%);
+        color:#FAF0F4;
+    }
+    .feat-music .sh .eye { color:var(--pink); }
+    .feat-music .sh h2  { color:#FAF0F4; }
+    .feat-music .sh p   { color:rgba(255,230,235,.6); }
+    /* orb */
+    .feat-music::before {
+        content:''; position:absolute; width:600px; height:600px; border-radius:50%;
+        background:radial-gradient(circle, rgba(255,183,197,.15) 0%, transparent 65%);
+        top:-100px; right:-100px; pointer-events:none;
+    }
+    /* Level section - warm green */
+    .feat-level {
+        background:linear-gradient(160deg, #102018 0%, #0D1A12 60%, #0A1510 100%);
+        color:#F0FAF4;
+    }
+    .feat-level .sh .eye { color:#74C69D; }
+    .feat-level .sh h2  { color:#F0FAF4; }
+    .feat-level .sh p   { color:rgba(180,230,200,.6); }
+    .feat-level::before {
+        content:''; position:absolute; width:600px; height:600px; border-radius:50%;
+        background:radial-gradient(circle, rgba(116,198,157,.12) 0%, transparent 65%);
+        top:-100px; left:-100px; pointer-events:none;
+    }
+
+    .feat-inner {
+        position:relative; z-index:1;
+        display:grid; grid-template-columns:1fr 1fr; align-items:center; gap:72px;
+    }
+    .feat-inner.rev { direction:rtl; }
+    .feat-inner.rev > * { direction:ltr; }
+    .feat-text { }
+    .feat-eye { font-size:.7rem; font-weight:800; letter-spacing:2px; text-transform:uppercase; margin-bottom:14px; display:block; }
+    .feat-music .feat-eye { color:var(--pink); }
+    .feat-level .feat-eye { color:#74C69D; }
+    .feat-title { font-size:2.3rem; font-weight:900; letter-spacing:-.8px; line-height:1.12; margin-bottom:16px; }
+    .feat-desc  { font-size:.97rem; line-height:1.75; opacity:.7; margin-bottom:28px; }
+    .feat-link  { display:inline-flex; align-items:center; gap:6px; font-size:.9rem; font-weight:800; opacity:.85; transition:.2s; }
+    .feat-link:hover { opacity:1; gap:10px; }
+    .feat-music .feat-link { color:var(--pink); }
+    .feat-level .feat-link { color:#74C69D; }
+
+    /* Music player big card */
+    .music-card {
+        background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.1);
+        border-radius:22px; padding:28px; backdrop-filter:blur(10px);
+    }
+    .mc-header { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+    .mc-art {
+        width:68px; height:68px; border-radius:14px; flex-shrink:0;
+        background:linear-gradient(135deg, var(--pink), var(--pinkd));
+        display:flex; align-items:center; justify-content:center;
+        font-size:2rem; box-shadow:0 8px 24px rgba(255,183,197,.3);
+    }
+    .mc-title { font-size:1.1rem; font-weight:900; margin-bottom:3px; color:#FAF0F4; }
+    .mc-sub   { font-size:.78rem; color:rgba(255,230,235,.5); }
+    .mc-bar   { height:5px; background:rgba(255,255,255,.12); border-radius:5px; }
+    .mc-fill  { height:100%; width:45%; border-radius:5px; background:linear-gradient(90deg,var(--pink),var(--pinkd)); animation:bg 14s ease-in-out infinite alternate; }
+    .mc-time  { display:flex; justify-content:space-between; font-size:.7rem; font-weight:700; color:rgba(255,230,235,.4); margin-top:6px; }
+    .mc-ctr   { display:flex; justify-content:center; align-items:center; gap:16px; margin-top:22px; }
+    .mc-btn { width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,.08); border:none; cursor:pointer; color:#FAF0F4; font-size:.9rem; display:flex; align-items:center; justify-content:center; transition:.15s; }
+    .mc-btn:hover { background:rgba(255,255,255,.14); }
+    .mc-btn.play { width:48px; height:48px; background:var(--pink); color:var(--dark); font-size:1.1rem; box-shadow:0 6px 18px rgba(255,183,197,.35); }
+    .mc-btn.play:hover { background:var(--pinkd); color:#fff; }
+    .mc-queue { margin-top:20px; display:flex; flex-direction:column; gap:6px; }
+    .mq-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; background:rgba(255,255,255,.05); font-size:.8rem; }
+    .mq-ic  { font-size:1rem; flex-shrink:0; }
+    .mq-nm  { flex:1; font-weight:700; color:rgba(255,240,244,.8); }
+    .mq-du  { font-size:.68rem; color:rgba(255,230,235,.35); font-weight:700; }
+
+    /* Level big card */
+    .level-card {
+        background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.09);
+        border-radius:22px; padding:28px; backdrop-filter:blur(10px);
+    }
+    .lc-head { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
+    .lc-av { width:58px; height:58px; border-radius:50%; background:linear-gradient(135deg,#74C69D,#40A874); display:flex; align-items:center; justify-content:center; font-size:1.6rem; flex-shrink:0; box-shadow:0 6px 18px rgba(116,198,157,.3); }
+    .lc-name { font-size:1.05rem; font-weight:900; color:#F0FAF4; margin-bottom:3px; }
+    .lc-rank { font-size:.74rem; color:rgba(180,230,200,.5); font-weight:700; }
+    .lc-bar  { height:8px; background:rgba(255,255,255,.1); border-radius:8px; }
+    .lc-fill { height:100%; width:72%; border-radius:8px; background:linear-gradient(90deg,#74C69D,#40A874); }
+    .lc-xp   { display:flex; justify-content:space-between; font-size:.7rem; font-weight:700; color:rgba(180,230,200,.45); margin-top:6px; }
+    .lc-lb   { margin-top:20px; display:flex; flex-direction:column; gap:7px; }
+    .ll { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px; background:rgba(255,255,255,.05); font-size:.82rem; }
+    .ll-rk { font-size:.8rem; width:20px; text-align:center; flex-shrink:0; }
+    .ll-av { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.9rem; flex-shrink:0; }
+    .ll-nm { flex:1; font-weight:700; color:rgba(240,250,244,.8); }
+    .ll-lv { font-size:.7rem; color:rgba(180,230,200,.4); font-weight:700; }
+
+    /* ═══════════════════════
+       HOW IT WORKS
+    ═══════════════════════ */
+    .how-sec { padding:90px 0; }
+    .steps { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+    .step {
+        padding:36px 28px; background:var(--surface);
+        border:1px solid var(--border); border-radius:22px;
+        position:relative; overflow:hidden; transition:.25s;
+    }
+    .step::after {
+        content:''; position:absolute; bottom:0; left:0; right:0; height:3px;
+        background:linear-gradient(90deg,var(--pink),var(--pinkd));
+        transform:scaleX(0); transform-origin:left; transition:.35s;
+    }
+    .step:hover { transform:translateY(-4px); box-shadow:0 16px 48px rgba(26,18,16,.08); }
+    .step:hover::after { transform:scaleX(1); }
+    .step-num {
+        width:52px; height:52px; border-radius:14px;
+        background:linear-gradient(135deg,#FFF0F5,#FFE0EA);
+        border:1px solid #FFDCE6;
+        display:flex; align-items:center; justify-content:center;
+        font-size:1.4rem; font-weight:900; color:var(--pinkd);
+        margin-bottom:18px;
+    }
+    .step h4 { font-size:1.1rem; font-weight:900; margin-bottom:9px; }
+    .step p  { font-size:.85rem; color:var(--mid); line-height:1.68; }
+
+    /* ═══════════════════════
+       CTA
+    ═══════════════════════ */
+    .cta-sec { padding:80px 0 100px; }
+    .cta {
+        background:var(--dark); border-radius:28px;
+        padding:72px 56px; text-align:center; position:relative; overflow:hidden;
+    }
+    .cta::before {
+        content:''; position:absolute; width:500px; height:500px; border-radius:50%;
+        background:radial-gradient(circle, rgba(255,183,197,.12) 0%, transparent 65%);
+        top:-150px; left:-100px; pointer-events:none;
+    }
+    .cta::after {
+        content:''; position:absolute; width:400px; height:400px; border-radius:50%;
+        background:radial-gradient(circle, rgba(255,183,197,.08) 0%, transparent 65%);
+        bottom:-100px; right:-60px; pointer-events:none;
+    }
+    .cta-in { position:relative; z-index:1; max-width:540px; margin:0 auto; }
+    .cta-em { font-size:2.8rem; margin-bottom:18px; display:block; }
+    .cta h2 { font-size:2.4rem; font-weight:900; letter-spacing:-.8px; line-height:1.14; color:#FAF0F4; margin-bottom:14px; }
+    .cta p  { font-size:.97rem; color:rgba(255,200,215,.5); margin-bottom:36px; }
+    .cta-btns { display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
+    .btn-cta {
+        display:inline-flex; align-items:center; gap:8px;
+        background:var(--pink); color:var(--dark);
+        font-size:.97rem; font-weight:800; padding:14px 32px; border-radius:50px;
+        box-shadow:0 6px 24px rgba(255,183,197,.35); transition:all .22s;
+    }
+    .btn-cta:hover { background:var(--pinkd); color:#fff; transform:translateY(-2px); }
+    .btn-cta-ghost {
+        font-size:.9rem; font-weight:700; color:rgba(255,255,255,.45);
+        padding:14px 22px; border-radius:50px;
+        border:1px solid rgba(255,255,255,.1); transition:all .2s;
+    }
+    .btn-cta-ghost:hover { color:#fff; border-color:rgba(255,255,255,.25); }
+
+    /* ═══════════════════════
+       FOOTER
+    ═══════════════════════ */
+    .footer { border-top:1px solid var(--border); padding:48px 0 32px; }
+    .footer-g { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:32px; margin-bottom:40px; }
+    .f-logo { font-weight:900; font-size:1.1rem; display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+    .f-tag { font-size:.82rem; color:var(--muted); line-height:1.7; max-width:200px; }
+    .fc2 h4 { font-size:.65rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+    .fc2 li { margin-bottom:8px; }
+    .fc2 li a { font-size:.84rem; color:var(--muted); font-weight:600; }
+    .fc2 li a:hover { color:var(--dark); }
+    .foot-bot { display:flex; justify-content:space-between; align-items:center; padding-top:22px; border-top:1px solid var(--border); font-size:.76rem; color:var(--muted); }
+    .foot-bot .hrt { color:var(--pink); }
+    .foot-bot .aut { color:var(--pinkd); font-weight:800; }
+
+    /* ═══════════════════════
+       SCROLL REVEAL
+    ═══════════════════════ */
+    .rv { opacity:0; transform:translateY(28px); transition:opacity .65s cubic-bezier(.4,0,.2,1), transform .65s cubic-bezier(.4,0,.2,1); }
+    .rv.d1{transition-delay:.1s;} .rv.d2{transition-delay:.2s;} .rv.d3{transition-delay:.3s;}
+    .rv.vis { opacity:1; transform:none; }
+
+    /* ═══════════════════════
+       RESPONSIVE
+    ═══════════════════════ */
+    @media(max-width:960px){
+        .hero { grid-template-columns:1fr; gap:40px; padding:50px 0 70px; }
+        .hero-img-wrap { max-width:320px; margin:0 auto; order:-1; }
+        .hero h1 { font-size:2.8rem; }
+        .bento { grid-template-columns:1fr 1fr; }
+        .bc-music { grid-column:1/3; }
+        .bc-wide  { grid-column:1/3; }
+        .feat-inner { grid-template-columns:1fr; gap:40px; }
+        .feat-inner.rev { direction:ltr; }
+        .steps { grid-template-columns:1fr; }
+        .footer-g { grid-template-columns:1fr 1fr; }
+        .cta { padding:48px 28px; }
+        .cta h2 { font-size:2rem; }
+    }
+    @media(max-width:600px){
+        .hero h1 { font-size:2.2rem; }
+        .bento { grid-template-columns:1fr; }
+        .bc-music,.bc-lvl,.bc-util,.bc-wide { grid-column:1/2; }
+        .bc-wide { display:flex; flex-direction:column; }
+        .bc-wide .bcp { border-right:none; border-bottom:1px solid var(--border); }
+        .stats-i { flex-wrap:wrap; }
+        .stat { min-width:50%; }
+        .stat::after { display:none!important; }
+        .footer-g { grid-template-columns:1fr; }
+        .nav-r .btn-ghost:not(#btn-lang) { display:none; }
+        .fc-online,.fc-xp { display:none; }
+    }
+    </style>
+</head>
+<body>
+
+<!-- STICKY NAV -->
+<nav class="snav" id="snav">
+    <div class="snav-i">
+        <div class="snav-logo"><span class="d"></span>小凛 Rin</div>
+        <div class="snav-r">
+            <a href="/dashboard" class="btn-ghost" id="sn-dash"></a>
+            <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+               target="_blank" class="btn-pill" id="sn-invite">邀请入驻 +</a>
+        </div>
+    </div>
+</nav>
+
+<div class="wrap">
+
+    <!-- TOP NAV -->
+    <div class="topnav" id="topnav">
+        <div class="nav-i">
+            <a href="/" class="logo"><span class="d"></span>小凛 RinBot</a>
+            <div class="nav-r">
+                <button class="btn-ghost" id="btn-lang" onclick="toggleLanguage()">English</button>
+                <a href="/dashboard" class="btn-ghost" id="btn-dashboard"></a>
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="btn-pill" id="btn-invite">邀请入驻 +</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- HERO -->
+    <section class="hero">
+        <div class="hero-text rv">
+            <div class="hero-badge"><span class="pip"></span><span id="hero-tag">在线中</span></div>
+            <h1 id="hero-title">你的全能<br><em>Discord</em><br>小助手。</h1>
+            <p class="hero-sub" id="hero-desc">哼哼，小凛可不只会唱歌哦！无论是管理社区、活跃气氛，还是陪大家解闷，只要敲敲 <span class="code-d">r!help</span>，小凛通通帮你搞定！</p>
+            <div class="hero-btns">
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="btn-hero" id="btn-hero">✨ 立即邀请小凛</a>
+                <a href="/dashboard" class="btn-hero-ghost" id="btn-dash-hero">控制台 →</a>
+            </div>
+        </div>
+        <div class="hero-img-wrap rv d1">
+            <div class="hero-img-glow"></div>
+            <div class="hero-img-box">
+                <img src="{{ url_for('static', filename='rinbot_bg.jpg') }}" alt="小凛 Rin">
+            </div>
+            <div class="fc fc-online"><span class="gd"></span><span id="badge-on">在线 · 今天也在哦！</span></div>
+            <div class="fc fc-xp">
+                <div class="lv">Lv.5</div>
+                <div class="lb" id="badge-xp">XP 进度</div>
+                <div class="xb"><div class="xf"></div></div>
+            </div>
+        </div>
+    </section>
+
+</div><!-- /wrap -->
+
+<!-- STATS -->
+<div class="stats-band">
+    <div class="wrap">
+        <div class="stats-i">
+            <div class="stat rv"><div class="stat-n">12<em>+</em></div><div class="stat-l" id="st1">活跃服务器</div></div>
+            <div class="stat rv d1"><div class="stat-n">10<em>+</em></div><div class="stat-l" id="st2">功能模块</div></div>
+            <div class="stat rv d2"><div class="stat-n">24<em>/7</em></div><div class="stat-l" id="st3">全天在线</div></div>
+            <div class="stat rv d3"><div class="stat-n">∞</div><div class="stat-l" id="st4">持续更新</div></div>
+        </div>
+    </div>
+</div>
+
+<!-- TICKER -->
+<div class="ticker">
+    <div class="ticker-lbl" id="ticker-lbl">受众多 Discord 社群信赖</div>
+    <div style="overflow:hidden">
+        <div class="ticker-t">
+            <span class="ti"><span class="tp"></span>游戏社区</span>
+            <span class="ti"><span class="tp"></span>ACG 频道</span>
+            <span class="ti"><span class="tp"></span>学习小组</span>
+            <span class="ti"><span class="tp"></span>创作者团队</span>
+            <span class="ti"><span class="tp"></span>音乐电台</span>
+            <span class="ti"><span class="tp"></span>朋友小圈</span>
+            <span class="ti"><span class="tp"></span>动漫讨论区</span>
+            <span class="ti"><span class="tp"></span>技术交流</span>
+            <span class="ti"><span class="tp"></span>游戏社区</span>
+            <span class="ti"><span class="tp"></span>ACG 频道</span>
+            <span class="ti"><span class="tp"></span>学习小组</span>
+            <span class="ti"><span class="tp"></span>创作者团队</span>
+            <span class="ti"><span class="tp"></span>音乐电台</span>
+            <span class="ti"><span class="tp"></span>朋友小圈</span>
+            <span class="ti"><span class="tp"></span>动漫讨论区</span>
+            <span class="ti"><span class="tp"></span>技术交流</span>
+        </div>
+    </div>
+</div>
+
+<!-- BENTO -->
+<div class="wrap">
+<section class="bento-sec">
+    <div class="sh rv">
+        <span class="eye" id="bento-eye" style="color:var(--pinkd)">核心功能</span>
+        <h2 id="bento-title">一个小凛，搞定所有</h2>
+        <p class="c" id="bento-sub" style="color:var(--mid)">嘿嘿~ One in all, all in one!</p>
+    </div>
+    <div class="bento">
+        <!-- Music tall -->
+        <div class="bc bc-music rv">
+            <div class="bcp">
+                <div class="bct">🎵 <span id="bc1t">音乐</span></div>
+                <h3 id="bc1h">语音派对<br>立刻开始</h3>
+                <p class="ds" id="bc1d">支持 YouTube 搜索和直链，高音质低延迟。</p>
+                <div class="mv">
+                    <div class="plr">
+                        <div class="plr-h">
+                            <div class="plr-alb">🎵</div>
+                            <div>
+                                <div class="plr-title">夜に駆ける</div>
+                                <div class="plr-sub">YOASOBI · 播放中</div>
+                            </div>
+                        </div>
+                        <div class="plr-bar"><div class="plr-fill"></div></div>
+                        <div class="plr-time"><span>2:14</span><span>4:06</span></div>
+                        <div class="plr-ctr">
+                            <button class="pb">⏮</button>
+                            <button class="pb play">⏸</button>
+                            <button class="pb">⏭</button>
+                        </div>
+                    </div>
+                    <div class="cmd-hint"><span class="cc">/play</span><span id="bc1hint">搜索或粘贴链接</span></div>
+                </div>
+            </div>
+        </div>
+        <!-- Level -->
+        <div class="bc bc-lvl rv d1">
+            <div class="bcp">
+                <div class="bct">🏆 <span id="bc2t">等级</span></div>
+                <h3 id="bc2h">聊天得经验<br>爬上排行榜</h3>
+                <p class="ds" id="bc2d">MEE6 同款算法，<span class="code-d">/rank</span> 查看等级卡片。</p>
+                <div class="rv">
+                    <div class="rk">
+                        <div class="rk-row">
+                            <div class="rk-av">🌸</div>
+                            <div><div class="rk-name">Milk Chocolate</div><div class="rk-lvl">Level 5 · Rank #1</div></div>
+                        </div>
+                        <div class="xpb"><div class="xpf"></div></div>
+                        <div class="xpt"><span>1,240 XP</span><span>/ 1,800</span></div>
+                    </div>
+                    <div class="lb" style="margin-top:12px">
+                        <div class="lb-r"><div class="lb-rn g">🥇</div><div class="lb-nm">Milk Chocolate</div><div class="lb-lv">Lv.5</div></div>
+                        <div class="lb-r"><div class="lb-rn s">🥈</div><div class="lb-nm">Starlight</div><div class="lb-lv">Lv.3</div></div>
+                        <div class="lb-r"><div class="lb-rn b">🥉</div><div class="lb-nm">GamerKun</div><div class="lb-lv">Lv.2</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Util -->
+        <div class="bc bc-util rv d2">
+            <div class="bcp">
+                <div class="bct">🛠️ <span id="bc3t">工具</span></div>
+                <h3 id="bc3h">日常管理<br>全搞定</h3>
+                <p class="ds" id="bc3d">头像、骰子、状态监控，Owner 专属。</p>
+                <div class="uv">
+                    <div class="ur"><div class="ui">🎲</div><div class="un">/roll</div><div class="ut">娱乐</div></div>
+                    <div class="ur"><div class="ui">🖼️</div><div class="un">/avatar</div><div class="ut">工具</div></div>
+                    <div class="ur"><div class="ui">📊</div><div class="un">/status</div><div class="ut">管理</div></div>
+                </div>
+            </div>
+        </div>
+        <!-- Wide cmd -->
+        <div class="bc bc-wide rv">
+            <div class="bcp">
+                <div class="bct">⚡ <span id="bc4t">指令</span></div>
+                <h3 id="bc4h">简单好用<br>一句话搞定</h3>
+                <p class="ds" id="bc4d">支持 <span class="code-d">/</span> 斜杠与 <span class="code-d">r!</span> 前缀，任意场合好用。</p>
+                <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px">
+                    <span style="display:inline-flex;align-items:center;gap:8px;background:#F5F0ED;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:.8rem;font-weight:700;transition:.2s;cursor:default;" onmouseenter="this.style.background='#FFF0F5';this.style.borderColor='#FFDCE6'" onmouseleave="this.style.background='#F5F0ED';this.style.borderColor='var(--border)'">🎵 <code style="font-family:monospace;font-size:.78rem">/play [歌名]</code></span>
+                    <span style="display:inline-flex;align-items:center;gap:8px;background:#F5F0ED;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:.8rem;font-weight:700;transition:.2s;cursor:default;" onmouseenter="this.style.background='#FFF0F5';this.style.borderColor='#FFDCE6'" onmouseleave="this.style.background='#F5F0ED';this.style.borderColor='var(--border)'">🏆 <code style="font-family:monospace;font-size:.78rem">/rank</code></span>
+                    <span style="display:inline-flex;align-items:center;gap:8px;background:#F5F0ED;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:.8rem;font-weight:700;transition:.2s;cursor:default;" onmouseenter="this.style.background='#FFF0F5';this.style.borderColor='#FFDCE6'" onmouseleave="this.style.background='#F5F0ED';this.style.borderColor='var(--border)'">🎲 <code style="font-family:monospace;font-size:.78rem">/roll [面数]</code></span>
+                </div>
+            </div>
+            <div class="bcp" style="display:flex;flex-direction:column;justify-content:center;">
+                <div class="term">
+                    <div class="term-bar"><span class="td r"></span><span class="td y"></span><span class="td g"></span></div>
+                    <div class="term-body">
+                        <div><span class="tp2">user&gt; </span><span class="tc">/play 夜に駆ける</span></div>
+                        <div><span class="tg">🎵 正在播放: 夜に駆ける</span></div>
+                        <div style="margin-top:4px"><span class="tp2">user&gt; </span><span class="tc">/rank</span></div>
+                        <div><span class="to">📊 Milk Chocolate · Lv.5 #1</span></div>
+                        <div style="margin-top:4px"><span class="tp2">user&gt; </span><span class="cur"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</div><!-- /wrap -->
+
+<!-- MUSIC FEATURE SECTION -->
+<section class="feat-section feat-music">
+    <div class="wrap">
+        <div class="feat-inner rv">
+            <div class="feat-text">
+                <span class="feat-eye" id="fm-eye">🎵 音乐系统</span>
+                <h2 class="feat-title" id="fm-title">让语音频道变成<br>专属派对电台</h2>
+                <p class="feat-desc" id="fm-desc">支持 YouTube 搜索与直链，一句 <span class="code">/play</span> 立即开唱。高音质、低延迟，小凛陪你嗨到天亮！</p>
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="feat-link" id="fm-link">立即邀请小凛 →</a>
+            </div>
+            <div>
+                <div class="music-card">
+                    <div class="mc-header">
+                        <div class="mc-art">🎵</div>
+                        <div>
+                            <div class="mc-title">夜に駆ける</div>
+                            <div class="mc-sub">YOASOBI · 正在播放</div>
+                        </div>
+                    </div>
+                    <div class="mc-bar"><div class="mc-fill"></div></div>
+                    <div class="mc-time"><span>2:14</span><span>4:06</span></div>
+                    <div class="mc-ctr">
+                        <button class="mc-btn">⏮</button>
+                        <button class="mc-btn play">⏸</button>
+                        <button class="mc-btn">⏭</button>
+                    </div>
+                    <div class="mc-queue">
+                        <div class="mq-item"><span class="mq-ic">🎵</span><span class="mq-nm">Kick Back — 米津玄師</span><span class="mq-du">4:18</span></div>
+                        <div class="mq-item"><span class="mq-ic">🎵</span><span class="mq-nm">Fight Song — Eve</span><span class="mq-du">3:52</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- LEVEL FEATURE SECTION -->
+<section class="feat-section feat-level">
+    <div class="wrap">
+        <div class="feat-inner rev rv">
+            <div class="feat-text">
+                <span class="feat-eye" id="fl-eye">🏆 等级系统</span>
+                <h2 class="feat-title" id="fl-title">聊天即得经验值<br>冲击服务器排行榜</h2>
+                <p class="feat-desc" id="fl-desc">发言自动积累经验，MEE6 同款算法。用 <span class="code">/rank</span> 看看谁才是最活跃的成员！</p>
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="feat-link" id="fl-link">立即邀请小凛 →</a>
+            </div>
+            <div>
+                <div class="level-card">
+                    <div class="lc-head">
+                        <div class="lc-av">🌸</div>
+                        <div><div class="lc-name">Milk Chocolate</div><div class="lc-rank">Level 5 · Rank #1</div></div>
+                    </div>
+                    <div class="lc-bar"><div class="lc-fill"></div></div>
+                    <div class="lc-xp"><span>1,240 XP</span><span>/ 1,800</span></div>
+                    <div class="lc-lb">
+                        <div class="ll"><span class="ll-rk">🥇</span><div class="ll-av" style="background:rgba(255,183,197,.2)">🌸</div><span class="ll-nm">Milk Chocolate</span><span class="ll-lv">Lv.5</span></div>
+                        <div class="ll"><span class="ll-rk">🥈</span><div class="ll-av" style="background:rgba(116,198,157,.2)">✨</div><span class="ll-nm">Starlight</span><span class="ll-lv">Lv.3</span></div>
+                        <div class="ll"><span class="ll-rk">🥉</span><div class="ll-av" style="background:rgba(255,209,102,.2)">🎮</div><span class="ll-nm">GamerKun</span><span class="ll-lv">Lv.2</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<div class="wrap">
+<section class="how-sec">
+    <div class="sh rv">
+        <span class="eye" id="hw-eye" style="color:var(--pinkd)">超简单</span>
+        <h2 id="hw-title">三步就能拥有小凛</h2>
+    </div>
+    <div class="steps">
+        <div class="step rv">
+            <div class="step-num">1</div>
+            <h4 id="s1h">点击邀请</h4>
+            <p id="s1d">点击「邀请入驻」按钮，选择你的服务器并授权小凛加入。</p>
+        </div>
+        <div class="step rv d1">
+            <div class="step-num">2</div>
+            <h4 id="s2h">敲 r!help</h4>
+            <p id="s2d">在任意频道发送 <span class="code-d">r!help</span>，查看所有可用指令。</p>
+        </div>
+        <div class="step rv d2">
+            <div class="step-num">3</div>
+            <h4 id="s3h">开始玩吧！</h4>
+            <p id="s3d">放音乐、刷等级、用工具…小凛 24/7 全天陪着你 (´• ω •`)ﾉ</p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-sec">
+    <div class="cta rv">
+        <div class="cta-in">
+            <span class="cta-em">✨</span>
+            <h2 id="cta-title">准备好了吗？<br>让小凛加入你的服务器！</h2>
+            <p id="cta-desc">嘿嘿，点一下就能拥有小凛~ One in all, all in one!</p>
+            <div class="cta-btns">
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="btn-cta" id="cta-invite">✨ 立即邀请小凛</a>
+                <a href="/dashboard" class="btn-cta-ghost" id="cta-dash">进入控制台 →</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+    <div class="footer-g">
+        <div>
+            <div class="f-logo"><span class="d" style="width:9px;height:9px;background:var(--pink);border-radius:50%;display:inline-block"></span>小凛 RinBot</div>
+            <p class="f-tag" id="footer-tagline">元气满满的全能 Discord 助手。<br>One in all, all in one!</p>
+        </div>
+        <div class="fc2"><h4 id="fc1-head">功能</h4><ul>
+            <li><a href="#" id="fc1-l1">音乐播放</a></li>
+            <li><a href="#" id="fc1-l2">等级系统</a></li>
+            <li><a href="#" id="fc1-l3">管理模块</a></li>
+            <li><a href="#" id="fc1-l4">迎新 & 审核 & 抽奖…</a></li>
+        </ul></div>
+        <div class="fc2"><h4 id="fc2-head">链接</h4><ul>
+            <li><a href="/dashboard" id="fc2-l1">控制台</a></li>
+            <li><a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands" target="_blank" id="fc2-l2">邀请小凛</a></li>
+        </ul></div>
+        <div class="fc2"><h4 id="fc3-head">关于</h4><ul>
+            <li><a href="#" id="fc3-l1">服务条款</a></li>
+            <li><a href="#" id="fc3-l2">隐私政策</a></li>
+        </ul></div>
+    </div>
+    <div class="foot-bot">
+        <span>&copy; 2026 RinBot. Made with <span class="hrt">💖</span></span>
+        <span>Created by <span class="aut">Milk Chocolate</span></span>
+    </div>
+</footer>
+
+</div><!-- /wrap -->
+
+<script>
+const userIsLoggedIn = {{ 'true' if is_logged_in else 'false' }};
+
+const i18n = {
+    zh:{
+        lang:'English', title:'小凛 Rin | 全能 Discord 助手',
+        invite:'邀请入驻 +',
+        dash: userIsLoggedIn ? '进入控制台 ⚙️' : '登录后台 ⚙️',
+        heroTag:'在线中',
+        heroTitle:'你的全能<br><em>Discord</em><br>小助手。',
+        heroDesc:'哼哼，小凛可不只会唱歌哦！无论是管理社区、活跃气氛，还是陪大家解闷，只要敲敲 <span class="code-d">r!help</span>，小凛通通帮你搞定！',
+        heroBtn:'✨ 立即邀请小凛', heroDash:'控制台 →',
+        badgeOn:'在线 · 今天也在哦！', badgeXp:'XP 进度',
+        st1:'活跃服务器', st2:'功能模块', st3:'全天在线', st4:'持续更新',
+        tickerLbl:'受众多 Discord 社群信赖',
+        bentoEye:'核心功能', bentoTitle:'一个小凛，搞定所有', bentoSub:'嘿嘿~ One in all, all in one!',
+        bc1t:'音乐', bc1h:'语音派对<br>立刻开始', bc1d:'支持 YouTube 搜索和直链，高音质低延迟。', bc1hint:'搜索或粘贴链接',
+        bc2t:'等级', bc2h:'聊天得经验<br>爬上排行榜', bc2d:'<span class="code-d">/rank</span> 查看等级卡片。',
+        bc3t:'工具', bc3h:'日常管理<br>全搞定', bc3d:'头像、骰子、状态监控，Owner 专属。',
+        bc4t:'指令', bc4h:'简单好用<br>一句话搞定', bc4d:'支持 <span class="code-d">/</span> 斜杠与 <span class="code-d">r!</span> 前缀，任意场合好用。',
+        fmEye:'🎵 音乐系统', fmTitle:'让语音频道变成<br>专属派对电台', fmDesc:'支持 YouTube 搜索与直链，一句 <span class="code">/play</span> 立即开唱。高音质、低延迟，小凛陪你嗨到天亮！', fmLink:'立即邀请小凛 →',
+        flEye:'🏆 等级系统', flTitle:'聊天即得经验值<br>冲击服务器排行榜', flDesc:'发言自动积累经验，MEE6 同款算法。用 <span class="code">/rank</span> 看看谁才是最活跃的成员！', flLink:'立即邀请小凛 →',
+        hwEye:'超简单', hwTitle:'三步就能拥有小凛',
+        s1h:'点击邀请', s1d:'点击「邀请入驻」按钮，选择你的服务器并授权小凛加入。',
+        s2h:'敲 r!help', s2d:'在任意频道发送 <span class="code-d">r!help</span>，查看所有可用指令。',
+        s3h:'开始玩吧！', s3d:'放音乐、刷等级、用工具…小凛 24/7 全天陪着你 (´• ω •`)ﾉ',
+        ctaTitle:'准备好了吗？<br>让小凛加入你的服务器！', ctaDesc:'嘿嘿，点一下就能拥有小凛~ One in all, all in one!',
+        ctaInvite:'✨ 立即邀请小凛', ctaDash:'进入控制台 →',
+        footerTagline:'元气满满的全能 Discord 助手。<br>One in all, all in one!',
+        fc1h:'功能',fc1l1:'音乐播放',fc1l2:'等级系统',fc1l3:'管理模块',fc1l4:'迎新 & 审核 & 抽奖…',
+        fc2h:'链接',fc2l1:'控制台',fc2l2:'邀请小凛',
+        fc3h:'关于',fc3l1:'服务条款',fc3l2:'隐私政策',
+    },
+    en:{
+        lang:'中文', title:'RinBot | All-in-One Discord Assistant',
+        invite:'Add to Server +',
+        dash: userIsLoggedIn ? 'Dashboard ⚙️' : 'Login ⚙️',
+        heroTag:'Now Online',
+        heroTitle:'Your Ultimate<br><em>Discord</em><br>Assistant.',
+        heroDesc:'Hehe, Rin isn\'t just about singing! Whether it\'s managing your community, livening up the mood, or just hanging out — type <span class="code-d">r!help</span> and Rin handles it all!',
+        heroBtn:'✨ Invite Rin Now', heroDash:'Dashboard →',
+        badgeOn:'Online · Here today too!', badgeXp:'XP Progress',
+        st1:'Active Servers', st2:'Modules', st3:'Always Online', st4:'Always Updating',
+        tickerLbl:'Trusted by Discord communities worldwide',
+        bentoEye:'Features', bentoTitle:'One Rin, Everything Done', bentoSub:'Hehe~ One in all, all in one!',
+        bc1t:'Music', bc1h:'Party Time<br>Starts Now', bc1d:'YouTube search and direct links. High quality, low latency.', bc1hint:'Search or paste a link',
+        bc2t:'Leveling', bc2h:'Chat to Earn XP<br>Top the Leaderboard', bc2d:' Use <span class="code-d">/rank</span> for your rank card.',
+        bc3t:'Utility', bc3h:'Daily Management<br>All Covered', bc3d:'Avatar, dice, server stats and owner-only commands.',
+        bc4t:'Commands', bc4h:'Simple & Powerful<br>One Line Away', bc4d:'Supports both <span class="code-d">/</span> slash commands and <span class="code-d">r!</span> prefix.',
+        fmEye:'🎵 Music', fmTitle:'Turn Your Voice Channel<br>Into a Party Station', fmDesc:'YouTube search and direct links. Type <span class="code">/play</span> and the music starts — high quality, low latency!', fmLink:'Invite Rin Now →',
+        flEye:'🏆 Leveling', flTitle:'Chat to Earn XP &<br>Climb the Leaderboard', flDesc:'XP earned automatically while you chat. MEE6-style algorithm. Type <span class="code">/rank</span> to see your rank card!', flLink:'Invite Rin Now →',
+        hwEye:'Easy as 1-2-3', hwTitle:'3 Steps to Get Rin',
+        s1h:'Click Invite', s1d:'Click "Add to Server", pick your server, and authorize Rin to join.',
+        s2h:'Type r!help', s2d:'Send <span class="code-d">r!help</span> in any channel to see all available commands.',
+        s3h:"Let's Go!", s3d:'Play music, earn XP, use tools… Rin is with you 24/7 (´• ω •`)ﾉ',
+        ctaTitle:"Ready?<br>Let Rin Join Your Server!", ctaDesc:'Hehe, just one click and Rin is yours~ One in all, all in one!',
+        ctaInvite:'✨ Invite Rin Now', ctaDash:'Dashboard →',
+        footerTagline:'Your energetic all-in-one Discord assistant.<br>One in all, all in one!',
+        fc1h:'Features',fc1l1:'Music',fc1l2:'Leveling',fc1l3:'Moderation',fc1l4:'Welcome & AutoMod & more…',
+        fc2h:'Links',fc2l1:'Dashboard',fc2l2:'Invite Rin',
+        fc3h:'About',fc3l1:'Terms of Service',fc3l2:'Privacy Policy',
+    }
+};
+
+let lang = localStorage.getItem('rinbot_lang') || (navigator.language.startsWith('zh') ? 'zh' : 'en');
+
+function s(id, v, html=false){
+    const el=document.getElementById(id); if(!el)return;
+    html ? el.innerHTML=v : el.textContent=v;
+}
+function render(){
+    const t=i18n[lang];
+    document.title=t.title;
+    document.documentElement.lang=lang==='zh'?'zh-CN':'en';
+    s('btn-lang',t.lang);
+    ['btn-invite','sn-invite'].forEach(id=>s(id,t.invite));
+    ['btn-dashboard','sn-dash'].forEach(id=>s(id,t.dash));
+    s('hero-tag',t.heroTag);
+    s('hero-title',t.heroTitle,true); s('hero-desc',t.heroDesc,true);
+    s('btn-hero',t.heroBtn); s('btn-dash-hero',t.heroDash);
+    s('badge-on',t.badgeOn); s('badge-xp',t.badgeXp);
+    s('st1',t.st1); s('st2',t.st2); s('st3',t.st3); s('st4',t.st4);
+    s('ticker-lbl',t.tickerLbl);
+    s('bento-eye',t.bentoEye); s('bento-title',t.bentoTitle); s('bento-sub',t.bentoSub);
+    s('bc1t',t.bc1t); s('bc1h',t.bc1h,true); s('bc1d',t.bc1d,true); s('bc1hint',t.bc1hint);
+    s('bc2t',t.bc2t); s('bc2h',t.bc2h,true); s('bc2d',t.bc2d,true);
+    s('bc3t',t.bc3t); s('bc3h',t.bc3h,true); s('bc3d',t.bc3d,true);
+    s('bc4t',t.bc4t); s('bc4h',t.bc4h,true); s('bc4d',t.bc4d,true);
+    s('fm-eye',t.fmEye); s('fm-title',t.fmTitle,true); s('fm-desc',t.fmDesc,true); s('fm-link',t.fmLink);
+    s('fl-eye',t.flEye); s('fl-title',t.flTitle,true); s('fl-desc',t.flDesc,true); s('fl-link',t.flLink);
+    s('hw-eye',t.hwEye); s('hw-title',t.hwTitle);
+    s('s1h',t.s1h); s('s1d',t.s1d,true);
+    s('s2h',t.s2h); s('s2d',t.s2d,true);
+    s('s3h',t.s3h); s('s3d',t.s3d,true);
+    s('cta-title',t.ctaTitle,true); s('cta-desc',t.ctaDesc);
+    s('cta-invite',t.ctaInvite); s('cta-dash',t.ctaDash);
+    s('footer-tagline',t.footerTagline,true);
+    s('fc1-head',t.fc1h); s('fc1-l1',t.fc1l1); s('fc1-l2',t.fc1l2); s('fc1-l3',t.fc1l3); s('fc1-l4',t.fc1l4);
+    s('fc2-head',t.fc2h); s('fc2-l1',t.fc2l1); s('fc2-l2',t.fc2l2);
+    s('fc3-head',t.fc3h); s('fc3-l1',t.fc3l1); s('fc3-l2',t.fc3l2);
+}
+function toggleLanguage(){ lang=lang==='zh'?'en':'zh'; localStorage.setItem('rinbot_lang',lang); render(); }
+render();
+
+/* Sticky nav */
+const snav=document.getElementById('snav');
+new IntersectionObserver(([e])=>snav.classList.toggle('on',!e.isIntersecting),{threshold:0})
+    .observe(document.getElementById('topnav'));
+
+/* Scroll reveal */
+const ro=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{ if(e.isIntersecting){e.target.classList.add('vis'); ro.unobserve(e.target);} });
+},{threshold:.08});
+document.querySelectorAll('.rv').forEach(el=>ro.observe(el));
+</script>
+</body>
+</html>

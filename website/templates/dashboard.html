@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>控制台 | 小凛 Rin</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-inner">
+
+            <a href="/" class="brand">
+                <span class="brand-dot"></span>
+                小凛 Rin
+            </a>
+
+            <nav class="side-nav">
+                <span class="nav-label">导航</span>
+                <ul>
+                    <li>
+                        <a href="/dashboard" class="nav-link active">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                                <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                            </svg>
+                            我的服务器
+                        </a>
+                    </li>
+                    <li>
+                        <a class="nav-link nav-disabled">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>
+                            </svg>
+                            数据统计
+                            <span class="nav-badge">即将上线</span>
+                        </a>
+                    </li>
+                </ul>
+
+                <span class="nav-label" style="margin-top:18px;">设置</span>
+                <ul>
+                    <li>
+                        <a class="nav-link nav-disabled">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="3"/>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                            </svg>
+                            全局设置
+                            <span class="nav-badge">即将上线</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="user-card">
+                <img src="{{ user.avatar_url }}" alt="头像" class="user-avatar">
+                <div class="user-info">
+                    <div class="user-name">{{ user.name }}</div>
+                    <a href="/logout" class="logout-link">退出登录</a>
+                </div>
+            </div>
+
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div>
+                <h1 class="page-title">我的服务器</h1>
+                <p class="page-sub">选择你要管理配置的服务器 (´• ω •`)ﾉ</p>
+            </div>
+            <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+               target="_blank" class="btn-add">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                邀请到新服务器
+            </a>
+        </header>
+
+        <div class="content-area">
+            {% if guilds %}
+
+            {# ── 已加入的服务器 ── #}
+            {% set joined = guilds | selectattr('bot_joined') | list %}
+            {% set not_joined = guilds | rejectattr('bot_joined') | list %}
+
+            {% if joined %}
+            <div class="section-heading">
+                <span class="section-dot section-dot--green"></span>
+                小凛已加入
+                <span class="section-count">{{ joined | length }}</span>
+            </div>
+            <div class="server-grid">
+                {% for guild in joined %}
+                <div class="server-card server-card--joined">
+                    <div class="card-top">
+                        {% if guild.icon_url %}
+                            <img src="{{ guild.icon_url }}" alt="{{ guild.name }}" class="server-icon">
+                        {% else %}
+                            <div class="server-icon server-icon--text">{{ guild.name[0] | upper }}</div>
+                        {% endif %}
+                        <div class="server-meta">
+                            <h3 class="server-name" title="{{ guild.name }}">{{ guild.name }}</h3>
+                            <span class="server-status status--joined">
+                                <span class="status-dot dot--green"></span>小凛在此服务器
+                            </span>
+                        </div>
+                    </div>
+                    <button class="btn-manage" data-id="{{ guild.id }}" data-name="{{ guild.name }}">
+                        管理配置
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {# ── 未加入的服务器 ── #}
+            {% if not_joined %}
+            <div class="section-heading" style="margin-top: {% if joined %}36px{% else %}0{% endif %}">
+                <span class="section-dot section-dot--gray"></span>
+                小凛未加入
+                <span class="section-count">{{ not_joined | length }}</span>
+            </div>
+            <div class="server-grid">
+                {% for guild in not_joined %}
+                <div class="server-card server-card--unjoined">
+                    <div class="card-top">
+                        {% if guild.icon_url %}
+                            <img src="{{ guild.icon_url }}" alt="{{ guild.name }}" class="server-icon server-icon--dim">
+                        {% else %}
+                            <div class="server-icon server-icon--text server-icon--dim-text">{{ guild.name[0] | upper }}</div>
+                        {% endif %}
+                        <div class="server-meta">
+                            <h3 class="server-name" title="{{ guild.name }}">{{ guild.name }}</h3>
+                            <span class="server-status status--unjoined">
+                                <span class="status-dot dot--gray"></span>小凛尚未加入
+                            </span>
+                        </div>
+                    </div>
+                    <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&guild_id={{ guild.id }}&integration_type=0&scope=bot+applications.commands"
+                       target="_blank" class="btn-invite-server">
+                        邀请小凛加入
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-emoji">( •᷄ ω •᷅ )</div>
+                <h3>找不到可管理的服务器</h3>
+                <p>你还没有拥有服务器，或者没有「管理服务器」权限哦。</p>
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="btn-add" style="margin-top:24px; display:inline-flex;">邀请小凛到你的服务器</a>
+            </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>

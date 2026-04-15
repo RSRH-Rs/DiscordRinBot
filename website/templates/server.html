@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ guild.name }} · 小凛 Rin</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <style>
+/* ═══ Module page layout ═══ */
+.mod-page { display:none; }
+.mod-page.active { display:block; }
+
+/* Module header banner */
+.mod-banner {
+    position:relative; padding:32px 36px; border-radius:20px; margin-bottom:28px; overflow:hidden;
+    background:linear-gradient(135deg, #3A2A35 0%, #2C2825 100%);
+}
+.mod-banner::before {
+    content:''; position:absolute; top:-40px; right:-40px; width:200px; height:200px;
+    border-radius:50%; background:radial-gradient(circle, rgba(232,137,154,.2) 0%, transparent 70%);
+    pointer-events:none;
+}
+.mod-banner-icon {
+    width:56px; height:56px; border-radius:16px; display:flex; align-items:center; justify-content:center;
+    font-size:1.6rem; margin-bottom:16px;
+    background:linear-gradient(135deg, rgba(232,137,154,.3), rgba(232,137,154,.1));
+    border:1px solid rgba(232,137,154,.2);
+}
+.mod-banner h2 { font-size:1.5rem; font-weight:800; color:#FAF0F4; margin-bottom:6px; letter-spacing:-.3px; }
+.mod-banner p { font-size:.88rem; color:rgba(250,240,244,.5); font-weight:600; }
+
+/* Section blocks */
+.cfg-section {
+    background:var(--card); border:1px solid var(--border-light); border-radius:18px;
+    padding:24px 28px; margin-bottom:18px;
+}
+.cfg-section-title {
+    font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px;
+    color:var(--text-muted); margin-bottom:16px; display:flex; align-items:center; gap:8px;
+}
+.cfg-row {
+    display:flex; align-items:center; justify-content:space-between; gap:16px;
+    padding:14px 0; border-bottom:1px solid var(--border-light);
+}
+.cfg-row:last-child { border-bottom:none; }
+.cfg-row-info { flex:1; min-width:0; }
+.cfg-row-label { font-size:.92rem; font-weight:700; margin-bottom:3px; }
+.cfg-row-hint { font-size:.78rem; color:var(--text-muted); line-height:1.5; }
+
+/* Form elements */
+.cfg-select, .cfg-input, .cfg-textarea {
+    width:100%; max-width:360px; padding:10px 14px; border:1.5px solid var(--border);
+    border-radius:10px; background:var(--bg); color:var(--text); font-size:.88rem;
+    font-weight:600; font-family:'Nunito',sans-serif; outline:none; transition:.18s;
+}
+.cfg-select:focus, .cfg-input:focus, .cfg-textarea:focus { border-color:var(--pink); }
+.cfg-textarea { max-width:100%; resize:vertical; min-height:80px; line-height:1.6; }
+.cfg-num {
+    width:80px; padding:8px 12px; border:1.5px solid var(--border); border-radius:8px;
+    background:var(--bg); text-align:center; font-size:.88rem; font-weight:700;
+    font-family:'Nunito',sans-serif; outline:none;
+}
+.cfg-num:focus { border-color:var(--pink); }
+.cfg-hint { font-size:.72rem; color:var(--text-muted); margin-top:5px; }
+.cfg-columns { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+@media(max-width:700px) { .cfg-columns { grid-template-columns:1fr; } }
+
+/* Toggle */
+.cfg-tog { position:relative; width:44px; height:24px; display:inline-block; flex-shrink:0; }
+.cfg-tog input { opacity:0; width:0; height:0; position:absolute; }
+.cfg-tog .track {
+    position:absolute; inset:0; background:var(--border); border-radius:24px;
+    transition:.25s; cursor:pointer;
+}
+.cfg-tog input:checked + .track { background:var(--green); }
+.cfg-tog .thumb {
+    position:absolute; top:2.5px; left:2.5px; width:19px; height:19px; border-radius:50%;
+    background:var(--white); box-shadow:0 1px 4px rgba(0,0,0,.18);
+    transition:transform .25s cubic-bezier(.4,0,.2,1); pointer-events:none;
+}
+.cfg-tog input:checked ~ .thumb { transform:translateX(20px); }
+
+/* Tag chips */
+.tag-list { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.tag-chip {
+    display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:50px;
+    background:var(--bg); border:1px solid var(--border); font-size:.8rem; font-weight:700;
+}
+.tag-rm { cursor:pointer; color:var(--text-muted); font-size:.95rem; line-height:1; }
+.tag-rm:hover { color:#E24B4A; }
+.tag-add { display:flex; gap:8px; margin-top:10px; max-width:360px; }
+.tag-add input { flex:1; }
+.tag-add-btn {
+    padding:8px 16px; border-radius:8px; background:var(--pink-bg); color:var(--pink);
+    border:1px solid var(--pink-border); font-size:.82rem; font-weight:800;
+    cursor:pointer; font-family:'Nunito',sans-serif; white-space:nowrap; transition:.18s;
+}
+.tag-add-btn:hover { background:var(--pink); color:#fff; }
+
+/* Save bar */
+.save-bar {
+    position:sticky; bottom:0; left:0; right:0; padding:14px 28px;
+    background:rgba(240,237,232,.92); backdrop-filter:blur(12px);
+    border-top:1px solid var(--border); display:flex; align-items:center;
+    justify-content:space-between; z-index:20; margin:18px -32px -40px;
+    border-radius:0 0 0 0;
+}
+.btn-save {
+    padding:10px 28px; border-radius:50px; background:var(--pink); color:#fff;
+    font-size:.9rem; font-weight:800; border:none; cursor:pointer;
+    font-family:'Nunito',sans-serif; transition:.2s;
+    box-shadow:0 4px 14px rgba(232,137,154,.3);
+}
+.btn-save:hover { background:#D8758A; transform:translateY(-1px); }
+.btn-save:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+.save-hint { font-size:.8rem; color:var(--text-muted); font-weight:600; }
+
+/* Warn box */
+.warn-box {
+    display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:12px;
+    background:#FFF8E6; border:1px solid #FFE8A3; font-size:.82rem; font-weight:700;
+    color:#85600B; margin-top:12px;
+}
+
+/* Overview grid */
+.ov-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:14px; margin-bottom:24px; }
+.ov-card { background:var(--card); border:1px solid var(--border-light); border-radius:16px; padding:20px 22px; }
+.ov-label { font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color:var(--text-muted); margin-bottom:8px; }
+.ov-val { font-size:1.7rem; font-weight:800; line-height:1; letter-spacing:-.5px; }
+.ov-val .accent { font-size:.9rem; color:var(--pink); }
+
+/* Module cards grid (overview) */
+.mod-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:14px; }
+.mod-card {
+    background:var(--card); border:1px solid var(--border-light); border-radius:16px;
+    padding:22px; cursor:pointer; transition:.22s;
+}
+.mod-card:hover { border-color:var(--pink-border); transform:translateY(-2px); box-shadow:0 8px 24px rgba(232,137,154,.1); }
+.mod-card-head { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+.mod-card-icon {
+    width:44px; height:44px; border-radius:12px; display:flex; align-items:center;
+    justify-content:center; font-size:1.2rem; flex-shrink:0;
+    background:var(--bg); box-shadow:0 2px 8px rgba(0,0,0,.04);
+}
+.mod-card-name { font-size:.95rem; font-weight:800; }
+.mod-card-desc { font-size:.82rem; color:var(--text-mid); line-height:1.6; }
+.mod-card-btn {
+    display:inline-flex; align-items:center; gap:6px; margin-top:14px; padding:7px 16px;
+    border-radius:8px; background:var(--pink-bg); color:var(--pink); font-size:.8rem;
+    font-weight:800; border:1px solid var(--pink-border); transition:.18s;
+}
+.mod-card:hover .mod-card-btn { background:var(--pink); color:#fff; }
+
+/* Case log */
+.case-item { padding:12px 14px; border-radius:12px; background:var(--bg); border:1px solid var(--border-light); margin-bottom:8px; }
+.case-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.case-action { font-weight:800; text-transform:uppercase; font-size:.82rem; }
+.case-time { font-size:.72rem; color:var(--text-muted); }
+.case-body { font-size:.82rem; color:var(--text-mid); }
+.empty-state-sm { text-align:center; padding:32px; color:var(--text-muted); font-size:.88rem; }
+
+/* Role select (multi) */
+.role-select-list { max-height:180px; overflow-y:auto; border:1.5px solid var(--border); border-radius:10px; background:var(--bg); max-width:360px; }
+.role-opt { display:flex; align-items:center; gap:8px; padding:8px 14px; font-size:.85rem; font-weight:600; cursor:pointer; transition:.1s; }
+.role-opt:hover { background:var(--pink-bg); }
+.role-opt input { accent-color:var(--pink); }
+
+/* Sidebar active per-module */
+.nav-link[data-mod].active { background:rgba(232,137,154,.15); color:var(--pink); }
+@keyframes pip-pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-inner">
+            <a href="/" class="brand"><span class="brand-dot"></span>小凛 Rin</a>
+            <nav class="side-nav">
+                <span class="nav-label">导航</span>
+                <ul>
+                    <li><a href="/dashboard" class="nav-link">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                        我的服务器
+                    </a></li>
+                </ul>
+                <span class="nav-label" style="margin-top:18px;">{{ guild.name }}</span>
+                <ul id="side-modules">
+                    <li><a class="nav-link active" data-mod="overview" onclick="go('overview')"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> 概览</a></li>
+                    <li><a class="nav-link" data-mod="music" onclick="go('music')"><i data-lucide="music" style="width:16px;height:16px;"></i> 音乐系统</a></li>
+                    <li><a class="nav-link" data-mod="welcome" onclick="go('welcome')"><i data-lucide="smile-plus" style="width:16px;height:16px;"></i> 欢迎新成员</a></li>
+                    <li><a class="nav-link" data-mod="roles" onclick="go('roles')"><i data-lucide="tags" style="width:16px;height:16px;"></i> 领取身份组</a></li>
+                    <li><a class="nav-link" data-mod="automod" onclick="go('automod')"><i data-lucide="shield-check" style="width:16px;height:16px;"></i> 自动审核</a></li>
+                    <li><a class="nav-link" data-mod="moderation" onclick="go('moderation')"><i data-lucide="gavel" style="width:16px;height:16px;"></i> 管理模块</a></li>
+                    <li><a class="nav-link" data-mod="giveaway" onclick="go('giveaway')"><i data-lucide="gift" style="width:16px;height:16px;"></i> 抽奖管理</a></li>
+                    <li><a class="nav-link" data-mod="leveling" onclick="go('leveling')"><i data-lucide="trophy" style="width:16px;height:16px;"></i> 等级系统</a></li>
+                    <li><a class="nav-link" data-mod="personalizer" onclick="go('personalizer')"><i data-lucide="palette" style="width:16px;height:16px;"></i> Bot 个性化</a></li>
+                </ul>
+            </nav>
+            <div class="user-card">
+                <img src="{{ user.avatar_url }}" alt="头像" class="user-avatar">
+                <div class="user-info">
+                    <div class="user-name">{{ user.name }}</div>
+                    <a href="/logout" class="logout-link">退出登录</a>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div>
+                <h1 class="page-title" id="page-title">{{ guild.name }}</h1>
+                <p class="page-sub" id="page-sub">服务器配置面板</p>
+            </div>
+            <div class="bot-online-badge"><span class="pip"></span>小凛在线</div>
+        </header>
+
+        <div class="content-area">
+
+<!-- ═══════ 概览 ═══════ -->
+<div class="mod-page active" id="pg-overview">
+    <a href="/dashboard" class="breadcrumb" style="display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:800;color:var(--text-muted);margin-bottom:18px;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        返回服务器列表
+    </a>
+    <!-- Server header -->
+    <div style="display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--border-light);border-radius:20px;padding:20px 24px;margin-bottom:24px;">
+        {% if guild.icon_url %}
+            <img src="{{ guild.icon_url }}" style="width:64px;height:64px;border-radius:16px;object-fit:cover;box-shadow:0 4px 16px rgba(90,74,66,.1);">
+        {% else %}
+            <div style="width:64px;height:64px;border-radius:16px;background:var(--pink-bg);border:1px solid var(--pink-border);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:var(--pink);">{{ guild.name[0]|upper }}</div>
+        {% endif %}
+        <div style="flex:1;min-width:0;">
+            <div style="font-size:1.25rem;font-weight:800;letter-spacing:-.3px;margin-bottom:4px;">{{ guild.name }}</div>
+            <div style="font-size:.79rem;color:var(--text-muted);font-weight:600;display:flex;gap:14px;flex-wrap:wrap;">
+                <span style="display:flex;align-items:center;gap:5px;"><i data-lucide="user" style="width:12px;height:12px;"></i> 管理员：{{ user.name }}</span>
+                <span style="display:flex;align-items:center;gap:5px;"><i data-lucide="hash" style="width:12px;height:12px;"></i> ID: {{ guild.id }}</span>
+            </div>
+        </div>
+        <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-size:.72rem;font-weight:800;padding:5px 12px;border-radius:50px;"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:pip-pulse 2s infinite;"></span>小凛在线</div>
+    </div>
+    <div class="ov-grid">
+        <div class="ov-card"><div class="ov-label">已启用模块</div><div class="ov-val">8 <span class="accent">/ 8</span></div></div>
+        <div class="ov-card"><div class="ov-label">Bot 状态</div><div class="ov-val" style="color:var(--green);font-size:1rem;">● 在线</div></div>
+        <div class="ov-card"><div class="ov-label">指令前缀</div><div class="ov-val" style="font-family:monospace;font-size:1.4rem;">r!</div></div>
+        <div class="ov-card"><div class="ov-label">可用指令</div><div class="ov-val">40+ <span class="accent">条</span></div></div>
+    </div>
+    <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:14px;">功能模块</div>
+    <div class="mod-grid">
+        <div class="mod-card" onclick="go('music')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="music" style="width:22px;height:22px;"></i></div><div class="mod-card-name">音乐系统</div></div><div class="mod-card-desc">完整播放器：队列、循环、音量、投票跳过</div><div class="mod-card-btn">开始设定 →</div></div>
+        <div class="mod-card" onclick="go('welcome')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="smile-plus" style="width:22px;height:22px;"></i></div><div class="mod-card-name">欢迎新成员</div></div><div class="mod-card-desc">欢迎图卡、自动身份组、道别消息</div><div class="mod-card-btn">开始设定 →</div></div>
+        <div class="mod-card" onclick="go('roles')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="tags" style="width:22px;height:22px;"></i></div><div class="mod-card-name">领取身份组</div></div><div class="mod-card-desc">成员点击 emoji 自助获取身份组</div><div class="mod-card-btn">开始设定 →</div></div>
+        <div class="mod-card" onclick="go('automod')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="shield-check" style="width:22px;height:22px;"></i></div><div class="mod-card-name">自动审核</div></div><div class="mod-card-desc">反刷屏、违禁词、链接过滤、大写轰炸</div><div class="mod-card-btn">开始设定 →</div></div>
+        <div class="mod-card" onclick="go('moderation')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="gavel" style="width:22px;height:22px;"></i></div><div class="mod-card-name">管理模块</div></div><div class="mod-card-desc">kick / ban / mute / warn / purge + 自动处罚</div><div class="mod-card-btn">开始设定 →</div></div>
+        <div class="mod-card" onclick="go('giveaway')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="gift" style="width:22px;height:22px;"></i></div><div class="mod-card-name">抽奖管理</div></div><div class="mod-card-desc">倒计时自动开奖，公平透明</div><div class="mod-card-btn">开始设定 →</div></div>
+        <div class="mod-card" onclick="go('leveling')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="trophy" style="width:22px;height:22px;"></i></div><div class="mod-card-name">等级系统</div></div><div class="mod-card-desc">智能经验算法，精美等级卡片</div><div class="mod-card-btn">开始设定 →</div></div>
+        <div class="mod-card" onclick="go('general')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="wrench" style="width:22px;height:22px;"></i></div><div class="mod-card-name">通用工具</div></div><div class="mod-card-desc">status / avatar / roll 等实用指令</div><div class="mod-card-btn">查看 →</div></div>
+    </div>
+</div>
+
+<!-- ═══════ 音乐 ═══════ -->
+<div class="mod-page" id="pg-music">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="music" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>音乐系统</h2><p>完整播放器：队列、循环、音量、洗牌、投票跳过</p></div>
+    <div class="cfg-section">
+        <div class="cfg-section-title">🎵 基本设定</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">DJ 身份组</div><div class="cfg-row-hint">限制特定身份组才能操作音乐指令（留空 = 所有人可用）</div></div>
+            <select class="cfg-select" id="mu-dj" style="max-width:220px;"><option value="0">— 不限制 —</option></select>
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">消息通知频道 🎶</div><div class="cfg-row-hint">有新歌播放时在频道通知当前播放的音乐</div></div>
+            <select class="cfg-select" id="mu-ch" style="max-width:220px;"><option value="0">#</option></select>
+        </div>
+    </div>
+    <div class="save-bar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" onclick="showToast('🎵 音乐配置功能即将上线！目前请使用 Discord 指令配置。')">储存设定</button></div>
+</div>
+
+<!-- ═══════ 欢迎新成员 ═══════ -->
+<div class="mod-page" id="pg-welcome">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="smile-plus" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>欢迎新成员</h2><p>给予新成员身份组、欢迎讯息</p></div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">✉️ 欢迎讯息内容</div>
+        <div class="cfg-row-info" style="margin-bottom:12px;">
+            <div class="cfg-row-label">欢迎消息</div>
+            <div class="cfg-row-hint">编辑讯息的标题、内文。可用 {member} = @用户, {server} = 服务器名</div>
+        </div>
+        <textarea class="cfg-textarea" id="w-msg" placeholder="欢迎 {member} 加入 {server}！🎉"></textarea>
+        <div style="margin-top:16px;">
+            <div class="cfg-row-label">道别消息</div>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">成员离开时发送的消息</div>
+            <textarea class="cfg-textarea" id="w-fmsg" placeholder="{member} 离开了我们... 👋"></textarea>
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">📢 发送频道</div>
+        <div class="cfg-columns">
+            <div>
+                <div class="cfg-row-label">欢迎频道</div>
+                <div class="cfg-row-hint" style="margin-bottom:8px;">在该频道发送欢迎图卡</div>
+                <select class="cfg-select" id="w-ch"><option value="0">#</option></select>
+            </div>
+            <div>
+                <div class="cfg-row-label">道别频道</div>
+                <div class="cfg-row-hint" style="margin-bottom:8px;">在该频道发送道别消息</div>
+                <select class="cfg-select" id="w-fch"><option value="0">#</option></select>
+            </div>
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">🏷 新成员身份组</div>
+        <div class="cfg-row-hint" style="margin-bottom:10px;">新加入的成员将可以收到该身份组</div>
+        <div class="role-select-list" id="w-roles"></div>
+        <div class="warn-box">⚠️ 请确保该身份组的位置在机器人下方，并且机器人有管理身份组权限</div>
+    </div>
+
+    <div class="save-bar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="w-save" onclick="saveWelcome()">储存设定</button></div>
+</div>
+
+<!-- ═══════ 领取身份组 ═══════ -->
+<div class="mod-page" id="pg-roles">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="tags" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>领取身份组讯息</h2><p>让成员使用选单来选取自己需要的身份组</p></div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title"><i data-lucide="send" style="width:14px;height:14px;"></i> 发送频道</div>
+        <div class="cfg-row-label">在该频道发送领取讯息</div>
+        <select class="cfg-select" id="rr-ch" style="margin-top:6px;"><option value="0"># 选择频道</option></select>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title"><i data-lucide="list" style="width:14px;height:14px;"></i> 身份组清单</div>
+        <div class="cfg-row-hint" style="margin-bottom:10px;">身份组选项将会出现在讯息下方的反应</div>
+        <div id="rr-roles-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button class="tag-add-btn" style="margin-top:12px;" onclick="addRoleRow()">+ 新增身份组</button>
+        <div class="warn-box">⚠️ 最多可选 20 个身份组。请确保身份组位置在机器人下方</div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title"><i data-lucide="file-text" style="width:14px;height:14px;"></i> 内文</div>
+        <div class="cfg-row-hint" style="margin-bottom:8px;">领取讯息的标题和描述</div>
+        <input class="cfg-input" id="rr-title" placeholder="🏷 身份组选择" style="margin-bottom:10px;">
+        <textarea class="cfg-textarea" id="rr-content" placeholder="点击下方的反应来领取对应身份组"></textarea>
+    </div>
+
+    <div class="save-bar">
+        <span class="save-hint">配置好后点击送出，小凛会在频道发送领取面板</span>
+        <button class="btn-save" id="rr-send" onclick="sendRRPanel()">送出</button>
+    </div>
+
+    <div class="cfg-section" style="margin-top:52px;">
+        <div class="cfg-section-title"><i data-lucide="archive" style="width:14px;height:14px;"></i> 已建立的面板</div>
+        <div id="rr-existing"><div class="empty-state-sm">加载中…</div></div>
+    </div>
+</div>
+
+<!-- ═══════ 自动审核 ═══════ -->
+<div class="mod-page" id="pg-automod">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="shield-check" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>自动审核</h2><p>自动拦截违规内容和刷屏行为，保护服务器环境</p></div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">⚙️ 总开关 & 日志</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">启用自动审核</div><div class="cfg-row-hint">开启/关闭整个审核系统</div></div>
+            <label class="cfg-tog"><input type="checkbox" id="am-enabled"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">审核操作记录发送到此频道</div></div>
+            <select class="cfg-select" id="am-log" style="max-width:220px;"><option value="0">#</option></select>
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">🚫 反刷屏</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">启用反刷屏</div><div class="cfg-row-hint">短时间内发大量消息自动禁言</div></div>
+            <label class="cfg-tog"><input type="checkbox" id="am-spam"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">触发阈值</div><div class="cfg-row-hint">几秒内发送几条消息触发</div></div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <input class="cfg-num" type="number" id="am-st" value="5" min="2" max="20"> <span style="font-size:.82rem;color:var(--text-muted);">条 /</span>
+                <input class="cfg-num" type="number" id="am-si" value="5" min="2" max="30"> <span style="font-size:.82rem;color:var(--text-muted);">秒</span>
+            </div>
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">禁言时长 (秒)</div></div>
+            <input class="cfg-num" type="number" id="am-mute" value="300" min="60" max="86400">
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">🤬 违禁词过滤</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">启用违禁词过滤</div></div>
+            <label class="cfg-tog"><input type="checkbox" id="am-bw"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div style="padding-top:10px;">
+            <div class="cfg-row-label">违禁词列表</div>
+            <div class="tag-list" id="am-bw-tags"></div>
+            <div class="tag-add"><input class="cfg-input" id="am-bw-new" placeholder="输入违禁词…" onkeydown="if(event.key==='Enter'){addTag('am-bw');event.preventDefault();}"><button class="tag-add-btn" onclick="addTag('am-bw')">添加</button></div>
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">🔗 链接过滤</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">启用链接过滤</div><div class="cfg-row-hint">自动删除非白名单域名的链接</div></div>
+            <label class="cfg-tog"><input type="checkbox" id="am-link"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        <div style="padding-top:10px;">
+            <div class="cfg-row-label">白名单域名</div>
+            <div class="tag-list" id="am-wl-tags"></div>
+            <div class="tag-add"><input class="cfg-input" id="am-wl-new" placeholder="如 youtube.com" onkeydown="if(event.key==='Enter'){addTag('am-wl');event.preventDefault();}"><button class="tag-add-btn" onclick="addTag('am-wl')">添加</button></div>
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">📝 其他</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">大写轰炸过滤</div><div class="cfg-row-hint">超过阈值百分比的大写字母</div></div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <input class="cfg-num" type="number" id="am-ct" value="70" min="50" max="100"><span style="font-size:.82rem;color:var(--text-muted);">%</span>
+                <label class="cfg-tog"><input type="checkbox" id="am-caps"><span class="track"></span><span class="thumb"></span></label>
+            </div>
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">重复消息过滤</div><div class="cfg-row-hint">连续发送相同消息达到次数触发</div></div>
+            <div style="display:flex;align-items:center;gap:6px;">
+                <input class="cfg-num" type="number" id="am-rt" value="3" min="2" max="10"><span style="font-size:.82rem;color:var(--text-muted);">次</span>
+                <label class="cfg-tog"><input type="checkbox" id="am-repeat"><span class="track"></span><span class="thumb"></span></label>
+            </div>
+        </div>
+    </div>
+
+    <div class="save-bar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="am-save" onclick="saveAutoMod()">储存设定</button></div>
+</div>
+
+<!-- ═══════ 管理模块 ═══════ -->
+<div class="mod-page" id="pg-moderation">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="gavel" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>管理模块</h2><p>kick / ban / tempban / mute / warn / purge / lock — 全套管理指令</p></div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">📋 管理日志频道</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">所有 kick/ban/warn/mute 操作自动记录到此频道</div></div>
+            <select class="cfg-select" id="mod-log" style="max-width:220px;"><option value="0">#</option></select>
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">⚠️ 警告自动处罚阈值</div>
+        <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">🔇 自动禁言</div><div class="cfg-row-hint">达到几次警告自动禁言 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-mt" value="3" min="0" max="50"></div>
+        <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">⏱ 禁言时长 (秒)</div></div><input class="cfg-num" type="number" id="mod-md" value="600" min="60" max="86400"></div>
+        <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">👢 自动踢出</div><div class="cfg-row-hint">达到几次警告自动踢出 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-kt" value="0" min="0" max="50"></div>
+        <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">🔨 自动封禁</div><div class="cfg-row-hint">达到几次警告自动封禁 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-bt" value="0" min="0" max="50"></div>
+    </div>
+
+    <div class="save-bar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mod-save" onclick="saveModeration()">储存设定</button></div>
+
+    <div class="cfg-section" style="margin-top:52px;">
+        <div class="cfg-section-title">📜 最近管理操作</div>
+        <div id="mod-cases"><div class="empty-state-sm">加载中…</div></div>
+    </div>
+</div>
+
+<!-- ═══════ 抽奖 ═══════ -->
+<div class="mod-page" id="pg-giveaway">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="gift" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>抽奖管理</h2><p>机器人帮你管理，让你可以专注在奖品丰厚的抽奖活动</p></div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title"><i data-lucide="plus-circle" style="width:14px;height:14px;"></i> 建立抽奖活动</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+                <div class="cfg-row-label">奖项名称 <span style="color:#E24B4A;">*</span></div>
+                <input class="cfg-input" id="gw-prize" placeholder="如: Discord Nitro 一个月" style="margin-top:6px;">
+            </div>
+            <div>
+                <div class="cfg-row-label">份数 <span style="color:#E24B4A;">*</span></div>
+                <input class="cfg-num" type="number" id="gw-winners" value="1" min="1" max="20" style="margin-top:6px;width:100%;">
+            </div>
+            <div>
+                <div class="cfg-row-label">发起频道 <span style="color:#E24B4A;">*</span></div>
+                <select class="cfg-select" id="gw-ch" style="margin-top:6px;max-width:100%;"><option value="0"># 选择频道</option></select>
+            </div>
+            <div>
+                <div class="cfg-row-label">结束时间 <span style="color:#E24B4A;">*</span></div>
+                <input class="cfg-input" type="datetime-local" id="gw-end" style="margin-top:6px;">
+            </div>
+        </div>
+        <div style="margin-top:16px;">
+            <div class="cfg-row-label">限制参加成员身份组 (选填)</div>
+            <div class="cfg-row-hint">留空 = 所有人都可以参加</div>
+            <select class="cfg-select" id="gw-role" style="margin-top:6px;"><option value="0">@ 不限制</option></select>
+        </div>
+        <button class="btn-save" style="margin-top:20px;width:auto;padding:10px 36px;" id="gw-create-btn" onclick="createGiveaway()">建立</button>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title"><i data-lucide="clock" style="width:14px;height:14px;"></i> 抽奖记录</div>
+        <div id="gw-list"><div class="empty-state-sm">加载中…</div></div>
+    </div>
+</div>
+
+<!-- ═══════ 等级 ═══════ -->
+<div class="mod-page" id="pg-leveling">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="trophy" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>等级系统</h2><p>小凛独家经验算法，发言即积累经验</p></div>
+    <div class="cfg-section">
+        <div class="cfg-section-title">🏅 排行榜</div>
+        <div id="lb-list"><div class="empty-state-sm">加载中…</div></div>
+    </div>
+</div>
+
+<!-- ═══════ 通用 ═══════ -->
+<div class="mod-page" id="pg-general">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="wrench" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>通用工具</h2><p>开箱即用的实用指令，无需额外配置</p></div>
+    <div class="cfg-section">
+        <div class="cfg-section-title">📋 可用指令</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/status</code> 服务器状态</div>
+            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/avatar</code> 查看头像</div>
+            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/roll</code> 投掷骰子</div>
+            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/help</code> 交互式帮助菜单</div>
+            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/setstatus</code> 修改 Bot 状态</div>
+            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/setbio</code> 修改 Bot 简介</div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════ Bot 个性化 ═══════ -->
+<div class="mod-page" id="pg-personalizer">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="palette" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>Bot 个性化</h2><p>修改小凛的名字、头像、状态和活动，让她成为你的专属机器人</p></div>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;">
+        <!-- Left: settings -->
+        <div>
+            <div class="cfg-section">
+                <div class="cfg-section-title">🖼 头像</div>
+                <div style="display:flex;align-items:center;gap:20px;">
+                    <div id="bp-av-preview" style="width:80px;height:80px;border-radius:20px;background:var(--bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:2rem;overflow:hidden;cursor:pointer;flex-shrink:0;" onclick="document.getElementById('bp-av-file').click()">
+                        <img id="bp-av-img" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
+                        <span id="bp-av-placeholder">🎨</span>
+                    </div>
+                    <div>
+                        <div class="cfg-row-label">点击左侧上传新头像</div>
+                        <div class="cfg-row-hint">支持 PNG / JPG，建议 256×256 以上</div>
+                        <button class="tag-add-btn" style="margin-top:8px;" onclick="uploadAvatar()" id="bp-av-btn">上传头像</button>
+                    </div>
+                    <input type="file" id="bp-av-file" accept="image/png,image/jpeg,image/gif" style="display:none;" onchange="previewAvatar(this)">
+                </div>
+            </div>
+
+            <div class="cfg-section">
+                <div class="cfg-section-title">📝 Bot 名称</div>
+                <div class="cfg-row">
+                    <div class="cfg-row-info"><div class="cfg-row-label">用户名</div><div class="cfg-row-hint">Discord 限制：每小时最多修改 2 次</div></div>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <input class="cfg-input" id="bp-name" style="max-width:200px;" placeholder="小凛 Rin">
+                        <button class="tag-add-btn" onclick="changeName()">修改</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="cfg-section">
+                <div class="cfg-section-title">🟢 Bot 状态</div>
+                <div class="cfg-row">
+                    <div class="cfg-row-info"><div class="cfg-row-label">在线状态</div></div>
+                    <select class="cfg-select" id="bp-status" style="max-width:200px;">
+                        <option value="online">🟢 Online 在线</option>
+                        <option value="idle">🌙 Idle 闲置</option>
+                        <option value="dnd">⛔ Do Not Disturb 请勿打扰</option>
+                        <option value="invisible">⚫ Invisible 隐身</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="cfg-section">
+                <div class="cfg-section-title">🎮 活动</div>
+                <div class="cfg-columns">
+                    <div>
+                        <div class="cfg-row-label">Activity Type 活动类型</div>
+                        <select class="cfg-select" id="bp-atype" style="margin-top:6px;" onchange="updatePreview()">
+                            <option value="watching">👀 Watching 观看中</option>
+                            <option value="playing">🎮 Playing 游玩中</option>
+                            <option value="listening">🎧 Listening to 收听中</option>
+                            <option value="competing">🏆 Competing in 竞争中</option>
+                            <option value="custom">💬 Custom 自定义</option>
+                            <option value="none">— 无活动 —</option>
+                        </select>
+                    </div>
+                    <div>
+                        <div class="cfg-row-label">Status text 状态文字</div>
+                        <input class="cfg-input" id="bp-atext" style="margin-top:6px;" placeholder="/help" onkeyup="updatePreview()">
+                    </div>
+                </div>
+            </div>
+
+            <div class="save-bar" style="margin:-18px -28px -40px;"><span class="save-hint">修改后 30 秒内自动生效</span><button class="btn-save" id="bp-save" onclick="savePersonalizer()">储存设定</button></div>
+        </div>
+
+        <!-- Right: preview -->
+        <div style="position:sticky;top:90px;">
+            <div class="cfg-section" style="text-align:center;">
+                <div class="cfg-section-title" style="justify-content:center;">📋 成员列表预览</div>
+                <div style="background:#2B2D31;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px;">
+                    <div style="position:relative;">
+                        <img id="prev-av-1" src="" style="width:36px;height:36px;border-radius:50%;background:#36393F;display:none;">
+                        <div id="prev-av-1-ph" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--pink),#D8758A);display:flex;align-items:center;justify-content:center;font-size:.9rem;">🌸</div>
+                        <div style="position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-radius:50%;border:2px solid #2B2D31;" id="prev-dot" class="prev-dot-online"></div>
+                    </div>
+                    <div style="text-align:left;">
+                        <div style="color:#F2F3F5;font-size:.85rem;font-weight:600;" id="prev-name">小凛 Rin</div>
+                        <div style="color:#B5BAC1;font-size:.72rem;" id="prev-act">观看中 /help</div>
+                    </div>
+                    <span style="margin-left:auto;font-size:.55rem;padding:2px 5px;border-radius:3px;background:#5865F2;color:#fff;font-weight:700;">APP</span>
+                </div>
+            </div>
+            <div class="cfg-section" style="text-align:center;margin-top:14px;">
+                <div class="cfg-section-title" style="justify-content:center;">👤 资料预览</div>
+                <div style="background:#232428;border-radius:12px;overflow:hidden;">
+                    <div style="height:60px;background:linear-gradient(135deg,#E8899A,#D8758A);"></div>
+                    <div style="padding:0 16px 16px;text-align:left;position:relative;">
+                        <div style="position:relative;margin-top:-24px;margin-bottom:10px;">
+                            <img id="prev-av-2" src="" style="width:56px;height:56px;border-radius:50%;border:4px solid #232428;background:#36393F;display:none;">
+                            <div id="prev-av-2-ph" style="width:56px;height:56px;border-radius:50%;border:4px solid #232428;background:linear-gradient(135deg,var(--pink),#D8758A);display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🌸</div>
+                        </div>
+                        <div style="color:#F2F3F5;font-size:.95rem;font-weight:700;" id="prev-name2">小凛 Rin</div>
+                        <div style="color:#B5BAC1;font-size:.72rem;margin-bottom:10px;">rinbot</div>
+                        <div style="background:#2B2D31;border-radius:8px;padding:8px 10px;margin-top:6px;">
+                            <div style="color:#B5BAC1;font-size:.72rem;" id="prev-act2">👀 观看中 /help</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        </div><!-- content-area -->
+    </main>
+
+    <!-- Toast -->
+    <div id="toast" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#3A302A;color:#FAF8F5;padding:11px 22px;border-radius:50px;font-size:.85rem;font-weight:700;font-family:'Nunito',sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.18);opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap;"></div>
+
+<script>
+const GID = "{{ guild.id }}";
+let _ch = null, _roles = null;
+
+/* ── Navigation ── */
+function go(mod) {
+    document.querySelectorAll('.mod-page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('#side-modules .nav-link').forEach(l => l.classList.remove('active'));
+    const pg = document.getElementById('pg-' + mod);
+    const nl = document.querySelector(`[data-mod="${mod}"]`);
+    if (pg) pg.classList.add('active');
+    if (nl) nl.classList.add('active');
+    window.scrollTo(0, 0);
+    // lazy load data
+    if (mod === 'welcome') loadWelcome();
+    if (mod === 'automod') loadAutoMod();
+    if (mod === 'moderation') loadModeration();
+    if (mod === 'giveaway') loadGiveaways();
+    if (mod === 'leveling') loadLeaderboard();
+    if (mod === 'music') loadMusicSelects();
+    if (mod === 'personalizer') loadPersonalizer();
+    if (mod === 'roles') loadRolesPage();
+    if (mod === 'giveaway') loadGiveawayPage();
+    // Re-render Lucide icons for newly visible content
+    if (window.lucide) lucide.createIcons();
+}
+
+/* ── API ── */
+async function api(path, method='GET', body=null) {
+    const opts = { method, headers: {'Content-Type':'application/json'} };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(`/api/guild/${GID}${path}`, opts);
+    return r.json();
+}
+async function getCh() { if (!_ch) _ch = await api('/channels').catch(()=>[]); return _ch || []; }
+async function getRoles() { if (!_roles) _roles = await api('/roles').catch(()=>[]); return _roles || []; }
+
+function chOpts(sel, channels, selected) {
+    const el = document.getElementById(sel);
+    el.innerHTML = '<option value="0">— 未设置 —</option>' +
+        channels.map(c => `<option value="${c.id}" ${String(c.id)===String(selected)?'selected':''}># ${c.name}</option>`).join('');
+}
+
+/* ── Welcome ── */
+let _wLoaded = false;
+async function loadWelcome() {
+    if (_wLoaded) return; _wLoaded = true;
+    const [cfg, ch, roles] = await Promise.all([api('/welcome'), getCh(), getRoles()]);
+    chOpts('w-ch', ch, cfg.welcome_channel);
+    chOpts('w-fch', ch, cfg.farewell_channel);
+    document.getElementById('w-msg').value = cfg.welcome_msg || '';
+    document.getElementById('w-fmsg').value = cfg.farewell_msg || '';
+    const autoRoles = cfg.auto_roles ? cfg.auto_roles.split(',').filter(Boolean) : [];
+    document.getElementById('w-roles').innerHTML = roles.map(r =>
+        `<label class="role-opt"><input type="checkbox" value="${r.id}" ${autoRoles.includes(String(r.id))?'checked':''}> ${r.name}</label>`
+    ).join('');
+}
+async function saveWelcome() {
+    const btn = document.getElementById('w-save'); btn.disabled = true; btn.textContent = '保存中…';
+    const checked = [...document.querySelectorAll('#w-roles input:checked')].map(i => i.value);
+    await api('/welcome', 'POST', {
+        welcome_channel: document.getElementById('w-ch').value,
+        farewell_channel: document.getElementById('w-fch').value,
+        auto_roles: checked.join(','),
+        welcome_msg: document.getElementById('w-msg').value,
+        farewell_msg: document.getElementById('w-fmsg').value,
+    });
+    btn.textContent = '✅ 已保存！'; showToast('✅ 欢迎配置已保存！');
+    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+}
+
+/* ── AutoMod ── */
+let _amLoaded = false;
+async function loadAutoMod() {
+    if (_amLoaded) return; _amLoaded = true;
+    const [cfg, ch] = await Promise.all([api('/automod'), getCh()]);
+    chOpts('am-log', ch, cfg.log_channel);
+    document.getElementById('am-enabled').checked = !!cfg.enabled;
+    document.getElementById('am-spam').checked = !!cfg.anti_spam;
+    document.getElementById('am-st').value = cfg.spam_threshold || 5;
+    document.getElementById('am-si').value = cfg.spam_interval || 5;
+    document.getElementById('am-mute').value = cfg.mute_duration || 300;
+    document.getElementById('am-bw').checked = !!cfg.anti_badword;
+    document.getElementById('am-link').checked = !!cfg.anti_link;
+    document.getElementById('am-caps').checked = !!cfg.anti_caps;
+    document.getElementById('am-ct').value = cfg.caps_threshold || 70;
+    document.getElementById('am-repeat').checked = !!cfg.anti_repeat;
+    document.getElementById('am-rt').value = cfg.repeat_threshold || 3;
+    renderTags('am-bw-tags', cfg.badwords || []);
+    renderTags('am-wl-tags', cfg.link_whitelist || []);
+}
+async function saveAutoMod() {
+    const btn = document.getElementById('am-save'); btn.disabled = true; btn.textContent = '保存中…';
+    await api('/automod', 'POST', {
+        enabled: document.getElementById('am-enabled').checked ? 1 : 0,
+        log_channel: document.getElementById('am-log').value,
+        anti_spam: document.getElementById('am-spam').checked ? 1 : 0,
+        spam_threshold: +document.getElementById('am-st').value,
+        spam_interval: +document.getElementById('am-si').value,
+        anti_badword: document.getElementById('am-bw').checked ? 1 : 0,
+        badwords: collectTags('am-bw-tags'),
+        anti_link: document.getElementById('am-link').checked ? 1 : 0,
+        link_whitelist: collectTags('am-wl-tags'),
+        anti_caps: document.getElementById('am-caps').checked ? 1 : 0,
+        caps_threshold: +document.getElementById('am-ct').value,
+        anti_repeat: document.getElementById('am-repeat').checked ? 1 : 0,
+        repeat_threshold: +document.getElementById('am-rt').value,
+        mute_duration: +document.getElementById('am-mute').value,
+    });
+    btn.textContent = '✅ 已保存！'; showToast('✅ 审核配置已保存！');
+    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+}
+
+/* ── Moderation ── */
+let _modLoaded = false;
+async function loadModeration() {
+    if (_modLoaded) return; _modLoaded = true;
+    const [cfg, ch, cases] = await Promise.all([api('/moderation'), getCh(), api('/moderation/cases')]);
+    chOpts('mod-log', ch, cfg.log_channel);
+    document.getElementById('mod-mt').value = cfg.warn_mute_threshold || 3;
+    document.getElementById('mod-md').value = cfg.warn_mute_duration || 600;
+    document.getElementById('mod-kt').value = cfg.warn_kick_threshold || 0;
+    document.getElementById('mod-bt').value = cfg.warn_ban_threshold || 0;
+    const el = document.getElementById('mod-cases');
+    if (!cases || cases.length === 0) { el.innerHTML = '<div class="empty-state-sm">暂无管理记录</div>'; return; }
+    const colors = {kick:'#E8899A',ban:'#E24B4A',tempban:'#E24B4A',mute:'#EF9F27',warn:'#FFD166',unban:'#5A9E6F',unmute:'#5A9E6F',purge:'#85B7EB'};
+    el.innerHTML = cases.map(c => {
+        const d = new Date(c.created_at * 1000);
+        const ts = d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+        return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${colors[c.action]||'var(--text)'}">#${c.id} ${c.action}</span><span class="case-time">${ts}</span></div><div class="case-body">用户 ${c.user_id} · 原因: ${c.reason}${c.duration?' · 时长: '+c.duration:''}</div></div>`;
+    }).join('');
+}
+async function saveModeration() {
+    const btn = document.getElementById('mod-save'); btn.disabled = true; btn.textContent = '保存中…';
+    await api('/moderation', 'POST', {
+        log_channel: document.getElementById('mod-log').value,
+        warn_mute_threshold: +document.getElementById('mod-mt').value,
+        warn_mute_duration: +document.getElementById('mod-md').value,
+        warn_kick_threshold: +document.getElementById('mod-kt').value,
+        warn_ban_threshold: +document.getElementById('mod-bt').value,
+    });
+    btn.textContent = '✅ 已保存！'; showToast('✅ 管理配置已保存！');
+    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+}
+
+/* ── Music (selects only) ── */
+let _muLoaded = false;
+async function loadMusicSelects() {
+    if (_muLoaded) return; _muLoaded = true;
+    const [ch, roles] = await Promise.all([getCh(), getRoles()]);
+    chOpts('mu-ch', ch, 0);
+    const djSel = document.getElementById('mu-dj');
+    djSel.innerHTML = '<option value="0">— 不限制 —</option>' + roles.map(r => `<option value="${r.id}">@ ${r.name}</option>`).join('');
+}
+
+/* ── Giveaway list ── */
+async function loadGiveaways() {
+    const data = await api('/giveaways').catch(()=>[]);
+    const el = document.getElementById('gw-list');
+    if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state-sm" style="padding:40px;">＋<br><br>还没有任何抽奖活动</div>'; return; }
+    el.innerHTML = data.map(g => {
+        const d = new Date(g.end_time * 1000);
+        return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${g.ended?'var(--text-muted)':'var(--green)'}">#${g.id} ${g.prize}</span><span class="case-time">${g.ended?'已结束':'进行中'} · ${d.toLocaleDateString('zh-CN')}</span></div><div class="case-body">名额: ${g.winners_count}</div></div>`;
+    }).join('');
+}
+
+/* ── Leaderboard ── */
+async function loadLeaderboard() {
+    const data = await api('/leaderboard').catch(()=>[]);
+    const el = document.getElementById('lb-list');
+    if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state-sm">暂无等级数据</div>'; return; }
+    const medals = ['🥇','🥈','🥉'];
+    el.innerHTML = data.map((u, i) =>
+        `<div class="case-item"><div style="display:flex;align-items:center;gap:12px;"><span style="font-size:1rem;width:24px;text-align:center;">${medals[i]||'#'+(i+1)}</span><span style="font-weight:700;flex:1;">用户 ${u.user_id}</span><span style="font-size:.82rem;color:var(--text-muted);">Lv.${u.level} · ${u.xp} XP</span></div></div>`
+    ).join('');
+}
+
+/* ── Tag helpers ── */
+function renderTags(id, arr) {
+    document.getElementById(id).innerHTML = arr.map(w =>
+        `<span class="tag-chip">${w}<span class="tag-rm" onclick="this.parentElement.remove()">×</span></span>`
+    ).join('');
+}
+function addTag(prefix) {
+    const inp = document.getElementById(prefix + '-new');
+    const w = inp.value.trim(); if (!w) return; inp.value = '';
+    document.getElementById(prefix + '-tags').insertAdjacentHTML('beforeend',
+        `<span class="tag-chip">${w}<span class="tag-rm" onclick="this.parentElement.remove()">×</span></span>`);
+}
+function collectTags(id) {
+    return [...document.querySelectorAll('#' + id + ' .tag-chip')].map(t => t.firstChild.textContent.trim());
+}
+
+/* ── Reaction Roles config ── */
+let _rrLoaded = false, _rrRoleCount = 0;
+async function loadRolesPage() {
+    if (_rrLoaded) return; _rrLoaded = true;
+    const [ch, roles] = await Promise.all([getCh(), getRoles()]);
+    chOpts('rr-ch', ch, 0);
+    // Store roles for row builder
+    window._rrAvailRoles = roles;
+    // Load existing panels
+    try {
+        const panels = await api('/reactionroles');
+        const el = document.getElementById('rr-existing');
+        if (!panels || panels.length === 0) { el.innerHTML = '<div class="empty-state-sm">还没有任何面板</div>'; }
+        else {
+            el.innerHTML = panels.map(p => {
+                const mappings = typeof p.mappings === 'string' ? JSON.parse(p.mappings) : p.mappings;
+                const count = Object.keys(mappings).length;
+                return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:var(--pink);">${p.title || '身份组面板'}</span><span class="case-time">消息 ID: ${p.message_id} · ${count} 个映射</span></div><div class="case-body">频道 ID: ${p.channel_id}</div></div>`;
+            }).join('');
+        }
+    } catch(e) { document.getElementById('rr-existing').innerHTML = '<div class="empty-state-sm">暂无面板</div>'; }
+    if (window.lucide) lucide.createIcons();
+}
+function addRoleRow() {
+    if (_rrRoleCount >= 20) { showToast('最多 20 个身份组'); return; }
+    _rrRoleCount++;
+    const roles = window._rrAvailRoles || [];
+    const ropts = roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+    document.getElementById('rr-roles-list').insertAdjacentHTML('beforeend', `
+        <div class="rr-row" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--border-light);border-radius:10px;">
+            <input class="cfg-input rr-emoji" style="width:60px;max-width:60px;text-align:center;" placeholder="🎮" maxlength="5">
+            <select class="cfg-select rr-role" style="flex:1;max-width:none;">${ropts}</select>
+            <button onclick="this.parentElement.remove();_rrRoleCount--;" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.1rem;padding:4px 8px;" title="移除">✕</button>
+        </div>
+    `);
+}
+async function sendRRPanel() {
+    const ch = document.getElementById('rr-ch').value;
+    const title = document.getElementById('rr-title').value || '🏷 身份组选择';
+    const content = document.getElementById('rr-content').value || '点击下方的反应来领取对应身份组';
+    if (ch === '0') { showToast('请选择发送频道'); return; }
+    const rows = document.querySelectorAll('.rr-row');
+    if (rows.length === 0) { showToast('请至少添加一个身份组'); return; }
+    const mappings = [];
+    for (const row of rows) {
+        const emoji = row.querySelector('.rr-emoji').value.trim();
+        const roleId = row.querySelector('.rr-role').value;
+        if (!emoji) { showToast('每个身份组都需要填写 emoji'); return; }
+        mappings.push({ emoji, role_id: roleId });
+    }
+    const btn = document.getElementById('rr-send'); btn.disabled = true; btn.textContent = '发送中…';
+    try {
+        const r = await api('/reactionroles/send', 'POST', { channel_id: ch, title, content, mappings });
+        if (r.ok) {
+            showToast('✅ 身份组面板已发送到频道！');
+            _rrLoaded = false; loadRolesPage(); // Reload list
+        } else { showToast('❌ ' + (r.error || '发送失败')); }
+    } catch(e) { showToast('❌ 网络错误'); }
+    btn.disabled = false; btn.textContent = '送出';
+}
+
+/* ── Giveaway creation ── */
+let _gwPageLoaded = false;
+async function loadGiveawayPage() {
+    if (_gwPageLoaded) return; _gwPageLoaded = true;
+    const [ch, roles] = await Promise.all([getCh(), getRoles()]);
+    chOpts('gw-ch', ch, 0);
+    const rsel = document.getElementById('gw-role');
+    rsel.innerHTML = '<option value="0">@ 不限制</option>' + roles.map(r => `<option value="${r.id}">@ ${r.name}</option>`).join('');
+    // Set default end time to 24h from now
+    const d = new Date(Date.now() + 86400000);
+    document.getElementById('gw-end').value = d.toISOString().slice(0, 16);
+    loadGiveaways(); // Load existing list
+}
+async function createGiveaway() {
+    const prize = document.getElementById('gw-prize').value.trim();
+    const winners = +document.getElementById('gw-winners').value;
+    const ch = document.getElementById('gw-ch').value;
+    const endStr = document.getElementById('gw-end').value;
+    const role = document.getElementById('gw-role').value;
+    if (!prize) { showToast('请输入奖项名称'); return; }
+    if (ch === '0') { showToast('请选择发起频道'); return; }
+    if (!endStr) { showToast('请选择结束时间'); return; }
+    const endTime = Math.floor(new Date(endStr).getTime() / 1000);
+    if (endTime <= Math.floor(Date.now() / 1000)) { showToast('结束时间必须在未来'); return; }
+    const btn = document.getElementById('gw-create-btn'); btn.disabled = true; btn.textContent = '建立中…';
+    try {
+        const r = await api('/giveaway/create', 'POST', {
+            prize, winners_count: winners, channel_id: ch,
+            end_time: endTime, restrict_role: role !== '0' ? role : null
+        });
+        if (r.ok) {
+            showToast('✅ 抽奖活动已建立！');
+            document.getElementById('gw-prize').value = '';
+            _gwPageLoaded = false; loadGiveawayPage();
+        } else { showToast('❌ ' + (r.error || '建立失败')); }
+    } catch(e) { showToast('❌ 网络错误'); }
+    btn.disabled = false; btn.textContent = '建立';
+}
+
+/* ── Bot Personalizer ── */
+let _bpLoaded = false, _avData = null;
+async function loadPersonalizer() {
+    if (_bpLoaded) return; _bpLoaded = true;
+    try {
+        const r = await fetch('/api/bot/personalizer');
+        const cfg = await r.json();
+        document.getElementById('bp-status').value = cfg.bot_status || 'online';
+        document.getElementById('bp-atype').value = cfg.activity_type || 'watching';
+        document.getElementById('bp-atext').value = cfg.activity_text || '';
+        updatePreview();
+    } catch(e) { console.error(e); }
+}
+function updatePreview() {
+    const atype = document.getElementById('bp-atype').value;
+    const atext = document.getElementById('bp-atext').value;
+    const status = document.getElementById('bp-status').value;
+    const labels = {watching:'观看中',playing:'游玩中',listening:'收听',competing:'竞争中',custom:'',none:''};
+    const emojis = {watching:'👀',playing:'🎮',listening:'🎧',competing:'🏆',custom:'💬',none:''};
+    const act = atype === 'none' ? '' : `${emojis[atype]||''} ${labels[atype]||''} ${atext}`.trim();
+    document.getElementById('prev-act').textContent = act || '无活动';
+    document.getElementById('prev-act2').textContent = act || '无活动';
+    const dot = document.getElementById('prev-dot');
+    const dColors = {online:'#23A559',idle:'#F0B232',dnd:'#F23F43',invisible:'#80848E'};
+    dot.style.background = dColors[status] || '#23A559';
+}
+function previewAvatar(input) {
+    if (!input.files || !input.files[0]) return;
+    const file = input.files[0];
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        _avData = e.target.result; // data:image/...;base64,...
+        ['bp-av-img','prev-av-1','prev-av-2'].forEach(id => {
+            const img = document.getElementById(id); img.src = _avData; img.style.display = 'block';
+        });
+        ['bp-av-placeholder','prev-av-1-ph','prev-av-2-ph'].forEach(id => {
+            const el = document.getElementById(id); if(el) el.style.display = 'none';
+        });
+    };
+    reader.readAsDataURL(file);
+}
+async function uploadAvatar() {
+    if (!_avData) { showToast('请先选择一张图片'); return; }
+    const btn = document.getElementById('bp-av-btn'); btn.textContent = '上传中…'; btn.disabled = true;
+    try {
+        const r = await fetch('/api/bot/avatar', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({avatar:_avData})});
+        const d = await r.json();
+        if (d.ok) { showToast('✅ 头像已更新！'); } else { showToast('❌ ' + (d.error||'上传失败')); }
+    } catch(e) { showToast('❌ 网络错误'); }
+    btn.textContent = '上传头像'; btn.disabled = false;
+}
+async function changeName() {
+    const name = document.getElementById('bp-name').value.trim();
+    if (!name) { showToast('请输入用户名'); return; }
+    try {
+        const r = await fetch('/api/bot/username', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:name})});
+        const d = await r.json();
+        if (d.ok) {
+            showToast('✅ 用户名已更新！');
+            document.getElementById('prev-name').textContent = name;
+            document.getElementById('prev-name2').textContent = name;
+        } else { showToast('❌ ' + (d.error||'修改失败')); }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+async function savePersonalizer() {
+    const btn = document.getElementById('bp-save'); btn.disabled = true; btn.textContent = '保存中…';
+    try {
+        await fetch('/api/bot/personalizer', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+            bot_status: document.getElementById('bp-status').value,
+            activity_type: document.getElementById('bp-atype').value,
+            activity_text: document.getElementById('bp-atext').value,
+        })});
+        btn.textContent = '✅ 已保存！'; showToast('✅ 状态配置已保存，30 秒内生效！');
+    } catch(e) { showToast('❌ 保存失败'); }
+    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+}
+
+/* ── Toast ── */
+let _tt;
+function showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg; el.style.opacity = '1'; el.style.transform = 'translateX(-50%) translateY(0)';
+    clearTimeout(_tt);
+    _tt = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(-50%) translateY(10px)'; }, 2400);
+}
+
+// Initialize Lucide icons
+document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+</script>
+</body>
+</html>
