@@ -4,3 +4,4 @@ Pillow
 psutil
 aiosqlite
 aiohttp
+aiosqlite

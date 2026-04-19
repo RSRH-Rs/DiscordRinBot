@@ -171,6 +171,45 @@
 /* Sidebar active per-module */
 .nav-link[data-mod].active { background:rgba(232,137,154,.15); color:var(--pink); }
 @keyframes pip-pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+
+/* Utility command rows */
+.cmd-group-title {
+    font-size:.7rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px;
+    color:var(--text-muted); margin:20px 0 10px; padding-left:4px;
+}
+.cmd-group-title:first-child { margin-top:0; }
+.cmd-group-header {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:12px 18px; margin:20px 0 8px; border-radius:12px;
+    background:var(--card); border:1px solid var(--border-light);
+}
+.cmd-group-header:first-child { margin-top:0; }
+.cmd-group-label { font-size:.78rem; font-weight:800; text-transform:uppercase; letter-spacing:1.2px; color:var(--text-mid); }
+.cmd-group-count { font-size:.7rem; color:var(--text-muted); font-weight:600; margin-left:8px; }
+.cmd-group-body { overflow:hidden; transition:max-height .3s ease, opacity .25s; }
+.cmd-group-body.collapsed { max-height:0!important; opacity:0; }
+.cmd-group-chevron {
+    transition:transform .25s; color:var(--text-muted); cursor:pointer; margin-right:8px;
+}
+.cmd-group-chevron.open { transform:rotate(90deg); }
+.util-tip {
+    display:flex; align-items:center; gap:10px; padding:12px 16px; border-radius:12px;
+    background:var(--pink-bg); border:1px solid var(--pink-border); font-size:.82rem;
+    font-weight:600; color:var(--pink); margin-bottom:18px;
+}
+.cmd-row {
+    display:flex; align-items:center; gap:14px; padding:14px 18px;
+    background:var(--card); border:1px solid var(--border-light); border-radius:14px;
+    margin-bottom:8px; transition:.18s;
+}
+.cmd-row:hover { border-color:var(--pink-border); }
+.cmd-name {
+    font-size:.92rem; font-weight:800; color:var(--text); font-family:'Nunito',monospace;
+}
+.cmd-name::before { content:'/'; color:var(--pink); }
+.cmd-desc { font-size:.78rem; color:var(--text-muted); margin-top:2px; line-height:1.4; }
+.cmd-info { flex:1; min-width:0; }
+.cmd-toggle { flex-shrink:0; }
     </style>
 </head>
 <body>
@@ -196,6 +235,7 @@
                     <li><a class="nav-link" data-mod="giveaway" onclick="go('giveaway')"><i data-lucide="gift" style="width:16px;height:16px;"></i> 抽奖管理</a></li>
                     <li><a class="nav-link" data-mod="leveling" onclick="go('leveling')"><i data-lucide="trophy" style="width:16px;height:16px;"></i> 等级系统</a></li>
                     <li><a class="nav-link" data-mod="personalizer" onclick="go('personalizer')"><i data-lucide="palette" style="width:16px;height:16px;"></i> Bot 个性化</a></li>
+                    <li><a class="nav-link" data-mod="utility" onclick="go('utility')"><i data-lucide="sliders-horizontal" style="width:16px;height:16px;"></i> 指令管理</a></li>
                 </ul>
             </nav>
             <div class="user-card">
@@ -242,10 +282,10 @@
         <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-size:.72rem;font-weight:800;padding:5px 12px;border-radius:50px;"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:pip-pulse 2s infinite;"></span>小凛在线</div>
     </div>
     <div class="ov-grid">
-        <div class="ov-card"><div class="ov-label">已启用模块</div><div class="ov-val">8 <span class="accent">/ 8</span></div></div>
+        <div class="ov-card"><div class="ov-label">已启用指令</div><div class="ov-val" id="ov-enabled">— <span class="accent">/ —</span></div></div>
         <div class="ov-card"><div class="ov-label">Bot 状态</div><div class="ov-val" style="color:var(--green);font-size:1rem;">● 在线</div></div>
         <div class="ov-card"><div class="ov-label">指令前缀</div><div class="ov-val" style="font-family:monospace;font-size:1.4rem;">r!</div></div>
-        <div class="ov-card"><div class="ov-label">可用指令</div><div class="ov-val">40+ <span class="accent">条</span></div></div>
+        <div class="ov-card"><div class="ov-label">已禁用指令</div><div class="ov-val" id="ov-disabled" style="color:var(--text-muted);">—</div></div>
     </div>
     <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:14px;">功能模块</div>
     <div class="mod-grid">
@@ -257,6 +297,7 @@
         <div class="mod-card" onclick="go('giveaway')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="gift" style="width:22px;height:22px;"></i></div><div class="mod-card-name">抽奖管理</div></div><div class="mod-card-desc">倒计时自动开奖，公平透明</div><div class="mod-card-btn">开始设定 →</div></div>
         <div class="mod-card" onclick="go('leveling')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="trophy" style="width:22px;height:22px;"></i></div><div class="mod-card-name">等级系统</div></div><div class="mod-card-desc">智能经验算法，精美等级卡片</div><div class="mod-card-btn">开始设定 →</div></div>
         <div class="mod-card" onclick="go('general')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="wrench" style="width:22px;height:22px;"></i></div><div class="mod-card-name">通用工具</div></div><div class="mod-card-desc">status / avatar / roll 等实用指令</div><div class="mod-card-btn">查看 →</div></div>
+        <div class="mod-card" onclick="go('utility')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="sliders-horizontal" style="width:22px;height:22px;"></i></div><div class="mod-card-name">指令管理</div></div><div class="mod-card-desc">按需启用/禁用每个指令</div><div class="mod-card-btn">开始设定 →</div></div>
     </div>
 </div>
 
@@ -639,6 +680,14 @@
     </div>
 </div>
 
+<!-- ═══════ Utility (指令开关) ═══════ -->
+<div class="mod-page" id="pg-utility">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="sliders-horizontal" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>指令管理</h2><p>按需启用或禁用每个指令，完全掌控你的服务器</p></div>
+    <div class="util-tip"><i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i> 点击分类标题展开查看详细指令，右侧开关可以单独或批量启用/禁用。修改即时生效，无需重启。</div>
+    <div id="util-summary" style="font-size:.85rem;color:var(--text-muted);margin-bottom:18px;font-weight:600;"></div>
+    <div id="util-commands"><div class="empty-state-sm">加载中…</div></div>
+</div>
+
         </div><!-- content-area -->
     </main>
 
@@ -668,6 +717,7 @@ function go(mod) {
     if (mod === 'personalizer') loadPersonalizer();
     if (mod === 'roles') loadRolesPage();
     if (mod === 'giveaway') loadGiveawayPage();
+    if (mod === 'utility') loadUtility();
     // Re-render Lucide icons for newly visible content
     if (window.lucide) lucide.createIcons();
 }
@@ -836,6 +886,165 @@ function addTag(prefix) {
 }
 function collectTags(id) {
     return [...document.querySelectorAll('#' + id + ' .tag-chip')].map(t => t.firstChild.textContent.trim());
+}
+
+/* ── Utility (Command Toggle) ── */
+let _utLoaded = false, _cmdData = null;
+
+async function loadOverviewStats() {
+    try {
+        const cmds = await api('/commands');
+        _cmdData = cmds;
+        const total = cmds.length;
+        const enabled = cmds.filter(c => c.enabled).length;
+        const disabled = total - enabled;
+        const ov1 = document.getElementById('ov-enabled');
+        const ov2 = document.getElementById('ov-disabled');
+        if (ov1) ov1.innerHTML = `${enabled} <span class="accent">/ ${total}</span>`;
+        if (ov2) ov2.textContent = disabled > 0 ? disabled : '0';
+    } catch(e) { console.error(e); }
+}
+
+async function loadUtility() {
+    if (!_cmdData) await loadOverviewStats();
+    const cmds = _cmdData;
+    const el = document.getElementById('util-commands');
+    if (!cmds || cmds.length === 0) { el.innerHTML = '<div class="empty-state-sm">没有可用指令</div>'; return; }
+
+    const total = cmds.length;
+    const enabled = cmds.filter(c => c.enabled).length;
+    document.getElementById('util-summary').textContent = `共 ${total} 个指令，${enabled} 个已启用`;
+
+    const groups = {};
+    for (const c of cmds) {
+        if (!groups[c.cog]) groups[c.cog] = [];
+        groups[c.cog].push(c);
+    }
+
+    let html = '';
+    for (const [cog, commands] of Object.entries(groups)) {
+        const cogEnabled = commands.filter(c => c.enabled).length;
+        const cogTotal = commands.length;
+        const allOn = cogEnabled === cogTotal;
+
+        html += `<div class="cmd-group-header" id="cg-${cog}" onclick="toggleCollapse('${cog}')" style="cursor:pointer;">
+            <div style="display:flex;align-items:center;">
+                <svg class="cmd-group-chevron" id="chev-${cog}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                <span class="cmd-group-label">${cog}</span>
+                <span class="cmd-group-count" id="cgc-${cog}">${cogEnabled} / ${cogTotal}</span>
+            </div>
+            <label class="cfg-tog" onclick="event.stopPropagation()">
+                <input type="checkbox" ${allOn?'checked':''} onchange="toggleCategory('${cog}', this.checked)">
+                <span class="track"></span>
+                <span class="thumb"></span>
+            </label>
+        </div>`;
+
+        html += `<div class="cmd-group-body collapsed" id="cgb-${cog}">`;
+        for (const c of commands) {
+            const checked = c.enabled ? 'checked' : '';
+            const disabled = c.protected ? 'disabled' : '';
+            const opacity = !c.enabled && !c.protected ? 'opacity:.5;' : c.protected ? 'opacity:.6;' : '';
+            html += `<div class="cmd-row" id="cr-${c.name}" data-cog="${cog}" style="${opacity}">
+                <div class="cmd-info">
+                    <div class="cmd-name">${c.name}</div>
+                    <div class="cmd-desc">${c.desc}</div>
+                </div>
+                <div class="cmd-toggle">
+                    <label class="cfg-tog">
+                        <input type="checkbox" ${checked} ${disabled} onchange="toggleCommand('${c.name}', this.checked, '${cog}')">
+                        <span class="track"></span>
+                        <span class="thumb"></span>
+                    </label>
+                </div>
+            </div>`;
+        }
+        html += `</div>`;
+    }
+    el.innerHTML = html;
+    if (window.lucide) lucide.createIcons();
+}
+
+function toggleCollapse(cog) {
+    const body = document.getElementById('cgb-' + cog);
+    const chev = document.getElementById('chev-' + cog);
+    if (!body) return;
+    if (body.classList.contains('collapsed')) {
+        body.style.maxHeight = body.scrollHeight + 'px';
+        body.classList.remove('collapsed');
+        if (chev) chev.classList.add('open');
+    } else {
+        body.style.maxHeight = body.scrollHeight + 'px';
+        requestAnimationFrame(() => { body.style.maxHeight = '0'; });
+        body.classList.add('collapsed');
+        if (chev) chev.classList.remove('open');
+    }
+}
+
+async function toggleCommand(name, enabled, cog) {
+    try {
+        const r = await api('/commands/toggle', 'POST', { name, enabled });
+        if (r.ok) {
+            const row = document.getElementById('cr-' + name);
+            if (row) row.style.opacity = enabled ? '' : '.5';
+            // Update local data
+            if (_cmdData) {
+                const c = _cmdData.find(x => x.name === name);
+                if (c) c.enabled = enabled;
+            }
+            updateCogCount(cog);
+            updateSummary();
+            showToast(enabled ? `✅ /${name} 已启用` : `⏹ /${name} 已禁用`);
+        } else { showToast('❌ ' + (r.error || '操作失败')); }
+    } catch(e) { showToast('❌ 网络错误'); }
+}
+
+async function toggleCategory(cog, enabled) {
+    if (!_cmdData) return;
+    const cmds = _cmdData.filter(c => c.cog === cog && !c.protected);
+    const promises = cmds.map(c => api('/commands/toggle', 'POST', { name: c.name, enabled }));
+    try {
+        await Promise.all(promises);
+        for (const c of cmds) {
+            c.enabled = enabled;
+            const row = document.getElementById('cr-' + c.name);
+            if (row) {
+                row.style.opacity = enabled ? '' : '.5';
+                const cb = row.querySelector('input[type=checkbox]');
+                if (cb) cb.checked = enabled;
+            }
+        }
+        updateCogCount(cog);
+        updateSummary();
+        showToast(enabled ? `✅ ${cog} 全部指令已启用` : `⏹ ${cog} 全部指令已禁用`);
+    } catch(e) { showToast('❌ 批量操作失败'); }
+}
+
+function updateCogCount(cog) {
+    if (!_cmdData) return;
+    const cmds = _cmdData.filter(c => c.cog === cog);
+    const en = cmds.filter(c => c.enabled).length;
+    const el = document.getElementById('cgc-' + cog);
+    if (el) el.textContent = `${en} / ${cmds.length}`;
+    // Update category toggle checkbox
+    const header = document.getElementById('cg-' + cog);
+    if (header) {
+        const cb = header.querySelector('input[type=checkbox]');
+        if (cb) cb.checked = en === cmds.length;
+    }
+}
+
+function updateSummary() {
+    if (!_cmdData) return;
+    const total = _cmdData.length;
+    const enabled = _cmdData.filter(c => c.enabled).length;
+    const disabled = total - enabled;
+    const sumEl = document.getElementById('util-summary');
+    if (sumEl) sumEl.textContent = `共 ${total} 个指令，${enabled} 个已启用`;
+    const ov1 = document.getElementById('ov-enabled');
+    const ov2 = document.getElementById('ov-disabled');
+    if (ov1) ov1.innerHTML = `${enabled} <span class="accent">/ ${total}</span>`;
+    if (ov2) ov2.textContent = disabled > 0 ? disabled : '0';
 }
 
 /* ── Reaction Roles config ── */
@@ -1025,7 +1234,10 @@ function showToast(msg) {
 }
 
 // Initialize Lucide icons
-document.addEventListener('DOMContentLoaded', () => { if (window.lucide) lucide.createIcons(); });
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+    loadOverviewStats();
+});
 </script>
 </body>
 </html>
