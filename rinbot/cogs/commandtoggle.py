@@ -14,15 +14,8 @@ DB_PATH = "commandtoggle.db"
 
 # 这些指令永远不能被禁用
 PROTECTED_COMMANDS = {
-    "toggle",
-    "togglelist",
-    "hot_update",
-    "sync",
-    "load",
-    "unload",
-    "extensions",
-    "eval",
-    "help",
+    "toggle", "togglelist", "hot_update", "sync",
+    "load", "unload", "extensions", "eval", "help",
 }
 
 
@@ -38,13 +31,11 @@ class CommandToggle(commands.Cog):
 
     async def cog_load(self):
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute(
-                """CREATE TABLE IF NOT EXISTS disabled_commands (
+            await db.execute("""CREATE TABLE IF NOT EXISTS disabled_commands (
                 guild_id INTEGER NOT NULL,
                 command_name TEXT NOT NULL,
                 PRIMARY KEY (guild_id, command_name)
-            )"""
-            )
+            )""")
             await db.commit()
 
         await self._refresh_cache()
@@ -65,9 +56,7 @@ class CommandToggle(commands.Cog):
         new_cache: dict[int, set[str]] = {}
         try:
             async with aiosqlite.connect(DB_PATH) as db:
-                cursor = await db.execute(
-                    "SELECT guild_id, command_name FROM disabled_commands"
-                )
+                cursor = await db.execute("SELECT guild_id, command_name FROM disabled_commands")
                 rows = await cursor.fetchall()
                 for gid, cmd in rows:
                     if gid not in new_cache:
@@ -113,14 +102,12 @@ class CommandToggle(commands.Cog):
             if enabled:
                 await db.execute(
                     "DELETE FROM disabled_commands WHERE guild_id=? AND command_name=?",
-                    (guild_id, command_name),
-                )
+                    (guild_id, command_name))
                 self._disabled.get(guild_id, set()).discard(command_name)
             else:
                 await db.execute(
                     "INSERT OR IGNORE INTO disabled_commands (guild_id, command_name) VALUES (?, ?)",
-                    (guild_id, command_name),
-                )
+                    (guild_id, command_name))
                 if guild_id not in self._disabled:
                     self._disabled[guild_id] = set()
                 self._disabled[guild_id].add(command_name)
@@ -133,9 +120,7 @@ class CommandToggle(commands.Cog):
     async def toggle_cmd(self, ctx, command_name: str):
         """command_name: 要切换的指令名 (如 play, kick, roll)"""
         if command_name in PROTECTED_COMMANDS:
-            await ctx.send(
-                f"⚠️ `{command_name}` 是核心指令，不能被禁用。", ephemeral=True
-            )
+            await ctx.send(f"⚠️ `{command_name}` 是核心指令，不能被禁用。", ephemeral=True)
             return
 
         cmd = self.bot.get_command(command_name)
@@ -151,9 +136,7 @@ class CommandToggle(commands.Cog):
         else:
             await ctx.send(f"⏹ `/{command_name}` 已**禁用**。", ephemeral=True)
 
-    @commands.hybrid_command(
-        name="togglelist", description="[管理] 查看所有已禁用的指令"
-    )
+    @commands.hybrid_command(name="togglelist", description="[管理] 查看所有已禁用的指令")
     @commands.has_permissions(manage_guild=True)
     async def toggle_list(self, ctx):
         disabled = self._disabled.get(ctx.guild.id, set())
@@ -167,9 +150,7 @@ class CommandToggle(commands.Cog):
             description="\n".join(lines),
             color=discord.Color.orange(),
         )
-        embed.set_footer(
-            text=f"共 {len(disabled)} 个指令被禁用 | 使用 /toggle <指令名> 恢复"
-        )
+        embed.set_footer(text=f"共 {len(disabled)} 个指令被禁用 | 使用 /toggle <指令名> 恢复")
         await ctx.send(embed=embed, ephemeral=True)
 
 
