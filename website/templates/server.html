@@ -106,8 +106,10 @@
     background:rgba(240,237,232,.92); backdrop-filter:blur(12px);
     border-top:1px solid var(--border); display:flex; align-items:center;
     justify-content:space-between; z-index:20; margin:18px -32px -40px;
-    border-radius:0 0 0 0;
+    border-radius:0 0 0 0; transition:border-color .3s;
 }
+.save-bar.dirty { border-top-color:var(--pink); }
+.save-bar.dirty .save-hint { color:var(--pink); }
 .btn-save {
     padding:10px 28px; border-radius:50px; background:var(--pink); color:#fff;
     font-size:.9rem; font-weight:800; border:none; cursor:pointer;
@@ -116,7 +118,36 @@
 }
 .btn-save:hover { background:#D8758A; transform:translateY(-1px); }
 .btn-save:disabled { opacity:.5; cursor:not-allowed; transform:none; }
-.save-hint { font-size:.8rem; color:var(--text-muted); font-weight:600; }
+.save-hint { font-size:.8rem; color:var(--text-muted); font-weight:600; transition:color .3s; }
+
+/* Loading skeleton */
+.skel { border-radius:8px; background:linear-gradient(90deg, var(--border-light) 25%, var(--bg) 50%, var(--border-light) 75%); background-size:200% 100%; animation:skel-shimmer 1.5s infinite; }
+@keyframes skel-shimmer { 0%{background-position:200% 0;} 100%{background-position:-200% 0;} }
+.skel-row { height:52px; margin-bottom:8px; }
+.skel-block { height:120px; margin-bottom:14px; }
+
+/* Sidebar status dot */
+.nav-status { width:6px; height:6px; border-radius:50%; margin-left:auto; flex-shrink:0; }
+.nav-status.on { background:var(--green); }
+.nav-status.off { background:var(--text-muted); opacity:.4; }
+
+/* Top bar online badge */
+.bot-online-badge {
+    display:inline-flex; align-items:center; gap:6px; flex-shrink:0;
+    background:var(--green-bg); border:1px solid var(--green-border);
+    color:var(--green); font-size:.72rem; font-weight:800;
+    padding:5px 12px; border-radius:50px;
+}
+.bot-online-badge .pip {
+    width:6px; height:6px; background:var(--green); border-radius:50%;
+    animation:pip-pulse 2s infinite;
+}
+
+/* Error state */
+.error-state {
+    text-align:center; padding:28px; color:#E24B4A; font-size:.85rem; font-weight:700;
+    background:#FFF5F5; border:1px solid #FECACA; border-radius:12px;
+}
 
 /* Warn box */
 .warn-box {
@@ -227,15 +258,15 @@
                 <span class="nav-label" style="margin-top:18px;">{{ guild.name }}</span>
                 <ul id="side-modules">
                     <li><a class="nav-link active" data-mod="overview" onclick="go('overview')"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> 概览</a></li>
-                    <li><a class="nav-link" data-mod="music" onclick="go('music')"><i data-lucide="music" style="width:16px;height:16px;"></i> 音乐系统</a></li>
-                    <li><a class="nav-link" data-mod="welcome" onclick="go('welcome')"><i data-lucide="smile-plus" style="width:16px;height:16px;"></i> 欢迎新成员</a></li>
-                    <li><a class="nav-link" data-mod="roles" onclick="go('roles')"><i data-lucide="tags" style="width:16px;height:16px;"></i> 领取身份组</a></li>
-                    <li><a class="nav-link" data-mod="automod" onclick="go('automod')"><i data-lucide="shield-check" style="width:16px;height:16px;"></i> 自动审核</a></li>
-                    <li><a class="nav-link" data-mod="moderation" onclick="go('moderation')"><i data-lucide="gavel" style="width:16px;height:16px;"></i> 管理模块</a></li>
-                    <li><a class="nav-link" data-mod="giveaway" onclick="go('giveaway')"><i data-lucide="gift" style="width:16px;height:16px;"></i> 抽奖管理</a></li>
-                    <li><a class="nav-link" data-mod="leveling" onclick="go('leveling')"><i data-lucide="trophy" style="width:16px;height:16px;"></i> 等级系统</a></li>
-                    <li><a class="nav-link" data-mod="personalizer" onclick="go('personalizer')"><i data-lucide="palette" style="width:16px;height:16px;"></i> Bot 个性化</a></li>
-                    <li><a class="nav-link" data-mod="utility" onclick="go('utility')"><i data-lucide="sliders-horizontal" style="width:16px;height:16px;"></i> 指令管理</a></li>
+                    <li><a class="nav-link" data-mod="music" onclick="go('music')"><i data-lucide="music" style="width:16px;height:16px;"></i> 音乐系统<span class="nav-status on"></span></a></li>
+                    <li><a class="nav-link" data-mod="welcome" onclick="go('welcome')"><i data-lucide="smile-plus" style="width:16px;height:16px;"></i> 欢迎新成员<span class="nav-status on"></span></a></li>
+                    <li><a class="nav-link" data-mod="roles" onclick="go('roles')"><i data-lucide="tags" style="width:16px;height:16px;"></i> 领取身份组<span class="nav-status on"></span></a></li>
+                    <li><a class="nav-link" data-mod="automod" onclick="go('automod')"><i data-lucide="shield-check" style="width:16px;height:16px;"></i> 自动审核<span class="nav-status on"></span></a></li>
+                    <li><a class="nav-link" data-mod="moderation" onclick="go('moderation')"><i data-lucide="gavel" style="width:16px;height:16px;"></i> 管理模块<span class="nav-status on"></span></a></li>
+                    <li><a class="nav-link" data-mod="giveaway" onclick="go('giveaway')"><i data-lucide="gift" style="width:16px;height:16px;"></i> 抽奖管理<span class="nav-status on"></span></a></li>
+                    <li><a class="nav-link" data-mod="leveling" onclick="go('leveling')"><i data-lucide="trophy" style="width:16px;height:16px;"></i> 等级系统<span class="nav-status on"></span></a></li>
+                    <li><a class="nav-link" data-mod="personalizer" onclick="go('personalizer')"><i data-lucide="palette" style="width:16px;height:16px;"></i> Bot 个性化<span class="nav-status on"></span></a></li>
+                    <li><a class="nav-link" data-mod="utility" onclick="go('utility')"><i data-lucide="sliders-horizontal" style="width:16px;height:16px;"></i> 指令管理<span class="nav-status on"></span></a></li>
                 </ul>
             </nav>
             <div class="user-card">
@@ -315,7 +346,7 @@
             <select class="cfg-select" id="mu-ch" style="max-width:220px;"><option value="0">#</option></select>
         </div>
     </div>
-    <div class="save-bar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" onclick="showToast('🎵 音乐配置功能即将上线！目前请使用 Discord 指令配置。')">储存设定</button></div>
+    <div class="save-bar" id="mu-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mu-save" onclick="saveMusic()">储存设定</button></div>
 </div>
 
 <!-- ═══════ 欢迎新成员 ═══════ -->
@@ -359,7 +390,7 @@
         <div class="warn-box">⚠️ 请确保该身份组的位置在机器人下方，并且机器人有管理身份组权限</div>
     </div>
 
-    <div class="save-bar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="w-save" onclick="saveWelcome()">储存设定</button></div>
+    <div class="save-bar" id="w-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="w-save" onclick="saveWelcome()">储存设定</button></div>
 </div>
 
 <!-- ═══════ 领取身份组 ═══════ -->
@@ -477,7 +508,7 @@
         </div>
     </div>
 
-    <div class="save-bar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="am-save" onclick="saveAutoMod()">储存设定</button></div>
+    <div class="save-bar" id="am-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="am-save" onclick="saveAutoMod()">储存设定</button></div>
 </div>
 
 <!-- ═══════ 管理模块 ═══════ -->
@@ -500,7 +531,7 @@
         <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">🔨 自动封禁</div><div class="cfg-row-hint">达到几次警告自动封禁 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-bt" value="0" min="0" max="50"></div>
     </div>
 
-    <div class="save-bar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mod-save" onclick="saveModeration()">储存设定</button></div>
+    <div class="save-bar" id="mod-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mod-save" onclick="saveModeration()">储存设定</button></div>
 
     <div class="cfg-section" style="margin-top:52px;">
         <div class="cfg-section-title">📜 最近管理操作</div>
@@ -722,15 +753,49 @@ function go(mod) {
     if (window.lucide) lucide.createIcons();
 }
 
-/* ── API ── */
+/* ── API helper with error handling ── */
 async function api(path, method='GET', body=null) {
     const opts = { method, headers: {'Content-Type':'application/json'} };
     if (body) opts.body = JSON.stringify(body);
     const r = await fetch(`/api/guild/${GID}${path}`, opts);
+    if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `请求失败 (${r.status})`);
+    }
     return r.json();
 }
-async function getCh() { if (!_ch) _ch = await api('/channels').catch(()=>[]); return _ch || []; }
-async function getRoles() { if (!_roles) _roles = await api('/roles').catch(()=>[]); return _roles || []; }
+async function apiGlobal(path, method='GET', body=null) {
+    const opts = { method, headers: {'Content-Type':'application/json'} };
+    if (body) opts.body = JSON.stringify(body);
+    const r = await fetch(path, opts);
+    if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        throw new Error(err.error || `请求失败 (${r.status})`);
+    }
+    return r.json();
+}
+async function getCh() { if (!_ch) try { _ch = await api('/channels'); } catch(e) { _ch = []; } return _ch || []; }
+async function getRoles() { if (!_roles) try { _roles = await api('/roles'); } catch(e) { _roles = []; } return _roles || []; }
+
+/* ── Skeleton loading ── */
+function showSkeleton(elId, count=3) {
+    const el = document.getElementById(elId);
+    if (el) el.innerHTML = Array(count).fill('<div class="skel skel-row"></div>').join('');
+}
+function showError(elId, msg) {
+    const el = document.getElementById(elId);
+    if (el) el.innerHTML = `<div class="error-state">❌ ${msg}</div>`;
+}
+
+/* ── Dirty tracking (unsaved changes) ── */
+function markDirty(barId) {
+    const bar = document.getElementById(barId);
+    if (bar) { bar.classList.add('dirty'); bar.querySelector('.save-hint').textContent = '⚠️ 你有未保存的更改'; }
+}
+function markClean(barId) {
+    const bar = document.getElementById(barId);
+    if (bar) { bar.classList.remove('dirty'); bar.querySelector('.save-hint').textContent = '修改后记得保存哦~'; }
+}
 
 function chOpts(sel, channels, selected) {
     const el = document.getElementById(sel);
@@ -742,15 +807,19 @@ function chOpts(sel, channels, selected) {
 let _wLoaded = false;
 async function loadWelcome() {
     if (_wLoaded) return; _wLoaded = true;
-    const [cfg, ch, roles] = await Promise.all([api('/welcome'), getCh(), getRoles()]);
-    chOpts('w-ch', ch, cfg.welcome_channel);
-    chOpts('w-fch', ch, cfg.farewell_channel);
-    document.getElementById('w-msg').value = cfg.welcome_msg || '';
-    document.getElementById('w-fmsg').value = cfg.farewell_msg || '';
-    const autoRoles = cfg.auto_roles ? cfg.auto_roles.split(',').filter(Boolean) : [];
-    document.getElementById('w-roles').innerHTML = roles.map(r =>
-        `<label class="role-opt"><input type="checkbox" value="${r.id}" ${autoRoles.includes(String(r.id))?'checked':''}> ${r.name}</label>`
-    ).join('');
+    try {
+        const [cfg, ch, roles] = await Promise.all([api('/welcome'), getCh(), getRoles()]);
+        chOpts('w-ch', ch, cfg.welcome_channel);
+        chOpts('w-fch', ch, cfg.farewell_channel);
+        document.getElementById('w-msg').value = cfg.welcome_msg || '';
+        document.getElementById('w-fmsg').value = cfg.farewell_msg || '';
+        const autoRoles = cfg.auto_roles ? cfg.auto_roles.split(',').filter(Boolean) : [];
+        document.getElementById('w-roles').innerHTML = roles.map(r =>
+            `<label class="role-opt"><input type="checkbox" value="${r.id}" ${autoRoles.includes(String(r.id))?'checked':''} onchange="markDirty('w-savebar')"> ${r.name}</label>`
+        ).join('');
+        // Attach dirty listeners
+        document.querySelectorAll('#w-ch,#w-fch,#w-msg,#w-fmsg').forEach(el => el.addEventListener('input', () => markDirty('w-savebar')));
+    } catch(e) { showToast('❌ 加载欢迎配置失败: ' + e.message); }
 }
 async function saveWelcome() {
     const btn = document.getElementById('w-save'); btn.disabled = true; btn.textContent = '保存中…';
@@ -762,7 +831,7 @@ async function saveWelcome() {
         welcome_msg: document.getElementById('w-msg').value,
         farewell_msg: document.getElementById('w-fmsg').value,
     });
-    btn.textContent = '✅ 已保存！'; showToast('✅ 欢迎配置已保存！');
+    btn.textContent = '✅ 已保存！'; showToast('✅ 欢迎配置已保存！'); markClean('w-savebar');
     setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
 }
 
@@ -770,7 +839,8 @@ async function saveWelcome() {
 let _amLoaded = false;
 async function loadAutoMod() {
     if (_amLoaded) return; _amLoaded = true;
-    const [cfg, ch] = await Promise.all([api('/automod'), getCh()]);
+    try {
+        const [cfg, ch] = await Promise.all([api('/automod'), getCh()]);
     chOpts('am-log', ch, cfg.log_channel);
     document.getElementById('am-enabled').checked = !!cfg.enabled;
     document.getElementById('am-spam').checked = !!cfg.anti_spam;
@@ -785,6 +855,9 @@ async function loadAutoMod() {
     document.getElementById('am-rt').value = cfg.repeat_threshold || 3;
     renderTags('am-bw-tags', cfg.badwords || []);
     renderTags('am-wl-tags', cfg.link_whitelist || []);
+    // Dirty listeners
+    document.querySelectorAll('#am-enabled,#am-spam,#am-bw,#am-link,#am-caps,#am-repeat,#am-log,#am-st,#am-si,#am-mute,#am-ct,#am-rt').forEach(el => el.addEventListener('change', () => markDirty('am-savebar')));
+    } catch(e) { showToast('❌ 加载审核配置失败: ' + e.message); }
 }
 async function saveAutoMod() {
     const btn = document.getElementById('am-save'); btn.disabled = true; btn.textContent = '保存中…';
@@ -804,7 +877,7 @@ async function saveAutoMod() {
         repeat_threshold: +document.getElementById('am-rt').value,
         mute_duration: +document.getElementById('am-mute').value,
     });
-    btn.textContent = '✅ 已保存！'; showToast('✅ 审核配置已保存！');
+    btn.textContent = '✅ 已保存！'; showToast('✅ 审核配置已保存！'); markClean('am-savebar');
     setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
 }
 
@@ -812,7 +885,9 @@ async function saveAutoMod() {
 let _modLoaded = false;
 async function loadModeration() {
     if (_modLoaded) return; _modLoaded = true;
-    const [cfg, ch, cases] = await Promise.all([api('/moderation'), getCh(), api('/moderation/cases')]);
+    showSkeleton('mod-cases', 4);
+    try {
+        const [cfg, ch, cases] = await Promise.all([api('/moderation'), getCh(), api('/moderation/cases')]);
     chOpts('mod-log', ch, cfg.log_channel);
     document.getElementById('mod-mt').value = cfg.warn_mute_threshold || 3;
     document.getElementById('mod-md').value = cfg.warn_mute_duration || 600;
@@ -826,50 +901,77 @@ async function loadModeration() {
         const ts = d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
         return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${colors[c.action]||'var(--text)'}">#${c.id} ${c.action}</span><span class="case-time">${ts}</span></div><div class="case-body">${c.user_name || c.user_id} · 管理员: ${c.mod_name || c.mod_id} · 原因: ${c.reason}${c.duration?' · 时长: '+c.duration:''}</div></div>`;
     }).join('');
+    // Dirty listeners
+    document.querySelectorAll('#mod-log,#mod-mt,#mod-md,#mod-kt,#mod-bt').forEach(el => el.addEventListener('change', () => markDirty('mod-savebar')));
+    } catch(e) { showToast('❌ 加载管理配置失败: ' + e.message); showError('mod-cases', e.message); }
 }
 async function saveModeration() {
     const btn = document.getElementById('mod-save'); btn.disabled = true; btn.textContent = '保存中…';
-    await api('/moderation', 'POST', {
-        log_channel: document.getElementById('mod-log').value,
-        warn_mute_threshold: +document.getElementById('mod-mt').value,
-        warn_mute_duration: +document.getElementById('mod-md').value,
-        warn_kick_threshold: +document.getElementById('mod-kt').value,
-        warn_ban_threshold: +document.getElementById('mod-bt').value,
-    });
-    btn.textContent = '✅ 已保存！'; showToast('✅ 管理配置已保存！');
+    try {
+        await api('/moderation', 'POST', {
+            log_channel: document.getElementById('mod-log').value,
+            warn_mute_threshold: +document.getElementById('mod-mt').value,
+            warn_mute_duration: +document.getElementById('mod-md').value,
+            warn_kick_threshold: +document.getElementById('mod-kt').value,
+            warn_ban_threshold: +document.getElementById('mod-bt').value,
+        });
+        btn.textContent = '✅ 已保存！'; showToast('✅ 管理配置已保存！'); markClean('mod-savebar');
+    } catch(e) { showToast('❌ 保存失败: ' + e.message); }
     setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
 }
 
-/* ── Music (selects only) ── */
+/* ── Music config ── */
 let _muLoaded = false;
 async function loadMusicSelects() {
     if (_muLoaded) return; _muLoaded = true;
-    const [ch, roles] = await Promise.all([getCh(), getRoles()]);
-    chOpts('mu-ch', ch, 0);
-    const djSel = document.getElementById('mu-dj');
-    djSel.innerHTML = '<option value="0">— 不限制 —</option>' + roles.map(r => `<option value="${r.id}">@ ${r.name}</option>`).join('');
+    try {
+        const [ch, roles, cfg] = await Promise.all([getCh(), getRoles(), api('/music').catch(()=>({}))]);
+        chOpts('mu-ch', ch, cfg.notify_channel || 0);
+        const djSel = document.getElementById('mu-dj');
+        djSel.innerHTML = '<option value="0">— 不限制 —</option>' + roles.map(r =>
+            `<option value="${r.id}" ${String(r.id)===String(cfg.dj_role||0)?'selected':''}>@ ${r.name}</option>`
+        ).join('');
+        document.querySelectorAll('#mu-dj,#mu-ch').forEach(el => el.addEventListener('change', () => markDirty('mu-savebar')));
+    } catch(e) { showToast('❌ 加载音乐配置失败: ' + e.message); }
+}
+async function saveMusic() {
+    const btn = document.getElementById('mu-save'); btn.disabled = true; btn.textContent = '保存中…';
+    try {
+        await api('/music', 'POST', {
+            dj_role: document.getElementById('mu-dj').value,
+            notify_channel: document.getElementById('mu-ch').value,
+        });
+        btn.textContent = '✅ 已保存！'; showToast('✅ 音乐配置已保存！'); markClean('mu-savebar');
+    } catch(e) { showToast('❌ 保存失败: ' + e.message); }
+    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
 }
 
 /* ── Giveaway list ── */
 async function loadGiveaways() {
-    const data = await api('/giveaways').catch(()=>[]);
-    const el = document.getElementById('gw-list');
-    if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state-sm" style="padding:40px;">＋<br><br>还没有任何抽奖活动</div>'; return; }
-    el.innerHTML = data.map(g => {
-        const d = new Date(g.end_time * 1000);
-        return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${g.ended?'var(--text-muted)':'var(--green)'}">#${g.id} ${g.prize}</span><span class="case-time">${g.ended?'已结束':'进行中'} · ${d.toLocaleDateString('zh-CN')}</span></div><div class="case-body">名额: ${g.winners_count}</div></div>`;
-    }).join('');
+    showSkeleton('gw-list', 2);
+    try {
+        const data = await api('/giveaways');
+        const el = document.getElementById('gw-list');
+        if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state-sm" style="padding:40px;">＋<br><br>还没有任何抽奖活动</div>'; return; }
+        el.innerHTML = data.map(g => {
+            const d = new Date(g.end_time * 1000);
+            return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${g.ended?'var(--text-muted)':'var(--green)'}">#${g.id} ${g.prize}</span><span class="case-time">${g.ended?'已结束':'进行中'} · ${d.toLocaleDateString('zh-CN')}</span></div><div class="case-body">名额: ${g.winners_count}</div></div>`;
+        }).join('');
+    } catch(e) { showError('gw-list', '加载失败: ' + e.message); }
 }
 
 /* ── Leaderboard ── */
 async function loadLeaderboard() {
-    const data = await api('/leaderboard').catch(()=>[]);
-    const el = document.getElementById('lb-list');
-    if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state-sm">暂无等级数据</div>'; return; }
-    const medals = ['🥇','🥈','🥉'];
-    el.innerHTML = data.map((u, i) =>
-        `<div class="case-item"><div style="display:flex;align-items:center;gap:12px;"><span style="font-size:1rem;width:24px;text-align:center;">${medals[i]||'#'+(i+1)}</span><span style="font-weight:700;flex:1;">${u.username}</span><span style="font-size:.82rem;color:var(--text-muted);">Lv.${u.level} · ${u.xp.toLocaleString()} XP</span></div></div>`
-    ).join('');
+    showSkeleton('lb-list', 3);
+    try {
+        const data = await api('/leaderboard');
+        const el = document.getElementById('lb-list');
+        if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state-sm">暂无等级数据</div>'; return; }
+        const medals = ['🥇','🥈','🥉'];
+        el.innerHTML = data.map((u, i) =>
+            `<div class="case-item"><div style="display:flex;align-items:center;gap:12px;"><span style="font-size:1rem;width:24px;text-align:center;">${medals[i]||'#'+(i+1)}</span><span style="font-weight:700;flex:1;">${u.username}</span><span style="font-size:.82rem;color:var(--text-muted);">Lv.${u.level} · ${u.xp.toLocaleString()} XP</span></div></div>`
+        ).join('');
+    } catch(e) { showError('lb-list', '加载失败: ' + e.message); }
 }
 
 /* ── Tag helpers ── */
@@ -902,7 +1004,11 @@ async function loadOverviewStats() {
         const ov2 = document.getElementById('ov-disabled');
         if (ov1) ov1.innerHTML = `${enabled} <span class="accent">/ ${total}</span>`;
         if (ov2) ov2.textContent = disabled > 0 ? disabled : '0';
-    } catch(e) { console.error(e); }
+    } catch(e) {
+        console.error('Overview stats failed:', e);
+        const ov1 = document.getElementById('ov-enabled');
+        if (ov1) ov1.innerHTML = '— <span class="accent">/ —</span>';
+    }
 }
 
 async function loadUtility() {
@@ -1153,6 +1259,7 @@ async function loadPersonalizer() {
     if (_bpLoaded) return; _bpLoaded = true;
     try {
         const r = await fetch('/api/bot/personalizer');
+        if (!r.ok) throw new Error('加载失败');
         const cfg = await r.json();
         document.getElementById('bp-status').value = cfg.bot_status || 'online';
         document.getElementById('bp-atype').value = cfg.activity_type || 'watching';
