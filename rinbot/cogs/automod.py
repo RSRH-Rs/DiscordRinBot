@@ -16,12 +16,13 @@ import discord
 from discord.ext import commands
 import aiosqlite
 import json
+import os
 import time
 import re
 from collections import defaultdict
 from typing import Literal
 
-DB_PATH = "automod.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "automod.db")
 
 
 class AutoMod(commands.Cog):

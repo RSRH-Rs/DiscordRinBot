@@ -11,12 +11,13 @@ import discord
 from discord.ext import commands, tasks
 from discord.ui import View, Button
 import aiosqlite
+import os
 import random
 import time
 import asyncio
 from typing import Optional
 
-DB_PATH = "giveaway.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "giveaway.db")
 GIVEAWAY_EMOJI = "🎉"
 
 

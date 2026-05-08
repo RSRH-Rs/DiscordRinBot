@@ -8,8 +8,9 @@
 import discord
 from discord.ext import commands, tasks
 import aiosqlite
+import os
 
-DB_PATH = "botconfig.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "botconfig.db")
 
 
 class BotConfig(commands.Cog):

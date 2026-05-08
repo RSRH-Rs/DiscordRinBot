@@ -1,7 +1,8 @@
+import os
 import aiosqlite
 from discord.ext import commands
 
-DB_PATH = "musicconfig.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "musicconfig.db")
 
 
 class MusicConfig(commands.Cog):

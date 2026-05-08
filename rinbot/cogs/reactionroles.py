@@ -13,9 +13,10 @@ from discord.ext import commands
 from discord.ui import View, Button, RoleSelect
 import aiosqlite
 import json
+import os
 from typing import Optional
 
-DB_PATH = "reactionroles.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reactionroles.db")
 
 
 class ReactionRoles(commands.Cog):

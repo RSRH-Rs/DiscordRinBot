@@ -23,10 +23,11 @@ import discord
 from discord.ext import commands, tasks
 import aiosqlite
 import datetime
+import os
 import time
 from typing import Literal, Optional
 
-DB_PATH = "moderation.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "moderation.db")
 
 
 class Moderation(commands.Cog):

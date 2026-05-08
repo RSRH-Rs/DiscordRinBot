@@ -14,7 +14,7 @@ import io
 import os
 import aiosqlite
 
-DB_PATH = "welcome.db"
+DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "welcome.db")
 
 
 class WelcomeSetupView(View):
