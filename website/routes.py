@@ -1,24 +1,56 @@
 from quart import redirect, url_for, render_template, session, jsonify, request
+import asyncio
+import time
 import traceback
 import aiohttp
 import aiosqlite
 import json
 import os
+from typing import Optional
 from config import BOT_TOKEN
+
+# Shared aiohttp session — created at app startup, closed at shutdown
+_session: Optional[aiohttp.ClientSession] = None
+
+# Username cache: uid -> (name, expiry_ts). 1-hour TTL.
+_username_cache: dict[str, tuple[str, float]] = {}
+_USERNAME_TTL = 3600
+
+
+async def _get_session() -> aiohttp.ClientSession:
+    global _session
+    if _session is None or _session.closed:
+        _session = aiohttp.ClientSession()
+    return _session
+
+
+async def _fetch_username(uid: str) -> str:
+    """Resolve a Discord user ID to display name, with TTL cache."""
+    now = time.time()
+    cached = _username_cache.get(uid)
+    if cached and cached[1] > now:
+        return cached[0]
+    udata = await discord_api_get(f"/users/{uid}")
+    name = uid
+    if udata:
+        name = udata.get("global_name") or udata.get("username") or uid
+    _username_cache[uid] = (name, now + _USERNAME_TTL)
+    return name
+
 
 # ── 关键：数据库在 rinbot 目录，网站在 website 目录 ──
 # 相对路径: website/ → ../rinbot/
 BOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rinbot")
 
-DB_WELCOME    = os.path.join(BOT_DIR, "welcome.db")
-DB_AUTOMOD    = os.path.join(BOT_DIR, "automod.db")
+DB_WELCOME = os.path.join(BOT_DIR, "welcome.db")
+DB_AUTOMOD = os.path.join(BOT_DIR, "automod.db")
 DB_MODERATION = os.path.join(BOT_DIR, "moderation.db")
-DB_GIVEAWAY   = os.path.join(BOT_DIR, "giveaway.db")
-DB_LEVELING   = os.path.join(BOT_DIR, "leveling.db")
-DB_BOTCONFIG  = os.path.join(BOT_DIR, "botconfig.db")
-DB_RR         = os.path.join(BOT_DIR, "reactionroles.db")
-DB_CMDTOGGLE  = os.path.join(BOT_DIR, "commandtoggle.db")
-DB_MUSIC      = os.path.join(BOT_DIR, "musicconfig.db")
+DB_GIVEAWAY = os.path.join(BOT_DIR, "giveaway.db")
+DB_LEVELING = os.path.join(BOT_DIR, "leveling.db")
+DB_BOTCONFIG = os.path.join(BOT_DIR, "botconfig.db")
+DB_RR = os.path.join(BOT_DIR, "reactionroles.db")
+DB_CMDTOGGLE = os.path.join(BOT_DIR, "commandtoggle.db")
+DB_MUSIC = os.path.join(BOT_DIR, "musicconfig.db")
 
 
 async def ensure_tables():
@@ -44,10 +76,12 @@ async def ensure_tables():
                 ignored_channels TEXT DEFAULT '[]', ignored_roles TEXT DEFAULT '[]')""")
             await db.commit()
         async with aiosqlite.connect(DB_MODERATION) as db:
-            await db.execute("""CREATE TABLE IF NOT EXISTS mod_config (
+            await db.execute(
+                """CREATE TABLE IF NOT EXISTS mod_config (
                 guild_id INTEGER PRIMARY KEY, log_channel INTEGER DEFAULT 0,
                 warn_kick_threshold INTEGER DEFAULT 0, warn_ban_threshold INTEGER DEFAULT 0,
-                warn_mute_threshold INTEGER DEFAULT 3, warn_mute_duration INTEGER DEFAULT 600)""")
+                warn_mute_threshold INTEGER DEFAULT 3, warn_mute_duration INTEGER DEFAULT 600)"""
+            )
             await db.execute("""CREATE TABLE IF NOT EXISTS mod_cases (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL,
                 action TEXT NOT NULL, user_id INTEGER NOT NULL, mod_id INTEGER NOT NULL,
@@ -133,11 +167,14 @@ def has_manage_permission(guild) -> bool:
 async def fetch_bot_guild_ids() -> set:
     headers = {"Authorization": f"Bot {BOT_TOKEN}"}
     try:
-        async with aiohttp.ClientSession() as s:
-            async with s.get("https://discord.com/api/v10/users/@me/guilds",
-                             headers=headers, timeout=aiohttp.ClientTimeout(total=5)) as resp:
-                if resp.status == 200:
-                    return {int(g["id"]) for g in await resp.json()}
+        s = await _get_session()
+        async with s.get(
+            "https://discord.com/api/v10/users/@me/guilds",
+            headers=headers,
+            timeout=aiohttp.ClientTimeout(total=5),
+        ) as resp:
+            if resp.status == 200:
+                return {int(g["id"]) for g in await resp.json()}
     except Exception as e:
         print(f"[fetch_bot_guild_ids] {e}")
     return set()
@@ -146,12 +183,15 @@ async def fetch_bot_guild_ids() -> set:
 async def discord_api_get(path):
     headers = {"Authorization": f"Bot {BOT_TOKEN}"}
     try:
-        async with aiohttp.ClientSession() as s:
-            async with s.get(f"https://discord.com/api/v10{path}",
-                             headers=headers, timeout=aiohttp.ClientTimeout(total=8)) as resp:
-                if resp.status == 200:
-                    return await resp.json()
-                print(f"[Discord API] {path} → {resp.status}")
+        s = await _get_session()
+        async with s.get(
+            f"https://discord.com/api/v10{path}",
+            headers=headers,
+            timeout=aiohttp.ClientTimeout(total=8),
+        ) as resp:
+            if resp.status == 200:
+                return await resp.json()
+            print(f"[Discord API] {path} → {resp.status}")
     except Exception as e:
         print(f"[Discord API] {path}: {e}")
     return None
@@ -159,25 +199,41 @@ async def discord_api_get(path):
 
 async def discord_api_post(path, json_data):
     headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
-    async with aiohttp.ClientSession() as s:
-        async with s.post(f"https://discord.com/api/v10{path}",
-                          headers=headers, json=json_data,
-                          timeout=aiohttp.ClientTimeout(total=10)) as resp:
-            body = await resp.json()
-            if resp.status in (200, 201):
-                return body
-            raise Exception(body.get("message", f"Discord API {resp.status}"))
+    s = await _get_session()
+    async with s.post(
+        f"https://discord.com/api/v10{path}",
+        headers=headers,
+        json=json_data,
+        timeout=aiohttp.ClientTimeout(total=10),
+    ) as resp:
+        body = await resp.json()
+        if resp.status in (200, 201):
+            return body
+        raise Exception(body.get("message", f"Discord API {resp.status}"))
 
 
 async def discord_api_put(path):
     headers = {"Authorization": f"Bot {BOT_TOKEN}"}
-    async with aiohttp.ClientSession() as s:
-        async with s.put(f"https://discord.com/api/v10{path}",
-                         headers=headers,
-                         timeout=aiohttp.ClientTimeout(total=5)) as resp:
-            if resp.status == 204:
-                return True
-            return False
+    s = await _get_session()
+    async with s.put(
+        f"https://discord.com/api/v10{path}",
+        headers=headers,
+        timeout=aiohttp.ClientTimeout(total=5),
+    ) as resp:
+        return resp.status == 204
+
+
+async def discord_api_patch(path, json_data):
+    """PATCH helper used by bot username/avatar endpoints. Returns (status, body)."""
+    headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
+    s = await _get_session()
+    async with s.patch(
+        f"https://discord.com/api/v10{path}",
+        headers=headers,
+        json=json_data,
+        timeout=aiohttp.ClientTimeout(total=15),
+    ) as resp:
+        return resp.status, await resp.json()
 
 
 async def check_guild_access(discord_oauth, gid_str):
@@ -198,18 +254,32 @@ def setup_routes(app, discord):
     @app.before_serving
     async def startup():
         await ensure_tables()
+        await _get_session()  # warm up shared aiohttp session
+
+    @app.after_serving
+    async def shutdown():
+        global _session
+        if _session and not _session.closed:
+            await _session.close()
+            _session = None
 
     # ═══════ Page routes ═══════
 
     @app.route("/")
     async def index():
-        bot_info = {"name": "小凛 RinBot", "status": "Online", "server_count": 12,
-                    "description": "全能型音乐/娱乐/管理机器人"}
+        bot_info = {
+            "name": "小凛 RinBot",
+            "status": "Online",
+            "server_count": 12,
+            "description": "全能型音乐/娱乐/管理机器人",
+        }
         try:
             is_logged_in = await discord.authorized
         except Exception:
             is_logged_in = False
-        return await render_template("index.html", bot=bot_info, is_logged_in=is_logged_in)
+        return await render_template(
+            "index.html", bot=bot_info, is_logged_in=is_logged_in
+        )
 
     @app.route("/login")
     async def login():
@@ -252,7 +322,12 @@ def setup_routes(app, discord):
             all_guilds = await discord.fetch_guilds()
             current = next((g for g in all_guilds if int(g.id) == guild_id), None)
             if not current:
-                return await render_template("error.html", error="找不到该服务器或无权访问"), 404
+                return (
+                    await render_template(
+                        "error.html", error="找不到该服务器或无权访问"
+                    ),
+                    404,
+                )
             return await render_template("server.html", user=user, guild=current)
         except Exception as e:
             return await render_template("error.html", error=str(e)), 500
@@ -279,8 +354,13 @@ def setup_routes(app, discord):
             if not data:
                 return jsonify([])
             ch = sorted(
-                [{"id": str(c["id"]), "name": c["name"]} for c in data if c.get("type") == 0],
-                key=lambda c: c["name"])
+                [
+                    {"id": str(c["id"]), "name": c["name"]}
+                    for c in data
+                    if c.get("type") == 0
+                ],
+                key=lambda c: c["name"],
+            )
             return jsonify(ch)
         except Exception as e:
             print(f"[api_channels] {traceback.format_exc()}")
@@ -295,9 +375,13 @@ def setup_routes(app, discord):
             if not data:
                 return jsonify([])
             roles = sorted(
-                [{"id": str(r["id"]), "name": r["name"], "color": r.get("color", 0)}
-                 for r in data if r["name"] != "@everyone"],
-                key=lambda r: r["name"])
+                [
+                    {"id": str(r["id"]), "name": r["name"], "color": r.get("color", 0)}
+                    for r in data
+                    if r["name"] != "@everyone"
+                ],
+                key=lambda r: r["name"],
+            )
             return jsonify(roles)
         except Exception as e:
             print(f"[api_roles] {traceback.format_exc()}")
@@ -313,14 +397,22 @@ def setup_routes(app, discord):
             g = int(gid)
             async with aiosqlite.connect(DB_WELCOME) as db:
                 db.row_factory = aiosqlite.Row
-                cur = await db.execute("SELECT * FROM welcome_config WHERE guild_id=?", (g,))
+                cur = await db.execute(
+                    "SELECT * FROM welcome_config WHERE guild_id=?", (g,)
+                )
                 row = await cur.fetchone()
             if row:
                 return jsonify(dict(row))
-            return jsonify({"guild_id": g, "welcome_channel": 0, "farewell_channel": 0,
-                            "auto_roles": "",
-                            "welcome_msg": "欢迎 {member} 加入 {server}！🎉",
-                            "farewell_msg": "{member} 离开了我们... 👋"})
+            return jsonify(
+                {
+                    "guild_id": g,
+                    "welcome_channel": 0,
+                    "farewell_channel": 0,
+                    "auto_roles": "",
+                    "welcome_msg": "欢迎 {member} 加入 {server}！🎉",
+                    "farewell_msg": "{member} 离开了我们... 👋",
+                }
+            )
         except Exception as e:
             print(f"[api_welcome_get] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
@@ -333,13 +425,22 @@ def setup_routes(app, discord):
             d = await request.get_json()
             g = int(gid)
             async with aiosqlite.connect(DB_WELCOME) as db:
-                await db.execute("INSERT OR IGNORE INTO welcome_config (guild_id) VALUES (?)", (g,))
-                await db.execute("""UPDATE welcome_config SET
+                await db.execute(
+                    "INSERT OR IGNORE INTO welcome_config (guild_id) VALUES (?)", (g,)
+                )
+                await db.execute(
+                    """UPDATE welcome_config SET
                     welcome_channel=?, farewell_channel=?, auto_roles=?,
                     welcome_msg=?, farewell_msg=? WHERE guild_id=?""",
-                    (int(d.get("welcome_channel", 0)), int(d.get("farewell_channel", 0)),
-                     d.get("auto_roles", ""), d.get("welcome_msg", ""),
-                     d.get("farewell_msg", ""), g))
+                    (
+                        int(d.get("welcome_channel", 0)),
+                        int(d.get("farewell_channel", 0)),
+                        d.get("auto_roles", ""),
+                        d.get("welcome_msg", ""),
+                        d.get("farewell_msg", ""),
+                        g,
+                    ),
+                )
                 await db.commit()
             return jsonify({"ok": True})
         except Exception as e:
@@ -356,22 +457,45 @@ def setup_routes(app, discord):
             g = int(gid)
             async with aiosqlite.connect(DB_AUTOMOD) as db:
                 db.row_factory = aiosqlite.Row
-                cur = await db.execute("SELECT * FROM automod_config WHERE guild_id=?", (g,))
+                cur = await db.execute(
+                    "SELECT * FROM automod_config WHERE guild_id=?", (g,)
+                )
                 row = await cur.fetchone()
             if row:
                 d = dict(row)
-                for k in ("badwords", "link_whitelist", "ignored_channels", "ignored_roles"):
+                for k in (
+                    "badwords",
+                    "link_whitelist",
+                    "ignored_channels",
+                    "ignored_roles",
+                ):
                     try:
                         d[k] = json.loads(d.get(k, "[]"))
                     except Exception:
                         d[k] = []
                 return jsonify(d)
-            return jsonify({"guild_id": g, "enabled": 0, "log_channel": 0,
-                            "anti_spam": 1, "spam_threshold": 5, "spam_interval": 5,
-                            "anti_badword": 1, "badwords": [], "anti_link": 0,
-                            "link_whitelist": [], "anti_caps": 1, "caps_threshold": 70,
-                            "caps_min_length": 10, "anti_repeat": 1, "repeat_threshold": 3,
-                            "mute_duration": 300, "ignored_channels": [], "ignored_roles": []})
+            return jsonify(
+                {
+                    "guild_id": g,
+                    "enabled": 0,
+                    "log_channel": 0,
+                    "anti_spam": 1,
+                    "spam_threshold": 5,
+                    "spam_interval": 5,
+                    "anti_badword": 1,
+                    "badwords": [],
+                    "anti_link": 0,
+                    "link_whitelist": [],
+                    "anti_caps": 1,
+                    "caps_threshold": 70,
+                    "caps_min_length": 10,
+                    "anti_repeat": 1,
+                    "repeat_threshold": 3,
+                    "mute_duration": 300,
+                    "ignored_channels": [],
+                    "ignored_roles": [],
+                }
+            )
         except Exception as e:
             print(f"[api_automod_get] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
@@ -384,25 +508,36 @@ def setup_routes(app, discord):
             d = await request.get_json()
             g = int(gid)
             async with aiosqlite.connect(DB_AUTOMOD) as db:
-                await db.execute("INSERT OR IGNORE INTO automod_config (guild_id) VALUES (?)", (g,))
-                await db.execute("""UPDATE automod_config SET
+                await db.execute(
+                    "INSERT OR IGNORE INTO automod_config (guild_id) VALUES (?)", (g,)
+                )
+                await db.execute(
+                    """UPDATE automod_config SET
                     enabled=?, log_channel=?, anti_spam=?, spam_threshold=?, spam_interval=?,
                     anti_badword=?, badwords=?, anti_link=?, link_whitelist=?,
                     anti_caps=?, caps_threshold=?, anti_repeat=?, repeat_threshold=?,
                     mute_duration=?, ignored_channels=?, ignored_roles=?
                     WHERE guild_id=?""",
-                    (int(d.get("enabled", 1)), int(d.get("log_channel", 0)),
-                     int(d.get("anti_spam", 1)), int(d.get("spam_threshold", 5)),
-                     int(d.get("spam_interval", 5)), int(d.get("anti_badword", 1)),
-                     json.dumps(d.get("badwords", []), ensure_ascii=False),
-                     int(d.get("anti_link", 0)),
-                     json.dumps(d.get("link_whitelist", []), ensure_ascii=False),
-                     int(d.get("anti_caps", 1)), int(d.get("caps_threshold", 70)),
-                     int(d.get("anti_repeat", 1)), int(d.get("repeat_threshold", 3)),
-                     int(d.get("mute_duration", 300)),
-                     json.dumps(d.get("ignored_channels", []), ensure_ascii=False),
-                     json.dumps(d.get("ignored_roles", []), ensure_ascii=False),
-                     g))
+                    (
+                        int(d.get("enabled", 1)),
+                        int(d.get("log_channel", 0)),
+                        int(d.get("anti_spam", 1)),
+                        int(d.get("spam_threshold", 5)),
+                        int(d.get("spam_interval", 5)),
+                        int(d.get("anti_badword", 1)),
+                        json.dumps(d.get("badwords", []), ensure_ascii=False),
+                        int(d.get("anti_link", 0)),
+                        json.dumps(d.get("link_whitelist", []), ensure_ascii=False),
+                        int(d.get("anti_caps", 1)),
+                        int(d.get("caps_threshold", 70)),
+                        int(d.get("anti_repeat", 1)),
+                        int(d.get("repeat_threshold", 3)),
+                        int(d.get("mute_duration", 300)),
+                        json.dumps(d.get("ignored_channels", []), ensure_ascii=False),
+                        json.dumps(d.get("ignored_roles", []), ensure_ascii=False),
+                        g,
+                    ),
+                )
                 await db.commit()
             return jsonify({"ok": True})
         except Exception as e:
@@ -419,13 +554,22 @@ def setup_routes(app, discord):
             g = int(gid)
             async with aiosqlite.connect(DB_MODERATION) as db:
                 db.row_factory = aiosqlite.Row
-                cur = await db.execute("SELECT * FROM mod_config WHERE guild_id=?", (g,))
+                cur = await db.execute(
+                    "SELECT * FROM mod_config WHERE guild_id=?", (g,)
+                )
                 row = await cur.fetchone()
             if row:
                 return jsonify(dict(row))
-            return jsonify({"guild_id": g, "log_channel": 0,
-                            "warn_kick_threshold": 0, "warn_ban_threshold": 0,
-                            "warn_mute_threshold": 3, "warn_mute_duration": 600})
+            return jsonify(
+                {
+                    "guild_id": g,
+                    "log_channel": 0,
+                    "warn_kick_threshold": 0,
+                    "warn_ban_threshold": 0,
+                    "warn_mute_threshold": 3,
+                    "warn_mute_duration": 600,
+                }
+            )
         except Exception as e:
             print(f"[api_moderation_get] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
@@ -438,13 +582,22 @@ def setup_routes(app, discord):
             d = await request.get_json()
             g = int(gid)
             async with aiosqlite.connect(DB_MODERATION) as db:
-                await db.execute("INSERT OR IGNORE INTO mod_config (guild_id) VALUES (?)", (g,))
-                await db.execute("""UPDATE mod_config SET
+                await db.execute(
+                    "INSERT OR IGNORE INTO mod_config (guild_id) VALUES (?)", (g,)
+                )
+                await db.execute(
+                    """UPDATE mod_config SET
                     log_channel=?, warn_mute_threshold=?, warn_kick_threshold=?,
                     warn_ban_threshold=?, warn_mute_duration=? WHERE guild_id=?""",
-                    (int(d.get("log_channel", 0)), int(d.get("warn_mute_threshold", 3)),
-                     int(d.get("warn_kick_threshold", 0)), int(d.get("warn_ban_threshold", 0)),
-                     int(d.get("warn_mute_duration", 600)), g))
+                    (
+                        int(d.get("log_channel", 0)),
+                        int(d.get("warn_mute_threshold", 3)),
+                        int(d.get("warn_kick_threshold", 0)),
+                        int(d.get("warn_ban_threshold", 0)),
+                        int(d.get("warn_mute_duration", 600)),
+                        g,
+                    ),
+                )
                 await db.commit()
             return jsonify({"ok": True})
         except Exception as e:
@@ -460,30 +613,37 @@ def setup_routes(app, discord):
             async with aiosqlite.connect(DB_MODERATION) as db:
                 cur = await db.execute(
                     "SELECT id,action,user_id,mod_id,reason,duration,created_at "
-                    "FROM mod_cases WHERE guild_id=? ORDER BY created_at DESC LIMIT 20", (g,))
+                    "FROM mod_cases WHERE guild_id=? ORDER BY created_at DESC LIMIT 20",
+                    (g,),
+                )
                 rows = await cur.fetchall()
 
-            # Batch resolve unique user IDs
-            all_ids = set()
-            for r in rows:
-                all_ids.add(str(r[2]))
-                all_ids.add(str(r[3]))
-            name_cache = {}
-            for uid in all_ids:
-                try:
-                    udata = await discord_api_get(f"/users/{uid}")
-                    if udata:
-                        name_cache[uid] = udata.get("global_name") or udata.get("username") or uid
-                except Exception:
-                    name_cache[uid] = uid
+            # Batch resolve unique user IDs concurrently
+            all_ids = list({str(r[2]) for r in rows} | {str(r[3]) for r in rows})
+            names = await asyncio.gather(
+                *[_fetch_username(uid) for uid in all_ids], return_exceptions=True
+            )
+            name_cache = {
+                uid: (n if isinstance(n, str) else uid)
+                for uid, n in zip(all_ids, names)
+            }
 
-            return jsonify([
-                {"id": r[0], "action": r[1],
-                 "user_id": str(r[2]), "user_name": name_cache.get(str(r[2]), str(r[2])),
-                 "mod_id": str(r[3]), "mod_name": name_cache.get(str(r[3]), str(r[3])),
-                 "reason": r[4], "duration": r[5], "created_at": r[6]}
-                for r in rows
-            ])
+            return jsonify(
+                [
+                    {
+                        "id": r[0],
+                        "action": r[1],
+                        "user_id": str(r[2]),
+                        "user_name": name_cache.get(str(r[2]), str(r[2])),
+                        "mod_id": str(r[3]),
+                        "mod_name": name_cache.get(str(r[3]), str(r[3])),
+                        "reason": r[4],
+                        "duration": r[5],
+                        "created_at": r[6],
+                    }
+                    for r in rows
+                ]
+            )
         except Exception as e:
             print(f"[api_mod_cases] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
@@ -499,13 +659,22 @@ def setup_routes(app, discord):
             async with aiosqlite.connect(DB_GIVEAWAY) as db:
                 cur = await db.execute(
                     "SELECT id,prize,winners_count,end_time,ended "
-                    "FROM giveaways WHERE guild_id=? ORDER BY end_time DESC LIMIT 10", (g,))
+                    "FROM giveaways WHERE guild_id=? ORDER BY end_time DESC LIMIT 10",
+                    (g,),
+                )
                 rows = await cur.fetchall()
-            return jsonify([
-                {"id": r[0], "prize": r[1], "winners_count": r[2],
-                 "end_time": r[3], "ended": bool(r[4])}
-                for r in rows
-            ])
+            return jsonify(
+                [
+                    {
+                        "id": r[0],
+                        "prize": r[1],
+                        "winners_count": r[2],
+                        "end_time": r[3],
+                        "ended": bool(r[4]),
+                    }
+                    for r in rows
+                ]
+            )
         except Exception as e:
             print(f"[api_giveaways] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
@@ -520,7 +689,9 @@ def setup_routes(app, discord):
             g = int(gid)
             async with aiosqlite.connect(DB_MUSIC) as db:
                 db.row_factory = aiosqlite.Row
-                cur = await db.execute("SELECT * FROM music_config WHERE guild_id=?", (g,))
+                cur = await db.execute(
+                    "SELECT * FROM music_config WHERE guild_id=?", (g,)
+                )
                 row = await cur.fetchone()
             if row:
                 return jsonify(dict(row))
@@ -539,7 +710,8 @@ def setup_routes(app, discord):
             async with aiosqlite.connect(DB_MUSIC) as db:
                 await db.execute(
                     "INSERT OR REPLACE INTO music_config (guild_id, dj_role, notify_channel) VALUES (?, ?, ?)",
-                    (g, int(d.get("dj_role", 0)), int(d.get("notify_channel", 0))))
+                    (g, int(d.get("dj_role", 0)), int(d.get("notify_channel", 0))),
+                )
                 await db.commit()
             return jsonify({"ok": True})
         except Exception as e:
@@ -557,26 +729,25 @@ def setup_routes(app, discord):
             async with aiosqlite.connect(DB_LEVELING) as db:
                 cur = await db.execute(
                     "SELECT user_id,xp,level FROM users "
-                    "WHERE guild_id=? ORDER BY xp DESC LIMIT 15", (g,))
+                    "WHERE guild_id=? ORDER BY xp DESC LIMIT 15",
+                    (g,),
+                )
                 rows = await cur.fetchall()
 
-            # Fetch usernames from Discord API
-            result = []
-            for r in rows:
-                uid = str(r[0])
-                name = None
-                try:
-                    udata = await discord_api_get(f"/users/{uid}")
-                    if udata:
-                        name = udata.get("global_name") or udata.get("username")
-                except Exception:
-                    pass
-                result.append({
+            # Fetch usernames concurrently (TTL-cached)
+            uids = [str(r[0]) for r in rows]
+            names = await asyncio.gather(
+                *[_fetch_username(uid) for uid in uids], return_exceptions=True
+            )
+            result = [
+                {
                     "user_id": uid,
-                    "username": name or f"用户 {uid}",
+                    "username": (n if isinstance(n, str) else None) or f"用户 {uid}",
                     "xp": r[1],
                     "level": r[2],
-                })
+                }
+                for r, uid, n in zip(rows, uids, names)
+            ]
             return jsonify(result)
         except Exception as e:
             print(f"[api_leaderboard] {traceback.format_exc()}")
@@ -595,8 +766,13 @@ def setup_routes(app, discord):
                 row = await cur.fetchone()
             if row:
                 return jsonify(dict(row))
-            return jsonify({"bot_status": "online", "activity_type": "watching",
-                            "activity_text": "正在偷看你的聊天记录|rin-bot.com"})
+            return jsonify(
+                {
+                    "bot_status": "online",
+                    "activity_type": "watching",
+                    "activity_text": "正在偷看你的聊天记录|rin-bot.com",
+                }
+            )
         except Exception as e:
             print(f"[api_bot_cfg_get] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
@@ -607,16 +783,21 @@ def setup_routes(app, discord):
             if not await discord.authorized:
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
-            import time
             async with aiosqlite.connect(DB_BOTCONFIG) as db:
-                await db.execute("INSERT OR IGNORE INTO bot_personalizer (id) VALUES (1)")
-                await db.execute("""UPDATE bot_personalizer SET
+                await db.execute(
+                    "INSERT OR IGNORE INTO bot_personalizer (id) VALUES (1)"
+                )
+                await db.execute(
+                    """UPDATE bot_personalizer SET
                     bot_status=?, activity_type=?, activity_text=?, updated_at=?
                     WHERE id=1""",
-                    (d.get("bot_status", "online"),
-                     d.get("activity_type", "watching"),
-                     d.get("activity_text", ""),
-                     time.time()))
+                    (
+                        d.get("bot_status", "online"),
+                        d.get("activity_type", "watching"),
+                        d.get("activity_text", ""),
+                        time.time(),
+                    ),
+                )
                 await db.commit()
             return jsonify({"ok": True})
         except Exception as e:
@@ -633,15 +814,13 @@ def setup_routes(app, discord):
             name = d.get("username", "").strip()
             if not name or len(name) < 2 or len(name) > 32:
                 return jsonify({"error": "用户名长度需要 2-32 字符"}), 400
-            headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
-            async with aiohttp.ClientSession() as s:
-                async with s.patch("https://discord.com/api/v10/users/@me",
-                                   headers=headers, json={"username": name},
-                                   timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                    if resp.status == 200:
-                        return jsonify({"ok": True})
-                    body = await resp.json()
-                    return jsonify({"error": body.get("message", f"Discord API {resp.status}")}), resp.status
+            status, body = await discord_api_patch("/users/@me", {"username": name})
+            if status == 200:
+                return jsonify({"ok": True})
+            return (
+                jsonify({"error": body.get("message", f"Discord API {status}")}),
+                status,
+            )
         except Exception as e:
             print(f"[api_bot_username] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
@@ -656,15 +835,13 @@ def setup_routes(app, discord):
             avatar_b64 = d.get("avatar")  # expects "data:image/png;base64,..."
             if not avatar_b64:
                 return jsonify({"error": "missing avatar data"}), 400
-            headers = {"Authorization": f"Bot {BOT_TOKEN}", "Content-Type": "application/json"}
-            async with aiohttp.ClientSession() as s:
-                async with s.patch("https://discord.com/api/v10/users/@me",
-                                   headers=headers, json={"avatar": avatar_b64},
-                                   timeout=aiohttp.ClientTimeout(total=15)) as resp:
-                    if resp.status == 200:
-                        return jsonify({"ok": True})
-                    body = await resp.json()
-                    return jsonify({"error": body.get("message", f"Discord API {resp.status}")}), resp.status
+            status, body = await discord_api_patch("/users/@me", {"avatar": avatar_b64})
+            if status == 200:
+                return jsonify({"ok": True})
+            return (
+                jsonify({"error": body.get("message", f"Discord API {status}")}),
+                status,
+            )
         except Exception as e:
             print(f"[api_bot_avatar] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
@@ -679,13 +856,21 @@ def setup_routes(app, discord):
             g = int(gid)
             async with aiosqlite.connect(DB_RR) as db:
                 cur = await db.execute(
-                    "SELECT message_id, channel_id, title, mappings FROM rr_panels WHERE guild_id=?", (g,))
+                    "SELECT message_id, channel_id, title, mappings FROM rr_panels WHERE guild_id=?",
+                    (g,),
+                )
                 rows = await cur.fetchall()
-            return jsonify([
-                {"message_id": str(r[0]), "channel_id": str(r[1]),
-                 "title": r[2], "mappings": r[3]}
-                for r in rows
-            ])
+            return jsonify(
+                [
+                    {
+                        "message_id": str(r[0]),
+                        "channel_id": str(r[1]),
+                        "title": r[2],
+                        "mappings": r[3],
+                    }
+                    for r in rows
+                ]
+            )
         except Exception as e:
             print(f"[api_rr_list] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
@@ -715,27 +900,35 @@ def setup_routes(app, discord):
                 desc_lines.append(f"{emoji} → <@&{role_id}>")
 
             # 1. Send embed message to Discord channel
-            msg_data = await discord_api_post(f"/channels/{channel_id}/messages", {
-                "embeds": [{
-                    "title": title,
-                    "description": "\n".join(desc_lines),
-                    "color": 0x2DD4BF,
-                    "footer": {"text": "点击下方反应获取对应身份组 | 再次点击移除"}
-                }]
-            })
+            msg_data = await discord_api_post(
+                f"/channels/{channel_id}/messages",
+                {
+                    "embeds": [
+                        {
+                            "title": title,
+                            "description": "\n".join(desc_lines),
+                            "color": 0x2DD4BF,
+                            "footer": {
+                                "text": "点击下方反应获取对应身份组 | 再次点击移除"
+                            },
+                        }
+                    ]
+                },
+            )
             message_id = msg_data["id"]
 
             # 2. Add reactions to the message
             import urllib.parse
+
             for m in mappings_list:
                 emoji = m["emoji"]
                 encoded = urllib.parse.quote(emoji)
                 try:
                     await discord_api_put(
-                        f"/channels/{channel_id}/messages/{message_id}/reactions/{encoded}/@me")
+                        f"/channels/{channel_id}/messages/{message_id}/reactions/{encoded}/@me"
+                    )
                 except Exception as e:
                     print(f"[RR] Failed to add reaction {emoji}: {e}")
-                import asyncio
                 await asyncio.sleep(0.3)  # Rate limit safety
 
             # 3. Save to DB
@@ -743,7 +936,14 @@ def setup_routes(app, discord):
             async with aiosqlite.connect(DB_RR) as db:
                 await db.execute(
                     "INSERT INTO rr_panels (message_id, channel_id, guild_id, title, mappings) VALUES (?, ?, ?, ?, ?)",
-                    (int(message_id), int(channel_id), g, title, json.dumps(mapping_dict)))
+                    (
+                        int(message_id),
+                        int(channel_id),
+                        g,
+                        title,
+                        json.dumps(mapping_dict),
+                    ),
+                )
                 await db.commit()
 
             return jsonify({"ok": True, "message_id": message_id})
@@ -769,7 +969,6 @@ def setup_routes(app, discord):
             if not prize or not channel_id or end_time <= 0:
                 return jsonify({"error": "缺少必填字段"}), 400
 
-            import time
             if end_time <= time.time():
                 return jsonify({"error": "结束时间必须在未来"}), 400
 
@@ -785,23 +984,32 @@ def setup_routes(app, discord):
             if restrict_role:
                 embed_desc += f"\n\n🔒 限制身份组: <@&{restrict_role}>"
 
-            msg_data = await discord_api_post(f"/channels/{channel_id}/messages", {
-                "embeds": [{
-                    "title": "🎉 抽奖活动！",
-                    "description": embed_desc,
-                    "color": 0x57F287,
-                    "footer": {"text": "小凛抽奖系统 | 公平公正公开"}
-                }],
-                "components": [{
-                    "type": 1,
-                    "components": [{
-                        "type": 2,
-                        "style": 1,
-                        "label": "🎉 参加抽奖!",
-                        "custom_id": "giveaway_enter"
-                    }]
-                }]
-            })
+            msg_data = await discord_api_post(
+                f"/channels/{channel_id}/messages",
+                {
+                    "embeds": [
+                        {
+                            "title": "🎉 抽奖活动！",
+                            "description": embed_desc,
+                            "color": 0x57F287,
+                            "footer": {"text": "小凛抽奖系统 | 公平公正公开"},
+                        }
+                    ],
+                    "components": [
+                        {
+                            "type": 1,
+                            "components": [
+                                {
+                                    "type": 2,
+                                    "style": 1,
+                                    "label": "🎉 参加抽奖!",
+                                    "custom_id": "giveaway_enter",
+                                }
+                            ],
+                        }
+                    ],
+                },
+            )
             message_id = msg_data["id"]
 
             # 2. Save to giveaway DB
@@ -816,7 +1024,16 @@ def setup_routes(app, discord):
             async with aiosqlite.connect(DB_GIVEAWAY) as db:
                 await db.execute(
                     "INSERT INTO giveaways (guild_id, channel_id, message_id, host_id, prize, winners_count, end_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (g, int(channel_id), int(message_id), host_id, prize, winners_count, end_time))
+                    (
+                        g,
+                        int(channel_id),
+                        int(message_id),
+                        host_id,
+                        prize,
+                        winners_count,
+                        end_time,
+                    ),
+                )
                 await db.commit()
 
             return jsonify({"ok": True, "message_id": message_id})
@@ -828,58 +1045,68 @@ def setup_routes(app, discord):
 
     # Static command registry — matches bot's actual commands
     COMMAND_REGISTRY = [
-        {"name": "play",       "desc": "播放音乐 (歌名或链接)",        "cog": "Music"},
-        {"name": "queue",      "desc": "查看播放队列",                 "cog": "Music"},
-        {"name": "skip",       "desc": "跳过当前歌曲",                 "cog": "Music"},
-        {"name": "pause",      "desc": "暂停播放",                     "cog": "Music"},
-        {"name": "resume",     "desc": "恢复播放",                     "cog": "Music"},
-        {"name": "stop",       "desc": "停止播放并离开频道",           "cog": "Music"},
-        {"name": "nowplaying", "desc": "查看正在播放的歌曲",           "cog": "Music"},
-        {"name": "loop",       "desc": "设置循环模式",                 "cog": "Music"},
-        {"name": "volume",     "desc": "调整音量 (0-200)",             "cog": "Music"},
-        {"name": "shuffle",    "desc": "随机打乱队列",                 "cog": "Music"},
-        {"name": "move",       "desc": "移动队列中的歌曲位置",         "cog": "Music"},
-        {"name": "remove",     "desc": "从队列移除指定歌曲",           "cog": "Music"},
-        {"name": "clear",      "desc": "清空播放队列",                 "cog": "Music"},
-        {"name": "join",       "desc": "加入你的语音频道",             "cog": "Music"},
-        {"name": "rank",       "desc": "查看你的等级卡片",             "cog": "Leveling"},
-        {"name": "kick",       "desc": "踢出成员",                     "cog": "Moderation"},
-        {"name": "ban",        "desc": "永久封禁成员",                 "cog": "Moderation"},
-        {"name": "tempban",    "desc": "临时封禁成员",                 "cog": "Moderation"},
-        {"name": "unban",      "desc": "解除封禁",                     "cog": "Moderation"},
-        {"name": "mute",       "desc": "禁言成员 (Timeout)",           "cog": "Moderation"},
-        {"name": "unmute",     "desc": "解除禁言",                     "cog": "Moderation"},
-        {"name": "warn",       "desc": "警告成员",                     "cog": "Moderation"},
-        {"name": "warns",      "desc": "查看警告记录",                 "cog": "Moderation"},
-        {"name": "clearwarns", "desc": "清除所有警告",                 "cog": "Moderation"},
-        {"name": "delwarn",    "desc": "删除指定警告",                 "cog": "Moderation"},
-        {"name": "purge",      "desc": "批量清理消息",                 "cog": "Moderation"},
-        {"name": "slowmode",   "desc": "设置频道慢速模式",             "cog": "Moderation"},
-        {"name": "lock",       "desc": "锁定频道",                     "cog": "Moderation"},
-        {"name": "unlock",     "desc": "解锁频道",                     "cog": "Moderation"},
-        {"name": "modlog",     "desc": "查看管理操作日志",             "cog": "Moderation"},
-        {"name": "status",     "desc": "显示服务器详细状态",           "cog": "General"},
-        {"name": "roll",       "desc": "投掷骰子 (默认6面)",           "cog": "General"},
-        {"name": "avatar",     "desc": "查看用户的大图头像",           "cog": "General"},
-        {"name": "setstatus",  "desc": "修改机器人的活动状态",         "cog": "General"},
-        {"name": "resetstatus","desc": "重置机器人状态",               "cog": "General"},
-        {"name": "setbio",     "desc": "修改机器人的简介",             "cog": "General"},
-        {"name": "welcome_setup","desc": "配置迎新和道别系统",         "cog": "Welcome"},
-        {"name": "welcome_test","desc": "测试欢迎图卡效果",           "cog": "Welcome"},
-        {"name": "rr_create",  "desc": "创建反应身份组面板",           "cog": "ReactionRoles"},
-        {"name": "rr_add",     "desc": "添加 emoji → 身份组映射",      "cog": "ReactionRoles"},
-        {"name": "rr_remove",  "desc": "移除一个 emoji 映射",          "cog": "ReactionRoles"},
-        {"name": "rr_list",    "desc": "列出所有面板",                 "cog": "ReactionRoles"},
-        {"name": "rr_delete",  "desc": "删除面板",                     "cog": "ReactionRoles"},
-        {"name": "giveaway",   "desc": "抽奖管理 (start/end/reroll)",  "cog": "Giveaway"},
-        {"name": "automod",    "desc": "自动审核配置面板",             "cog": "AutoMod"},
-        {"name": "automod_words","desc": "管理违禁词列表",             "cog": "AutoMod"},
-        {"name": "automod_whitelist","desc": "管理链接白名单",         "cog": "AutoMod"},
-        {"name": "automod_ignore","desc": "管理审核忽略列表",          "cog": "AutoMod"},
-        {"name": "toggle",     "desc": "启用/禁用指定指令",           "cog": "System"},
-        {"name": "togglelist", "desc": "查看已禁用的指令",            "cog": "System"},
+        {"name": "play", "desc": "播放音乐 (歌名或链接)", "cog": "Music"},
+        {"name": "queue", "desc": "查看播放队列", "cog": "Music"},
+        {"name": "skip", "desc": "跳过当前歌曲", "cog": "Music"},
+        {"name": "pause", "desc": "暂停播放", "cog": "Music"},
+        {"name": "resume", "desc": "恢复播放", "cog": "Music"},
+        {"name": "stop", "desc": "停止播放并离开频道", "cog": "Music"},
+        {"name": "nowplaying", "desc": "查看正在播放的歌曲", "cog": "Music"},
+        {"name": "loop", "desc": "设置循环模式", "cog": "Music"},
+        {"name": "volume", "desc": "调整音量 (0-200)", "cog": "Music"},
+        {"name": "shuffle", "desc": "随机打乱队列", "cog": "Music"},
+        {"name": "move", "desc": "移动队列中的歌曲位置", "cog": "Music"},
+        {"name": "remove", "desc": "从队列移除指定歌曲", "cog": "Music"},
+        {"name": "clear", "desc": "清空播放队列", "cog": "Music"},
+        {"name": "join", "desc": "加入你的语音频道", "cog": "Music"},
+        {"name": "rank", "desc": "查看你的等级卡片", "cog": "Leveling"},
+        {"name": "kick", "desc": "踢出成员", "cog": "Moderation"},
+        {"name": "ban", "desc": "永久封禁成员", "cog": "Moderation"},
+        {"name": "tempban", "desc": "临时封禁成员", "cog": "Moderation"},
+        {"name": "unban", "desc": "解除封禁", "cog": "Moderation"},
+        {"name": "mute", "desc": "禁言成员 (Timeout)", "cog": "Moderation"},
+        {"name": "unmute", "desc": "解除禁言", "cog": "Moderation"},
+        {"name": "warn", "desc": "警告成员", "cog": "Moderation"},
+        {"name": "warns", "desc": "查看警告记录", "cog": "Moderation"},
+        {"name": "clearwarns", "desc": "清除所有警告", "cog": "Moderation"},
+        {"name": "delwarn", "desc": "删除指定警告", "cog": "Moderation"},
+        {"name": "purge", "desc": "批量清理消息", "cog": "Moderation"},
+        {"name": "slowmode", "desc": "设置频道慢速模式", "cog": "Moderation"},
+        {"name": "lock", "desc": "锁定频道", "cog": "Moderation"},
+        {"name": "unlock", "desc": "解锁频道", "cog": "Moderation"},
+        {"name": "modlog", "desc": "查看管理操作日志", "cog": "Moderation"},
+        {"name": "status", "desc": "显示服务器详细状态", "cog": "General"},
+        {"name": "roll", "desc": "投掷骰子 (默认6面)", "cog": "General"},
+        {"name": "avatar", "desc": "查看用户的大图头像", "cog": "General"},
+        {"name": "setstatus", "desc": "修改机器人的活动状态", "cog": "General"},
+        {"name": "resetstatus", "desc": "重置机器人状态", "cog": "General"},
+        {"name": "setbio", "desc": "修改机器人的简介", "cog": "General"},
+        {"name": "welcome_setup", "desc": "配置迎新和道别系统", "cog": "Welcome"},
+        {"name": "welcome_test", "desc": "测试欢迎图卡效果", "cog": "Welcome"},
+        {"name": "rr_create", "desc": "创建反应身份组面板", "cog": "ReactionRoles"},
+        {"name": "rr_add", "desc": "添加 emoji → 身份组映射", "cog": "ReactionRoles"},
+        {"name": "rr_remove", "desc": "移除一个 emoji 映射", "cog": "ReactionRoles"},
+        {"name": "rr_list", "desc": "列出所有面板", "cog": "ReactionRoles"},
+        {"name": "rr_delete", "desc": "删除面板", "cog": "ReactionRoles"},
+        {"name": "giveaway", "desc": "抽奖管理 (start/end/reroll)", "cog": "Giveaway"},
+        {"name": "automod", "desc": "自动审核配置面板", "cog": "AutoMod"},
+        {"name": "automod_words", "desc": "管理违禁词列表", "cog": "AutoMod"},
+        {"name": "automod_whitelist", "desc": "管理链接白名单", "cog": "AutoMod"},
+        {"name": "automod_ignore", "desc": "管理审核忽略列表", "cog": "AutoMod"},
+        {"name": "toggle", "desc": "启用/禁用指定指令", "cog": "System"},
+        {"name": "togglelist", "desc": "查看已禁用的指令", "cog": "System"},
     ]
-    PROTECTED = {"toggle", "togglelist", "hot_update", "sync", "load", "unload", "extensions", "eval", "help"}
+    PROTECTED = {
+        "toggle",
+        "togglelist",
+        "hot_update",
+        "sync",
+        "load",
+        "unload",
+        "extensions",
+        "eval",
+        "help",
+    }
 
     @app.route("/api/guild/<string:gid>/commands", methods=["GET"])
     async def api_commands_get(gid):
@@ -889,18 +1116,22 @@ def setup_routes(app, discord):
             g = int(gid)
             disabled = set()
             async with aiosqlite.connect(DB_CMDTOGGLE) as db:
-                cur = await db.execute("SELECT command_name FROM disabled_commands WHERE guild_id=?", (g,))
+                cur = await db.execute(
+                    "SELECT command_name FROM disabled_commands WHERE guild_id=?", (g,)
+                )
                 rows = await cur.fetchall()
                 disabled = {r[0] for r in rows}
             result = []
             for cmd in COMMAND_REGISTRY:
-                result.append({
-                    "name": cmd["name"],
-                    "desc": cmd["desc"],
-                    "cog": cmd["cog"],
-                    "enabled": cmd["name"] not in disabled,
-                    "protected": cmd["name"] in PROTECTED,
-                })
+                result.append(
+                    {
+                        "name": cmd["name"],
+                        "desc": cmd["desc"],
+                        "cog": cmd["cog"],
+                        "enabled": cmd["name"] not in disabled,
+                        "protected": cmd["name"] in PROTECTED,
+                    }
+                )
             return jsonify(result)
         except Exception as e:
             print(f"[api_commands_get] {traceback.format_exc()}")
@@ -919,9 +1150,15 @@ def setup_routes(app, discord):
             g = int(gid)
             async with aiosqlite.connect(DB_CMDTOGGLE) as db:
                 if enabled:
-                    await db.execute("DELETE FROM disabled_commands WHERE guild_id=? AND command_name=?", (g, name))
+                    await db.execute(
+                        "DELETE FROM disabled_commands WHERE guild_id=? AND command_name=?",
+                        (g, name),
+                    )
                 else:
-                    await db.execute("INSERT OR IGNORE INTO disabled_commands (guild_id, command_name) VALUES (?, ?)", (g, name))
+                    await db.execute(
+                        "INSERT OR IGNORE INTO disabled_commands (guild_id, command_name) VALUES (?, ?)",
+                        (g, name),
+                    )
                 await db.commit()
             return jsonify({"ok": True, "name": name, "enabled": enabled})
         except Exception as e:

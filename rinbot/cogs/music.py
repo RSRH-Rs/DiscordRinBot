@@ -14,15 +14,33 @@ from config import YTDL_OPTIONS, FFMPEG_OPTIONS
 class Song:
     """封装一首歌的信息"""
 
-    __slots__ = ("title", "url", "stream_url", "duration", "thumbnail", "requester")
+    __slots__ = (
+        "title",
+        "url",
+        "stream_url",
+        "stream_extracted_at",
+        "duration",
+        "thumbnail",
+        "requester",
+    )
+
+    # YouTube stream URLs are signed and expire (~6h). Refresh well before that.
+    STREAM_TTL = 5 * 60
 
     def __init__(self, title, url, stream_url, duration, thumbnail, requester):
         self.title = title
         self.url = url
         self.stream_url = stream_url
+        self.stream_extracted_at = time.time() if stream_url else 0.0
         self.duration = duration
         self.thumbnail = thumbnail
         self.requester = requester
+
+    def stream_is_fresh(self) -> bool:
+        return (
+            bool(self.stream_url)
+            and (time.time() - self.stream_extracted_at) < self.STREAM_TTL
+        )
 
     @staticmethod
     def format_duration(seconds):
@@ -193,10 +211,12 @@ class Music(commands.Cog):
                 await guild.voice_client.disconnect()
             return
 
-        # 重新获取流媒体 URL（旧 URL 可能过期）
-        info = await self._extract_info(state.current.url)
-        if info:
-            state.current.stream_url = info.get("url", state.current.stream_url)
+        # 仅当 stream URL 缺失或过期时才重新解析
+        if not state.current.stream_is_fresh():
+            info = await self._extract_info(state.current.url)
+            if info:
+                state.current.stream_url = info.get("url", state.current.stream_url)
+                state.current.stream_extracted_at = time.time()
 
         state.is_playing = True
         source = self._make_source(state.current, state.volume)
