@@ -1,7 +1,3 @@
-# cogs/music.py
-# RinBot — 完整音乐播放器模块
-# 功能：播放、队列、跳过、暂停/恢复、循环、音量、洗牌、正在播放、移除、清空队列
-
 import discord
 from discord.ext import commands
 from discord.ui import View, Button
@@ -17,6 +13,7 @@ from config import YTDL_OPTIONS, FFMPEG_OPTIONS
 
 class Song:
     """封装一首歌的信息"""
+
     __slots__ = ("title", "url", "stream_url", "duration", "thumbnail", "requester")
 
     def __init__(self, title, url, stream_url, duration, thumbnail, requester):
@@ -55,6 +52,7 @@ class GuildMusicState:
         self.current = None
         self.loop_mode = "off"
         self.skip_votes.clear()
+        self.is_playing = False
 
 
 class NowPlayingView(View):
@@ -83,9 +81,13 @@ class NowPlayingView(View):
         vc = interaction.guild.voice_client
         if vc and (vc.is_playing() or vc.is_paused()):
             vc.stop()
-            await interaction.response.send_message("⏭ 已跳过当前歌曲！", ephemeral=True)
+            await interaction.response.send_message(
+                "⏭ 已跳过当前歌曲！", ephemeral=True
+            )
         else:
-            await interaction.response.send_message("❌ 当前没有在播放。", ephemeral=True)
+            await interaction.response.send_message(
+                "❌ 当前没有在播放。", ephemeral=True
+            )
 
     @discord.ui.button(label="⏹ 停止", style=discord.ButtonStyle.danger)
     async def stop_btn(self, interaction: discord.Interaction, button: Button):
@@ -95,7 +97,9 @@ class NowPlayingView(View):
         if vc:
             vc.stop()
             await vc.disconnect()
-        await interaction.response.send_message("⏹ 已停止播放并清空队列。", ephemeral=True)
+        await interaction.response.send_message(
+            "⏹ 已停止播放并清空队列。", ephemeral=True
+        )
         self.stop()
 
     @discord.ui.button(label="🔁 循环", style=discord.ButtonStyle.secondary)
@@ -138,13 +142,13 @@ class Music(commands.Cog):
             if ctx.voice_client.channel != channel:
                 await ctx.voice_client.move_to(channel)
         else:
-            await channel.connect()
+            await channel.connect(self_deaf=True)
         return ctx.voice_client
 
     async def _extract_info(self, query: str) -> Optional[dict]:
         """用 yt-dlp 提取音频信息（异步包装）"""
         loop = asyncio.get_event_loop()
-        opts = {**YTDL_OPTIONS, 'extract_flat': False}
+        opts = {**YTDL_OPTIONS, "extract_flat": False}
 
         def _extract():
             with yt_dlp.YoutubeDL(opts) as ydl:
@@ -200,13 +204,18 @@ class Music(commands.Cog):
         def after_play(error):
             if error:
                 print(f"播放错误: {error}")
-            asyncio.run_coroutine_threadsafe(self._play_next(guild_id), self.bot.loop)
+            if state.is_playing:
+                asyncio.run_coroutine_threadsafe(
+                    self._play_next(guild_id), self.bot.loop
+                )
 
         vc.play(source, after=after_play)
 
     # ─── 指令：play ───
 
-    @commands.hybrid_command(name="play", aliases=["p"], description="播放音乐（歌名或链接），支持队列")
+    @commands.hybrid_command(
+        name="play", aliases=["p"], description="播放音乐（歌名或链接），支持队列"
+    )
     async def play(self, ctx, *, query: str):
         await ctx.defer()
         vc = await self._ensure_voice(ctx)
@@ -236,7 +245,9 @@ class Music(commands.Cog):
                 description=f"**{song.title}**\n⏱ 时长: {Song.format_duration(song.duration)}",
                 color=discord.Color.blue(),
             )
-            embed.set_footer(text=f"队列位置: #{len(state.queue)} | 请求者: {ctx.author.display_name}")
+            embed.set_footer(
+                text=f"队列位置: #{len(state.queue)} | 请求者: {ctx.author.display_name}"
+            )
             if song.thumbnail:
                 embed.set_thumbnail(url=song.thumbnail)
             await ctx.send(embed=embed)
@@ -248,7 +259,10 @@ class Music(commands.Cog):
             def after_play(error):
                 if error:
                     print(f"播放错误: {error}")
-                asyncio.run_coroutine_threadsafe(self._play_next(ctx.guild.id), self.bot.loop)
+                if state.is_playing:
+                    asyncio.run_coroutine_threadsafe(
+                        self._play_next(ctx.guild.id), self.bot.loop
+                    )
 
             vc.play(source, after=after_play)
             await self._send_now_playing(ctx, song, state)
@@ -259,20 +273,29 @@ class Music(commands.Cog):
             description=f"**[{song.title}]({song.url})**",
             color=discord.Color.pink(),
         )
-        embed.add_field(name="⏱ 时长", value=Song.format_duration(song.duration), inline=True)
-        embed.add_field(name="🔊 音量", value=f"{int(state.volume * 100)}%", inline=True)
+        embed.add_field(
+            name="⏱ 时长", value=Song.format_duration(song.duration), inline=True
+        )
+        embed.add_field(
+            name="🔊 音量", value=f"{int(state.volume * 100)}%", inline=True
+        )
         loop_labels = {"off": "关闭", "single": "单曲循环", "queue": "队列循环"}
         embed.add_field(name="🔁 循环", value=loop_labels[state.loop_mode], inline=True)
         if song.thumbnail:
             embed.set_thumbnail(url=song.thumbnail)
-        embed.set_footer(text=f"请求者: {song.requester.display_name}", icon_url=song.requester.display_avatar.url)
+        embed.set_footer(
+            text=f"请求者: {song.requester.display_name}",
+            icon_url=song.requester.display_avatar.url,
+        )
 
         view = NowPlayingView(self, ctx)
         await ctx.send(embed=embed, view=view)
 
     # ─── 指令：skip ───
 
-    @commands.hybrid_command(name="skip", aliases=["s", "next"], description="跳过当前歌曲（或投票跳过）")
+    @commands.hybrid_command(
+        name="skip", aliases=["s", "next"], description="跳过当前歌曲（或投票跳过）"
+    )
     async def skip(self, ctx):
         vc = ctx.voice_client
         if not vc or not (vc.is_playing() or vc.is_paused()):
@@ -282,9 +305,9 @@ class Music(commands.Cog):
         state = self._get_state(ctx.guild.id)
 
         # 如果是点歌者或管理员，直接跳
-        if (
-            state.current
-            and (ctx.author == state.current.requester or ctx.author.guild_permissions.manage_guild)
+        if state.current and (
+            ctx.author == state.current.requester
+            or ctx.author.guild_permissions.manage_guild
         ):
             vc.stop()
             await ctx.send("⏭ 已跳过！")
@@ -323,7 +346,11 @@ class Music(commands.Cog):
 
     # ─── 指令：stop ───
 
-    @commands.hybrid_command(name="stop", aliases=["dc", "disconnect", "leave"], description="停止播放、清空队列并离开")
+    @commands.hybrid_command(
+        name="stop",
+        aliases=["dc", "disconnect", "leave"],
+        description="停止播放、清空队列并离开",
+    )
     async def stop(self, ctx):
         state = self._get_state(ctx.guild.id)
         state.clear()
@@ -336,7 +363,9 @@ class Music(commands.Cog):
 
     # ─── 指令：nowplaying ───
 
-    @commands.hybrid_command(name="nowplaying", aliases=["np"], description="查看正在播放的歌曲")
+    @commands.hybrid_command(
+        name="nowplaying", aliases=["np"], description="查看正在播放的歌曲"
+    )
     async def nowplaying(self, ctx):
         state = self._get_state(ctx.guild.id)
         if not state.current:
@@ -346,7 +375,9 @@ class Music(commands.Cog):
 
     # ─── 指令：queue ───
 
-    @commands.hybrid_command(name="queue", aliases=["q", "list"], description="查看播放队列")
+    @commands.hybrid_command(
+        name="queue", aliases=["q", "list"], description="查看播放队列"
+    )
     async def queue(self, ctx, page: int = 1):
         state = self._get_state(ctx.guild.id)
 
@@ -372,20 +403,30 @@ class Music(commands.Cog):
             end = start + items_per_page
             lines = []
             for i, song in enumerate(list(state.queue)[start:end], start=start + 1):
-                lines.append(f"`{i}.` **{song.title}** [{Song.format_duration(song.duration)}] — {song.requester.mention}")
-            embed.add_field(name=f"队列 (第 {page}/{pages} 页)", value="\n".join(lines), inline=False)
+                lines.append(
+                    f"`{i}.` **{song.title}** [{Song.format_duration(song.duration)}] — {song.requester.mention}"
+                )
+            embed.add_field(
+                name=f"队列 (第 {page}/{pages} 页)",
+                value="\n".join(lines),
+                inline=False,
+            )
 
         total_dur = sum(s.duration or 0 for s in state.queue)
         if state.current and state.current.duration:
             total_dur += state.current.duration
         loop_labels = {"off": "关闭", "single": "🔂 单曲", "queue": "🔁 队列"}
-        embed.set_footer(text=f"共 {len(state.queue)} 首待播放 | 总时长: {Song.format_duration(total_dur)} | 循环: {loop_labels[state.loop_mode]}")
+        embed.set_footer(
+            text=f"共 {len(state.queue)} 首待播放 | 总时长: {Song.format_duration(total_dur)} | 循环: {loop_labels[state.loop_mode]}"
+        )
 
         await ctx.send(embed=embed)
 
     # ─── 指令：remove ───
 
-    @commands.hybrid_command(name="remove", aliases=["rm"], description="从队列中移除指定位置的歌曲")
+    @commands.hybrid_command(
+        name="remove", aliases=["rm"], description="从队列中移除指定位置的歌曲"
+    )
     async def remove(self, ctx, position: int):
         state = self._get_state(ctx.guild.id)
         if position < 1 or position > len(state.queue):
@@ -397,7 +438,9 @@ class Music(commands.Cog):
 
     # ─── 指令：clear ───
 
-    @commands.hybrid_command(name="clear", aliases=["cls"], description="清空播放队列（不影响当前播放）")
+    @commands.hybrid_command(
+        name="clear", aliases=["cls"], description="清空播放队列（不影响当前播放）"
+    )
     async def clear_queue(self, ctx):
         state = self._get_state(ctx.guild.id)
         count = len(state.queue)
@@ -419,7 +462,9 @@ class Music(commands.Cog):
 
     # ─── 指令：loop ───
 
-    @commands.hybrid_command(name="loop", aliases=["repeat"], description="设置循环模式")
+    @commands.hybrid_command(
+        name="loop", aliases=["repeat"], description="设置循环模式"
+    )
     async def loop(self, ctx, mode: Literal["off", "single", "queue"] = None):
         state = self._get_state(ctx.guild.id)
         if mode is None:
@@ -433,7 +478,9 @@ class Music(commands.Cog):
 
     # ─── 指令：volume ───
 
-    @commands.hybrid_command(name="volume", aliases=["vol"], description="调整音量 (0-200)")
+    @commands.hybrid_command(
+        name="volume", aliases=["vol"], description="调整音量 (0-200)"
+    )
     async def volume(self, ctx, level: int = None):
         state = self._get_state(ctx.guild.id)
         if level is None:
@@ -465,7 +512,9 @@ class Music(commands.Cog):
 
     # ─── 指令：join ───
 
-    @commands.hybrid_command(name="join", aliases=["j", "connect"], description="让机器人加入你的语音频道")
+    @commands.hybrid_command(
+        name="join", aliases=["j", "connect"], description="让机器人加入你的语音频道"
+    )
     async def join(self, ctx):
         if not ctx.author.voice:
             await ctx.send("❌ 你必须先加入一个语音频道！")
@@ -480,7 +529,7 @@ class Music(commands.Cog):
                 await ctx.voice_client.move_to(destination)
                 await ctx.send(f"➡️ 已从 {old} 移动到 **{destination.name}**")
         else:
-            await destination.connect()
+            await destination.connect(self_deaf=True)
             await ctx.send(f"👋 已加入语音频道: **{destination.name}**")
 
     # ─── 自动断开（所有人离开语音时）───
@@ -491,6 +540,10 @@ class Music(commands.Cog):
             return
         vc = member.guild.voice_client
         if vc and before.channel == vc.channel:
+            # 等待 1 秒，避免因用户短暂断线重连触发误判
+            await asyncio.sleep(1)
+            if not vc.is_connected():
+                return
             # 检查频道里除了 bot 还有没有人
             real_members = [m for m in vc.channel.members if not m.bot]
             if len(real_members) == 0:
