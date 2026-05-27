@@ -387,6 +387,94 @@ def setup_routes(app, discord):
             print(f"[api_roles] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
 
+    # ── 模块列表 ──
+
+    MODULES = [
+        {
+            "slug": "music",
+            "name": "音乐系统",
+            "desc": "完整播放器：队列、循环、音量、投票跳过",
+            "icon": "music",
+            "db": "musicconfig.db",
+        },
+        {
+            "slug": "welcome",
+            "name": "欢迎新成员",
+            "desc": "欢迎图卡、自动身份组、道别消息",
+            "icon": "smile-plus",
+            "db": "welcome.db",
+        },
+        {
+            "slug": "roles",
+            "name": "领取身份组",
+            "desc": "成员点击 emoji 自助获取身份组",
+            "icon": "tags",
+            "db": "reactionroles.db",
+        },
+        {
+            "slug": "automod",
+            "name": "自动审核",
+            "desc": "反刷屏、违禁词、链接过滤、大写轰炸",
+            "icon": "shield-check",
+            "db": "automod.db",
+        },
+        {
+            "slug": "moderation",
+            "name": "管理模块",
+            "desc": "kick / ban / mute / warn / purge + 自动处罚",
+            "icon": "gavel",
+            "db": "moderation.db",
+        },
+        {
+            "slug": "giveaway",
+            "name": "抽奖管理",
+            "desc": "倒计时自动开奖，公平透明",
+            "icon": "gift",
+            "db": "giveaway.db",
+        },
+        {
+            "slug": "leveling",
+            "name": "等级系统",
+            "desc": "曲线式经验算法，精美等级卡片",
+            "icon": "trophy",
+            "db": "leveling.db",
+        },
+        {
+            "slug": "personalizer",
+            "name": "Bot 个性化",
+            "desc": "修改 Bot 头像、用户名、活动状态",
+            "icon": "palette",
+            "db": "botconfig.db",
+        },
+        {
+            "slug": "utility",
+            "name": "指令管理",
+            "desc": "按需启用/禁用每个指令",
+            "icon": "sliders-horizontal",
+            "db": "commandtoggle.db",
+        },
+        {
+            "slug": "general",
+            "name": "通用工具",
+            "desc": "status / avatar / roll 等实用指令",
+            "icon": "wrench",
+            "db": None,
+        },
+    ]
+
+    @app.route("/api/modules")
+    async def api_modules():
+        result = []
+        for m in MODULES:
+            if m["db"] is None:
+                loaded = True
+            else:
+                loaded = os.path.exists(os.path.join(BOT_DIR, m["db"]))
+            result.append(
+                {k: v for k, v in m.items() if k != "db"} | {"loaded": loaded}
+            )
+        return jsonify(result)
+
     # ── Welcome ──
 
     @app.route("/api/guild/<string:gid>/welcome", methods=["GET"])

@@ -241,6 +241,18 @@
 .cmd-desc { font-size:.78rem; color:var(--text-muted); margin-top:2px; line-height:1.4; }
 .cmd-info { flex:1; min-width:0; }
 .cmd-toggle { flex-shrink:0; }
+
+/* Module status badge */
+.mod-status-badge {
+    margin-left:auto; font-size:.65rem; font-weight:800; padding:3px 9px;
+    border-radius:50px; background:var(--green-bg); color:var(--green);
+    border:1px solid var(--green-border); white-space:nowrap;
+}
+.mod-status-badge--off {
+    background:var(--panel); color:var(--text-muted); border-color:var(--border);
+}
+.mod-card--off { opacity:.45; cursor:not-allowed; }
+.mod-card--off:hover { transform:none; box-shadow:none; border-color:var(--border-light); }
     </style>
 </head>
 <body>
@@ -258,15 +270,6 @@
                 <span class="nav-label" style="margin-top:18px;">{{ guild.name }}</span>
                 <ul id="side-modules">
                     <li><a class="nav-link active" data-mod="overview" onclick="go('overview')"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> 概览</a></li>
-                    <li><a class="nav-link" data-mod="music" onclick="go('music')"><i data-lucide="music" style="width:16px;height:16px;"></i> 音乐系统<span class="nav-status on"></span></a></li>
-                    <li><a class="nav-link" data-mod="welcome" onclick="go('welcome')"><i data-lucide="smile-plus" style="width:16px;height:16px;"></i> 欢迎新成员<span class="nav-status on"></span></a></li>
-                    <li><a class="nav-link" data-mod="roles" onclick="go('roles')"><i data-lucide="tags" style="width:16px;height:16px;"></i> 领取身份组<span class="nav-status on"></span></a></li>
-                    <li><a class="nav-link" data-mod="automod" onclick="go('automod')"><i data-lucide="shield-check" style="width:16px;height:16px;"></i> 自动审核<span class="nav-status on"></span></a></li>
-                    <li><a class="nav-link" data-mod="moderation" onclick="go('moderation')"><i data-lucide="gavel" style="width:16px;height:16px;"></i> 管理模块<span class="nav-status on"></span></a></li>
-                    <li><a class="nav-link" data-mod="giveaway" onclick="go('giveaway')"><i data-lucide="gift" style="width:16px;height:16px;"></i> 抽奖管理<span class="nav-status on"></span></a></li>
-                    <li><a class="nav-link" data-mod="leveling" onclick="go('leveling')"><i data-lucide="trophy" style="width:16px;height:16px;"></i> 等级系统<span class="nav-status on"></span></a></li>
-                    <li><a class="nav-link" data-mod="personalizer" onclick="go('personalizer')"><i data-lucide="palette" style="width:16px;height:16px;"></i> Bot 个性化<span class="nav-status on"></span></a></li>
-                    <li><a class="nav-link" data-mod="utility" onclick="go('utility')"><i data-lucide="sliders-horizontal" style="width:16px;height:16px;"></i> 指令管理<span class="nav-status on"></span></a></li>
                 </ul>
             </nav>
             <div class="user-card">
@@ -319,16 +322,13 @@
         <div class="ov-card"><div class="ov-label">已禁用指令</div><div class="ov-val" id="ov-disabled" style="color:var(--text-muted);">—</div></div>
     </div>
     <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:14px;">功能模块</div>
-    <div class="mod-grid">
-        <div class="mod-card" onclick="go('music')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="music" style="width:22px;height:22px;"></i></div><div class="mod-card-name">音乐系统</div></div><div class="mod-card-desc">完整播放器：队列、循环、音量、投票跳过</div><div class="mod-card-btn">开始设定 →</div></div>
-        <div class="mod-card" onclick="go('welcome')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="smile-plus" style="width:22px;height:22px;"></i></div><div class="mod-card-name">欢迎新成员</div></div><div class="mod-card-desc">欢迎图卡、自动身份组、道别消息</div><div class="mod-card-btn">开始设定 →</div></div>
-        <div class="mod-card" onclick="go('roles')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="tags" style="width:22px;height:22px;"></i></div><div class="mod-card-name">领取身份组</div></div><div class="mod-card-desc">成员点击 emoji 自助获取身份组</div><div class="mod-card-btn">开始设定 →</div></div>
-        <div class="mod-card" onclick="go('automod')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="shield-check" style="width:22px;height:22px;"></i></div><div class="mod-card-name">自动审核</div></div><div class="mod-card-desc">反刷屏、违禁词、链接过滤、大写轰炸</div><div class="mod-card-btn">开始设定 →</div></div>
-        <div class="mod-card" onclick="go('moderation')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="gavel" style="width:22px;height:22px;"></i></div><div class="mod-card-name">管理模块</div></div><div class="mod-card-desc">kick / ban / mute / warn / purge + 自动处罚</div><div class="mod-card-btn">开始设定 →</div></div>
-        <div class="mod-card" onclick="go('giveaway')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="gift" style="width:22px;height:22px;"></i></div><div class="mod-card-name">抽奖管理</div></div><div class="mod-card-desc">倒计时自动开奖，公平透明</div><div class="mod-card-btn">开始设定 →</div></div>
-        <div class="mod-card" onclick="go('leveling')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="trophy" style="width:22px;height:22px;"></i></div><div class="mod-card-name">等级系统</div></div><div class="mod-card-desc">智能经验算法，精美等级卡片</div><div class="mod-card-btn">开始设定 →</div></div>
-        <div class="mod-card" onclick="go('general')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="wrench" style="width:22px;height:22px;"></i></div><div class="mod-card-name">通用工具</div></div><div class="mod-card-desc">status / avatar / roll 等实用指令</div><div class="mod-card-btn">查看 →</div></div>
-        <div class="mod-card" onclick="go('utility')"><div class="mod-card-head"><div class="mod-card-icon"><i data-lucide="sliders-horizontal" style="width:22px;height:22px;"></i></div><div class="mod-card-name">指令管理</div></div><div class="mod-card-desc">按需启用/禁用每个指令</div><div class="mod-card-btn">开始设定 →</div></div>
+    <div class="mod-grid" id="ov-modules">
+        <div class="skel skel-block"></div>
+        <div class="skel skel-block"></div>
+        <div class="skel skel-block"></div>
+        <div class="skel skel-block"></div>
+        <div class="skel skel-block"></div>
+        <div class="skel skel-block"></div>
     </div>
 </div>
 
@@ -1344,7 +1344,51 @@ function showToast(msg) {
 document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
     loadOverviewStats();
+    loadModules();
 });
+
+async function loadModules() {
+    try {
+        const r = await fetch('/api/modules');
+        const mods = await r.json();
+        renderSidebar(mods);
+        renderOverviewCards(mods);
+        if (window.lucide) lucide.createIcons();
+    } catch(e) {
+        console.error('loadModules', e);
+        document.getElementById('ov-modules').innerHTML = '<div class="error-state">模块列表加载失败</div>';
+    }
+}
+
+function renderSidebar(mods) {
+    const sb = document.getElementById('side-modules');
+    const overviewLi = sb.querySelector('li');
+    sb.innerHTML = '';
+    sb.appendChild(overviewLi);
+    for (const m of mods) {
+        const li = document.createElement('li');
+        li.innerHTML = `<a class="nav-link" data-mod="${m.slug}" onclick="go('${m.slug}')">
+            <i data-lucide="${m.icon}" style="width:16px;height:16px;"></i> ${m.name}
+            <span class="nav-status ${m.loaded ? 'on' : 'off'}"></span>
+        </a>`;
+        sb.appendChild(li);
+    }
+}
+
+function renderOverviewCards(mods) {
+    const grid = document.getElementById('ov-modules');
+    grid.innerHTML = mods.map(m => `
+        <div class="mod-card ${m.loaded ? '' : 'mod-card--off'}" ${m.loaded ? `onclick="go('${m.slug}')"` : ''}>
+            <div class="mod-card-head">
+                <div class="mod-card-icon"><i data-lucide="${m.icon}" style="width:22px;height:22px;"></i></div>
+                <div class="mod-card-name">${m.name}</div>
+                <span class="mod-status-badge ${m.loaded ? '' : 'mod-status-badge--off'}">${m.loaded ? '已启用' : '未启用'}</span>
+            </div>
+            <div class="mod-card-desc">${m.desc}</div>
+            <div class="mod-card-btn">${m.loaded ? '开始设定 →' : '暂不可用'}</div>
+        </div>
+    `).join('');
+}
 </script>
 </body>
 </html>
