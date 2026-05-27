@@ -14,33 +14,15 @@ from config import YTDL_OPTIONS, FFMPEG_OPTIONS
 class Song:
     """封装一首歌的信息"""
 
-    __slots__ = (
-        "title",
-        "url",
-        "stream_url",
-        "stream_extracted_at",
-        "duration",
-        "thumbnail",
-        "requester",
-    )
-
-    # YouTube stream URLs are signed and expire (~6h). Refresh well before that.
-    STREAM_TTL = 5 * 60
+    __slots__ = ("title", "url", "stream_url", "duration", "thumbnail", "requester")
 
     def __init__(self, title, url, stream_url, duration, thumbnail, requester):
         self.title = title
         self.url = url
         self.stream_url = stream_url
-        self.stream_extracted_at = time.time() if stream_url else 0.0
         self.duration = duration
         self.thumbnail = thumbnail
         self.requester = requester
-
-    def stream_is_fresh(self) -> bool:
-        return (
-            bool(self.stream_url)
-            and (time.time() - self.stream_extracted_at) < self.STREAM_TTL
-        )
 
     @staticmethod
     def format_duration(seconds):
@@ -163,6 +145,32 @@ class Music(commands.Cog):
             await channel.connect(self_deaf=True)
         return ctx.voice_client
 
+    async def _require_dj(self, ctx) -> bool:
+        """控制类命令使用。无配置/管理员/有 DJ 角色 → 通过。"""
+        mc = self.bot.get_cog("MusicConfig")
+        if not mc:
+            return True
+        dj_role_id = mc.get_config(ctx.guild.id).get("dj_role", 0)
+        if not dj_role_id:
+            return True
+        if ctx.author.guild_permissions.manage_guild:
+            return True
+        if any(r.id == dj_role_id for r in ctx.author.roles):
+            return True
+        await ctx.send("❌ 你没有 DJ 权限,无法使用此指令。", ephemeral=True)
+        return False
+
+    def _get_notify_channel(self, ctx) -> discord.TextChannel:
+        """返回配置的通知频道,未配置则返回 ctx.channel"""
+        mc = self.bot.get_cog("MusicConfig")
+        if not mc:
+            return ctx.channel
+        ch_id = mc.get_config(ctx.guild.id).get("notify_channel", 0)
+        if not ch_id:
+            return ctx.channel
+        ch = ctx.guild.get_channel(ch_id)
+        return ch or ctx.channel
+
     async def _extract_info(self, query: str) -> Optional[dict]:
         """用 yt-dlp 提取音频信息（异步包装）"""
         loop = asyncio.get_event_loop()
@@ -211,12 +219,10 @@ class Music(commands.Cog):
                 await guild.voice_client.disconnect()
             return
 
-        # 仅当 stream URL 缺失或过期时才重新解析
-        if not state.current.stream_is_fresh():
-            info = await self._extract_info(state.current.url)
-            if info:
-                state.current.stream_url = info.get("url", state.current.stream_url)
-                state.current.stream_extracted_at = time.time()
+        # 重新获取流媒体 URL（旧 URL 可能过期）
+        info = await self._extract_info(state.current.url)
+        if info:
+            state.current.stream_url = info.get("url", state.current.stream_url)
 
         state.is_playing = True
         source = self._make_source(state.current, state.volume)
@@ -309,7 +315,10 @@ class Music(commands.Cog):
         )
 
         view = NowPlayingView(self, ctx)
-        await ctx.send(embed=embed, view=view)
+        notify_ch = self._get_notify_channel(ctx)
+        await notify_ch.send(embed=embed, view=view)
+        if notify_ch.id != ctx.channel.id:
+            await ctx.send(f"🎵 已开始播放 **{song.title}** → {notify_ch.mention}")
 
     # ─── 指令：skip ───
 
@@ -317,6 +326,8 @@ class Music(commands.Cog):
         name="skip", aliases=["s", "next"], description="跳过当前歌曲（或投票跳过）"
     )
     async def skip(self, ctx):
+        if not await self._require_dj(ctx):
+            return
         vc = ctx.voice_client
         if not vc or not (vc.is_playing() or vc.is_paused()):
             await ctx.send("❌ 当前没有在播放。")
@@ -348,6 +359,8 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="pause", description="暂停播放")
     async def pause(self, ctx):
+        if not await self._require_dj(ctx):
+            return
         vc = ctx.voice_client
         if vc and vc.is_playing():
             vc.pause()
@@ -357,6 +370,8 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="resume", aliases=["unpause"], description="恢复播放")
     async def resume(self, ctx):
+        if not await self._require_dj(ctx):
+            return
         vc = ctx.voice_client
         if vc and vc.is_paused():
             vc.resume()
@@ -372,6 +387,8 @@ class Music(commands.Cog):
         description="停止播放、清空队列并离开",
     )
     async def stop(self, ctx):
+        if not await self._require_dj(ctx):
+            return
         state = self._get_state(ctx.guild.id)
         state.clear()
         if ctx.voice_client:
@@ -448,6 +465,8 @@ class Music(commands.Cog):
         name="remove", aliases=["rm"], description="从队列中移除指定位置的歌曲"
     )
     async def remove(self, ctx, position: int):
+        if not await self._require_dj(ctx):
+            return
         state = self._get_state(ctx.guild.id)
         if position < 1 or position > len(state.queue):
             await ctx.send(f"❌ 无效的位置。队列长度为 {len(state.queue)}。")
@@ -462,6 +481,8 @@ class Music(commands.Cog):
         name="clear", aliases=["cls"], description="清空播放队列（不影响当前播放）"
     )
     async def clear_queue(self, ctx):
+        if not await self._require_dj(ctx):
+            return
         state = self._get_state(ctx.guild.id)
         count = len(state.queue)
         state.queue.clear()
@@ -471,6 +492,8 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="shuffle", description="随机打乱队列顺序")
     async def shuffle(self, ctx):
+        if not await self._require_dj(ctx):
+            return
         state = self._get_state(ctx.guild.id)
         if len(state.queue) < 2:
             await ctx.send("❌ 队列中歌曲不足，无需洗牌。")
@@ -486,6 +509,8 @@ class Music(commands.Cog):
         name="loop", aliases=["repeat"], description="设置循环模式"
     )
     async def loop(self, ctx, mode: Literal["off", "single", "queue"] = None):
+        if not await self._require_dj(ctx):
+            return
         state = self._get_state(ctx.guild.id)
         if mode is None:
             modes = ["off", "single", "queue"]
@@ -506,6 +531,8 @@ class Music(commands.Cog):
         if level is None:
             await ctx.send(f"🔊 当前音量: **{int(state.volume * 100)}%**")
             return
+        if not await self._require_dj(ctx):
+            return
         if level < 0 or level > 200:
             await ctx.send("❌ 音量范围: 0-200")
             return
@@ -519,6 +546,8 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="move", description="移动队列中的歌曲位置")
     async def move(self, ctx, from_pos: int, to_pos: int):
+        if not await self._require_dj(ctx):
+            return
         state = self._get_state(ctx.guild.id)
         q = state.queue
         if from_pos < 1 or from_pos > len(q) or to_pos < 1 or to_pos > len(q):
