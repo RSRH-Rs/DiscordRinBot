@@ -253,6 +253,32 @@
 }
 .mod-card--off { opacity:.45; cursor:not-allowed; }
 .mod-card--off:hover { transform:none; box-shadow:none; border-color:var(--border-light); }
+
+/* Toast variants */
+.toast {
+    position:fixed; bottom:28px; left:50%; z-index:999;
+    transform:translateX(-50%) translateY(20px);
+    display:inline-flex; align-items:center; gap:10px;
+    padding:11px 22px; border-radius:50px;
+    font-size:.85rem; font-weight:700; font-family:'Nunito',sans-serif;
+    box-shadow:0 4px 20px rgba(0,0,0,.18);
+    opacity:0; pointer-events:none; transition:all .3s;
+    max-width:min(420px, 90vw);
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast-icon {
+    width:18px; height:18px; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:.75rem; font-weight:800; flex-shrink:0;
+}
+.toast--info    { background:#3A302A; color:#FAF8F5; }
+.toast--info    .toast-icon { background:rgba(255,255,255,.15); color:#FAF8F5; }
+.toast--success { background:#2D5F3F; color:#EAF4EE; }
+.toast--success .toast-icon { background:rgba(255,255,255,.18); color:#EAF4EE; }
+.toast--error   { background:#7A2A2A; color:#FFEAEA; }
+.toast--error   .toast-icon { background:rgba(255,255,255,.18); color:#FFEAEA; }
+.toast--warning { background:#7A5A1F; color:#FFF6DC; }
+.toast--warning .toast-icon { background:rgba(255,255,255,.18); color:#FFF6DC; }
     </style>
 </head>
 <body>
@@ -723,7 +749,7 @@
     </main>
 
     <!-- Toast -->
-    <div id="toast" style="position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(20px);background:#3A302A;color:#FAF8F5;padding:11px 22px;border-radius:50px;font-size:.85rem;font-weight:700;font-family:'Nunito',sans-serif;box-shadow:0 4px 20px rgba(0,0,0,.18);opacity:0;transition:all .3s;z-index:999;pointer-events:none;white-space:nowrap;"></div>
+    <div id="toast" class="toast toast--info"></div>
 
 <script>
 const GID = "{{ guild.id }}";
@@ -1012,6 +1038,7 @@ async function loadOverviewStats() {
 }
 
 async function loadUtility() {
+    showSkeleton('util-commands', 4);
     if (!_cmdData) await loadOverviewStats();
     const cmds = _cmdData;
     const el = document.getElementById('util-commands');
@@ -1157,11 +1184,10 @@ function updateSummary() {
 let _rrLoaded = false, _rrRoleCount = 0;
 async function loadRolesPage() {
     if (_rrLoaded) return; _rrLoaded = true;
+    showSkeleton('rr-existing', 2);
     const [ch, roles] = await Promise.all([getCh(), getRoles()]);
     chOpts('rr-ch', ch, 0);
-    // Store roles for row builder
     window._rrAvailRoles = roles;
-    // Load existing panels
     try {
         const panels = await api('/reactionroles');
         const el = document.getElementById('rr-existing');
@@ -1173,7 +1199,7 @@ async function loadRolesPage() {
                 return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:var(--pink);">${p.title || '身份组面板'}</span><span class="case-time">消息 ID: ${p.message_id} · ${count} 个映射</span></div><div class="case-body">频道 ID: ${p.channel_id}</div></div>`;
             }).join('');
         }
-    } catch(e) { document.getElementById('rr-existing').innerHTML = '<div class="empty-state-sm">暂无面板</div>'; }
+    } catch(e) { showError('rr-existing', '加载失败: ' + e.message); showToast('❌ 加载面板列表失败: ' + e.message); }
     if (window.lucide) lucide.createIcons();
 }
 function addRoleRow() {
@@ -1258,14 +1284,12 @@ let _bpLoaded = false, _avData = null;
 async function loadPersonalizer() {
     if (_bpLoaded) return; _bpLoaded = true;
     try {
-        const r = await fetch('/api/bot/personalizer');
-        if (!r.ok) throw new Error('加载失败');
-        const cfg = await r.json();
+        const cfg = await apiGlobal('/api/bot/personalizer');
         document.getElementById('bp-status').value = cfg.bot_status || 'online';
         document.getElementById('bp-atype').value = cfg.activity_type || 'watching';
         document.getElementById('bp-atext').value = cfg.activity_text || '';
         updatePreview();
-    } catch(e) { console.error(e); }
+    } catch(e) { showToast('❌ 加载 Bot 配置失败: ' + e.message); }
 }
 function updatePreview() {
     const atype = document.getElementById('bp-atype').value;
@@ -1296,48 +1320,57 @@ function previewAvatar(input) {
     reader.readAsDataURL(file);
 }
 async function uploadAvatar() {
-    if (!_avData) { showToast('请先选择一张图片'); return; }
+    if (!_avData) { showToast('⚠ 请先选择一张图片'); return; }
     const btn = document.getElementById('bp-av-btn'); btn.textContent = '上传中…'; btn.disabled = true;
     try {
-        const r = await fetch('/api/bot/avatar', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({avatar:_avData})});
-        const d = await r.json();
-        if (d.ok) { showToast('✅ 头像已更新！'); } else { showToast('❌ ' + (d.error||'上传失败')); }
-    } catch(e) { showToast('❌ 网络错误'); }
+        const d = await apiGlobal('/api/bot/avatar', 'POST', { avatar: _avData });
+        if (d.ok) showToast('✅ 头像已更新!');
+        else showToast('❌ ' + (d.error || '上传失败'));
+    } catch(e) { showToast('❌ 上传失败: ' + e.message); }
     btn.textContent = '上传头像'; btn.disabled = false;
 }
 async function changeName() {
     const name = document.getElementById('bp-name').value.trim();
-    if (!name) { showToast('请输入用户名'); return; }
+    if (!name) { showToast('⚠ 请输入用户名'); return; }
     try {
-        const r = await fetch('/api/bot/username', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:name})});
-        const d = await r.json();
+        const d = await apiGlobal('/api/bot/username', 'POST', { username: name });
         if (d.ok) {
-            showToast('✅ 用户名已更新！');
+            showToast('✅ 用户名已更新!');
             document.getElementById('prev-name').textContent = name;
             document.getElementById('prev-name2').textContent = name;
-        } else { showToast('❌ ' + (d.error||'修改失败')); }
-    } catch(e) { showToast('❌ 网络错误'); }
+        } else { showToast('❌ ' + (d.error || '修改失败')); }
+    } catch(e) { showToast('❌ 修改失败: ' + e.message); }
 }
 async function savePersonalizer() {
     const btn = document.getElementById('bp-save'); btn.disabled = true; btn.textContent = '保存中…';
     try {
-        await fetch('/api/bot/personalizer', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+        await apiGlobal('/api/bot/personalizer', 'POST', {
             bot_status: document.getElementById('bp-status').value,
             activity_type: document.getElementById('bp-atype').value,
             activity_text: document.getElementById('bp-atext').value,
-        })});
-        btn.textContent = '✅ 已保存！'; showToast('✅ 状态配置已保存，30 秒内生效！');
-    } catch(e) { showToast('❌ 保存失败'); }
+        });
+        btn.textContent = '✅ 已保存!'; showToast('✅ 状态配置已保存,30 秒内生效!');
+    } catch(e) { showToast('❌ 保存失败: ' + e.message); }
     setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
 }
 
 /* ── Toast ── */
 let _tt;
-function showToast(msg) {
+function showToast(msg, type) {
     const el = document.getElementById('toast');
-    el.textContent = msg; el.style.opacity = '1'; el.style.transform = 'translateX(-50%) translateY(0)';
+    if (!type) {
+        if (msg.startsWith('✅')) type = 'success';
+        else if (msg.startsWith('❌')) type = 'error';
+        else if (msg.startsWith('⚠')) type = 'warning';
+        else type = 'info';
+    }
+    const icons = { info:'i', success:'✓', error:'✕', warning:'!' };
+    const text = msg.replace(/^[❌✅⚠️ℹ️]+\s*/u, '').trim();
+    el.className = 'toast toast--' + type;
+    el.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${text}</span>`;
+    requestAnimationFrame(() => el.classList.add('show'));
     clearTimeout(_tt);
-    _tt = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(-50%) translateY(10px)'; }, 2400);
+    _tt = setTimeout(() => el.classList.remove('show'), 2800);
 }
 
 // Initialize Lucide icons
@@ -1350,6 +1383,7 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadModules() {
     try {
         const r = await fetch('/api/modules');
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
         const mods = await r.json();
         renderSidebar(mods);
         renderOverviewCards(mods);
@@ -1357,6 +1391,7 @@ async function loadModules() {
     } catch(e) {
         console.error('loadModules', e);
         document.getElementById('ov-modules').innerHTML = '<div class="error-state">模块列表加载失败</div>';
+        showToast('❌ 模块列表加载失败: ' + e.message);
     }
 }
 
