@@ -12,6 +12,7 @@ import discord
 from discord.ext import commands
 from discord.ui import View, Button, RoleSelect
 import aiosqlite
+import aiohttp
 import json
 from typing import Optional
 
@@ -108,21 +109,30 @@ class ReactionRoles(commands.Cog):
         guild: discord.Guild,
         description: str = "",
     ):
-        """重建面板:embed + 按钮(指令面板与 Web 面板统一格式)"""
+        """重建面板:embed + 按钮(用 raw aiohttp 绕过 discord.py http 限制)"""
         embed = discord.Embed(
             title=f"🏷 {title}",
             description=description or "点击下方按钮领取对应身份组",
             color=discord.Color.teal(),
         )
         components = self._build_components(mappings, guild)
-        # discord.py 不支持直接传 components dict,绕过用 raw HTTP
+        token = self.bot.http.token
         try:
-            await self.bot.http.edit_message(
-                message.channel.id,
-                message.id,
-                embed=embed.to_dict(),
-                components=components if components else [],
-            )
+            async with aiohttp.ClientSession() as session:
+                async with session.patch(
+                    f"https://discord.com/api/v10/channels/{message.channel.id}/messages/{message.id}",
+                    headers={
+                        "Authorization": f"Bot {token}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "embeds": [embed.to_dict()],
+                        "components": components,
+                    },
+                ) as resp:
+                    if resp.status >= 400:
+                        body = await resp.text()
+                        print(f"[RR rebuild] Discord {resp.status}: {body[:300]}")
         except Exception as e:
             print(f"[RR rebuild] {e}")
 
