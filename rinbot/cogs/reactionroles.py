@@ -24,8 +24,8 @@ class ReactionRoles(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        # 内存缓存: {message_id: {emoji_str: role_id}}
-        self._cache: dict[int, dict[str, int]] = {}
+        # 内存缓存: {message_id: {"mappings": {emoji: role_id}, "exclusive": bool}}
+        self._cache: dict[int, dict] = {}
 
     async def cog_load(self):
         async with aiosqlite.connect(DB_PATH) as db:
@@ -35,29 +35,56 @@ class ReactionRoles(commands.Cog):
                     channel_id INTEGER NOT NULL,
                     guild_id INTEGER NOT NULL,
                     title TEXT DEFAULT '身份组选择',
-                    mappings TEXT DEFAULT '{}'
+                    mappings TEXT DEFAULT '{}',
+                    exclusive INTEGER DEFAULT 0
                 )
             """)
+            # 兼容旧 schema:加 exclusive 列(如果不存在)
+            try:
+                await db.execute(
+                    "ALTER TABLE rr_panels ADD COLUMN exclusive INTEGER DEFAULT 0"
+                )
+            except Exception:
+                pass
             await db.commit()
 
             # 加载缓存
-            cursor = await db.execute("SELECT message_id, mappings FROM rr_panels")
+            cursor = await db.execute(
+                "SELECT message_id, mappings, exclusive FROM rr_panels"
+            )
             rows = await cursor.fetchall()
-            for msg_id, mappings_json in rows:
+            for msg_id, mappings_json, exclusive in rows:
                 try:
-                    self._cache[msg_id] = json.loads(mappings_json)
+                    self._cache[msg_id] = {
+                        "mappings": json.loads(mappings_json),
+                        "exclusive": bool(exclusive),
+                    }
                 except json.JSONDecodeError:
-                    self._cache[msg_id] = {}
+                    self._cache[msg_id] = {"mappings": {}, "exclusive": False}
 
         print("✅ 反应身份组系统已准备就绪！")
 
     async def _save_mappings(self, message_id: int, mappings: dict):
-        self._cache[message_id] = mappings
+        entry = self._cache.get(message_id, {"mappings": {}, "exclusive": False})
+        entry["mappings"] = mappings
+        self._cache[message_id] = entry
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
                 "UPDATE rr_panels SET mappings = ? WHERE message_id = ?",
                 (json.dumps(mappings), message_id),
             )
+            await db.commit()
+
+    async def _set_exclusive(self, message_id: int, exclusive: bool):
+        entry = self._cache.get(message_id, {"mappings": {}, "exclusive": False})
+        entry["exclusive"] = exclusive
+        self._cache[message_id] = entry
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "UPDATE rr_panels SET exclusive = ? WHERE message_id = ?",
+                (int(exclusive), message_id),
+            )
+            await db.commit()
             await db.commit()
 
     def _build_components(self, mappings: dict, guild: discord.Guild) -> list:
@@ -170,7 +197,7 @@ class ReactionRoles(commands.Cog):
             )
             await db.commit()
 
-        self._cache[msg.id] = {}
+        self._cache[msg.id] = {"mappings": {}, "exclusive": False}
         botlog = self.bot.get_cog("BotLog")
         if botlog:
             await botlog.log(
@@ -214,7 +241,7 @@ class ReactionRoles(commands.Cog):
             )
             return
 
-        mappings = self._cache[msg_id]
+        mappings = self._cache[msg_id]["mappings"]
         mappings[emoji] = role.id
         await self._save_mappings(msg_id, mappings)
 
@@ -263,7 +290,7 @@ class ReactionRoles(commands.Cog):
             await ctx.send("❌ 找不到该面板。", ephemeral=True)
             return
 
-        mappings = self._cache[msg_id]
+        mappings = self._cache[msg_id]["mappings"]
         if emoji not in mappings:
             await ctx.send("❌ 该 emoji 不在面板映射中。", ephemeral=True)
             return
@@ -379,24 +406,27 @@ class ReactionRoles(commands.Cog):
         if payload.member and payload.member.bot:
             return
 
-        mappings = self._cache.get(payload.message_id)
-        if not mappings:
-            # DB fallback — pick up panels created via web dashboard
+        entry = self._cache.get(payload.message_id)
+        if not entry:
             try:
                 async with aiosqlite.connect(DB_PATH) as db:
                     cur = await db.execute(
-                        "SELECT mappings FROM rr_panels WHERE message_id=?",
+                        "SELECT mappings, exclusive FROM rr_panels WHERE message_id=?",
                         (payload.message_id,),
                     )
                     row = await cur.fetchone()
                     if row:
-                        mappings = json.loads(row[0])
-                        self._cache[payload.message_id] = mappings
+                        entry = {
+                            "mappings": json.loads(row[0]),
+                            "exclusive": bool(row[1]),
+                        }
+                        self._cache[payload.message_id] = entry
                     else:
                         return
             except Exception:
                 return
 
+        mappings = entry["mappings"]
         emoji_str = str(payload.emoji)
         role_id = mappings.get(emoji_str)
         if not role_id:
@@ -416,22 +446,27 @@ class ReactionRoles(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
-        mappings = self._cache.get(payload.message_id)
-        if not mappings:
+        entry = self._cache.get(payload.message_id)
+        if not entry:
             try:
                 async with aiosqlite.connect(DB_PATH) as db:
                     cur = await db.execute(
-                        "SELECT mappings FROM rr_panels WHERE message_id=?",
+                        "SELECT mappings, exclusive FROM rr_panels WHERE message_id=?",
                         (payload.message_id,),
                     )
                     row = await cur.fetchone()
                     if row:
-                        mappings = json.loads(row[0])
-                        self._cache[payload.message_id] = mappings
+                        entry = {
+                            "mappings": json.loads(row[0]),
+                            "exclusive": bool(row[1]),
+                        }
+                        self._cache[payload.message_id] = entry
                     else:
                         return
             except Exception:
                 return
+
+        mappings = entry["mappings"]
 
         emoji_str = str(payload.emoji)
         role_id = mappings.get(emoji_str)
@@ -480,6 +515,28 @@ class ReactionRoles(commands.Cog):
             )
             return
 
+        # 单选模式检测:从 cache / DB 拿当前面板的 exclusive 状态
+        message_id = interaction.message.id if interaction.message else 0
+        entry = self._cache.get(message_id)
+        if not entry:
+            try:
+                async with aiosqlite.connect(DB_PATH) as db:
+                    cur = await db.execute(
+                        "SELECT mappings, exclusive FROM rr_panels WHERE message_id=?",
+                        (message_id,),
+                    )
+                    row = await cur.fetchone()
+                    if row:
+                        entry = {
+                            "mappings": json.loads(row[0]),
+                            "exclusive": bool(row[1]),
+                        }
+                        self._cache[message_id] = entry
+            except Exception:
+                pass
+        exclusive = entry.get("exclusive", False) if entry else False
+        panel_role_ids = set(entry["mappings"].values()) if entry else set()
+
         try:
             if role in member.roles:
                 await member.remove_roles(role, reason="身份组按钮 - 取消")
@@ -487,10 +544,29 @@ class ReactionRoles(commands.Cog):
                     f"✅ 已移除身份组 {role.mention}", ephemeral=True
                 )
             else:
+                # 单选模式:移除该面板里其他已拥有的角色
+                if exclusive:
+                    to_remove = [
+                        r
+                        for r in member.roles
+                        if r.id in panel_role_ids and r.id != role.id
+                    ]
+                    if to_remove:
+                        try:
+                            await member.remove_roles(
+                                *to_remove, reason="身份组按钮 - 单选互斥"
+                            )
+                        except discord.Forbidden:
+                            pass
                 await member.add_roles(role, reason="身份组按钮 - 领取")
-                await interaction.response.send_message(
-                    f"✅ 已获得身份组 {role.mention}", ephemeral=True
-                )
+                if exclusive:
+                    await interaction.response.send_message(
+                        f"✅ 已切换到身份组 {role.mention}", ephemeral=True
+                    )
+                else:
+                    await interaction.response.send_message(
+                        f"✅ 已获得身份组 {role.mention}", ephemeral=True
+                    )
         except discord.Forbidden:
             await interaction.response.send_message(
                 "❌ 我没有权限分配此身份组。", ephemeral=True

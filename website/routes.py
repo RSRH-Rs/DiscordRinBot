@@ -129,7 +129,14 @@ async def ensure_tables():
                 channel_id INTEGER NOT NULL,
                 guild_id INTEGER NOT NULL,
                 title TEXT DEFAULT '身份组选择',
-                mappings TEXT DEFAULT '{}')""")
+                mappings TEXT DEFAULT '{}',
+                exclusive INTEGER DEFAULT 0)""")
+            try:
+                await db.execute(
+                    "ALTER TABLE rr_panels ADD COLUMN exclusive INTEGER DEFAULT 0"
+                )
+            except Exception:
+                pass
             await db.commit()
         async with aiosqlite.connect(DB_CMDTOGGLE) as db:
             await db.execute("""CREATE TABLE IF NOT EXISTS disabled_commands (
@@ -1180,7 +1187,7 @@ def setup_routes(app, discord):
             g = int(gid)
             async with aiosqlite.connect(DB_RR) as db:
                 cur = await db.execute(
-                    "SELECT message_id, channel_id, title, mappings FROM rr_panels WHERE guild_id=?",
+                    "SELECT message_id, channel_id, title, mappings, exclusive FROM rr_panels WHERE guild_id=?",
                     (g,),
                 )
                 rows = await cur.fetchall()
@@ -1191,6 +1198,7 @@ def setup_routes(app, discord):
                         "channel_id": str(r[1]),
                         "title": r[2],
                         "mappings": r[3],
+                        "exclusive": bool(r[4]),
                     }
                     for r in rows
                 ]
@@ -1210,6 +1218,7 @@ def setup_routes(app, discord):
             title = d.get("title", "🏷 身份组选择")
             content = d.get("content", "点击下方的按钮来领取身分组")
             mappings_list = d.get("mappings", [])  # [{emoji, role_id, role_name}]
+            exclusive = bool(d.get("exclusive", False))
 
             if not channel_id or not mappings_list:
                 return jsonify({"error": "缺少频道或身份组映射"}), 400
@@ -1258,6 +1267,11 @@ def setup_routes(app, discord):
             if current_row["components"]:
                 components.append(current_row)
 
+            # 单选模式提示加在 description
+            desc_with_hint = content
+            if exclusive:
+                desc_with_hint = f"{content}\n\n*注:只能选一个身份组,选其他会自动替换*"
+
             # ── 发送 embed + 按钮 ──
             msg_data = await discord_api_post(
                 f"/channels/{channel_id}/messages",
@@ -1265,7 +1279,7 @@ def setup_routes(app, discord):
                     "embeds": [
                         {
                             "title": title,
-                            "description": content,
+                            "description": desc_with_hint,
                             "color": 0x2DD4BF,
                         }
                     ],
@@ -1274,17 +1288,17 @@ def setup_routes(app, discord):
             )
             message_id = msg_data["id"]
 
-            # ── 存 DB(保持旧 schema 兼容,bot 端按钮处理用 custom_id 直接拿 role_id)──
             g = int(gid)
             async with aiosqlite.connect(DB_RR) as db:
                 await db.execute(
-                    "INSERT INTO rr_panels (message_id, channel_id, guild_id, title, mappings) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT INTO rr_panels (message_id, channel_id, guild_id, title, mappings, exclusive) VALUES (?, ?, ?, ?, ?, ?)",
                     (
                         int(message_id),
                         int(channel_id),
                         g,
                         title,
                         json.dumps(mapping_dict),
+                        int(exclusive),
                     ),
                 )
                 await db.commit()
@@ -1298,6 +1312,7 @@ def setup_routes(app, discord):
                     "频道": f"<#{channel_id}>",
                     "标题": title,
                     "按钮数量": str(len(mapping_dict)),
+                    "单选模式": "是" if exclusive else "否",
                 },
             )
             return jsonify({"ok": True, "message_id": message_id})

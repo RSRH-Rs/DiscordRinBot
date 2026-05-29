@@ -514,6 +514,17 @@
         <textarea class="cfg-textarea" id="rr-content" placeholder="点击下方的按钮来领取身分组"></textarea>
     </div>
 
+    <div class="cfg-section">
+        <div class="cfg-section-title"><i data-lucide="check-circle-2" style="width:14px;height:14px;"></i> 选项模式</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info">
+                <div class="cfg-row-label">单选模式</div>
+                <div class="cfg-row-hint">开启后,成员只能拥有面板内一个身份组(如选区:美服/欧服/国服)。选其他会自动替换。</div>
+            </div>
+            <label class="cfg-tog"><input type="checkbox" id="rr-exclusive"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+    </div>
+
     <div class="save-bar">
         <span class="save-hint">配置好后点击送出，小凛会在频道发送领取面板</span>
         <button class="btn-save" id="rr-send" onclick="sendRRPanel()">送出</button>
@@ -1436,6 +1447,7 @@ async function sendRRPanel() {
     const ch = document.getElementById('rr-ch').value;
     const title = document.getElementById('rr-title').value || '🏷 身份组选择';
     const content = document.getElementById('rr-content').value || '点击下方的按钮来领取身分组';
+    const exclusive = document.getElementById('rr-exclusive').checked;
     if (ch === '0') { showToast('请选择发送频道'); return; }
     const rows = document.querySelectorAll('.rr-row');
     if (rows.length === 0) { showToast('请至少添加一个身份组'); return; }
@@ -1450,7 +1462,7 @@ async function sendRRPanel() {
     }
     const btn = document.getElementById('rr-send'); btn.disabled = true; btn.textContent = '发送中…';
     try {
-        const r = await api('/reactionroles/send', 'POST', { channel_id: ch, title, content, mappings });
+        const r = await api('/reactionroles/send', 'POST', { channel_id: ch, title, content, mappings, exclusive });
         if (r.ok) {
             showToast('✅ 身份组面板已发送到频道!');
             _rrLoaded = false; loadRolesPage();
