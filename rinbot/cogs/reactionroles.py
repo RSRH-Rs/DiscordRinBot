@@ -59,24 +59,72 @@ class ReactionRoles(commands.Cog):
             )
             await db.commit()
 
-    async def _rebuild_embed(
-        self, message: discord.Message, title: str, mappings: dict, guild: discord.Guild
-    ):
-        """重建面板 Embed"""
-        lines = []
+    def _build_components(self, mappings: dict, guild: discord.Guild) -> list:
+        """从 mappings 构造按钮 components"""
+        rows = []
+        current = {"type": 1, "components": []}
         for emoji_str, role_id in mappings.items():
             role = guild.get_role(role_id)
-            if role:
-                lines.append(f"{emoji_str} → {role.mention}")
+            if not role:
+                continue
+
+            # 解析 emoji:Unicode / <:name:id> / <a:name:id>
+            emoji_obj = None
+            if emoji_str.startswith("<") and emoji_str.endswith(">"):
+                inner = emoji_str.strip("<>")
+                parts = inner.split(":")
+                if len(parts) == 3:
+                    emoji_obj = {
+                        "name": parts[1],
+                        "id": parts[2],
+                        "animated": inner.startswith("a:"),
+                    }
+            else:
+                emoji_obj = {"name": emoji_str}
+
+            btn = {
+                "type": 2,
+                "style": 2,
+                "label": role.name[:80],
+                "custom_id": f"rr:{role.id}",
+            }
+            if emoji_obj:
+                btn["emoji"] = emoji_obj
+
+            if len(current["components"]) >= 5:
+                rows.append(current)
+                current = {"type": 1, "components": []}
+            current["components"].append(btn)
+
+        if current["components"]:
+            rows.append(current)
+        return rows
+
+    async def _rebuild_panel(
+        self,
+        message: discord.Message,
+        title: str,
+        mappings: dict,
+        guild: discord.Guild,
+        description: str = "",
+    ):
+        """重建面板:embed + 按钮(指令面板与 Web 面板统一格式)"""
         embed = discord.Embed(
             title=f"🏷 {title}",
-            description=(
-                "\n".join(lines) if lines else "暂无映射，使用 `/rr_add` 添加。"
-            ),
+            description=description or "点击下方按钮领取对应身份组",
             color=discord.Color.teal(),
         )
-        embed.set_footer(text="点击下方反应获取对应身份组 | 再次点击移除")
-        await message.edit(embed=embed)
+        components = self._build_components(mappings, guild)
+        # discord.py 不支持直接传 components dict,绕过用 raw HTTP
+        try:
+            await self.bot.http.edit_message(
+                message.channel.id,
+                message.id,
+                embed=embed.to_dict(),
+                components=components if components else [],
+            )
+        except Exception as e:
+            print(f"[RR rebuild] {e}")
 
     # ─── 指令：rr_create ───
 
@@ -89,7 +137,7 @@ class ReactionRoles(commands.Cog):
         ctx,
         title: str = "身份组选择",
         *,
-        description: str = "点击下方的表情来获取对应身份组！",
+        description: str = "点击下方的按钮来领取身分组",
     ):
         """
         title: 面板标题
@@ -99,10 +147,9 @@ class ReactionRoles(commands.Cog):
 
         embed = discord.Embed(
             title=f"🏷 {title}",
-            description=f"{description}\n\n*使用 `/rr_add` 来添加 emoji-身份组 映射*",
+            description=f"{description}\n\n*使用 `/rr_add` 添加身份组按钮*",
             color=discord.Color.teal(),
         )
-        embed.set_footer(text="点击下方反应获取对应身份组 | 再次点击移除")
 
         msg = await ctx.send(embed=embed)
 
@@ -127,7 +174,7 @@ class ReactionRoles(commands.Cog):
                 },
             )
         await ctx.send(
-            f"✅ 面板已创建!消息 ID: `{msg.id}`\n用 `/rr_add {msg.id} <emoji> <@角色>` 添加映射。",
+            f"✅ 面板已创建!消息 ID: `{msg.id}`\n用 `/rr_add {msg.id} <emoji> <@角色>` 添加按钮。",
             ephemeral=True,
         )
 
@@ -161,7 +208,6 @@ class ReactionRoles(commands.Cog):
         mappings[emoji] = role.id
         await self._save_mappings(msg_id, mappings)
 
-        # 获取面板消息并更新
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
                 "SELECT channel_id, title FROM rr_panels WHERE message_id = ?",
@@ -174,12 +220,11 @@ class ReactionRoles(commands.Cog):
             if channel:
                 try:
                     message = await channel.fetch_message(msg_id)
-                    await self._rebuild_embed(message, row[1], mappings, ctx.guild)
-                    await message.add_reaction(emoji)
+                    await self._rebuild_panel(message, row[1], mappings, ctx.guild)
                 except discord.NotFound:
                     pass
 
-        await ctx.send(f"✅ 已添加: {emoji} → {role.mention}", ephemeral=True)
+        await ctx.send(f"✅ 已添加按钮: {emoji} {role.mention}", ephemeral=True)
         botlog = self.bot.get_cog("BotLog")
         if botlog:
             await botlog.log(
@@ -227,8 +272,7 @@ class ReactionRoles(commands.Cog):
             if channel:
                 try:
                     message = await channel.fetch_message(msg_id)
-                    await self._rebuild_embed(message, row[1], mappings, ctx.guild)
-                    await message.clear_reaction(emoji)
+                    await self._rebuild_panel(message, row[1], mappings, ctx.guild)
                 except (discord.NotFound, discord.Forbidden):
                     pass
 
