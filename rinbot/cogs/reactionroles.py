@@ -13,10 +13,9 @@ from discord.ext import commands
 from discord.ui import View, Button, RoleSelect
 import aiosqlite
 import json
-import os
 from typing import Optional
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reactionroles.db")
+DB_PATH = "reactionroles.db"
 
 
 class ReactionRoles(commands.Cog):
@@ -60,7 +59,9 @@ class ReactionRoles(commands.Cog):
             )
             await db.commit()
 
-    async def _rebuild_embed(self, message: discord.Message, title: str, mappings: dict, guild: discord.Guild):
+    async def _rebuild_embed(
+        self, message: discord.Message, title: str, mappings: dict, guild: discord.Guild
+    ):
         """重建面板 Embed"""
         lines = []
         for emoji_str, role_id in mappings.items():
@@ -69,7 +70,9 @@ class ReactionRoles(commands.Cog):
                 lines.append(f"{emoji_str} → {role.mention}")
         embed = discord.Embed(
             title=f"🏷 {title}",
-            description="\n".join(lines) if lines else "暂无映射，使用 `/rr_add` 添加。",
+            description=(
+                "\n".join(lines) if lines else "暂无映射，使用 `/rr_add` 添加。"
+            ),
             color=discord.Color.teal(),
         )
         embed.set_footer(text="点击下方反应获取对应身份组 | 再次点击移除")
@@ -77,9 +80,17 @@ class ReactionRoles(commands.Cog):
 
     # ─── 指令：rr_create ───
 
-    @commands.hybrid_command(name="rr_create", description="[管理] 创建一个反应身份组面板")
+    @commands.hybrid_command(
+        name="rr_create", description="[管理] 创建一个反应身份组面板"
+    )
     @commands.has_permissions(manage_roles=True)
-    async def rr_create(self, ctx, title: str = "身份组选择", *, description: str = "点击下方的表情来获取对应身份组！"):
+    async def rr_create(
+        self,
+        ctx,
+        title: str = "身份组选择",
+        *,
+        description: str = "点击下方的表情来获取对应身份组！",
+    ):
         """
         title: 面板标题
         description: 面板说明文字
@@ -103,11 +114,28 @@ class ReactionRoles(commands.Cog):
             await db.commit()
 
         self._cache[msg.id] = {}
-        await ctx.send(f"✅ 面板已创建！消息 ID: `{msg.id}`\n用 `/rr_add {msg.id} <emoji> <@角色>` 添加映射。", ephemeral=True)
+        botlog = self.bot.get_cog("BotLog")
+        if botlog:
+            await botlog.log(
+                ctx.guild.id,
+                "config",
+                "创建身份组面板",
+                **{
+                    "操作者": ctx.author.mention,
+                    "频道": ctx.channel.mention,
+                    "标题": title,
+                },
+            )
+        await ctx.send(
+            f"✅ 面板已创建!消息 ID: `{msg.id}`\n用 `/rr_add {msg.id} <emoji> <@角色>` 添加映射。",
+            ephemeral=True,
+        )
 
     # ─── 指令：rr_add ───
 
-    @commands.hybrid_command(name="rr_add", description="[管理] 向面板添加 emoji → 身份组 映射")
+    @commands.hybrid_command(
+        name="rr_add", description="[管理] 向面板添加 emoji → 身份组 映射"
+    )
     @commands.has_permissions(manage_roles=True)
     async def rr_add(self, ctx, message_id: str, emoji: str, role: discord.Role):
         """
@@ -124,7 +152,9 @@ class ReactionRoles(commands.Cog):
 
         # 权限检查
         if role >= ctx.guild.me.top_role:
-            await ctx.send("❌ 该身份组高于或等于我的最高身份组，无法分配。", ephemeral=True)
+            await ctx.send(
+                "❌ 该身份组高于或等于我的最高身份组，无法分配。", ephemeral=True
+            )
             return
 
         mappings = self._cache[msg_id]
@@ -133,7 +163,10 @@ class ReactionRoles(commands.Cog):
 
         # 获取面板消息并更新
         async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute("SELECT channel_id, title FROM rr_panels WHERE message_id = ?", (msg_id,))
+            cursor = await db.execute(
+                "SELECT channel_id, title FROM rr_panels WHERE message_id = ?",
+                (msg_id,),
+            )
             row = await cursor.fetchone()
 
         if row:
@@ -147,10 +180,25 @@ class ReactionRoles(commands.Cog):
                     pass
 
         await ctx.send(f"✅ 已添加: {emoji} → {role.mention}", ephemeral=True)
+        botlog = self.bot.get_cog("BotLog")
+        if botlog:
+            await botlog.log(
+                ctx.guild.id,
+                "config",
+                "添加身份组映射",
+                **{
+                    "操作者": ctx.author.mention,
+                    "面板": str(msg_id),
+                    "Emoji": emoji,
+                    "身份组": role.mention,
+                },
+            )
 
     # ─── 指令：rr_remove ───
 
-    @commands.hybrid_command(name="rr_remove", description="[管理] 从面板移除一个 emoji 映射")
+    @commands.hybrid_command(
+        name="rr_remove", description="[管理] 从面板移除一个 emoji 映射"
+    )
     @commands.has_permissions(manage_roles=True)
     async def rr_remove(self, ctx, message_id: str, emoji: str):
         await ctx.defer(ephemeral=True)
@@ -169,7 +217,10 @@ class ReactionRoles(commands.Cog):
         await self._save_mappings(msg_id, mappings)
 
         async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute("SELECT channel_id, title FROM rr_panels WHERE message_id = ?", (msg_id,))
+            cursor = await db.execute(
+                "SELECT channel_id, title FROM rr_panels WHERE message_id = ?",
+                (msg_id,),
+            )
             row = await cursor.fetchone()
         if row:
             channel = ctx.guild.get_channel(row[0])
@@ -182,10 +233,20 @@ class ReactionRoles(commands.Cog):
                     pass
 
         await ctx.send(f"✅ 已移除: {emoji}", ephemeral=True)
+        botlog = self.bot.get_cog("BotLog")
+        if botlog:
+            await botlog.log(
+                ctx.guild.id,
+                "config",
+                "移除身份组映射",
+                **{"操作者": ctx.author.mention, "面板": str(msg_id), "Emoji": emoji},
+            )
 
     # ─── 指令：rr_list ───
 
-    @commands.hybrid_command(name="rr_list", description="[管理] 列出所有反应身份组面板")
+    @commands.hybrid_command(
+        name="rr_list", description="[管理] 列出所有反应身份组面板"
+    )
     @commands.has_permissions(manage_roles=True)
     async def rr_list(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
@@ -215,7 +276,9 @@ class ReactionRoles(commands.Cog):
 
     # ─── 指令：rr_delete ───
 
-    @commands.hybrid_command(name="rr_delete", description="[管理] 删除一个反应身份组面板")
+    @commands.hybrid_command(
+        name="rr_delete", description="[管理] 删除一个反应身份组面板"
+    )
     @commands.has_permissions(manage_roles=True)
     async def rr_delete(self, ctx, message_id: str):
         await ctx.defer(ephemeral=True)
@@ -246,6 +309,14 @@ class ReactionRoles(commands.Cog):
                 pass
 
         await ctx.send("✅ 面板已删除。", ephemeral=True)
+        botlog = self.bot.get_cog("BotLog")
+        if botlog:
+            await botlog.log(
+                ctx.guild.id,
+                "config",
+                "删除身份组面板",
+                **{"操作者": ctx.author.mention, "消息 ID": str(msg_id)},
+            )
 
     # ─── 反应监听 ───
 
@@ -259,7 +330,10 @@ class ReactionRoles(commands.Cog):
             # DB fallback — pick up panels created via web dashboard
             try:
                 async with aiosqlite.connect(DB_PATH) as db:
-                    cur = await db.execute("SELECT mappings FROM rr_panels WHERE message_id=?", (payload.message_id,))
+                    cur = await db.execute(
+                        "SELECT mappings FROM rr_panels WHERE message_id=?",
+                        (payload.message_id,),
+                    )
                     row = await cur.fetchone()
                     if row:
                         mappings = json.loads(row[0])
@@ -292,7 +366,10 @@ class ReactionRoles(commands.Cog):
         if not mappings:
             try:
                 async with aiosqlite.connect(DB_PATH) as db:
-                    cur = await db.execute("SELECT mappings FROM rr_panels WHERE message_id=?", (payload.message_id,))
+                    cur = await db.execute(
+                        "SELECT mappings FROM rr_panels WHERE message_id=?",
+                        (payload.message_id,),
+                    )
                     row = await cur.fetchone()
                     if row:
                         mappings = json.loads(row[0])
@@ -317,6 +394,60 @@ class ReactionRoles(commands.Cog):
             try:
                 await member.remove_roles(role, reason="反应身份组移除")
             except discord.Forbidden:
+                pass
+
+    # ─── 按钮监听(Web 端新面板使用)───
+
+    @commands.Cog.listener()
+    async def on_interaction(self, interaction: discord.Interaction):
+        if interaction.type != discord.InteractionType.component:
+            return
+        custom_id = interaction.data.get("custom_id", "")
+        if not custom_id.startswith("rr:"):
+            return
+        if not interaction.guild:
+            return
+
+        try:
+            role_id = int(custom_id.split(":", 1)[1])
+        except (ValueError, IndexError):
+            return
+
+        role = interaction.guild.get_role(role_id)
+        member = interaction.user
+        if not role:
+            await interaction.response.send_message(
+                "❌ 该身份组已不存在,请联系管理员重建面板。", ephemeral=True
+            )
+            return
+        if role >= interaction.guild.me.top_role:
+            await interaction.response.send_message(
+                "❌ 该身份组高于我的最高身份组,我无法分配。", ephemeral=True
+            )
+            return
+
+        try:
+            if role in member.roles:
+                await member.remove_roles(role, reason="身份组按钮 - 取消")
+                await interaction.response.send_message(
+                    f"✅ 已移除身份组 {role.mention}", ephemeral=True
+                )
+            else:
+                await member.add_roles(role, reason="身份组按钮 - 领取")
+                await interaction.response.send_message(
+                    f"✅ 已获得身份组 {role.mention}", ephemeral=True
+                )
+        except discord.Forbidden:
+            await interaction.response.send_message(
+                "❌ 我没有权限分配此身份组。", ephemeral=True
+            )
+        except Exception as e:
+            print(f"[RR button] {e}")
+            try:
+                await interaction.response.send_message(
+                    "❌ 操作失败,请联系管理员。", ephemeral=True
+                )
+            except Exception:
                 pass
 
 

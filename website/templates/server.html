@@ -511,7 +511,7 @@
         <div class="cfg-section-title"><i data-lucide="file-text" style="width:14px;height:14px;"></i> 内文</div>
         <div class="cfg-row-hint" style="margin-bottom:8px;">领取讯息的标题和描述</div>
         <input class="cfg-input" id="rr-title" placeholder="🏷 身份组选择" style="margin-bottom:10px;">
-        <textarea class="cfg-textarea" id="rr-content" placeholder="点击下方的反应来领取对应身份组"></textarea>
+        <textarea class="cfg-textarea" id="rr-content" placeholder="点击下方的按钮来领取身分组"></textarea>
     </div>
 
     <div class="save-bar">
@@ -1329,7 +1329,7 @@ function addRoleRow() {
     const roles = window._rrAvailRoles || [];
     const ropts = roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
     document.getElementById('rr-roles-list').insertAdjacentHTML('beforeend', `
-        <div class="rr-row" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--border-light);border-radius:10px;">
+        <div class="rr-row" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--border-light);border-radius:10px;max-width:560px;">
             <button type="button" class="emoji-trigger rr-emoji-trigger" onclick="openEmojiPicker(this)"><span class="ep-placeholder">🎮</span></button>
             <input type="hidden" class="rr-emoji" value="">
             <select class="cfg-select rr-role" style="flex:1;max-width:none;">${ropts}</select>
@@ -1435,23 +1435,25 @@ function pickEmoji(code, imgUrl) {
 async function sendRRPanel() {
     const ch = document.getElementById('rr-ch').value;
     const title = document.getElementById('rr-title').value || '🏷 身份组选择';
-    const content = document.getElementById('rr-content').value || '点击下方的反应来领取对应身份组';
+    const content = document.getElementById('rr-content').value || '点击下方的按钮来领取身分组';
     if (ch === '0') { showToast('请选择发送频道'); return; }
     const rows = document.querySelectorAll('.rr-row');
     if (rows.length === 0) { showToast('请至少添加一个身份组'); return; }
     const mappings = [];
     for (const row of rows) {
         const emoji = row.querySelector('.rr-emoji').value.trim();
-        const roleId = row.querySelector('.rr-role').value;
-        if (!emoji) { showToast('每个身份组都需要填写 emoji'); return; }
-        mappings.push({ emoji, role_id: roleId });
+        const roleSel = row.querySelector('.rr-role');
+        const roleId = roleSel.value;
+        const roleName = roleSel.options[roleSel.selectedIndex].text;
+        if (!emoji) { showToast('每个身份组都需要选择 emoji'); return; }
+        mappings.push({ emoji, role_id: roleId, role_name: roleName });
     }
     const btn = document.getElementById('rr-send'); btn.disabled = true; btn.textContent = '发送中…';
     try {
         const r = await api('/reactionroles/send', 'POST', { channel_id: ch, title, content, mappings });
         if (r.ok) {
-            showToast('✅ 身份组面板已发送到频道！');
-            _rrLoaded = false; loadRolesPage(); // Reload list
+            showToast('✅ 身份组面板已发送到频道!');
+            _rrLoaded = false; loadRolesPage();
         } else { showToast('❌ ' + (r.error || '发送失败')); }
     } catch(e) { showToast('❌ 网络错误'); }
     btn.disabled = false; btn.textContent = '送出';

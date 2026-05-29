@@ -1201,61 +1201,80 @@ def setup_routes(app, discord):
 
     @app.route("/api/guild/<string:gid>/reactionroles/send", methods=["POST"])
     async def api_rr_send(gid):
-        """Send a reaction role panel to a Discord channel via Bot REST API"""
+        """Send a role-button panel to a Discord channel via Bot REST API"""
         try:
             if not await check_guild_access(discord, gid):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
             channel_id = d.get("channel_id")
             title = d.get("title", "🏷 身份组选择")
-            content = d.get("content", "点击下方的反应来领取对应身份组")
-            mappings_list = d.get("mappings", [])  # [{emoji, role_id}]
+            content = d.get("content", "点击下方的按钮来领取身分组")
+            mappings_list = d.get("mappings", [])  # [{emoji, role_id, role_name}]
 
             if not channel_id or not mappings_list:
                 return jsonify({"error": "缺少频道或身份组映射"}), 400
+            if len(mappings_list) > 25:
+                return jsonify({"error": "最多 25 个身份组(5 行 × 5 个按钮)"}), 400
 
-            # Build embed description with emoji → role mapping display
-            desc_lines = [content, ""]
+            # ── 构造按钮 components(每行最多 5 个,最多 5 行)──
             mapping_dict = {}
-            for m in mappings_list:
-                emoji = m["emoji"]
-                role_id = m["role_id"]
-                mapping_dict[emoji] = int(role_id)
-                desc_lines.append(f"{emoji} → <@&{role_id}>")
+            components = []
+            current_row = {"type": 1, "components": []}
 
-            # 1. Send embed message to Discord channel
+            for m in mappings_list:
+                emoji_raw = m["emoji"]
+                role_id = str(m["role_id"])
+                role_name = m.get("role_name", "身份组")[:80]
+                mapping_dict[emoji_raw] = int(role_id)
+
+                # 解析 emoji:Unicode 或自定义 <:name:id> / <a:name:id>
+                emoji_obj = None
+                if emoji_raw.startswith("<") and emoji_raw.endswith(">"):
+                    inner = emoji_raw.strip("<>")
+                    parts = inner.split(":")
+                    if len(parts) == 3:
+                        emoji_obj = {
+                            "name": parts[1],
+                            "id": parts[2],
+                            "animated": inner.startswith("a:"),
+                        }
+                else:
+                    emoji_obj = {"name": emoji_raw}
+
+                btn = {
+                    "type": 2,
+                    "style": 2,  # SECONDARY (gray)
+                    "label": role_name,
+                    "custom_id": f"rr:{role_id}",
+                }
+                if emoji_obj:
+                    btn["emoji"] = emoji_obj
+
+                if len(current_row["components"]) >= 5:
+                    components.append(current_row)
+                    current_row = {"type": 1, "components": []}
+                current_row["components"].append(btn)
+
+            if current_row["components"]:
+                components.append(current_row)
+
+            # ── 发送 embed + 按钮 ──
             msg_data = await discord_api_post(
                 f"/channels/{channel_id}/messages",
                 {
                     "embeds": [
                         {
                             "title": title,
-                            "description": "\n".join(desc_lines),
+                            "description": content,
                             "color": 0x2DD4BF,
-                            "footer": {
-                                "text": "点击下方反应获取对应身份组 | 再次点击移除"
-                            },
                         }
-                    ]
+                    ],
+                    "components": components,
                 },
             )
             message_id = msg_data["id"]
 
-            # 2. Add reactions to the message
-            import urllib.parse
-
-            for m in mappings_list:
-                emoji = m["emoji"]
-                encoded = urllib.parse.quote(emoji)
-                try:
-                    await discord_api_put(
-                        f"/channels/{channel_id}/messages/{message_id}/reactions/{encoded}/@me"
-                    )
-                except Exception as e:
-                    print(f"[RR] Failed to add reaction {emoji}: {e}")
-                await asyncio.sleep(0.3)  # Rate limit safety
-
-            # 3. Save to DB
+            # ── 存 DB(保持旧 schema 兼容,bot 端按钮处理用 custom_id 直接拿 role_id)──
             g = int(gid)
             async with aiosqlite.connect(DB_RR) as db:
                 await db.execute(
@@ -1278,7 +1297,7 @@ def setup_routes(app, discord):
                     "操作者": actor,
                     "频道": f"<#{channel_id}>",
                     "标题": title,
-                    "映射数量": str(len(mapping_dict)),
+                    "按钮数量": str(len(mapping_dict)),
                 },
             )
             return jsonify({"ok": True, "message_id": message_id})
