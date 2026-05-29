@@ -1,17 +1,3 @@
-# cogs/automod.py
-# RinBot — 自动审核模块
-# 功能：
-#   • 反刷屏（短时间内发大量消息自动 mute）
-#   • 违禁词过滤（可自定义词库）
-#   • 链接过滤（可设置白名单域名）
-#   • 大写字母轰炸过滤
-#   • 重复消息过滤
-#   • /automod — 开关及配置面板
-#   • /automod_log — 设置日志频道
-#   • /automod_words — 管理违禁词
-#   • /automod_whitelist — 管理链接白名单
-#   • /automod_ignore — 忽略指定频道/身份组
-
 import discord
 from discord.ext import commands
 import aiosqlite
@@ -22,7 +8,9 @@ import re
 from collections import defaultdict
 from typing import Literal
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "automod.db")
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "automod.db"
+)
 
 
 class AutoMod(commands.Cog):
@@ -31,9 +19,13 @@ class AutoMod(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         # 刷屏检测缓存: {guild_id: {user_id: [timestamp, ...]}}
-        self._msg_cache: dict[int, dict[int, list[float]]] = defaultdict(lambda: defaultdict(list))
+        self._msg_cache: dict[int, dict[int, list[float]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
         # 重复消息缓存: {guild_id: {user_id: [(content, timestamp), ...]}}
-        self._repeat_cache: dict[int, dict[int, list[tuple]]] = defaultdict(lambda: defaultdict(list))
+        self._repeat_cache: dict[int, dict[int, list[tuple]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
         # 配置缓存
         self._config_cache: dict[int, dict] = {}
 
@@ -77,7 +69,9 @@ class AutoMod(commands.Cog):
             return self._config_cache[guild_id]
         async with aiosqlite.connect(DB_PATH) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("SELECT * FROM automod_config WHERE guild_id = ?", (guild_id,))
+            cursor = await db.execute(
+                "SELECT * FROM automod_config WHERE guild_id = ?", (guild_id,)
+            )
             row = await cursor.fetchone()
             if row:
                 cfg = dict(row)
@@ -87,14 +81,22 @@ class AutoMod(commands.Cog):
 
     async def _update_config(self, guild_id: int, **kwargs):
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute("INSERT OR IGNORE INTO automod_config (guild_id) VALUES (?)", (guild_id,))
+            await db.execute(
+                "INSERT OR IGNORE INTO automod_config (guild_id) VALUES (?)",
+                (guild_id,),
+            )
             for key, val in kwargs.items():
-                await db.execute(f"UPDATE automod_config SET {key} = ? WHERE guild_id = ?", (val, guild_id))
+                await db.execute(
+                    f"UPDATE automod_config SET {key} = ? WHERE guild_id = ?",
+                    (val, guild_id),
+                )
             await db.commit()
         # 刷新缓存
         async with aiosqlite.connect(DB_PATH) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("SELECT * FROM automod_config WHERE guild_id = ?", (guild_id,))
+            cursor = await db.execute(
+                "SELECT * FROM automod_config WHERE guild_id = ?", (guild_id,)
+            )
             row = await cursor.fetchone()
             if row:
                 self._config_cache[guild_id] = dict(row)
@@ -114,6 +116,7 @@ class AutoMod(commands.Cog):
         """使用 Discord 原生 timeout 功能"""
         try:
             import datetime
+
             until = discord.utils.utcnow() + datetime.timedelta(seconds=duration)
             await member.timeout(until, reason=reason)
         except discord.Forbidden:
@@ -280,7 +283,9 @@ class AutoMod(commands.Cog):
             text = message.content
             alpha_chars = [c for c in text if c.isalpha()]
             if len(alpha_chars) >= min_len:
-                upper_ratio = sum(1 for c in alpha_chars if c.isupper()) / len(alpha_chars) * 100
+                upper_ratio = (
+                    sum(1 for c in alpha_chars if c.isupper()) / len(alpha_chars) * 100
+                )
                 if upper_ratio >= threshold:
                     try:
                         await message.delete()
@@ -308,16 +313,44 @@ class AutoMod(commands.Cog):
                 title="🛡 自动审核配置面板",
                 color=discord.Color.blue(),
             )
-            embed.add_field(name="总开关", value=status_emoji(cfg["enabled"]), inline=True)
-            embed.add_field(name="反刷屏", value=f"{status_emoji(cfg['anti_spam'])} ({cfg['spam_threshold']}条/{cfg['spam_interval']}秒)", inline=True)
-            embed.add_field(name="违禁词", value=f"{status_emoji(cfg['anti_badword'])} ({len(json.loads(cfg.get('badwords','[]')))}个词)", inline=True)
-            embed.add_field(name="链接过滤", value=status_emoji(cfg["anti_link"]), inline=True)
-            embed.add_field(name="大写过滤", value=f"{status_emoji(cfg['anti_caps'])} (>{cfg['caps_threshold']}%)", inline=True)
-            embed.add_field(name="重复消息", value=f"{status_emoji(cfg['anti_repeat'])} ({cfg['repeat_threshold']}次触发)", inline=True)
+            embed.add_field(
+                name="总开关", value=status_emoji(cfg["enabled"]), inline=True
+            )
+            embed.add_field(
+                name="反刷屏",
+                value=f"{status_emoji(cfg['anti_spam'])} ({cfg['spam_threshold']}条/{cfg['spam_interval']}秒)",
+                inline=True,
+            )
+            embed.add_field(
+                name="违禁词",
+                value=f"{status_emoji(cfg['anti_badword'])} ({len(json.loads(cfg.get('badwords','[]')))}个词)",
+                inline=True,
+            )
+            embed.add_field(
+                name="链接过滤", value=status_emoji(cfg["anti_link"]), inline=True
+            )
+            embed.add_field(
+                name="大写过滤",
+                value=f"{status_emoji(cfg['anti_caps'])} (>{cfg['caps_threshold']}%)",
+                inline=True,
+            )
+            embed.add_field(
+                name="重复消息",
+                value=f"{status_emoji(cfg['anti_repeat'])} ({cfg['repeat_threshold']}次触发)",
+                inline=True,
+            )
 
             log_ch = ctx.guild.get_channel(cfg.get("log_channel", 0))
-            embed.add_field(name="日志频道", value=log_ch.mention if log_ch else "未设置", inline=True)
-            embed.add_field(name="禁言时长", value=f"{cfg.get('mute_duration', 300) // 60} 分钟", inline=True)
+            embed.add_field(
+                name="日志频道",
+                value=log_ch.mention if log_ch else "未设置",
+                inline=True,
+            )
+            embed.add_field(
+                name="禁言时长",
+                value=f"{cfg.get('mute_duration', 300) // 60} 分钟",
+                inline=True,
+            )
 
             embed.set_footer(text="使用 /automod enable|disable|toggle 子指令来配置")
             await ctx.send(embed=embed)
@@ -336,7 +369,9 @@ class AutoMod(commands.Cog):
 
     @automod_group.command(name="toggle", description="开关指定功能")
     @commands.has_permissions(manage_guild=True)
-    async def am_toggle(self, ctx, feature: Literal["spam", "badword", "link", "caps", "repeat"]):
+    async def am_toggle(
+        self, ctx, feature: Literal["spam", "badword", "link", "caps", "repeat"]
+    ):
         key_map = {
             "spam": "anti_spam",
             "badword": "anti_badword",
@@ -373,14 +408,21 @@ class AutoMod(commands.Cog):
         threshold: 触发阈值（条数）
         interval: 检测窗口（秒）
         """
-        await self._update_config(ctx.guild.id, spam_threshold=threshold, spam_interval=interval)
-        await ctx.send(f"✅ 反刷屏配置: {interval} 秒内发送 {threshold} 条消息触发。", ephemeral=True)
+        await self._update_config(
+            ctx.guild.id, spam_threshold=threshold, spam_interval=interval
+        )
+        await ctx.send(
+            f"✅ 反刷屏配置: {interval} 秒内发送 {threshold} 条消息触发。",
+            ephemeral=True,
+        )
 
     # ─── 违禁词管理 ───
 
     @commands.hybrid_command(name="automod_words", description="[管理] 管理违禁词列表")
     @commands.has_permissions(manage_guild=True)
-    async def am_words(self, ctx, action: Literal["add", "remove", "list"], *, word: str = ""):
+    async def am_words(
+        self, ctx, action: Literal["add", "remove", "list"], *, word: str = ""
+    ):
         cfg = await self._get_config(ctx.guild.id)
         if not cfg:
             await self._update_config(ctx.guild.id)
@@ -394,7 +436,9 @@ class AutoMod(commands.Cog):
         if action == "list":
             if words:
                 display = ", ".join(f"||{w}||" for w in words)
-                await ctx.send(f"📝 违禁词列表 ({len(words)} 个): {display}", ephemeral=True)
+                await ctx.send(
+                    f"📝 违禁词列表 ({len(words)} 个): {display}", ephemeral=True
+                )
             else:
                 await ctx.send("📝 违禁词列表为空。", ephemeral=True)
             return
@@ -406,7 +450,17 @@ class AutoMod(commands.Cog):
         if action == "add":
             if word.lower() not in [w.lower() for w in words]:
                 words.append(word)
-                await self._update_config(ctx.guild.id, badwords=json.dumps(words, ensure_ascii=False))
+                await self._update_config(
+                    ctx.guild.id, badwords=json.dumps(words, ensure_ascii=False)
+                )
+                botlog = self.bot.get_cog("BotLog")
+                if botlog:
+                    await botlog.log(
+                        ctx.guild.id,
+                        "config",
+                        "添加违禁词",
+                        **{"操作者": ctx.author.mention, "词": f"||{word}||"},
+                    )
                 await ctx.send(f"✅ 已添加违禁词: ||{word}||", ephemeral=True)
             else:
                 await ctx.send("⚠️ 该词已在列表中。", ephemeral=True)
@@ -416,16 +470,30 @@ class AutoMod(commands.Cog):
             if word.lower() in words_lower:
                 idx = words_lower.index(word.lower())
                 words.pop(idx)
-                await self._update_config(ctx.guild.id, badwords=json.dumps(words, ensure_ascii=False))
+                await self._update_config(
+                    ctx.guild.id, badwords=json.dumps(words, ensure_ascii=False)
+                )
+                botlog = self.bot.get_cog("BotLog")
+                if botlog:
+                    await botlog.log(
+                        ctx.guild.id,
+                        "config",
+                        "移除违禁词",
+                        **{"操作者": ctx.author.mention, "词": f"||{word}||"},
+                    )
                 await ctx.send(f"✅ 已移除违禁词: ||{word}||", ephemeral=True)
             else:
                 await ctx.send("⚠️ 该词不在列表中。", ephemeral=True)
 
     # ─── 链接白名单管理 ───
 
-    @commands.hybrid_command(name="automod_whitelist", description="[管理] 管理链接白名单")
+    @commands.hybrid_command(
+        name="automod_whitelist", description="[管理] 管理链接白名单"
+    )
     @commands.has_permissions(manage_guild=True)
-    async def am_whitelist(self, ctx, action: Literal["add", "remove", "list"], domain: str = ""):
+    async def am_whitelist(
+        self, ctx, action: Literal["add", "remove", "list"], domain: str = ""
+    ):
         cfg = await self._get_config(ctx.guild.id)
         if not cfg:
             await self._update_config(ctx.guild.id)
@@ -440,7 +508,9 @@ class AutoMod(commands.Cog):
             if whitelist:
                 await ctx.send(f"✅ 链接白名单: {', '.join(whitelist)}", ephemeral=True)
             else:
-                await ctx.send("📝 链接白名单为空（所有链接都会被过滤）。", ephemeral=True)
+                await ctx.send(
+                    "📝 链接白名单为空（所有链接都会被过滤）。", ephemeral=True
+                )
             return
 
         if not domain:
@@ -450,7 +520,17 @@ class AutoMod(commands.Cog):
         if action == "add":
             if domain.lower() not in whitelist:
                 whitelist.append(domain.lower())
-                await self._update_config(ctx.guild.id, link_whitelist=json.dumps(whitelist))
+                await self._update_config(
+                    ctx.guild.id, link_whitelist=json.dumps(whitelist)
+                )
+                botlog = self.bot.get_cog("BotLog")
+                if botlog:
+                    await botlog.log(
+                        ctx.guild.id,
+                        "config",
+                        "添加链接白名单",
+                        **{"操作者": ctx.author.mention, "域名": domain},
+                    )
                 await ctx.send(f"✅ 已添加白名单域名: `{domain}`", ephemeral=True)
             else:
                 await ctx.send("⚠️ 该域名已在白名单中。", ephemeral=True)
@@ -458,14 +538,26 @@ class AutoMod(commands.Cog):
         elif action == "remove":
             if domain.lower() in whitelist:
                 whitelist.remove(domain.lower())
-                await self._update_config(ctx.guild.id, link_whitelist=json.dumps(whitelist))
+                await self._update_config(
+                    ctx.guild.id, link_whitelist=json.dumps(whitelist)
+                )
+                botlog = self.bot.get_cog("BotLog")
+                if botlog:
+                    await botlog.log(
+                        ctx.guild.id,
+                        "config",
+                        "移除链接白名单",
+                        **{"操作者": ctx.author.mention, "域名": domain},
+                    )
                 await ctx.send(f"✅ 已移除白名单域名: `{domain}`", ephemeral=True)
             else:
                 await ctx.send("⚠️ 该域名不在白名单中。", ephemeral=True)
 
     # ─── 忽略频道/身份组 ───
 
-    @commands.hybrid_command(name="automod_ignore", description="[管理] 添加/移除审核忽略的频道或身份组")
+    @commands.hybrid_command(
+        name="automod_ignore", description="[管理] 添加/移除审核忽略的频道或身份组"
+    )
     @commands.has_permissions(manage_guild=True)
     async def am_ignore(
         self,
@@ -488,7 +580,9 @@ class AutoMod(commands.Cog):
         if action == "list":
             ch_text = ", ".join(f"<#{cid}>" for cid in ignored_channels) or "无"
             role_text = ", ".join(f"<@&{rid}>" for rid in ignored_roles) or "无"
-            embed = discord.Embed(title="🔕 审核忽略列表", color=discord.Color.greyple())
+            embed = discord.Embed(
+                title="🔕 审核忽略列表", color=discord.Color.greyple()
+            )
             embed.add_field(name="频道", value=ch_text, inline=False)
             embed.add_field(name="身份组", value=role_text, inline=False)
             await ctx.send(embed=embed, ephemeral=True)
@@ -511,6 +605,17 @@ class AutoMod(commands.Cog):
             ignored_roles=json.dumps(ignored_roles),
         )
         await ctx.send("✅ 忽略列表已更新。", ephemeral=True)
+
+        botlog = self.bot.get_cog("BotLog")
+        if botlog and (channel or role):
+            target = channel.mention if channel else role.mention
+            verb = "添加" if action == "add" else "移除"
+            await botlog.log(
+                ctx.guild.id,
+                "config",
+                f"{verb}审核忽略对象",
+                **{"操作者": ctx.author.mention, "对象": target},
+            )
 
 
 async def setup(bot):

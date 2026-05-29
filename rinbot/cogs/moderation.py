@@ -27,7 +27,9 @@ import os
 import time
 from typing import Literal, Optional
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "moderation.db")
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "moderation.db"
+)
 
 
 class Moderation(commands.Cog):
@@ -98,15 +100,26 @@ class Moderation(commands.Cog):
 
     async def _get_config(self, guild_id: int) -> dict:
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute("INSERT OR IGNORE INTO mod_config (guild_id) VALUES (?)", (guild_id,))
+            await db.execute(
+                "INSERT OR IGNORE INTO mod_config (guild_id) VALUES (?)", (guild_id,)
+            )
             await db.commit()
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("SELECT * FROM mod_config WHERE guild_id = ?", (guild_id,))
+            cursor = await db.execute(
+                "SELECT * FROM mod_config WHERE guild_id = ?", (guild_id,)
+            )
             row = await cursor.fetchone()
             return dict(row) if row else {}
 
-    async def _log_case(self, guild: discord.Guild, action: str, user: discord.User,
-                        mod: discord.Member, reason: str, duration: str = ""):
+    async def _log_case(
+        self,
+        guild: discord.Guild,
+        action: str,
+        user: discord.User,
+        mod: discord.Member,
+        reason: str,
+        duration: str = "",
+    ):
         """记录管理操作到数据库 + 发送到日志频道"""
         now = time.time()
         async with aiosqlite.connect(DB_PATH) as db:
@@ -124,17 +137,29 @@ class Moderation(commands.Cog):
             channel = guild.get_channel(log_ch_id)
             if channel:
                 action_emoji = {
-                    "kick": "👢", "ban": "🔨", "tempban": "⏳🔨",
-                    "unban": "🔓", "mute": "🔇", "unmute": "🔊",
-                    "warn": "⚠️", "clearwarns": "🧹", "purge": "🗑",
+                    "kick": "👢",
+                    "ban": "🔨",
+                    "tempban": "⏳🔨",
+                    "unban": "🔓",
+                    "mute": "🔇",
+                    "unmute": "🔊",
+                    "warn": "⚠️",
+                    "clearwarns": "🧹",
+                    "purge": "🗑",
                 }.get(action, "📋")
 
                 embed = discord.Embed(
                     title=f"{action_emoji} {action.upper()} | 案件 #{case_id}",
-                    color=discord.Color.red() if action in ("ban", "tempban", "kick") else discord.Color.orange(),
+                    color=(
+                        discord.Color.red()
+                        if action in ("ban", "tempban", "kick")
+                        else discord.Color.orange()
+                    ),
                     timestamp=discord.utils.utcnow(),
                 )
-                embed.add_field(name="成员", value=f"{user.mention} (`{user.id}`)", inline=True)
+                embed.add_field(
+                    name="成员", value=f"{user.mention} (`{user.id}`)", inline=True
+                )
                 embed.add_field(name="管理员", value=mod.mention, inline=True)
                 if duration:
                     embed.add_field(name="时长", value=duration, inline=True)
@@ -148,7 +173,9 @@ class Moderation(commands.Cog):
 
         return case_id
 
-    async def _check_warn_thresholds(self, guild: discord.Guild, member: discord.Member):
+    async def _check_warn_thresholds(
+        self, guild: discord.Guild, member: discord.Member
+    ):
         """检查警告是否达到自动处罚阈值"""
         config = await self._get_config(guild.id)
 
@@ -163,9 +190,16 @@ class Moderation(commands.Cog):
         ban_threshold = config.get("warn_ban_threshold", 0)
         if ban_threshold > 0 and count >= ban_threshold:
             try:
-                await member.ban(reason=f"警告数达到自动封禁阈值 ({count}/{ban_threshold})")
-                await self._log_case(guild, "ban", member, guild.me,
-                                     f"警告数达到阈值自动封禁 ({count}次警告)")
+                await member.ban(
+                    reason=f"警告数达到自动封禁阈值 ({count}/{ban_threshold})"
+                )
+                await self._log_case(
+                    guild,
+                    "ban",
+                    member,
+                    guild.me,
+                    f"警告数达到阈值自动封禁 ({count}次警告)",
+                )
                 return f"🔨 {member.mention} 的警告数已达 {count} 次，已自动封禁。"
             except discord.Forbidden:
                 return None
@@ -174,9 +208,16 @@ class Moderation(commands.Cog):
         kick_threshold = config.get("warn_kick_threshold", 0)
         if kick_threshold > 0 and count >= kick_threshold:
             try:
-                await member.kick(reason=f"警告数达到自动踢出阈值 ({count}/{kick_threshold})")
-                await self._log_case(guild, "kick", member, guild.me,
-                                     f"警告数达到阈值自动踢出 ({count}次警告)")
+                await member.kick(
+                    reason=f"警告数达到自动踢出阈值 ({count}/{kick_threshold})"
+                )
+                await self._log_case(
+                    guild,
+                    "kick",
+                    member,
+                    guild.me,
+                    f"警告数达到阈值自动踢出 ({count}次警告)",
+                )
                 return f"👢 {member.mention} 的警告数已达 {count} 次，已自动踢出。"
             except discord.Forbidden:
                 return None
@@ -184,13 +225,24 @@ class Moderation(commands.Cog):
         # 禁言阈值
         mute_threshold = config.get("warn_mute_threshold", 3)
         mute_duration = config.get("warn_mute_duration", 600)
-        if mute_threshold > 0 and count >= mute_threshold and count % mute_threshold == 0:
+        if (
+            mute_threshold > 0
+            and count >= mute_threshold
+            and count % mute_threshold == 0
+        ):
             try:
-                until = discord.utils.utcnow() + datetime.timedelta(seconds=mute_duration)
+                until = discord.utils.utcnow() + datetime.timedelta(
+                    seconds=mute_duration
+                )
                 await member.timeout(until, reason=f"警告数达到禁言阈值 ({count}次)")
-                await self._log_case(guild, "mute", member, guild.me,
-                                     f"警告数达到阈值自动禁言 ({count}次警告)",
-                                     f"{mute_duration // 60} 分钟")
+                await self._log_case(
+                    guild,
+                    "mute",
+                    member,
+                    guild.me,
+                    f"警告数达到阈值自动禁言 ({count}次警告)",
+                    f"{mute_duration // 60} 分钟",
+                )
                 return f"🔇 {member.mention} 的警告数已达 {count} 次，已自动禁言 {mute_duration // 60} 分钟。"
             except discord.Forbidden:
                 return None
@@ -206,10 +258,14 @@ class Moderation(commands.Cog):
                 buf += ch
             elif ch in ("d", "h", "m", "s") and buf:
                 n = int(buf)
-                if ch == "d": total += n * 86400
-                elif ch == "h": total += n * 3600
-                elif ch == "m": total += n * 60
-                elif ch == "s": total += n
+                if ch == "d":
+                    total += n * 86400
+                elif ch == "h":
+                    total += n * 3600
+                elif ch == "m":
+                    total += n * 60
+                elif ch == "s":
+                    total += n
                 buf = ""
             else:
                 return None
@@ -220,10 +276,14 @@ class Moderation(commands.Cog):
         d, rem = divmod(seconds, 86400)
         h, rem = divmod(rem, 3600)
         m, s = divmod(rem, 60)
-        if d: parts.append(f"{d}天")
-        if h: parts.append(f"{h}小时")
-        if m: parts.append(f"{m}分钟")
-        if s and not d: parts.append(f"{s}秒")
+        if d:
+            parts.append(f"{d}天")
+        if h:
+            parts.append(f"{h}小时")
+        if m:
+            parts.append(f"{m}分钟")
+        if s and not d:
+            parts.append(f"{s}秒")
         return " ".join(parts) or "0秒"
 
     def _hierarchy_check(self, ctx, target: discord.Member) -> Optional[str]:
@@ -246,7 +306,9 @@ class Moderation(commands.Cog):
     async def check_tempbans(self):
         now = time.time()
         async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute("SELECT guild_id, user_id FROM tempbans WHERE unban_at <= ?", (now,))
+            cursor = await db.execute(
+                "SELECT guild_id, user_id FROM tempbans WHERE unban_at <= ?", (now,)
+            )
             expired = await cursor.fetchall()
 
             for guild_id, user_id in expired:
@@ -257,7 +319,10 @@ class Moderation(commands.Cog):
                         await guild.unban(user, reason="临时封禁到期自动解封")
                     except (discord.NotFound, discord.Forbidden):
                         pass
-                await db.execute("DELETE FROM tempbans WHERE guild_id = ? AND user_id = ?", (guild_id, user_id))
+                await db.execute(
+                    "DELETE FROM tempbans WHERE guild_id = ? AND user_id = ?",
+                    (guild_id, user_id),
+                )
             await db.commit()
 
     @check_tempbans.before_loop
@@ -291,7 +356,9 @@ class Moderation(commands.Cog):
         await member.kick(reason=f"{ctx.author}: {reason}")
         case_id = await self._log_case(ctx.guild, "kick", member, ctx.author, reason)
 
-        await ctx.send(f"👢 **{member}** 已被踢出。(案件 #{case_id})\n📝 原因: {reason}")
+        await ctx.send(
+            f"👢 **{member}** 已被踢出。(案件 #{case_id})\n📝 原因: {reason}"
+        )
 
     # ═══════════════════════════════════════
     #  指令：ban
@@ -319,7 +386,9 @@ class Moderation(commands.Cog):
         await member.ban(reason=f"{ctx.author}: {reason}", delete_message_days=0)
         case_id = await self._log_case(ctx.guild, "ban", member, ctx.author, reason)
 
-        await ctx.send(f"🔨 **{member}** 已被永久封禁。(案件 #{case_id})\n📝 原因: {reason}")
+        await ctx.send(
+            f"🔨 **{member}** 已被永久封禁。(案件 #{case_id})\n📝 原因: {reason}"
+        )
 
     # ═══════════════════════════════════════
     #  指令：tempban
@@ -328,7 +397,9 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(name="tempban", description="临时封禁成员 (到期自动解封)")
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
-    async def tempban(self, ctx, member: discord.Member, duration: str, *, reason: str = "未提供原因"):
+    async def tempban(
+        self, ctx, member: discord.Member, duration: str, *, reason: str = "未提供原因"
+    ):
         """
         duration: 封禁时长 (如 1h, 30m, 7d)
         """
@@ -354,7 +425,10 @@ class Moderation(commands.Cog):
         except discord.Forbidden:
             pass
 
-        await member.ban(reason=f"临时封禁 {dur_text} | {ctx.author}: {reason}", delete_message_days=0)
+        await member.ban(
+            reason=f"临时封禁 {dur_text} | {ctx.author}: {reason}",
+            delete_message_days=0,
+        )
 
         unban_at = time.time() + seconds
         async with aiosqlite.connect(DB_PATH) as db:
@@ -364,8 +438,12 @@ class Moderation(commands.Cog):
             )
             await db.commit()
 
-        case_id = await self._log_case(ctx.guild, "tempban", member, ctx.author, reason, dur_text)
-        await ctx.send(f"⏳🔨 **{member}** 已被临时封禁 **{dur_text}**。(案件 #{case_id})\n📝 原因: {reason}")
+        case_id = await self._log_case(
+            ctx.guild, "tempban", member, ctx.author, reason, dur_text
+        )
+        await ctx.send(
+            f"⏳🔨 **{member}** 已被临时封禁 **{dur_text}**。(案件 #{case_id})\n📝 原因: {reason}"
+        )
 
     # ═══════════════════════════════════════
     #  指令：unban
@@ -383,8 +461,10 @@ class Moderation(commands.Cog):
 
             # 清理临时封禁记录
             async with aiosqlite.connect(DB_PATH) as db:
-                await db.execute("DELETE FROM tempbans WHERE guild_id = ? AND user_id = ?",
-                                 (ctx.guild.id, user.id))
+                await db.execute(
+                    "DELETE FROM tempbans WHERE guild_id = ? AND user_id = ?",
+                    (ctx.guild.id, user.id),
+                )
                 await db.commit()
 
             case_id = await self._log_case(ctx.guild, "unban", user, ctx.author, reason)
@@ -401,7 +481,14 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(name="mute", description="禁言成员 (使用 Discord Timeout)")
     @commands.has_permissions(moderate_members=True)
     @commands.bot_has_permissions(moderate_members=True)
-    async def mute(self, ctx, member: discord.Member, duration: str = "10m", *, reason: str = "未提供原因"):
+    async def mute(
+        self,
+        ctx,
+        member: discord.Member,
+        duration: str = "10m",
+        *,
+        reason: str = "未提供原因",
+    ):
         """
         duration: 禁言时长 (如 10m, 1h, 1d, 最长 28d)
         """
@@ -423,9 +510,13 @@ class Moderation(commands.Cog):
         until = discord.utils.utcnow() + datetime.timedelta(seconds=seconds)
 
         await member.timeout(until, reason=f"{ctx.author}: {reason}")
-        case_id = await self._log_case(ctx.guild, "mute", member, ctx.author, reason, dur_text)
+        case_id = await self._log_case(
+            ctx.guild, "mute", member, ctx.author, reason, dur_text
+        )
 
-        await ctx.send(f"🔇 **{member}** 已被禁言 **{dur_text}**。(案件 #{case_id})\n📝 原因: {reason}")
+        await ctx.send(
+            f"🔇 **{member}** 已被禁言 **{dur_text}**。(案件 #{case_id})\n📝 原因: {reason}"
+        )
 
     # ═══════════════════════════════════════
     #  指令：unmute
@@ -550,8 +641,9 @@ class Moderation(commands.Cog):
         if count == 0:
             await ctx.send(f"ℹ️ {member.mention} 本来就没有警告记录。")
         else:
-            await self._log_case(ctx.guild, "clearwarns", member, ctx.author,
-                                 f"清除了 {count} 条警告")
+            await self._log_case(
+                ctx.guild, "clearwarns", member, ctx.author, f"清除了 {count} 条警告"
+            )
             await ctx.send(f"🧹 已清除 **{member}** 的所有警告 ({count} 条)。")
 
     # ═══════════════════════════════════════
@@ -580,7 +672,9 @@ class Moderation(commands.Cog):
     #  指令：purge
     # ═══════════════════════════════════════
 
-    @commands.hybrid_command(name="purge", aliases=["prune"], description="批量清理消息")
+    @commands.hybrid_command(
+        name="purge", aliases=["prune"], description="批量清理消息"
+    )
     @commands.has_permissions(manage_messages=True)
     @commands.bot_has_permissions(manage_messages=True)
     async def purge(self, ctx, amount: int, member: discord.Member = None):
@@ -602,7 +696,7 @@ class Moderation(commands.Cog):
                     deleted.append(msg)
             # 批量删除 (只能删 14 天内的)
             for i in range(0, len(deleted), 100):
-                batch = deleted[i:i + 100]
+                batch = deleted[i : i + 100]
                 try:
                     await ctx.channel.delete_messages(batch)
                 except discord.HTTPException:
@@ -616,9 +710,14 @@ class Moderation(commands.Cog):
             deleted = await ctx.channel.purge(limit=amount)
             count = len(deleted)
 
-        await self._log_case(ctx.guild, "purge", ctx.author, ctx.author,
-                             f"在 #{ctx.channel.name} 清理了 {count} 条消息"
-                             + (f" (来自 {member})" if member else ""))
+        await self._log_case(
+            ctx.guild,
+            "purge",
+            ctx.author,
+            ctx.author,
+            f"在 #{ctx.channel.name} 清理了 {count} 条消息"
+            + (f" (来自 {member})" if member else ""),
+        )
 
         await ctx.send(f"🗑 已清理 **{count}** 条消息。", ephemeral=True)
 
@@ -626,7 +725,9 @@ class Moderation(commands.Cog):
     #  指令：slowmode
     # ═══════════════════════════════════════
 
-    @commands.hybrid_command(name="slowmode", aliases=["slow"], description="设置频道慢速模式")
+    @commands.hybrid_command(
+        name="slowmode", aliases=["slow"], description="设置频道慢速模式"
+    )
     @commands.has_permissions(manage_channels=True)
     @commands.bot_has_permissions(manage_channels=True)
     async def slowmode(self, ctx, seconds: int = 0):
@@ -650,11 +751,15 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(name="lock", description="锁定频道 (禁止普通成员发言)")
     @commands.has_permissions(manage_channels=True)
     @commands.bot_has_permissions(manage_channels=True)
-    async def lock(self, ctx, channel: discord.TextChannel = None, *, reason: str = "未提供原因"):
+    async def lock(
+        self, ctx, channel: discord.TextChannel = None, *, reason: str = "未提供原因"
+    ):
         channel = channel or ctx.channel
         overwrite = channel.overwrites_for(ctx.guild.default_role)
         overwrite.send_messages = False
-        await channel.set_permissions(ctx.guild.default_role, overwrite=overwrite, reason=reason)
+        await channel.set_permissions(
+            ctx.guild.default_role, overwrite=overwrite, reason=reason
+        )
         await ctx.send(f"🔒 {channel.mention} 已被锁定。\n📝 原因: {reason}")
 
     @commands.hybrid_command(name="unlock", description="解锁频道")
@@ -704,7 +809,9 @@ class Moderation(commands.Cog):
             color=discord.Color.blue(),
         )
 
-        for case_id, action, user_id, mod_id, reason, duration, created_at in rows[start:end]:
+        for case_id, action, user_id, mod_id, reason, duration, created_at in rows[
+            start:end
+        ]:
             ts = int(created_at)
             dur_info = f" | 时长: {duration}" if duration else ""
             embed.add_field(
@@ -720,30 +827,64 @@ class Moderation(commands.Cog):
     #  指令：modlog_channel
     # ═══════════════════════════════════════
 
-    @commands.hybrid_command(name="modlog_channel", description="[管理] 设置管理日志频道")
+    @commands.hybrid_command(
+        name="modlog_channel", description="[管理] 设置管理日志频道"
+    )
     @commands.has_permissions(manage_guild=True)
     async def modlog_channel(self, ctx, channel: discord.TextChannel = None):
         """channel: 留空则禁用管理日志"""
+        botlog = self.bot.get_cog("BotLog")
         if channel:
             async with aiosqlite.connect(DB_PATH) as db:
-                await db.execute("INSERT OR IGNORE INTO mod_config (guild_id) VALUES (?)", (ctx.guild.id,))
-                await db.execute("UPDATE mod_config SET log_channel = ? WHERE guild_id = ?",
-                                 (channel.id, ctx.guild.id))
+                await db.execute(
+                    "INSERT OR IGNORE INTO mod_config (guild_id) VALUES (?)",
+                    (ctx.guild.id,),
+                )
+                await db.execute(
+                    "UPDATE mod_config SET log_channel = ? WHERE guild_id = ?",
+                    (channel.id, ctx.guild.id),
+                )
                 await db.commit()
+            if botlog:
+                await botlog.log(
+                    ctx.guild.id,
+                    "config",
+                    "设置管理日志频道",
+                    **{"操作者": ctx.author.mention, "频道": channel.mention},
+                )
             await ctx.send(f"✅ 管理日志频道已设为 {channel.mention}", ephemeral=True)
         else:
             async with aiosqlite.connect(DB_PATH) as db:
-                await db.execute("UPDATE mod_config SET log_channel = 0 WHERE guild_id = ?", (ctx.guild.id,))
+                await db.execute(
+                    "UPDATE mod_config SET log_channel = 0 WHERE guild_id = ?",
+                    (ctx.guild.id,),
+                )
                 await db.commit()
+            if botlog:
+                await botlog.log(
+                    ctx.guild.id,
+                    "config",
+                    "禁用管理日志频道",
+                    **{"操作者": ctx.author.mention},
+                )
             await ctx.send("✅ 已禁用管理日志频道。", ephemeral=True)
 
     # ═══════════════════════════════════════
     #  指令：warn_config
     # ═══════════════════════════════════════
 
-    @commands.hybrid_command(name="warn_config", description="[管理] 配置警告自动处罚阈值")
+    @commands.hybrid_command(
+        name="warn_config", description="[管理] 配置警告自动处罚阈值"
+    )
     @commands.has_permissions(manage_guild=True)
-    async def warn_config(self, ctx, mute_at: int = 3, kick_at: int = 0, ban_at: int = 0, mute_minutes: int = 10):
+    async def warn_config(
+        self,
+        ctx,
+        mute_at: int = 3,
+        kick_at: int = 0,
+        ban_at: int = 0,
+        mute_minutes: int = 10,
+    ):
         """
         mute_at: 达到几次警告自动禁言 (0=禁用)
         kick_at: 达到几次警告自动踢出 (0=禁用)
@@ -751,15 +892,21 @@ class Moderation(commands.Cog):
         mute_minutes: 自动禁言的时长 (分钟)
         """
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute("INSERT OR IGNORE INTO mod_config (guild_id) VALUES (?)", (ctx.guild.id,))
-            await db.execute("""
+            await db.execute(
+                "INSERT OR IGNORE INTO mod_config (guild_id) VALUES (?)",
+                (ctx.guild.id,),
+            )
+            await db.execute(
+                """
                 UPDATE mod_config SET
                     warn_mute_threshold = ?,
                     warn_kick_threshold = ?,
                     warn_ban_threshold = ?,
                     warn_mute_duration = ?
                 WHERE guild_id = ?
-            """, (mute_at, kick_at, ban_at, mute_minutes * 60, ctx.guild.id))
+            """,
+                (mute_at, kick_at, ban_at, mute_minutes * 60, ctx.guild.id),
+            )
             await db.commit()
 
         lines = []
@@ -778,6 +925,21 @@ class Moderation(commands.Cog):
             color=discord.Color.blue(),
         )
         await ctx.send(embed=embed, ephemeral=True)
+
+        botlog = self.bot.get_cog("BotLog")
+        if botlog:
+            await botlog.log(
+                ctx.guild.id,
+                "config",
+                "更新警告自动处罚阈值",
+                **{
+                    "操作者": ctx.author.mention,
+                    "禁言阈值": str(mute_at),
+                    "踢出阈值": str(kick_at),
+                    "封禁阈值": str(ban_at),
+                    "禁言时长": f"{mute_minutes} 分钟",
+                },
+            )
 
     # ═══════════════════════════════════════
     #  全局错误处理
