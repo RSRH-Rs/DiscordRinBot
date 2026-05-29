@@ -254,6 +254,18 @@
 .mod-card--off { opacity:.45; cursor:not-allowed; }
 .mod-card--off:hover { transform:none; box-shadow:none; border-color:var(--border-light); }
 
+/* BotLog level chips */
+.bl-chip {
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 14px; border-radius:50px;
+    background:var(--bg); border:1.5px solid var(--border-light);
+    font-size:.82rem; font-weight:700; color:var(--text-mid);
+    cursor:pointer; transition:.2s; user-select:none;
+}
+.bl-chip:has(input:checked) { background:var(--pink-bg); border-color:var(--pink-border); color:var(--pink); }
+.bl-chip input { display:none; }
+.bl-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+
 /* Toast variants */
 .toast {
     position:fixed; bottom:28px; left:50%; z-index:999;
@@ -745,6 +757,46 @@
     <div id="util-commands"><div class="empty-state-sm">加载中…</div></div>
 </div>
 
+<!-- ═══════ Bot Log (系统日志) ═══════ -->
+<div class="mod-page" id="pg-botlog">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="scroll-text" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>系统日志</h2><p>将 bot 内部活动转发到指定频道，出问题时一眼定位</p></div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">📜 基本设定</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">所有系统日志会发送到这个频道，建议选一个只有管理员能看的频道</div></div>
+            <select class="cfg-select" id="bl-ch" style="max-width:220px;"><option value="0">— 未启用 —</option></select>
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">启用系统日志</div><div class="cfg-row-hint">关闭后，所有日志将被静默丢弃</div></div>
+            <label class="cfg-tog"><input type="checkbox" id="bl-enabled" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">🏷️ 接收等级</div>
+        <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:14px;">
+            <div class="cfg-row-info" style="width:100%;"><div class="cfg-row-label">日志类型</div><div class="cfg-row-hint">勾选要接收的日志等级，不勾选的等级会被静默丢弃</div></div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                <label class="bl-chip"><input type="checkbox" value="error" checked><span class="bl-dot" style="background:#E24B4A;"></span>错误</label>
+                <label class="bl-chip"><input type="checkbox" value="warning" checked><span class="bl-dot" style="background:#EF9F27;"></span>警告</label>
+                <label class="bl-chip"><input type="checkbox" value="info" checked><span class="bl-dot" style="background:#85B7EB;"></span>信息</label>
+                <label class="bl-chip"><input type="checkbox" value="config" checked><span class="bl-dot" style="background:#5A9E6F;"></span>配置变更</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">🧪 测试</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">发送测试日志</div><div class="cfg-row-hint">向所选频道发送一条测试消息，验证配置正确</div></div>
+            <button class="btn-save" id="bl-test" onclick="testBotLog()" style="background:var(--pink-bg);color:var(--pink);">📤 发送测试</button>
+        </div>
+    </div>
+
+    <div class="save-bar" id="bl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="bl-save" onclick="saveBotLog()">储存设定</button></div>
+</div>
+
         </div><!-- content-area -->
     </main>
 
@@ -775,6 +827,7 @@ function go(mod) {
     if (mod === 'roles') loadRolesPage();
     if (mod === 'giveaway') loadGiveawayPage();
     if (mod === 'utility') loadUtility();
+    if (mod === 'botlog') loadBotLog();
     // Re-render Lucide icons for newly visible content
     if (window.lucide) lucide.createIcons();
 }
@@ -1379,6 +1432,47 @@ document.addEventListener('DOMContentLoaded', () => {
     loadOverviewStats();
     loadModules();
 });
+
+/* ── Bot Log ── */
+let _blLoaded = false;
+async function loadBotLog() {
+    if (_blLoaded) return; _blLoaded = true;
+    try {
+        const [ch, cfg] = await Promise.all([getCh(), api('/botlog')]);
+        chOpts('bl-ch', ch, cfg.channel_id);
+        document.getElementById('bl-enabled').checked = !!cfg.enabled;
+        const wanted = new Set(cfg.levels || []);
+        document.querySelectorAll('#pg-botlog .bl-chip input').forEach(inp => {
+            inp.checked = wanted.has(inp.value);
+        });
+        document.querySelectorAll('#bl-ch,#bl-enabled,#pg-botlog .bl-chip input').forEach(el =>
+            el.addEventListener('change', () => markDirty('bl-savebar'))
+        );
+    } catch(e) { showToast('❌ 加载日志配置失败: ' + e.message); }
+}
+
+async function saveBotLog() {
+    const btn = document.getElementById('bl-save'); btn.disabled = true; btn.textContent = '保存中…';
+    try {
+        const levels = [...document.querySelectorAll('#pg-botlog .bl-chip input:checked')].map(i => i.value);
+        await api('/botlog', 'POST', {
+            channel_id: document.getElementById('bl-ch').value,
+            enabled: document.getElementById('bl-enabled').checked,
+            levels,
+        });
+        btn.textContent = '✅ 已保存!'; showToast('✅ 日志配置已保存!'); markClean('bl-savebar');
+    } catch(e) { showToast('❌ 保存失败: ' + e.message); }
+    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+}
+
+async function testBotLog() {
+    const btn = document.getElementById('bl-test'); btn.disabled = true; btn.textContent = '发送中…';
+    try {
+        await api('/botlog/test', 'POST', {});
+        showToast('✅ 测试消息已发送!');
+    } catch(e) { showToast('❌ ' + e.message); }
+    setTimeout(() => { btn.disabled = false; btn.textContent = '📤 发送测试日志'; }, 1500);
+}
 
 async function loadModules() {
     try {

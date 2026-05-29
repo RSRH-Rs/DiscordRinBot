@@ -1,16 +1,11 @@
-# cogs/botconfig.py
-# RinBot — Bot 个性化模块
-# 由网页仪表盘写入配置，Bot 定时读取并应用
-# 功能：
-#   • 自动应用状态 (online/idle/dnd)、活动类型、活动文字
-#   • 头像和用户名通过 REST API 直接修改
-
 import discord
 from discord.ext import commands, tasks
 import aiosqlite
 import os
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "botconfig.db")
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "botconfig.db"
+)
 
 
 class BotConfig(commands.Cog):
@@ -29,8 +24,7 @@ class BotConfig(commands.Cog):
                 activity_text TEXT DEFAULT '正在偷看你的聊天记录|rin-bot.com',
                 updated_at REAL DEFAULT 0
             )""")
-            await db.execute(
-                "INSERT OR IGNORE INTO bot_personalizer (id) VALUES (1)")
+            await db.execute("INSERT OR IGNORE INTO bot_personalizer (id) VALUES (1)")
             await db.commit()
         print("✅ Bot 个性化模块已准备就绪！")
         if not self.check_presence.is_running():
@@ -74,11 +68,17 @@ class BotConfig(commands.Cog):
             if atype == "playing":
                 activity = discord.Game(name=atext)
             elif atype == "watching":
-                activity = discord.Activity(type=discord.ActivityType.watching, name=atext)
+                activity = discord.Activity(
+                    type=discord.ActivityType.watching, name=atext
+                )
             elif atype == "listening":
-                activity = discord.Activity(type=discord.ActivityType.listening, name=atext)
+                activity = discord.Activity(
+                    type=discord.ActivityType.listening, name=atext
+                )
             elif atype == "competing":
-                activity = discord.Activity(type=discord.ActivityType.competing, name=atext)
+                activity = discord.Activity(
+                    type=discord.ActivityType.competing, name=atext
+                )
             elif atype == "custom":
                 activity = discord.CustomActivity(name=atext)
             elif atype == "none":

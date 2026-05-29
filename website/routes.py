@@ -51,6 +51,7 @@ DB_BOTCONFIG = os.path.join(BOT_DIR, "botconfig.db")
 DB_RR = os.path.join(BOT_DIR, "reactionroles.db")
 DB_CMDTOGGLE = os.path.join(BOT_DIR, "commandtoggle.db")
 DB_MUSIC = os.path.join(BOT_DIR, "musicconfig.db")
+DB_BOTLOG = os.path.join(BOT_DIR, "botlog.db")
 
 
 async def ensure_tables():
@@ -140,6 +141,13 @@ async def ensure_tables():
                 guild_id INTEGER PRIMARY KEY,
                 dj_role INTEGER DEFAULT 0,
                 notify_channel INTEGER DEFAULT 0)""")
+            await db.commit()
+        async with aiosqlite.connect(DB_BOTLOG) as db:
+            await db.execute("""CREATE TABLE IF NOT EXISTS botlog_config (
+                guild_id INTEGER PRIMARY KEY,
+                channel_id INTEGER DEFAULT 0,
+                enabled INTEGER DEFAULT 1,
+                levels TEXT DEFAULT 'error,warning,info,config')""")
             await db.commit()
         print(f"✅ Dashboard DB 就绪 (路径: {BOT_DIR})")
     except Exception as e:
@@ -452,6 +460,13 @@ def setup_routes(app, discord):
             "desc": "按需启用/禁用每个指令",
             "icon": "sliders-horizontal",
             "db": "commandtoggle.db",
+        },
+        {
+            "slug": "botlog",
+            "name": "系统日志",
+            "desc": "将 bot 内部活动转发到指定频道",
+            "icon": "scroll-text",
+            "db": "botlog.db",
         },
         {
             "slug": "general",
@@ -804,6 +819,111 @@ def setup_routes(app, discord):
             return jsonify({"ok": True})
         except Exception as e:
             print(f"[api_music_post] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
+    # ── Bot Log ──
+
+    @app.route("/api/guild/<string:gid>/botlog", methods=["GET"])
+    async def api_botlog_get(gid):
+        try:
+            if not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            g = int(gid)
+            async with aiosqlite.connect(DB_BOTLOG) as db:
+                db.row_factory = aiosqlite.Row
+                cur = await db.execute(
+                    "SELECT * FROM botlog_config WHERE guild_id=?", (g,)
+                )
+                row = await cur.fetchone()
+            if row:
+                d = dict(row)
+                d["channel_id"] = str(d["channel_id"])
+                d["guild_id"] = str(d["guild_id"])
+                d["levels"] = d["levels"].split(",") if d["levels"] else []
+                d["enabled"] = bool(d["enabled"])
+                return jsonify(d)
+            return jsonify(
+                {
+                    "guild_id": str(g),
+                    "channel_id": "0",
+                    "enabled": True,
+                    "levels": ["error", "warning", "info", "config"],
+                }
+            )
+        except Exception as e:
+            print(f"[api_botlog_get] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/guild/<string:gid>/botlog", methods=["POST"])
+    async def api_botlog_post(gid):
+        try:
+            if not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            d = await request.get_json()
+            g = int(gid)
+            valid_levels = {"error", "warning", "info", "config"}
+            levels = [l for l in (d.get("levels") or []) if l in valid_levels]
+            async with aiosqlite.connect(DB_BOTLOG) as db:
+                await db.execute(
+                    "INSERT OR REPLACE INTO botlog_config (guild_id, channel_id, enabled, levels) VALUES (?, ?, ?, ?)",
+                    (
+                        g,
+                        int(d.get("channel_id", 0)),
+                        int(bool(d.get("enabled", True))),
+                        ",".join(levels),
+                    ),
+                )
+                await db.commit()
+            return jsonify({"ok": True})
+        except Exception as e:
+            print(f"[api_botlog_post] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/guild/<string:gid>/botlog/test", methods=["POST"])
+    async def api_botlog_test(gid):
+        """通过 Discord REST 直接发测试消息(不依赖 bot 进程)"""
+        try:
+            if not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            g = int(gid)
+            async with aiosqlite.connect(DB_BOTLOG) as db:
+                cur = await db.execute(
+                    "SELECT channel_id, enabled FROM botlog_config WHERE guild_id=?",
+                    (g,),
+                )
+                row = await cur.fetchone()
+            if not row or not row[0]:
+                return jsonify({"error": "未配置日志频道,请先选择并保存"}), 400
+            if not row[1]:
+                return jsonify({"error": "日志系统已禁用"}), 400
+            if not BOT_TOKEN:
+                return jsonify({"error": "BOT_TOKEN 未配置"}), 500
+
+            embed = {
+                "title": "ℹ️ 测试消息",
+                "description": "如果你看到这条消息,说明系统日志频道配置正确!",
+                "color": 0x85B7EB,
+                "footer": {"text": f"由网页控制台触发 · Guild ID: {g}"},
+            }
+            session = await _get_session()
+            async with session.post(
+                f"https://discord.com/api/v10/channels/{row[0]}/messages",
+                headers={"Authorization": f"Bot {BOT_TOKEN}"},
+                json={"embeds": [embed]},
+            ) as resp:
+                if resp.status >= 400:
+                    body = await resp.text()
+                    print(f"[api_botlog_test] Discord {resp.status}: {body}")
+                    err_map = {
+                        401: "Bot Token 无效",
+                        403: "Bot 在该频道没有「发送消息」权限",
+                        404: "找不到该频道(可能已被删除)",
+                    }
+                    msg = err_map.get(resp.status, f"Discord API 错误 ({resp.status})")
+                    return jsonify({"error": msg}), 400
+            return jsonify({"ok": True})
+        except Exception as e:
+            print(f"[api_botlog_test] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
 
     # ── Leaderboard ──
