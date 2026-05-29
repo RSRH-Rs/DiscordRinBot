@@ -266,6 +266,64 @@
 .bl-chip input { display:none; }
 .bl-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 
+/* Emoji picker */
+.emoji-trigger {
+    width:44px; height:38px;
+    border:1.5px solid var(--border-light);
+    background:var(--bg);
+    border-radius:8px;
+    cursor:pointer; transition:.15s;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.15rem; line-height:1;
+    flex-shrink:0;
+}
+.emoji-trigger:hover { border-color:var(--pink); background:var(--pink-bg); }
+.emoji-trigger img { width:22px; height:22px; }
+.emoji-trigger .ep-placeholder { color:var(--text-muted); opacity:.4; }
+
+.emoji-picker {
+    position:absolute; z-index:200;
+    width:300px; max-height:340px;
+    background:var(--card); border:1px solid var(--border);
+    border-radius:12px; box-shadow:0 8px 30px rgba(0,0,0,.12);
+    display:flex; flex-direction:column; overflow:hidden;
+}
+.emoji-picker input {
+    margin:10px 10px 6px; padding:8px 12px;
+    border:1.5px solid var(--border-light); border-radius:8px;
+    background:var(--bg); font-size:.85rem; outline:none;
+    font-family:'Nunito',sans-serif;
+}
+.emoji-picker input:focus { border-color:var(--pink); }
+.ep-tabs { display:flex; gap:4px; padding:0 10px 8px; border-bottom:1px solid var(--border-light); }
+.ep-tab {
+    flex:1; padding:6px 0; border-radius:6px;
+    border:none; background:transparent;
+    font-size:.78rem; font-weight:700; color:var(--text-muted);
+    cursor:pointer; font-family:'Nunito',sans-serif;
+    transition:.15s;
+}
+.ep-tab:hover { background:var(--bg); color:var(--text); }
+.ep-tab.active { background:var(--pink-bg); color:var(--pink); }
+.ep-grid {
+    flex:1; overflow-y:auto; padding:8px;
+    display:grid; grid-template-columns:repeat(8, 1fr); gap:2px;
+}
+.ep-item {
+    width:30px; height:30px;
+    display:flex; align-items:center; justify-content:center;
+    border-radius:6px; cursor:pointer; transition:.1s;
+    font-size:1.1rem; line-height:1;
+    border:none; background:transparent; padding:0;
+}
+.ep-item:hover { background:var(--pink-bg); transform:scale(1.15); }
+.ep-item img { width:22px; height:22px; }
+.ep-empty {
+    grid-column:span 8;
+    text-align:center; padding:30px 10px;
+    color:var(--text-muted); font-size:.82rem;
+}
+
 /* Toast variants */
 .toast {
     position:fixed; bottom:28px; left:50%; z-index:999;
@@ -411,12 +469,12 @@
             <div>
                 <div class="cfg-row-label">欢迎频道</div>
                 <div class="cfg-row-hint" style="margin-bottom:8px;">在该频道发送欢迎图卡</div>
-                <select class="cfg-select" id="w-ch"><option value="0">#</option></select>
+                <select class="cfg-select" id="w-ch" style="max-width:280px;"><option value="0">#</option></select>
             </div>
             <div>
                 <div class="cfg-row-label">道别频道</div>
                 <div class="cfg-row-hint" style="margin-bottom:8px;">在该频道发送道别消息</div>
-                <select class="cfg-select" id="w-fch"><option value="0">#</option></select>
+                <select class="cfg-select" id="w-fch" style="max-width:280px;"><option value="0">#</option></select>
             </div>
         </div>
     </div>
@@ -438,7 +496,7 @@
     <div class="cfg-section">
         <div class="cfg-section-title"><i data-lucide="send" style="width:14px;height:14px;"></i> 发送频道</div>
         <div class="cfg-row-label">在该频道发送领取讯息</div>
-        <select class="cfg-select" id="rr-ch" style="margin-top:6px;"><option value="0"># 选择频道</option></select>
+        <select class="cfg-select" id="rr-ch" style="margin-top:6px;max-width:280px;"><option value="0"># 选择频道</option></select>
     </div>
 
     <div class="cfg-section">
@@ -583,14 +641,14 @@
 
     <div class="cfg-section">
         <div class="cfg-section-title"><i data-lucide="plus-circle" style="width:14px;height:14px;"></i> 建立抽奖活动</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:680px;">
             <div>
                 <div class="cfg-row-label">奖项名称 <span style="color:#E24B4A;">*</span></div>
-                <input class="cfg-input" id="gw-prize" placeholder="如: Discord Nitro 一个月" style="margin-top:6px;">
+                <input class="cfg-input" id="gw-prize" placeholder="如: Discord Nitro 一个月" style="margin-top:6px;max-width:100%;">
             </div>
             <div>
                 <div class="cfg-row-label">份数 <span style="color:#E24B4A;">*</span></div>
-                <input class="cfg-num" type="number" id="gw-winners" value="1" min="1" max="20" style="margin-top:6px;width:100%;">
+                <input class="cfg-num" type="number" id="gw-winners" value="1" min="1" max="20" style="margin-top:6px;width:100%;max-width:100%;">
             </div>
             <div>
                 <div class="cfg-row-label">发起频道 <span style="color:#E24B4A;">*</span></div>
@@ -598,13 +656,13 @@
             </div>
             <div>
                 <div class="cfg-row-label">结束时间 <span style="color:#E24B4A;">*</span></div>
-                <input class="cfg-input" type="datetime-local" id="gw-end" style="margin-top:6px;">
+                <input class="cfg-input" type="datetime-local" id="gw-end" style="margin-top:6px;max-width:100%;">
             </div>
         </div>
-        <div style="margin-top:16px;">
+        <div style="margin-top:16px;max-width:320px;">
             <div class="cfg-row-label">限制参加成员身份组 (选填)</div>
             <div class="cfg-row-hint">留空 = 所有人都可以参加</div>
-            <select class="cfg-select" id="gw-role" style="margin-top:6px;"><option value="0">@ 不限制</option></select>
+            <select class="cfg-select" id="gw-role" style="margin-top:6px;max-width:100%;"><option value="0">@ 不限制</option></select>
         </div>
         <button class="btn-save" style="margin-top:20px;width:auto;padding:10px 36px;" id="gw-create-btn" onclick="createGiveaway()">建立</button>
     </div>
@@ -692,7 +750,7 @@
                 <div class="cfg-columns">
                     <div>
                         <div class="cfg-row-label">Activity Type 活动类型</div>
-                        <select class="cfg-select" id="bp-atype" style="margin-top:6px;" onchange="updatePreview()">
+                        <select class="cfg-select" id="bp-atype" style="margin-top:6px;max-width:280px;" onchange="updatePreview()">
                             <option value="watching">👀 Watching 观看中</option>
                             <option value="playing">🎮 Playing 游玩中</option>
                             <option value="listening">🎧 Listening to 收听中</option>
@@ -703,7 +761,7 @@
                     </div>
                     <div>
                         <div class="cfg-row-label">Status text 状态文字</div>
-                        <input class="cfg-input" id="bp-atext" style="margin-top:6px;" placeholder="/help" onkeyup="updatePreview()">
+                        <input class="cfg-input" id="bp-atext" style="margin-top:6px;max-width:280px;" placeholder="/help" onkeyup="updatePreview()">
                     </div>
                 </div>
             </div>
@@ -802,6 +860,16 @@
 
     <!-- Toast -->
     <div id="toast" class="toast toast--info"></div>
+
+    <!-- Emoji Picker (单例) -->
+    <div id="emoji-picker" class="emoji-picker" style="display:none;">
+        <input id="ep-search" placeholder="搜索 emoji…" oninput="filterEmojis()">
+        <div class="ep-tabs">
+            <button class="ep-tab active" data-tab="default" onclick="switchEmojiTab('default')">😀 常用</button>
+            <button class="ep-tab" data-tab="custom" onclick="switchEmojiTab('custom')">🌸 服务器</button>
+        </div>
+        <div id="ep-grid" class="ep-grid"></div>
+    </div>
 
 <script>
 const GID = "{{ guild.id }}";
@@ -1262,11 +1330,107 @@ function addRoleRow() {
     const ropts = roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
     document.getElementById('rr-roles-list').insertAdjacentHTML('beforeend', `
         <div class="rr-row" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--border-light);border-radius:10px;">
-            <input class="cfg-input rr-emoji" style="width:60px;max-width:60px;text-align:center;" placeholder="🎮" maxlength="5">
+            <button type="button" class="emoji-trigger rr-emoji-trigger" onclick="openEmojiPicker(this)"><span class="ep-placeholder">🎮</span></button>
+            <input type="hidden" class="rr-emoji" value="">
             <select class="cfg-select rr-role" style="flex:1;max-width:none;">${ropts}</select>
             <button onclick="this.parentElement.remove();_rrRoleCount--;" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.1rem;padding:4px 8px;" title="移除">✕</button>
         </div>
     `);
+}
+
+/* ── Emoji Picker ── */
+let _epTab = 'default', _epTarget = null, _epCustom = null;
+const EP_DEFAULT_EMOJIS = [
+    {e:'😀',k:'笑 smile happy'},{e:'😂',k:'笑哭 lol'},{e:'🥰',k:'爱 love'},{e:'😎',k:'酷 cool'},
+    {e:'🥺',k:'求 pleading'},{e:'😭',k:'哭 cry'},{e:'😡',k:'怒 angry'},{e:'🤔',k:'想 think'},
+    {e:'😴',k:'睡 sleep'},{e:'🤗',k:'抱 hug'},{e:'😏',k:'坏笑 smirk'},{e:'🙄',k:'翻白眼 eyeroll'},
+    {e:'👍',k:'赞 thumbs up like'},{e:'👎',k:'踩 thumbs down'},{e:'👏',k:'拍手 clap'},{e:'🙏',k:'谢谢 thanks pray'},
+    {e:'✌️',k:'胜利 peace'},{e:'🤝',k:'握手 handshake'},{e:'💪',k:'肌肉 strong'},{e:'🫡',k:'敬礼 salute'},
+    {e:'❤️',k:'红心 heart love'},{e:'🧡',k:'橙心 orange heart'},{e:'💛',k:'黄心 yellow heart'},{e:'💚',k:'绿心 green heart'},
+    {e:'💙',k:'蓝心 blue heart'},{e:'💜',k:'紫心 purple heart'},{e:'🖤',k:'黑心 black heart'},{e:'🤍',k:'白心 white heart'},
+    {e:'💖',k:'闪心 sparkle heart'},{e:'💗',k:'粉心 pink heart'},{e:'💕',k:'两颗心 two hearts'},{e:'✨',k:'闪 sparkles'},
+    {e:'🔥',k:'火 fire'},{e:'⭐',k:'星 star'},{e:'🌟',k:'闪星 glow star'},{e:'⚡',k:'闪电 lightning'},
+    {e:'🎉',k:'庆祝 party'},{e:'🎊',k:'彩带 confetti'},{e:'🎁',k:'礼物 gift'},{e:'🏆',k:'奖杯 trophy'},
+    {e:'🌸',k:'樱花 cherry blossom'},{e:'🌺',k:'花 flower'},{e:'🌷',k:'郁金香 tulip'},{e:'🌻',k:'向日葵 sunflower'},
+    {e:'🌹',k:'玫瑰 rose'},{e:'🍀',k:'四叶草 clover'},{e:'🌈',k:'彩虹 rainbow'},{e:'☀️',k:'太阳 sun'},
+    {e:'🌙',k:'月亮 moon'},{e:'⛅',k:'云 cloud'},{e:'❄️',k:'雪 snow'},{e:'🎵',k:'音符 music'},
+    {e:'🎮',k:'游戏 game'},{e:'🕹️',k:'摇杆 joystick'},{e:'🎲',k:'骰子 dice'},{e:'🎯',k:'目标 target'},
+    {e:'🍕',k:'披萨 pizza'},{e:'🍔',k:'汉堡 burger'},{e:'🍣',k:'寿司 sushi'},{e:'🍰',k:'蛋糕 cake'},
+    {e:'☕',k:'咖啡 coffee'},{e:'🍺',k:'啤酒 beer'},{e:'🐱',k:'猫 cat'},{e:'🐶',k:'狗 dog'},
+    {e:'🐼',k:'熊猫 panda'},{e:'🦊',k:'狐狸 fox'},{e:'🐰',k:'兔子 bunny'},{e:'🦄',k:'独角兽 unicorn'},
+    {e:'✅',k:'对 check yes'},{e:'❌',k:'错 cross no'},{e:'⚠️',k:'警告 warning'},{e:'❓',k:'问号 question'},
+    {e:'❗',k:'感叹号 exclamation'},{e:'💯',k:'满分 100'},{e:'🚀',k:'火箭 rocket'},{e:'💎',k:'钻石 diamond'},
+];
+
+async function openEmojiPicker(triggerBtn) {
+    _epTarget = triggerBtn;
+    if (_epCustom === null) {
+        try { _epCustom = await api('/emojis'); } catch(e) { _epCustom = []; }
+    }
+    const picker = document.getElementById('emoji-picker');
+    const rect = triggerBtn.getBoundingClientRect();
+    picker.style.display = 'flex';
+    // Position below trigger, scroll-aware
+    picker.style.top = (window.scrollY + rect.bottom + 6) + 'px';
+    picker.style.left = (window.scrollX + rect.left) + 'px';
+    document.getElementById('ep-search').value = '';
+    renderEmojiGrid('');
+    // Close on outside click
+    setTimeout(() => document.addEventListener('click', closeEmojiPickerOnOutside), 0);
+}
+
+function closeEmojiPickerOnOutside(e) {
+    const picker = document.getElementById('emoji-picker');
+    if (picker.contains(e.target) || (_epTarget && _epTarget.contains(e.target))) return;
+    picker.style.display = 'none';
+    document.removeEventListener('click', closeEmojiPickerOnOutside);
+}
+
+function switchEmojiTab(tab) {
+    _epTab = tab;
+    document.querySelectorAll('.ep-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+    renderEmojiGrid(document.getElementById('ep-search').value);
+}
+
+function filterEmojis() {
+    renderEmojiGrid(document.getElementById('ep-search').value);
+}
+
+function renderEmojiGrid(q) {
+    const grid = document.getElementById('ep-grid');
+    q = (q || '').toLowerCase().trim();
+    let html = '';
+    if (_epTab === 'default') {
+        const list = q
+            ? EP_DEFAULT_EMOJIS.filter(x => x.k.includes(q) || x.e === q)
+            : EP_DEFAULT_EMOJIS;
+        if (list.length === 0) html = '<div class="ep-empty">没有匹配的 emoji</div>';
+        else html = list.map(x =>
+            `<button class="ep-item" type="button" onclick="pickEmoji(${JSON.stringify(x.e).replace(/"/g,'&quot;')})">${x.e}</button>`
+        ).join('');
+    } else {
+        const list = q ? (_epCustom||[]).filter(x => x.name.toLowerCase().includes(q)) : (_epCustom||[]);
+        if (list.length === 0) html = '<div class="ep-empty">服务器没有自定义 emoji</div>';
+        else html = list.map(x => {
+            const code = `<${x.animated?'a':''}:${x.name}:${x.id}>`;
+            const safe = JSON.stringify(code).replace(/"/g,'&quot;');
+            return `<button class="ep-item" type="button" title=":${x.name}:" onclick="pickEmoji(${safe},'${x.url}')"><img src="${x.url}" alt=""></button>`;
+        }).join('');
+    }
+    grid.innerHTML = html;
+}
+
+function pickEmoji(code, imgUrl) {
+    if (!_epTarget) return;
+    const row = _epTarget.parentElement;
+    row.querySelector('.rr-emoji').value = code;
+    if (imgUrl) {
+        _epTarget.innerHTML = `<img src="${imgUrl}" alt="">`;
+    } else {
+        _epTarget.innerHTML = code;
+    }
+    document.getElementById('emoji-picker').style.display = 'none';
+    document.removeEventListener('click', closeEmojiPickerOnOutside);
 }
 async function sendRRPanel() {
     const ch = document.getElementById('rr-ch').value;

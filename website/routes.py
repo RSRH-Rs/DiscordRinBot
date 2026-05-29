@@ -395,6 +395,30 @@ def setup_routes(app, discord):
             print(f"[api_roles] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/guild/<string:gid>/emojis")
+    async def api_emojis(gid):
+        try:
+            if not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            data = await discord_api_get(f"/guilds/{gid}/emojis")
+            if not data:
+                return jsonify([])
+            emojis = [
+                {
+                    "id": str(e["id"]),
+                    "name": e["name"],
+                    "animated": bool(e.get("animated")),
+                    "url": f"https://cdn.discordapp.com/emojis/{e['id']}.{'gif' if e.get('animated') else 'png'}",
+                }
+                for e in data
+                if e.get("id") and e.get("name")
+            ]
+            emojis.sort(key=lambda e: e["name"].lower())
+            return jsonify(emojis)
+        except Exception as e:
+            print(f"[api_emojis] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
     # ── 模块列表 ──
 
     MODULES = [
