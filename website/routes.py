@@ -7,6 +7,7 @@ import aiosqlite
 import json
 import os
 from typing import Optional
+from datetime import datetime, timezone
 from config import BOT_TOKEN
 
 # Shared aiohttp session — created at app startup, closed at shutdown
@@ -229,6 +230,83 @@ async def discord_api_put(path):
         timeout=aiohttp.ClientTimeout(total=5),
     ) as resp:
         return resp.status == 204
+
+
+# 等级配色和 emoji,跟 cogs/botlog.py 对齐
+_AUDIT_LEVEL_META = {
+    "error": {"emoji": "❌", "color": 0xE24B4A, "label": "错误"},
+    "warning": {"emoji": "⚠️", "color": 0xEF9F27, "label": "警告"},
+    "info": {"emoji": "ℹ️", "color": 0x85B7EB, "label": "信息"},
+    "config": {"emoji": "⚙️", "color": 0x5A9E6F, "label": "配置变更"},
+}
+
+
+async def _botlog_send(
+    guild_id: int, level: str, title: str, desc: str = "", actor: str = "", **fields
+):
+    """从 Web 进程发送日志到 botlog 频道(通过 Discord REST)"""
+    try:
+        async with aiosqlite.connect(DB_BOTLOG) as db:
+            cur = await db.execute(
+                "SELECT channel_id, enabled, levels FROM botlog_config WHERE guild_id=?",
+                (guild_id,),
+            )
+            row = await cur.fetchone()
+        if not row or not row[0] or not row[1]:
+            return
+        allowed_levels = set((row[2] or "").split(","))
+        if level not in allowed_levels:
+            return
+
+        meta = _AUDIT_LEVEL_META.get(level, _AUDIT_LEVEL_META["info"])
+        embed_fields = [
+            {"name": k, "value": str(v)[:1000], "inline": True}
+            for k, v in fields.items()
+            if v not in (None, "")
+        ]
+        if actor:
+            embed_fields.insert(0, {"name": "操作者", "value": actor, "inline": True})
+
+        embed = {
+            "title": f"{meta['emoji']} {title}",
+            "color": meta["color"],
+            "author": {"name": f"系统日志 · {meta['label']}"},
+            "footer": {"text": f"网页控制台 · Guild ID: {guild_id}"},
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        if desc:
+            embed["description"] = desc[:4000]
+        if embed_fields:
+            embed["fields"] = embed_fields[:25]
+
+        session = await _get_session()
+        async with session.post(
+            f"https://discord.com/api/v10/channels/{row[0]}/messages",
+            headers={"Authorization": f"Bot {BOT_TOKEN}"},
+            json={"embeds": [embed]},
+            timeout=aiohttp.ClientTimeout(total=5),
+        ) as resp:
+            if resp.status >= 400:
+                body = await resp.text()
+                print(f"[_botlog_send] Discord {resp.status}: {body[:200]}")
+    except Exception as e:
+        print(f"[_botlog_send] {e}")
+
+
+def audit(gid, title, **fields):
+    """配置变更便捷调用,自动 fire-and-forget"""
+    asyncio.create_task(_botlog_send(int(gid), "config", title, **fields))
+
+
+async def _resolve_actor(discord_oauth) -> str:
+    """从当前 OAuth session 拿登录用户的显示名"""
+    try:
+        if await discord_oauth.authorized:
+            u = await discord_oauth.fetch_user()
+            return f"{u.name}"
+    except Exception:
+        pass
+    return "未知"
 
 
 async def discord_api_patch(path, json_data):
@@ -569,6 +647,8 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            actor = await _resolve_actor(discord)
+            audit(g, "欢迎模块配置已更新", **{"操作者": actor})
             return jsonify({"ok": True})
         except Exception as e:
             print(f"[api_welcome_post] {traceback.format_exc()}")
@@ -666,6 +746,8 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            actor = await _resolve_actor(discord)
+            audit(g, "自动审核配置已更新", **{"操作者": actor})
             return jsonify({"ok": True})
         except Exception as e:
             print(f"[api_automod_post] {traceback.format_exc()}")
@@ -726,6 +808,8 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            actor = await _resolve_actor(discord)
+            audit(g, "管理模块配置已更新", **{"操作者": actor})
             return jsonify({"ok": True})
         except Exception as e:
             print(f"[api_moderation_post] {traceback.format_exc()}")
@@ -840,6 +924,8 @@ def setup_routes(app, discord):
                     (g, int(d.get("dj_role", 0)), int(d.get("notify_channel", 0))),
                 )
                 await db.commit()
+            actor = await _resolve_actor(discord)
+            audit(g, "音乐模块配置已更新", **{"操作者": actor})
             return jsonify({"ok": True})
         except Exception as e:
             print(f"[api_music_post] {traceback.format_exc()}")
@@ -898,6 +984,12 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            actor = await _resolve_actor(discord)
+            audit(
+                g,
+                "系统日志配置已更新",
+                **{"操作者": actor, "等级": ",".join(levels) or "(无)"},
+            )
             return jsonify({"ok": True})
         except Exception as e:
             print(f"[api_botlog_post] {traceback.format_exc()}")
@@ -1178,6 +1270,17 @@ def setup_routes(app, discord):
                 )
                 await db.commit()
 
+            actor = await _resolve_actor(discord)
+            audit(
+                g,
+                "发送了身份组面板",
+                **{
+                    "操作者": actor,
+                    "频道": f"<#{channel_id}>",
+                    "标题": title,
+                    "映射数量": str(len(mapping_dict)),
+                },
+            )
             return jsonify({"ok": True, "message_id": message_id})
         except Exception as e:
             print(f"[api_rr_send] {traceback.format_exc()}")
@@ -1268,6 +1371,17 @@ def setup_routes(app, discord):
                 )
                 await db.commit()
 
+            actor = await _resolve_actor(discord)
+            audit(
+                g,
+                "创建了抽奖活动",
+                **{
+                    "操作者": actor,
+                    "奖品": prize,
+                    "中奖人数": str(winners_count),
+                    "频道": f"<#{channel_id}>",
+                },
+            )
             return jsonify({"ok": True, "message_id": message_id})
         except Exception as e:
             print(f"[api_gw_create] {traceback.format_exc()}")
@@ -1392,6 +1506,9 @@ def setup_routes(app, discord):
                         (g, name),
                     )
                 await db.commit()
+            actor = await _resolve_actor(discord)
+            action = "启用" if enabled else "禁用"
+            audit(g, f"{action}了指令", **{"操作者": actor, "指令": f"/{name}"})
             return jsonify({"ok": True, "name": name, "enabled": enabled})
         except Exception as e:
             print(f"[api_commands_toggle] {traceback.format_exc()}")
