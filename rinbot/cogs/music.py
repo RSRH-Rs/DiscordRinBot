@@ -36,6 +36,8 @@ class Song:
 class GuildMusicState:
     """每个服务器独立的音乐状态"""
 
+    MAX_CONSECUTIVE_FAILURES = 3
+
     def __init__(self, bot, guild_id):
         self.bot = bot
         self.guild_id = guild_id
@@ -46,6 +48,13 @@ class GuildMusicState:
         self.is_playing = False
         self.skip_votes: set[int] = set()
         self._task: Optional[asyncio.Task] = None
+        self.fail_count = 0
+        self.idle_task: Optional[asyncio.Task] = None
+
+    def cancel_idle(self):
+        if self.idle_task and not self.idle_task.done():
+            self.idle_task.cancel()
+        self.idle_task = None
 
     def clear(self):
         self.queue.clear()
@@ -53,6 +62,8 @@ class GuildMusicState:
         self.loop_mode = "off"
         self.skip_votes.clear()
         self.is_playing = False
+        self.fail_count = 0
+        self.cancel_idle()
 
 
 class NowPlayingView(View):
@@ -201,6 +212,7 @@ class Music(commands.Cog):
 
         vc = guild.voice_client
         state.skip_votes.clear()
+        state.cancel_idle()
 
         # 循环逻辑
         if state.loop_mode == "single" and state.current:
@@ -213,13 +225,10 @@ class Music(commands.Cog):
 
         if not state.current:
             state.is_playing = False
-            # 3 分钟无歌自动断开
-            await asyncio.sleep(180)
-            if not state.is_playing and guild.voice_client:
-                await guild.voice_client.disconnect()
+            state.idle_task = asyncio.create_task(self._idle_disconnect(guild_id))
             return
 
-        # 重新获取流媒体 URL（旧 URL 可能过期）
+        # 重新获取流媒体 URL(旧 URL 可能过期)
         info = await self._extract_info(state.current.url)
         if info:
             state.current.stream_url = info.get("url", state.current.stream_url)
@@ -229,7 +238,28 @@ class Music(commands.Cog):
 
         def after_play(error):
             if error:
-                print(f"播放错误: {error}")
+                print(f"[music] 播放错误 (guild {guild_id}): {error}")
+                state.fail_count += 1
+                if state.fail_count >= GuildMusicState.MAX_CONSECUTIVE_FAILURES:
+                    print(f"[music] 连续失败 {state.fail_count} 次,停止队列")
+                    state.is_playing = False
+                    # 通知日志频道(异步,不影响主流程)
+                    botlog = self.bot.get_cog("BotLog")
+                    if botlog:
+                        asyncio.run_coroutine_threadsafe(
+                            botlog.log(
+                                guild_id,
+                                "error",
+                                "音乐播放连续失败,已停止队列",
+                                f"```{str(error)[:500]}```",
+                                **{"失败次数": str(state.fail_count)},
+                            ),
+                            self.bot.loop,
+                        )
+                    return
+            else:
+                state.fail_count = 0  # 成功播完一首,重置计数
+
             if state.is_playing:
                 asyncio.run_coroutine_threadsafe(
                     self._play_next(guild_id), self.bot.loop
@@ -237,7 +267,18 @@ class Music(commands.Cog):
 
         vc.play(source, after=after_play)
 
-    # ─── 指令：play ───
+    async def _idle_disconnect(self, guild_id: int):
+        """空闲 3 分钟自动断开,可被新的 /play 取消"""
+        try:
+            await asyncio.sleep(180)
+            state = self._get_state(guild_id)
+            guild = self.bot.get_guild(guild_id)
+            if not state.is_playing and guild and guild.voice_client:
+                await guild.voice_client.disconnect()
+        except asyncio.CancelledError:
+            pass
+
+    # ─── 指令:play ───
 
     @commands.hybrid_command(
         name="play", aliases=["p"], description="播放音乐（歌名或链接），支持队列"
@@ -278,16 +319,38 @@ class Music(commands.Cog):
                 embed.set_thumbnail(url=song.thumbnail)
             await ctx.send(embed=embed)
         else:
+            state.cancel_idle()
             state.current = song
             state.is_playing = True
             source = self._make_source(song, state.volume)
+            guild_id = ctx.guild.id
 
             def after_play(error):
                 if error:
-                    print(f"播放错误: {error}")
+                    print(f"[music] 播放错误 (guild {guild_id}): {error}")
+                    state.fail_count += 1
+                    if state.fail_count >= GuildMusicState.MAX_CONSECUTIVE_FAILURES:
+                        print(f"[music] 连续失败 {state.fail_count} 次,停止队列")
+                        state.is_playing = False
+                        botlog = self.bot.get_cog("BotLog")
+                        if botlog:
+                            asyncio.run_coroutine_threadsafe(
+                                botlog.log(
+                                    guild_id,
+                                    "error",
+                                    "音乐播放连续失败,已停止队列",
+                                    f"```{str(error)[:500]}```",
+                                    **{"失败次数": str(state.fail_count)},
+                                ),
+                                self.bot.loop,
+                            )
+                        return
+                else:
+                    state.fail_count = 0
+
                 if state.is_playing:
                     asyncio.run_coroutine_threadsafe(
-                        self._play_next(ctx.guild.id), self.bot.loop
+                        self._play_next(guild_id), self.bot.loop
                     )
 
             vc.play(source, after=after_play)
