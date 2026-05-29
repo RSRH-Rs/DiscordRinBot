@@ -173,18 +173,23 @@ class ReactionRoles(commands.Cog):
         self,
         ctx,
         title: str = "身份组选择",
+        exclusive: bool = False,
         *,
         description: str = "点击下方的按钮来领取身分组",
     ):
         """
         title: 面板标题
+        exclusive: 单选模式(只能选一个角色,选其他会自动替换)
         description: 面板说明文字
         """
         await ctx.defer()
 
+        full_desc = description
+        if exclusive:
+            full_desc = f"{description}\n\n*注:只能选一个身份组,选其他会自动替换*"
         embed = discord.Embed(
             title=f"🏷 {title}",
-            description=f"{description}\n\n*使用 `/rr_add` 添加身份组按钮*",
+            description=f"{full_desc}\n\n*使用 `/rr_add` 添加身份组按钮*",
             color=discord.Color.teal(),
         )
 
@@ -192,12 +197,12 @@ class ReactionRoles(commands.Cog):
 
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
-                "INSERT INTO rr_panels (message_id, channel_id, guild_id, title, mappings) VALUES (?, ?, ?, ?, ?)",
-                (msg.id, ctx.channel.id, ctx.guild.id, title, "{}"),
+                "INSERT INTO rr_panels (message_id, channel_id, guild_id, title, mappings, exclusive) VALUES (?, ?, ?, ?, ?, ?)",
+                (msg.id, ctx.channel.id, ctx.guild.id, title, "{}", int(exclusive)),
             )
             await db.commit()
 
-        self._cache[msg.id] = {"mappings": {}, "exclusive": False}
+        self._cache[msg.id] = {"mappings": {}, "exclusive": exclusive}
         botlog = self.bot.get_cog("BotLog")
         if botlog:
             await botlog.log(
@@ -208,10 +213,12 @@ class ReactionRoles(commands.Cog):
                     "操作者": ctx.author.mention,
                     "频道": ctx.channel.mention,
                     "标题": title,
+                    "单选模式": "是" if exclusive else "否",
                 },
             )
+        mode_hint = "(单选模式)" if exclusive else ""
         await ctx.send(
-            f"✅ 面板已创建!消息 ID: `{msg.id}`\n用 `/rr_add {msg.id} <emoji> <@角色>` 添加按钮。",
+            f"✅ 面板已创建{mode_hint}!消息 ID: `{msg.id}`\n用 `/rr_add {msg.id} <emoji> <@角色>` 添加按钮。",
             ephemeral=True,
         )
 
@@ -332,7 +339,7 @@ class ReactionRoles(commands.Cog):
     async def rr_list(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
-                "SELECT message_id, channel_id, title, mappings FROM rr_panels WHERE guild_id = ?",
+                "SELECT message_id, channel_id, title, mappings, exclusive FROM rr_panels WHERE guild_id = ?",
                 (ctx.guild.id,),
             )
             rows = await cursor.fetchall()
@@ -342,18 +349,59 @@ class ReactionRoles(commands.Cog):
             return
 
         embed = discord.Embed(title="🏷 反应身份组面板列表", color=discord.Color.teal())
-        for msg_id, ch_id, title, mappings_json in rows:
+        for msg_id, ch_id, title, mappings_json, exclusive in rows:
             mappings = json.loads(mappings_json)
             channel = ctx.guild.get_channel(ch_id)
             ch_name = channel.mention if channel else f"#{ch_id}"
             count = len(mappings)
+            mode = "🔘 单选" if exclusive else "☑️ 多选"
             embed.add_field(
                 name=f"{title}",
-                value=f"频道: {ch_name}\n消息 ID: `{msg_id}`\n映射数量: {count}",
+                value=f"频道: {ch_name}\n消息 ID: `{msg_id}`\n映射数量: {count} | 模式: {mode}",
                 inline=False,
             )
 
         await ctx.send(embed=embed)
+
+    # ─── 指令:rr_exclusive ───
+
+    @commands.hybrid_command(
+        name="rr_exclusive", description="[管理] 切换面板的单选/多选模式"
+    )
+    @commands.has_permissions(manage_roles=True)
+    async def rr_exclusive(self, ctx, message_id: str, enabled: bool):
+        """
+        message_id: 面板消息 ID
+        enabled: True=单选模式(只能选一个),False=多选模式
+        """
+        await ctx.defer(ephemeral=True)
+        msg_id = int(message_id)
+
+        if msg_id not in self._cache:
+            async with aiosqlite.connect(DB_PATH) as db:
+                cur = await db.execute(
+                    "SELECT 1 FROM rr_panels WHERE message_id = ? AND guild_id = ?",
+                    (msg_id, ctx.guild.id),
+                )
+                if not await cur.fetchone():
+                    await ctx.send("❌ 找不到该面板。", ephemeral=True)
+                    return
+
+        await self._set_exclusive(msg_id, enabled)
+        mode = "🔘 单选" if enabled else "☑️ 多选"
+        await ctx.send(
+            f"✅ 已切换为 {mode} 模式。\n*提示:Discord 端的面板提示文字不会自动更新,如需更新请重建面板。*",
+            ephemeral=True,
+        )
+
+        botlog = self.bot.get_cog("BotLog")
+        if botlog:
+            await botlog.log(
+                ctx.guild.id,
+                "config",
+                "切换面板模式",
+                **{"操作者": ctx.author.mention, "面板": str(msg_id), "新模式": mode},
+            )
 
     # ─── 指令：rr_delete ───
 
