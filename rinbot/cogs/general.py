@@ -1,12 +1,15 @@
 # cogs/general.py
 import discord
 from discord.ext import commands
+import aiosqlite
 import platform
 import psutil
 import time
 import datetime
 import random
 from typing import Literal
+
+BOTCONFIG_DB = "botconfig.db"
 
 
 class General(commands.Cog):
@@ -98,28 +101,48 @@ class General(commands.Cog):
         """
         await ctx.defer()
 
-        activity = None
+        atype_map = {
+            "Playing": "playing",
+            "Watching": "watching",
+            "Listening": "listening",
+            "Competing": "competing",
+            "Custom": "custom",
+        }
+        atype = atype_map[type]
 
-        if type == "Playing":
-            activity = discord.Game(name=text)
-        elif type == "Watching":
-            activity = discord.Activity(type=discord.ActivityType.watching, name=text)
-        elif type == "Listening":
-            activity = discord.Activity(type=discord.ActivityType.listening, name=text)
-        elif type == "Competing":
-            activity = discord.Activity(type=discord.ActivityType.competing, name=text)
-        elif type == "Custom":
-            # 👇 这里就是纯文字状态的关键
-            activity = discord.CustomActivity(name=text)
+        # 写 DB,botconfig 是唯一管 presence 的人
+        async with aiosqlite.connect(BOTCONFIG_DB) as db:
+            await db.execute("INSERT OR IGNORE INTO bot_personalizer (id) VALUES (1)")
+            await db.execute(
+                "UPDATE bot_personalizer SET activity_type=?, activity_text=?, updated_at=? WHERE id=1",
+                (atype, text, time.time()),
+            )
+            await db.commit()
 
-        await self.bot.change_presence(status=discord.Status.online, activity=activity)
+        # 立刻触发 botconfig 重新读取(不用等 30 秒轮询)
+        botcfg = self.bot.get_cog("BotConfig")
+        if botcfg:
+            botcfg._last_hash = None
+            await botcfg.check_presence()
 
         await ctx.send(f"✅ 状态已更新为: **{type} {text}**")
 
     @commands.hybrid_command(name="resetstatus", description="[Owner] 重置/清除状态")
     @commands.is_owner()
     async def resetstatus(self, ctx):
-        await self.bot.change_presence(activity=None, status=discord.Status.online)
+        async with aiosqlite.connect(BOTCONFIG_DB) as db:
+            await db.execute("INSERT OR IGNORE INTO bot_personalizer (id) VALUES (1)")
+            await db.execute(
+                "UPDATE bot_personalizer SET activity_type='none', activity_text='', updated_at=? WHERE id=1",
+                (time.time(),),
+            )
+            await db.commit()
+
+        botcfg = self.bot.get_cog("BotConfig")
+        if botcfg:
+            botcfg._last_hash = None
+            await botcfg.check_presence()
+
         await ctx.send("✅ 状态已重置")
 
     @commands.hybrid_command(
