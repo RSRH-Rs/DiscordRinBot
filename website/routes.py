@@ -380,6 +380,12 @@ def setup_routes(app, discord):
         session.permanent = True
         return await discord.create_session(scope=["identify", "guilds"])
 
+    @app.route("/invite")
+    async def invite():
+        """跳转到 Discord 机器人的邀请链接"""
+        invite_url = "https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+        return redirect(invite_url)
+
     @app.route("/callback")
     async def callback():
         try:
