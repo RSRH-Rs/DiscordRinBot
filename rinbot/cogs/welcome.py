@@ -13,8 +13,9 @@ from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import io
 import os
 import aiosqlite
+from _botlog_helper import audit
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "welcome.db")
+DB_PATH = "welcome.db"
 
 
 class WelcomeSetupView(View):
@@ -29,41 +30,98 @@ class WelcomeSetupView(View):
         cls=ChannelSelect,
         placeholder="📢 选择欢迎频道...",
         channel_types=[discord.ChannelType.text],
-        min_values=1, max_values=1,
+        min_values=1,
+        max_values=1,
     )
-    async def welcome_channel(self, interaction: discord.Interaction, select: ChannelSelect):
+    async def welcome_channel(
+        self, interaction: discord.Interaction, select: ChannelSelect
+    ):
         channel = select.values[0]
         await self.cog._set_config(self.guild_id, "welcome_channel", channel.id)
-        await interaction.response.send_message(f"✅ 欢迎频道已设为: {channel.mention}", ephemeral=True)
+        botlog = self.cog.bot.get_cog("BotLog")
+        if botlog:
+            await botlog.log(
+                self.guild_id,
+                "config",
+                "设置欢迎频道",
+                **{"操作者": interaction.user.mention, "频道": channel.mention},
+            )
+        await interaction.response.send_message(
+            f"✅ 欢迎频道已设为: {channel.mention}", ephemeral=True
+        )
 
     @discord.ui.select(
         cls=ChannelSelect,
         placeholder="👋 选择道别频道 (可选)...",
         channel_types=[discord.ChannelType.text],
-        min_values=0, max_values=1,
+        min_values=0,
+        max_values=1,
     )
-    async def farewell_channel(self, interaction: discord.Interaction, select: ChannelSelect):
+    async def farewell_channel(
+        self, interaction: discord.Interaction, select: ChannelSelect
+    ):
+        botlog = self.cog.bot.get_cog("BotLog")
         if select.values:
             channel = select.values[0]
             await self.cog._set_config(self.guild_id, "farewell_channel", channel.id)
-            await interaction.response.send_message(f"✅ 道别频道已设为: {channel.mention}", ephemeral=True)
+            if botlog:
+                await botlog.log(
+                    self.guild_id,
+                    "config",
+                    "设置道别频道",
+                    **{"操作者": interaction.user.mention, "频道": channel.mention},
+                )
+            await interaction.response.send_message(
+                f"✅ 道别频道已设为: {channel.mention}", ephemeral=True
+            )
         else:
             await self.cog._set_config(self.guild_id, "farewell_channel", 0)
-            await interaction.response.send_message("✅ 已禁用道别消息。", ephemeral=True)
+            if botlog:
+                await botlog.log(
+                    self.guild_id,
+                    "config",
+                    "禁用道别消息",
+                    **{"操作者": interaction.user.mention},
+                )
+            await interaction.response.send_message(
+                "✅ 已禁用道别消息。", ephemeral=True
+            )
 
     @discord.ui.select(
         cls=RoleSelect,
         placeholder="🏷 选择自动分配的身份组...",
-        min_values=0, max_values=3,
+        min_values=0,
+        max_values=3,
     )
     async def auto_roles(self, interaction: discord.Interaction, select: RoleSelect):
         role_ids = [r.id for r in select.values]
-        await self.cog._set_config(self.guild_id, "auto_roles", ",".join(str(r) for r in role_ids))
+        await self.cog._set_config(
+            self.guild_id, "auto_roles", ",".join(str(r) for r in role_ids)
+        )
+        botlog = self.cog.bot.get_cog("BotLog")
         if role_ids:
             mentions = ", ".join(r.mention for r in select.values)
-            await interaction.response.send_message(f"✅ 新成员将自动获得: {mentions}", ephemeral=True)
+            if botlog:
+                await botlog.log(
+                    self.guild_id,
+                    "config",
+                    "设置自动身份组",
+                    **{"操作者": interaction.user.mention, "身份组": mentions},
+                )
+            await interaction.response.send_message(
+                f"✅ 新成员将自动获得: {mentions}", ephemeral=True
+            )
         else:
-            await interaction.response.send_message("✅ 已清除自动分配身份组。", ephemeral=True)
+            if botlog:
+                await botlog.log(
+                    self.guild_id,
+                    "config",
+                    "清除自动身份组",
+                    **{"操作者": interaction.user.mention},
+                )
+            await interaction.response.send_message(
+                "✅ 已清除自动分配身份组。", ephemeral=True
+            )
 
 
 class Welcome(commands.Cog):
@@ -94,7 +152,9 @@ class Welcome(commands.Cog):
     async def _get_config(self, guild_id: int) -> dict:
         async with aiosqlite.connect(DB_PATH) as db:
             db.row_factory = aiosqlite.Row
-            cursor = await db.execute("SELECT * FROM welcome_config WHERE guild_id = ?", (guild_id,))
+            cursor = await db.execute(
+                "SELECT * FROM welcome_config WHERE guild_id = ?", (guild_id,)
+            )
             row = await cursor.fetchone()
             if row:
                 return dict(row)
@@ -103,14 +163,24 @@ class Welcome(commands.Cog):
     async def _set_config(self, guild_id: int, key: str, value):
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
-                "INSERT OR IGNORE INTO welcome_config (guild_id) VALUES (?)", (guild_id,)
+                "INSERT OR IGNORE INTO welcome_config (guild_id) VALUES (?)",
+                (guild_id,),
             )
-            await db.execute(f"UPDATE welcome_config SET {key} = ? WHERE guild_id = ?", (value, guild_id))
+            await db.execute(
+                f"UPDATE welcome_config SET {key} = ? WHERE guild_id = ?",
+                (value, guild_id),
+            )
             await db.commit()
 
     # ─── 欢迎图卡生成 ───
 
-    def _generate_welcome_card(self, member_name: str, guild_name: str, member_count: int, avatar_img: Image.Image) -> io.BytesIO:
+    def _generate_welcome_card(
+        self,
+        member_name: str,
+        guild_name: str,
+        member_count: int,
+        avatar_img: Image.Image,
+    ) -> io.BytesIO:
         card_w, card_h = 900, 300
 
         # 背景
@@ -126,7 +196,9 @@ class Welcome(commands.Cog):
         # 半透明底板
         overlay = Image.new("RGBA", (card_w, card_h), (0, 0, 0, 0))
         od = ImageDraw.Draw(overlay)
-        od.rounded_rectangle([(20, 20), (card_w - 20, card_h - 20)], radius=25, fill=(255, 255, 255, 170))
+        od.rounded_rectangle(
+            [(20, 20), (card_w - 20, card_h - 20)], radius=25, fill=(255, 255, 255, 170)
+        )
         img = Image.alpha_composite(img, overlay)
         draw = ImageDraw.Draw(img)
 
@@ -138,8 +210,13 @@ class Welcome(commands.Cog):
         ImageDraw.Draw(mask).ellipse((0, 0, av_size, av_size), fill=255)
         # 白色边框
         border = 6
-        border_mask = Image.new("RGBA", (av_size + border * 2, av_size + border * 2), (0, 0, 0, 0))
-        ImageDraw.Draw(border_mask).ellipse((0, 0, av_size + border * 2, av_size + border * 2), fill=(255, 255, 255, 255))
+        border_mask = Image.new(
+            "RGBA", (av_size + border * 2, av_size + border * 2), (0, 0, 0, 0)
+        )
+        ImageDraw.Draw(border_mask).ellipse(
+            (0, 0, av_size + border * 2, av_size + border * 2),
+            fill=(255, 255, 255, 255),
+        )
         av_x = 60
         av_y = (card_h - av_size) // 2
         img.paste(border_mask, (av_x - border, av_y - border), border_mask)
@@ -159,14 +236,25 @@ class Welcome(commands.Cog):
         sub_color = (120, 90, 100, 255)
 
         # 欢迎文字
-        name_display = member_name if len(member_name) <= 18 else member_name[:17] + "..."
-        draw.text((text_x, 65), f"欢迎加入！", fill=(255, 105, 140, 255), font=font_title)
+        name_display = (
+            member_name if len(member_name) <= 18 else member_name[:17] + "..."
+        )
+        draw.text(
+            (text_x, 65), f"欢迎加入！", fill=(255, 105, 140, 255), font=font_title
+        )
         draw.text((text_x, 120), name_display, fill=text_color, font=font_title)
         draw.text((text_x, 175), f"🏠 {guild_name}", fill=sub_color, font=font_sub)
-        draw.text((text_x, 210), f"✨ 你是第 {member_count} 位成员", fill=sub_color, font=font_count)
+        draw.text(
+            (text_x, 210),
+            f"✨ 你是第 {member_count} 位成员",
+            fill=sub_color,
+            font=font_count,
+        )
 
         # 底部装饰线
-        draw.line([(text_x, 250), (card_w - 60, 250)], fill=(255, 182, 193, 200), width=2)
+        draw.line(
+            [(text_x, 250), (card_w - 60, 250)], fill=(255, 182, 193, 200), width=2
+        )
 
         buffer = io.BytesIO()
         img.save(buffer, format="PNG")
@@ -219,7 +307,9 @@ class Welcome(commands.Cog):
         )
 
         embed = discord.Embed(
-            description=config["welcome_msg"].format(member=member.mention, server=member.guild.name),
+            description=config["welcome_msg"].format(
+                member=member.mention, server=member.guild.name
+            ),
             color=discord.Color.pink(),
         )
         embed.set_footer(text=f"ID: {member.id}")
@@ -245,7 +335,9 @@ class Welcome(commands.Cog):
             return
 
         embed = discord.Embed(
-            description=config["farewell_msg"].format(member=f"**{member.display_name}**", server=member.guild.name),
+            description=config["farewell_msg"].format(
+                member=f"**{member.display_name}**", server=member.guild.name
+            ),
             color=discord.Color.dark_grey(),
         )
         embed.set_thumbnail(url=member.display_avatar.url)
@@ -254,7 +346,9 @@ class Welcome(commands.Cog):
 
     # ─── 配置指令 ───
 
-    @commands.hybrid_command(name="welcome_setup", description="[管理] 配置迎新 & 道别系统")
+    @commands.hybrid_command(
+        name="welcome_setup", description="[管理] 配置迎新 & 道别系统"
+    )
     @commands.has_permissions(manage_guild=True)
     async def welcome_setup(self, ctx):
         embed = discord.Embed(
@@ -270,7 +364,9 @@ class Welcome(commands.Cog):
         view = WelcomeSetupView(self, ctx.guild.id)
         await ctx.send(embed=embed, view=view, ephemeral=True)
 
-    @commands.hybrid_command(name="welcome_message", description="[管理] 自定义欢迎/道别消息")
+    @commands.hybrid_command(
+        name="welcome_message", description="[管理] 自定义欢迎/道别消息"
+    )
     @commands.has_permissions(manage_guild=True)
     async def welcome_message(self, ctx, msg_type: str, *, text: str):
         """
@@ -282,6 +378,13 @@ class Welcome(commands.Cog):
             return
         key = f"{msg_type}_msg"
         await self._set_config(ctx.guild.id, key, text)
+        label = "欢迎消息" if msg_type == "welcome" else "道别消息"
+        await audit(
+            self.bot,
+            ctx.guild.id,
+            f"修改{label}模板",
+            **{"操作者": ctx.author.mention, "内容": text[:200]},
+        )
         preview = text.format(member=ctx.author.mention, server=ctx.guild.name)
         await ctx.send(f"✅ 已更新 {msg_type} 消息！\n预览: {preview}")
 
@@ -309,14 +412,26 @@ class Welcome(commands.Cog):
             description=msg.format(member=ctx.author.mention, server=ctx.guild.name),
             color=discord.Color.pink(),
         )
-        await ctx.send(embed=embed, file=discord.File(fp=card_buffer, filename="welcome_test.png"))
+        await ctx.send(
+            embed=embed, file=discord.File(fp=card_buffer, filename="welcome_test.png")
+        )
 
-    @commands.hybrid_command(name="welcome_disable", description="[管理] 禁用迎新/道别系统")
+    @commands.hybrid_command(
+        name="welcome_disable", description="[管理] 禁用迎新/道别系统"
+    )
     @commands.has_permissions(manage_guild=True)
     async def welcome_disable(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute("DELETE FROM welcome_config WHERE guild_id = ?", (ctx.guild.id,))
+            await db.execute(
+                "DELETE FROM welcome_config WHERE guild_id = ?", (ctx.guild.id,)
+            )
             await db.commit()
+        await audit(
+            self.bot,
+            ctx.guild.id,
+            "禁用迎新 & 道别系统",
+            **{"操作者": ctx.author.mention},
+        )
         await ctx.send("✅ 已禁用迎新 & 道别系统。")
 
 

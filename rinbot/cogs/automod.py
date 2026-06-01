@@ -8,6 +8,8 @@ import re
 from collections import defaultdict
 from typing import Literal
 
+from _botlog_helper import audit
+
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "automod.db"
 )
@@ -453,14 +455,12 @@ class AutoMod(commands.Cog):
                 await self._update_config(
                     ctx.guild.id, badwords=json.dumps(words, ensure_ascii=False)
                 )
-                botlog = self.bot.get_cog("BotLog")
-                if botlog:
-                    await botlog.log(
-                        ctx.guild.id,
-                        "config",
-                        "添加违禁词",
-                        **{"操作者": ctx.author.mention, "词": f"||{word}||"},
-                    )
+                await audit(
+                    self.bot,
+                    ctx.guild.id,
+                    "添加违禁词",
+                    **{"操作者": ctx.author.mention, "词": f"||{word}||"},
+                )
                 await ctx.send(f"✅ 已添加违禁词: ||{word}||", ephemeral=True)
             else:
                 await ctx.send("⚠️ 该词已在列表中。", ephemeral=True)
@@ -473,14 +473,12 @@ class AutoMod(commands.Cog):
                 await self._update_config(
                     ctx.guild.id, badwords=json.dumps(words, ensure_ascii=False)
                 )
-                botlog = self.bot.get_cog("BotLog")
-                if botlog:
-                    await botlog.log(
-                        ctx.guild.id,
-                        "config",
-                        "移除违禁词",
-                        **{"操作者": ctx.author.mention, "词": f"||{word}||"},
-                    )
+                await audit(
+                    self.bot,
+                    ctx.guild.id,
+                    "移除违禁词",
+                    **{"操作者": ctx.author.mention, "词": f"||{word}||"},
+                )
                 await ctx.send(f"✅ 已移除违禁词: ||{word}||", ephemeral=True)
             else:
                 await ctx.send("⚠️ 该词不在列表中。", ephemeral=True)
@@ -523,14 +521,12 @@ class AutoMod(commands.Cog):
                 await self._update_config(
                     ctx.guild.id, link_whitelist=json.dumps(whitelist)
                 )
-                botlog = self.bot.get_cog("BotLog")
-                if botlog:
-                    await botlog.log(
-                        ctx.guild.id,
-                        "config",
-                        "添加链接白名单",
-                        **{"操作者": ctx.author.mention, "域名": domain},
-                    )
+                await audit(
+                    self.bot,
+                    ctx.guild.id,
+                    "添加链接白名单",
+                    **{"操作者": ctx.author.mention, "域名": domain},
+                )
                 await ctx.send(f"✅ 已添加白名单域名: `{domain}`", ephemeral=True)
             else:
                 await ctx.send("⚠️ 该域名已在白名单中。", ephemeral=True)
@@ -541,14 +537,12 @@ class AutoMod(commands.Cog):
                 await self._update_config(
                     ctx.guild.id, link_whitelist=json.dumps(whitelist)
                 )
-                botlog = self.bot.get_cog("BotLog")
-                if botlog:
-                    await botlog.log(
-                        ctx.guild.id,
-                        "config",
-                        "移除链接白名单",
-                        **{"操作者": ctx.author.mention, "域名": domain},
-                    )
+                await audit(
+                    self.bot,
+                    ctx.guild.id,
+                    "移除链接白名单",
+                    **{"操作者": ctx.author.mention, "域名": domain},
+                )
                 await ctx.send(f"✅ 已移除白名单域名: `{domain}`", ephemeral=True)
             else:
                 await ctx.send("⚠️ 该域名不在白名单中。", ephemeral=True)
@@ -606,13 +600,12 @@ class AutoMod(commands.Cog):
         )
         await ctx.send("✅ 忽略列表已更新。", ephemeral=True)
 
-        botlog = self.bot.get_cog("BotLog")
-        if botlog and (channel or role):
+        if channel or role:
             target = channel.mention if channel else role.mention
             verb = "添加" if action == "add" else "移除"
-            await botlog.log(
+            await audit(
+                self.bot,
                 ctx.guild.id,
-                "config",
                 f"{verb}审核忽略对象",
                 **{"操作者": ctx.author.mention, "对象": target},
             )

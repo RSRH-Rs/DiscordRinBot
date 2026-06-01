@@ -15,6 +15,7 @@ import aiosqlite
 import aiohttp
 import json
 from typing import Optional
+from _botlog_helper import audit
 
 DB_PATH = "reactionroles.db"
 
@@ -203,19 +204,17 @@ class ReactionRoles(commands.Cog):
             await db.commit()
 
         self._cache[msg.id] = {"mappings": {}, "exclusive": exclusive}
-        botlog = self.bot.get_cog("BotLog")
-        if botlog:
-            await botlog.log(
-                ctx.guild.id,
-                "config",
-                "创建身份组面板",
-                **{
-                    "操作者": ctx.author.mention,
-                    "频道": ctx.channel.mention,
-                    "标题": title,
-                    "单选模式": "是" if exclusive else "否",
-                },
-            )
+        await audit(
+            self.bot,
+            ctx.guild.id,
+            "创建身份组面板",
+            **{
+                "操作者": ctx.author.mention,
+                "频道": ctx.channel.mention,
+                "标题": title,
+                "单选模式": "是" if exclusive else "否",
+            },
+        )
         mode_hint = "(单选模式)" if exclusive else ""
         await ctx.send(
             f"✅ 面板已创建{mode_hint}!消息 ID: `{msg.id}`\n用 `/rr_add {msg.id} <emoji> <@角色>` 添加按钮。",
@@ -269,19 +268,17 @@ class ReactionRoles(commands.Cog):
                     pass
 
         await ctx.send(f"✅ 已添加按钮: {emoji} {role.mention}", ephemeral=True)
-        botlog = self.bot.get_cog("BotLog")
-        if botlog:
-            await botlog.log(
-                ctx.guild.id,
-                "config",
-                "添加身份组映射",
-                **{
-                    "操作者": ctx.author.mention,
-                    "面板": str(msg_id),
-                    "Emoji": emoji,
-                    "身份组": role.mention,
-                },
-            )
+        await audit(
+            self.bot,
+            ctx.guild.id,
+            "添加身份组映射",
+            **{
+                "操作者": ctx.author.mention,
+                "面板": str(msg_id),
+                "Emoji": emoji,
+                "身份组": role.mention,
+            },
+        )
 
     # ─── 指令：rr_remove ───
 
@@ -321,14 +318,12 @@ class ReactionRoles(commands.Cog):
                     pass
 
         await ctx.send(f"✅ 已移除: {emoji}", ephemeral=True)
-        botlog = self.bot.get_cog("BotLog")
-        if botlog:
-            await botlog.log(
-                ctx.guild.id,
-                "config",
-                "移除身份组映射",
-                **{"操作者": ctx.author.mention, "面板": str(msg_id), "Emoji": emoji},
-            )
+        await audit(
+            self.bot,
+            ctx.guild.id,
+            "移除身份组映射",
+            **{"操作者": ctx.author.mention, "面板": str(msg_id), "Emoji": emoji},
+        )
 
     # ─── 指令：rr_list ───
 
@@ -394,14 +389,12 @@ class ReactionRoles(commands.Cog):
             ephemeral=True,
         )
 
-        botlog = self.bot.get_cog("BotLog")
-        if botlog:
-            await botlog.log(
-                ctx.guild.id,
-                "config",
-                "切换面板模式",
-                **{"操作者": ctx.author.mention, "面板": str(msg_id), "新模式": mode},
-            )
+        await audit(
+            self.bot,
+            ctx.guild.id,
+            "切换面板模式",
+            **{"操作者": ctx.author.mention, "面板": str(msg_id), "新模式": mode},
+        )
 
     # ─── 指令：rr_delete ───
 
@@ -438,14 +431,12 @@ class ReactionRoles(commands.Cog):
                 pass
 
         await ctx.send("✅ 面板已删除。", ephemeral=True)
-        botlog = self.bot.get_cog("BotLog")
-        if botlog:
-            await botlog.log(
-                ctx.guild.id,
-                "config",
-                "删除身份组面板",
-                **{"操作者": ctx.author.mention, "消息 ID": str(msg_id)},
-            )
+        await audit(
+            self.bot,
+            ctx.guild.id,
+            "删除身份组面板",
+            **{"操作者": ctx.author.mention, "消息 ID": str(msg_id)},
+        )
 
     # ─── 反应监听 ───
 

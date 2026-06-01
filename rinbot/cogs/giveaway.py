@@ -11,13 +11,13 @@ import discord
 from discord.ext import commands, tasks
 from discord.ui import View, Button
 import aiosqlite
-import os
 import random
 import time
 import asyncio
 from typing import Optional
+from _botlog_helper import audit
 
-DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "giveaway.db")
+DB_PATH = "giveaway.db"
 GIVEAWAY_EMOJI = "🎉"
 
 
@@ -27,7 +27,11 @@ class GiveawayEntryButton(View):
     def __init__(self):
         super().__init__(timeout=None)  # 持久化
 
-    @discord.ui.button(label="🎉 参加抽奖!", style=discord.ButtonStyle.success, custom_id="giveaway_enter")
+    @discord.ui.button(
+        label="🎉 参加抽奖!",
+        style=discord.ButtonStyle.success,
+        custom_id="giveaway_enter",
+    )
     async def enter(self, interaction: discord.Interaction, button: Button):
         # 查找这个消息对应的抽奖
         async with aiosqlite.connect(DB_PATH) as db:
@@ -37,11 +41,15 @@ class GiveawayEntryButton(View):
             )
             row = await cursor.fetchone()
             if not row:
-                await interaction.response.send_message("❌ 找不到该抽奖活动。", ephemeral=True)
+                await interaction.response.send_message(
+                    "❌ 找不到该抽奖活动。", ephemeral=True
+                )
                 return
             giveaway_id, ended = row
             if ended:
-                await interaction.response.send_message("❌ 这个抽奖已经结束了。", ephemeral=True)
+                await interaction.response.send_message(
+                    "❌ 这个抽奖已经结束了。", ephemeral=True
+                )
                 return
 
             # 检查是否已参加
@@ -57,9 +65,14 @@ class GiveawayEntryButton(View):
                 )
                 await db.commit()
                 # 更新计数
-                cursor3 = await db.execute("SELECT COUNT(*) FROM giveaway_entries WHERE giveaway_id = ?", (giveaway_id,))
+                cursor3 = await db.execute(
+                    "SELECT COUNT(*) FROM giveaway_entries WHERE giveaway_id = ?",
+                    (giveaway_id,),
+                )
                 count = (await cursor3.fetchone())[0]
-                await interaction.response.send_message("✅ 你已取消参加抽奖。", ephemeral=True)
+                await interaction.response.send_message(
+                    "✅ 你已取消参加抽奖。", ephemeral=True
+                )
             else:
                 # 参加
                 await db.execute(
@@ -67,9 +80,14 @@ class GiveawayEntryButton(View):
                     (giveaway_id, interaction.user.id),
                 )
                 await db.commit()
-                cursor3 = await db.execute("SELECT COUNT(*) FROM giveaway_entries WHERE giveaway_id = ?", (giveaway_id,))
+                cursor3 = await db.execute(
+                    "SELECT COUNT(*) FROM giveaway_entries WHERE giveaway_id = ?",
+                    (giveaway_id,),
+                )
                 count = (await cursor3.fetchone())[0]
-                await interaction.response.send_message(f"✅ 你已成功参加抽奖！当前参与人数: {count}", ephemeral=True)
+                await interaction.response.send_message(
+                    f"✅ 你已成功参加抽奖！当前参与人数: {count}", ephemeral=True
+                )
 
             # 更新按钮文字显示人数
             button.label = f"🎉 参加抽奖! ({count}人)"
@@ -185,7 +203,9 @@ class Giveaway(commands.Cog):
                 return
             guild_id, channel_id, message_id, prize, winners_count, host_id = row
 
-            await db.execute("UPDATE giveaways SET ended = 1 WHERE id = ?", (giveaway_id,))
+            await db.execute(
+                "UPDATE giveaways SET ended = 1 WHERE id = ?", (giveaway_id,)
+            )
             await db.commit()
 
         guild = self.bot.get_guild(guild_id)
@@ -252,7 +272,9 @@ class Giveaway(commands.Cog):
     @commands.hybrid_group(name="giveaway", aliases=["gw"], description="抽奖管理")
     async def giveaway_group(self, ctx):
         if ctx.invoked_subcommand is None:
-            await ctx.send("用法: `/giveaway start`, `/giveaway end`, `/giveaway reroll`, `/giveaway list`")
+            await ctx.send(
+                "用法: `/giveaway start`, `/giveaway end`, `/giveaway reroll`, `/giveaway list`"
+            )
 
     @giveaway_group.command(name="start", description="发起一个抽奖活动")
     @commands.has_permissions(manage_guild=True)
@@ -295,9 +317,29 @@ class Giveaway(commands.Cog):
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
                 "INSERT INTO giveaways (guild_id, channel_id, message_id, host_id, prize, winners_count, end_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (ctx.guild.id, ctx.channel.id, msg.id, ctx.author.id, prize, winners, end_time),
+                (
+                    ctx.guild.id,
+                    ctx.channel.id,
+                    msg.id,
+                    ctx.author.id,
+                    prize,
+                    winners,
+                    end_time,
+                ),
             )
             await db.commit()
+
+        await audit(
+            self.bot,
+            ctx.guild.id,
+            "发起抽奖活动",
+            **{
+                "操作者": ctx.author.mention,
+                "奖品": prize,
+                "中奖人数": str(winners),
+                "频道": ctx.channel.mention,
+            },
+        )
 
     @giveaway_group.command(name="end", description="[管理] 提前结束一个抽奖")
     @commands.has_permissions(manage_guild=True)
@@ -316,7 +358,13 @@ class Giveaway(commands.Cog):
                 return
 
         await self._end_giveaway(giveaway_id)
-        await ctx.send(f"✅ 抽奖 #{giveaway_id} 已提前结束！", ephemeral=True)
+        await ctx.send(f"✅ 抽奖 #{giveaway_id} 已提前结束!", ephemeral=True)
+        await audit(
+            self.bot,
+            ctx.guild.id,
+            "提前结束抽奖",
+            **{"操作者": ctx.author.mention, "抽奖 ID": str(giveaway_id)},
+        )
 
     @giveaway_group.command(name="reroll", description="[管理] 重新抽取获奖者")
     @commands.has_permissions(manage_guild=True)
@@ -337,7 +385,17 @@ class Giveaway(commands.Cog):
         winners = await self._pick_winners(giveaway_id, count)
         if winners:
             winner_mentions = ", ".join(f"<@{uid}>" for uid in winners)
-            await ctx.send(f"🎉 Reroll 结果: {winner_mentions} 赢得了 **{row[1]}**！")
+            await ctx.send(f"🎉 Reroll 结果: {winner_mentions} 赢得了 **{row[1]}**!")
+            await audit(
+                self.bot,
+                ctx.guild.id,
+                "重新抽取获奖者",
+                **{
+                    "操作者": ctx.author.mention,
+                    "抽奖 ID": str(giveaway_id),
+                    "新获奖者数": str(len(winners)),
+                },
+            )
         else:
             await ctx.send("❌ 没有参与者可以 Reroll。")
 
