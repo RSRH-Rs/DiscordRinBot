@@ -1,3 +1,7 @@
+# cogs/music.py
+# RinBot — 完整音乐播放器模块
+# 功能：播放、队列、跳过、暂停/恢复、循环、音量、洗牌、正在播放、移除、清空队列
+
 import discord
 from discord.ext import commands
 from discord.ui import View, Button
@@ -67,40 +71,71 @@ class GuildMusicState:
 
 
 class NowPlayingView(View):
-    """正在播放的控制面板"""
+    """正在播放的控制面板 — 单排 5 按钮"""
 
-    def __init__(self, music_cog, ctx):
-        super().__init__(timeout=300)
+    def __init__(self, music_cog, ctx, state=None):
+        super().__init__(timeout=600)
         self.music_cog = music_cog
         self.ctx = ctx
+        self.state = state
 
-    @discord.ui.button(label="⏸ 暂停", style=discord.ButtonStyle.secondary)
+    @discord.ui.button(emoji="⏸️", style=discord.ButtonStyle.secondary)
     async def pause_btn(self, interaction: discord.Interaction, button: Button):
         vc = interaction.guild.voice_client
         if vc and vc.is_playing():
             vc.pause()
-            button.label = "▶ 恢复"
-            button.style = discord.ButtonStyle.success
+            button.emoji = "▶️"
+            await interaction.response.edit_message(view=self)
         elif vc and vc.is_paused():
             vc.resume()
-            button.label = "⏸ 暂停"
-            button.style = discord.ButtonStyle.secondary
-        await interaction.response.edit_message(view=self)
-
-    @discord.ui.button(label="⏭ 跳过", style=discord.ButtonStyle.primary)
-    async def skip_btn(self, interaction: discord.Interaction, button: Button):
-        vc = interaction.guild.voice_client
-        if vc and (vc.is_playing() or vc.is_paused()):
-            vc.stop()
-            await interaction.response.send_message(
-                "⏭ 已跳过当前歌曲！", ephemeral=True
-            )
+            button.emoji = "⏸️"
+            await interaction.response.edit_message(view=self)
         else:
             await interaction.response.send_message(
                 "❌ 当前没有在播放。", ephemeral=True
             )
 
-    @discord.ui.button(label="⏹ 停止", style=discord.ButtonStyle.danger)
+    @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.secondary)
+    async def skip_btn(self, interaction: discord.Interaction, button: Button):
+        vc = interaction.guild.voice_client
+        if vc and (vc.is_playing() or vc.is_paused()):
+            vc.stop()
+            await interaction.response.send_message("⏭ 已跳过!", ephemeral=True)
+        else:
+            await interaction.response.send_message(
+                "❌ 当前没有在播放。", ephemeral=True
+            )
+
+    @discord.ui.button(
+        label="循环: 关", emoji="🔁", style=discord.ButtonStyle.secondary
+    )
+    async def loop_btn(self, interaction: discord.Interaction, button: Button):
+        state = self.music_cog._get_state(interaction.guild.id)
+        modes = ["off", "single", "queue"]
+        labels = {"off": "循环: 关", "single": "单曲循环", "queue": "队列循环"}
+        emojis = {"off": "🔁", "single": "🔂", "queue": "🔁"}
+        idx = (modes.index(state.loop_mode) + 1) % 3
+        state.loop_mode = modes[idx]
+        button.label = labels[state.loop_mode]
+        button.emoji = emojis[state.loop_mode]
+        await interaction.response.edit_message(view=self)
+
+    @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary)
+    async def shuffle_btn(self, interaction: discord.Interaction, button: Button):
+        state = self.music_cog._get_state(interaction.guild.id)
+        if len(state.queue) < 2:
+            await interaction.response.send_message(
+                "❌ 队列歌曲不足,无需洗牌。", ephemeral=True
+            )
+            return
+        temp = list(state.queue)
+        random.shuffle(temp)
+        state.queue = deque(temp)
+        await interaction.response.send_message(
+            f"🔀 已随机打乱 {len(state.queue)} 首歌!", ephemeral=True
+        )
+
+    @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.secondary)
     async def stop_btn(self, interaction: discord.Interaction, button: Button):
         state = self.music_cog._get_state(interaction.guild.id)
         state.clear()
@@ -112,16 +147,6 @@ class NowPlayingView(View):
             "⏹ 已停止播放并清空队列。", ephemeral=True
         )
         self.stop()
-
-    @discord.ui.button(label="🔁 循环", style=discord.ButtonStyle.secondary)
-    async def loop_btn(self, interaction: discord.Interaction, button: Button):
-        state = self.music_cog._get_state(interaction.guild.id)
-        modes = ["off", "single", "queue"]
-        labels = {"off": "🔁 循环: 关", "single": "🔂 单曲循环", "queue": "🔁 队列循环"}
-        idx = (modes.index(state.loop_mode) + 1) % 3
-        state.loop_mode = modes[idx]
-        button.label = labels[state.loop_mode]
-        await interaction.response.edit_message(view=self)
 
 
 class Music(commands.Cog):
@@ -357,27 +382,46 @@ class Music(commands.Cog):
             await self._send_now_playing(ctx, song, state)
 
     async def _send_now_playing(self, ctx, song: Song, state: GuildMusicState):
-        embed = discord.Embed(
-            title="🎵 正在播放",
-            description=f"**[{song.title}]({song.url})**",
-            color=discord.Color.pink(),
+        embed = discord.Embed(color=0xFFB6C1)
+        embed.set_author(
+            name="正在播放 ♪",
+            icon_url=self.bot.user.display_avatar.url,
         )
+        title_display = song.title if len(song.title) <= 60 else song.title[:59] + "…"
+        embed.title = title_display
+        embed.url = song.url
+
+        if song.thumbnail:
+            embed.set_image(url=song.thumbnail)
+
+        loop_labels = {"off": "❌ 关闭", "single": "🔂 单曲", "queue": "🔁 队列"}
         embed.add_field(
             name="⏱ 时长", value=Song.format_duration(song.duration), inline=True
         )
         embed.add_field(
             name="🔊 音量", value=f"{int(state.volume * 100)}%", inline=True
         )
-        loop_labels = {"off": "关闭", "single": "单曲循环", "queue": "队列循环"}
         embed.add_field(name="🔁 循环", value=loop_labels[state.loop_mode], inline=True)
-        if song.thumbnail:
-            embed.set_thumbnail(url=song.thumbnail)
+
+        if state.queue:
+            next_song = state.queue[0]
+            next_title = (
+                next_song.title
+                if len(next_song.title) <= 50
+                else next_song.title[:49] + "…"
+            )
+            embed.add_field(
+                name="⏭ 接下来",
+                value=f"**{next_title}**\n*请求者: {next_song.requester.display_name}*",
+                inline=False,
+            )
+
         embed.set_footer(
-            text=f"请求者: {song.requester.display_name}",
+            text=f"🌸 由 {song.requester.display_name} 点歌 · 小凛音乐 ♪",
             icon_url=song.requester.display_avatar.url,
         )
 
-        view = NowPlayingView(self, ctx)
+        view = NowPlayingView(self, ctx, state)
         notify_ch = self._get_notify_channel(ctx)
         await notify_ch.send(embed=embed, view=view)
         if notify_ch.id != ctx.channel.id:
