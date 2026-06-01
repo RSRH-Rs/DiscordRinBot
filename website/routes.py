@@ -504,6 +504,41 @@ def setup_routes(app, discord):
             print(f"[api_emojis] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
 
+    @app.route("/api/guild/<string:gid>/info")
+    async def api_guild_info(gid):
+        """服务器统计:成员数、在线数、频道数、bot 加入时间"""
+        try:
+            if not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+
+            guild_data = await discord_api_get(f"/guilds/{gid}?with_counts=true")
+            channels = await discord_api_get(f"/guilds/{gid}/channels")
+            me = await discord_api_get(
+                f"/guilds/{gid}/members/{app.config.get('DISCORD_CLIENT_ID', 0)}"
+            )
+
+            if not guild_data:
+                return jsonify({"error": "无法获取服务器信息"}), 502
+
+            text_ch = sum(1 for c in (channels or []) if c.get("type") in (0, 5))
+            voice_ch = sum(1 for c in (channels or []) if c.get("type") in (2, 13))
+
+            return jsonify(
+                {
+                    "name": guild_data.get("name", ""),
+                    "member_count": guild_data.get("approximate_member_count", 0),
+                    "online_count": guild_data.get("approximate_presence_count", 0),
+                    "text_channels": text_ch,
+                    "voice_channels": voice_ch,
+                    "boost_tier": guild_data.get("premium_tier", 0),
+                    "boost_count": guild_data.get("premium_subscription_count", 0),
+                    "bot_joined_at": me.get("joined_at") if me else None,
+                }
+            )
+        except Exception as e:
+            print(f"[api_guild_info] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
     # ── 模块列表 ──
 
     MODULES = [

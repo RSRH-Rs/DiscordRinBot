@@ -412,10 +412,12 @@
         <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-size:.72rem;font-weight:800;padding:5px 12px;border-radius:50px;"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:pip-pulse 2s infinite;"></span>小凛在线</div>
     </div>
     <div class="ov-grid">
+        <div class="ov-card"><div class="ov-label">成员数</div><div class="ov-val" id="ov-members">—</div></div>
+        <div class="ov-card"><div class="ov-label">在线成员</div><div class="ov-val" id="ov-online" style="color:var(--green);">—</div></div>
+        <div class="ov-card"><div class="ov-label">文字频道</div><div class="ov-val" id="ov-text-ch">—</div></div>
+        <div class="ov-card"><div class="ov-label">语音频道</div><div class="ov-val" id="ov-voice-ch">—</div></div>
+        <div class="ov-card"><div class="ov-label">小凛已驻守</div><div class="ov-val" id="ov-joined" style="font-size:1rem;">—</div></div>
         <div class="ov-card"><div class="ov-label">已启用指令</div><div class="ov-val" id="ov-enabled">— <span class="accent">/ —</span></div></div>
-        <div class="ov-card"><div class="ov-label">Bot 状态</div><div class="ov-val" style="color:var(--green);font-size:1rem;">● 在线</div></div>
-        <div class="ov-card"><div class="ov-label">指令前缀</div><div class="ov-val" style="font-family:monospace;font-size:1.4rem;">r!</div></div>
-        <div class="ov-card"><div class="ov-label">已禁用指令</div><div class="ov-val" id="ov-disabled" style="color:var(--text-muted);">—</div></div>
     </div>
     <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:14px;">功能模块</div>
     <div class="mod-grid" id="ov-modules">
@@ -1609,7 +1611,38 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.lucide) lucide.createIcons();
     loadOverviewStats();
     loadModules();
+    loadGuildInfo();
 });
+
+async function loadGuildInfo() {
+    try {
+        const info = await api('/info');
+        const m = document.getElementById('ov-members');
+        const o = document.getElementById('ov-online');
+        const t = document.getElementById('ov-text-ch');
+        const v = document.getElementById('ov-voice-ch');
+        const j = document.getElementById('ov-joined');
+        if (m) m.textContent = (info.member_count || 0).toLocaleString();
+        if (o) o.textContent = (info.online_count || 0).toLocaleString();
+        if (t) t.textContent = info.text_channels || 0;
+        if (v) v.textContent = info.voice_channels || 0;
+        if (j) j.textContent = info.bot_joined_at ? formatJoinDuration(info.bot_joined_at) : '—';
+    } catch(e) {
+        console.error('loadGuildInfo', e);
+    }
+}
+
+function formatJoinDuration(iso) {
+    const joined = new Date(iso);
+    const now = new Date();
+    const days = Math.floor((now - joined) / 86400000);
+    if (days < 1) return '今天';
+    if (days < 30) return `${days} 天`;
+    if (days < 365) return `${Math.floor(days / 30)} 个月`;
+    const years = Math.floor(days / 365);
+    const remMonths = Math.floor((days % 365) / 30);
+    return remMonths > 0 ? `${years} 年 ${remMonths} 个月` : `${years} 年`;
+}
 
 /* ── Bot Log ── */
 let _blLoaded = false;

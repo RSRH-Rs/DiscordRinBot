@@ -2,93 +2,117 @@ import discord
 from discord.ext import commands
 from discord.ui import Select, View
 
+# Cog 元数据(emoji + 描述)— 没列在这的 cog 会被隐藏
+COG_META = {
+    "Music": {"emoji": "🎵", "label": "音乐系统", "desc": "队列、循环、音量、投票跳过"},
+    "Leveling": {
+        "emoji": "🏆",
+        "label": "等级系统",
+        "desc": "聊天累积经验、精美等级卡",
+    },
+    "Welcome": {"emoji": "👋", "label": "迎新道别", "desc": "欢迎图卡、自动身份组"},
+    "ReactionRoles": {
+        "emoji": "🏷️",
+        "label": "领取身份组",
+        "desc": "成员点按钮自助拿角色",
+    },
+    "AutoMod": {"emoji": "🛡️", "label": "自动审核", "desc": "反刷屏、违禁词、链接过滤"},
+    "Moderation": {
+        "emoji": "⚖️",
+        "label": "管理工具",
+        "desc": "kick / ban / mute / warn / purge",
+    },
+    "Giveaway": {"emoji": "🎉", "label": "抽奖管理", "desc": "倒计时自动开奖,公正透明"},
+    "CommandToggle": {
+        "emoji": "🔘",
+        "label": "指令开关",
+        "desc": "按需启用/禁用每个指令",
+    },
+    "BotLog": {"emoji": "📜", "label": "系统日志", "desc": "Bot 活动转发到指定频道"},
+    "General": {
+        "emoji": "🛠️",
+        "label": "通用工具",
+        "desc": "status / avatar / roll 等",
+    },
+}
 
-# --- 1. 定义下拉菜单组件 ---
+# 隐藏:开发者 cog / 纯后台 cog
+HIDDEN_COGS = {"Help", "Dev", "BotConfig", "MusicConfig"}
+
+
+def _format_command(cmd) -> str:
+    desc = cmd.description or "暂无介绍"
+    return f"**`/{cmd.qualified_name}`** — {desc}"
+
+
+def _collect_commands(cog) -> list:
+    """收集 cog 下所有可见命令(展开 hybrid group 的子命令)"""
+    lines = []
+    for cmd in cog.get_commands():
+        if cmd.hidden:
+            continue
+        if isinstance(cmd, commands.HybridGroup) or isinstance(cmd, commands.Group):
+            for sub in cmd.commands:
+                if not sub.hidden:
+                    lines.append(_format_command(sub))
+        else:
+            lines.append(_format_command(cmd))
+    return lines
+
+
 class HelpDropdown(Select):
     def __init__(self, bot):
         self.bot = bot
-        options = []
-
-        # A. 添加一个默认的“首页”选项
-        options.append(
+        options = [
             discord.SelectOption(
                 label="🏠 首页", description="回到功能概览", value="home"
             )
-        )
+        ]
 
-        # B. 动态读取 bot 里的所有 Cog (插件)
-        for cog_name, cog in bot.cogs.items():
-            # 跳过 Help 自己，不显示在菜单里
-            if cog_name == "Help":
+        for cog_name, meta in COG_META.items():
+            if cog_name in HIDDEN_COGS:
                 continue
-
-            # 如果这个插件里没有指令，也就不用显示了
-            if len(cog.get_commands()) == 0:
+            cog = bot.get_cog(cog_name)
+            if not cog:
                 continue
-
-            # 给不同的模块设置不同的 emoji (可选，为了好看)
-            emoji = "📂"
-            if cog_name == "Music":
-                emoji = "🎵"
-            elif cog_name == "Leveling":
-                emoji = "🏆"
-            elif cog_name == "General":
-                emoji = "🛠️"
-
+            if not _collect_commands(cog):
+                continue
             options.append(
                 discord.SelectOption(
-                    label=f"{cog_name} 模块",
-                    description=f"查看 {cog_name} 的所有指令",
-                    value=cog_name,  # 这里的 value 存的是 Cog 的名字
-                    emoji=emoji,
+                    label=meta["label"],
+                    description=meta["desc"][:100],
+                    value=cog_name,
+                    emoji=meta["emoji"],
                 )
             )
 
-        # 初始化下拉菜单
         super().__init__(
-            placeholder="👇 请选择你想查看的功能模块...",
+            placeholder="👇 选择你想查看的功能模块…",
             min_values=1,
             max_values=1,
             options=options,
         )
 
-    # C. 当用户选中某个选项时触发
     async def callback(self, interaction: discord.Interaction):
-        value = self.values[0]  # 获取用户选中的值
+        value = self.values[0]
 
         if value == "home":
-            # 如果选的是首页，显示默认欢迎界面
-            embed = discord.Embed(
-                title="✨ 小凛 Rinbot 指令手册",
-                description="这里是全能小助手小凛！\n请查看下方的功能列表 (´• ω •`)ﾉ\n",
-                color=discord.Color.pink(),
-            )
-            embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-            embed.add_field(
-                name="关于我",
-                value="我是你的全能小助手，支持音乐、等级、娱乐等功能。",
-                inline=False,
-            )
-
+            embed = _build_home_embed(self.bot)
         else:
-            # 如果选的是具体模块 (如 Music)
             cog = self.bot.get_cog(value)
+            meta = COG_META.get(value, {"emoji": "📂", "label": value, "desc": ""})
             if cog:
+                lines = _collect_commands(cog)
                 embed = discord.Embed(
-                    title=f"📂 {value} 模块指令", color=discord.Color.blue()
+                    title=f"{meta['emoji']} {meta['label']}",
+                    description=(
+                        meta["desc"] + "\n\n" + "\n".join(lines)
+                        if lines
+                        else "该模块暂时没有可用指令。"
+                    ),
+                    color=discord.Color.pink(),
                 )
-
-                # 获取该模块下的指令
-                commands_list = []
-                for command in cog.get_commands():
-                    if not command.hidden:
-                        desc = command.description or "暂无介绍"
-                        commands_list.append(f"**`/{command.name}`**\n╰ {desc}")
-
-                if commands_list:
-                    embed.description = "\n\n".join(commands_list)
-                else:
-                    embed.description = "该模块暂时没有可用指令。"
+                embed.set_footer(text=f"共 {len(lines)} 个指令")
             else:
                 embed = discord.Embed(
                     title="❌ 错误",
@@ -96,34 +120,52 @@ class HelpDropdown(Select):
                     color=discord.Color.red(),
                 )
 
-        # 更新消息 (edit_message)
         await interaction.response.edit_message(embed=embed)
 
 
-# --- 2. 定义包含下拉菜单的视图 (View) ---
+def _build_home_embed(bot):
+    embed = discord.Embed(
+        title="✨ 小凛 RinBot 指令中心",
+        description=(
+            "你的全能 Discord 小助手 (´• ω •`)ﾉ\n" "下方菜单选择模块查看详细指令。\n"
+        ),
+        color=discord.Color.pink(),
+    )
+    if bot.user:
+        embed.set_thumbnail(url=bot.user.display_avatar.url)
+
+    available = []
+    for cog_name, meta in COG_META.items():
+        if cog_name in HIDDEN_COGS:
+            continue
+        cog = bot.get_cog(cog_name)
+        if cog and _collect_commands(cog):
+            available.append(f"{meta['emoji']} **{meta['label']}** — *{meta['desc']}*")
+
+    if available:
+        embed.add_field(
+            name="📦 已加载的模块",
+            value="\n".join(available),
+            inline=False,
+        )
+
+    embed.set_footer(text=f"共 {len(available)} 个模块 · 菜单 120 秒后失效")
+    return embed
+
+
 class HelpView(View):
     def __init__(self, bot):
-        super().__init__(timeout=60)  # 60秒后按钮失效，节省资源
+        super().__init__(timeout=120)
         self.add_item(HelpDropdown(bot))
 
 
-# --- 3. 主 Cog ---
 class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
     @commands.hybrid_command(name="help", description="打开交互式指令菜单")
     async def help(self, ctx):
-        # 创建默认的首页 Embed
-        embed = discord.Embed(
-            title="✨ 小凛 Rinbot 指令中心",
-            description="请在下方菜单选择一个分类，查看详细指令列表！",
-            color=discord.Color.pink(),
-        )
-        embed.set_thumbnail(url=self.bot.user.display_avatar.url)
-        embed.set_footer(text="提示: 菜单 60 秒后失效")
-
-        # 发送 Embed 并附带 View (下拉菜单)
+        embed = _build_home_embed(self.bot)
         view = HelpView(self.bot)
         await ctx.send(embed=embed, view=view)
 
