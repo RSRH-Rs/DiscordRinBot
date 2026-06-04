@@ -4,7 +4,11 @@ from discord.ui import Select, View
 
 # Cog 元数据(emoji + 描述)— 没列在这的 cog 会被隐藏
 COG_META = {
-    "Music": {"emoji": "🎵", "label": "音乐系统", "desc": "队列、循环、音量、投票跳过"},
+    "Music": {
+        "emoji": "🎵",
+        "label": "音乐系统",
+        "desc": "队列、歌单/Spotify、循环、存读队列",
+    },
     "Leveling": {
         "emoji": "🏆",
         "label": "等级系统",
@@ -29,6 +33,11 @@ COG_META = {
         "desc": "按需启用/禁用每个指令",
     },
     "BotLog": {"emoji": "📜", "label": "系统日志", "desc": "Bot 活动转发到指定频道"},
+    "ServerLog": {
+        "emoji": "🗃️",
+        "label": "审计日志",
+        "desc": "消息/成员/频道/身份组/封禁记录",
+    },
     "General": {
         "emoji": "🛠️",
         "label": "通用工具",
