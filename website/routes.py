@@ -53,6 +53,7 @@ DB_RR = os.path.join(BOT_DIR, "reactionroles.db")
 DB_CMDTOGGLE = os.path.join(BOT_DIR, "commandtoggle.db")
 DB_MUSIC = os.path.join(BOT_DIR, "musicconfig.db")
 DB_BOTLOG = os.path.join(BOT_DIR, "botlog.db")
+DB_SERVERLOG = os.path.join(BOT_DIR, "serverlog.db")
 
 
 async def ensure_tables():
@@ -156,6 +157,14 @@ async def ensure_tables():
                 channel_id INTEGER DEFAULT 0,
                 enabled INTEGER DEFAULT 1,
                 levels TEXT DEFAULT 'error,warning,info,config')""")
+            await db.commit()
+        async with aiosqlite.connect(DB_SERVERLOG) as db:
+            await db.execute("""CREATE TABLE IF NOT EXISTS serverlog_config (
+                guild_id INTEGER PRIMARY KEY,
+                channel_id INTEGER DEFAULT 0,
+                enabled INTEGER DEFAULT 1,
+                categories TEXT DEFAULT '',
+                ignored_channels TEXT DEFAULT '')""")
             await db.commit()
         print(f"✅ Dashboard DB 就绪 (路径: {BOT_DIR})")
     except Exception as e:
@@ -379,12 +388,6 @@ def setup_routes(app, discord):
         session.clear()
         session.permanent = True
         return await discord.create_session(scope=["identify", "guilds"])
-
-    @app.route("/invite")
-    async def invite():
-        """跳转到 Discord 机器人的邀请链接"""
-        invite_url = "https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
-        return redirect(invite_url)
 
     @app.route("/callback")
     async def callback():
@@ -617,6 +620,13 @@ def setup_routes(app, discord):
             "desc": "将 bot 内部活动转发到指定频道",
             "icon": "scroll-text",
             "db": "botlog.db",
+        },
+        {
+            "slug": "serverlog",
+            "name": "审计日志",
+            "desc": "记录消息/成员/频道/身份组/封禁等服务器事件",
+            "icon": "history",
+            "db": "serverlog.db",
         },
         {
             "slug": "general",
@@ -1088,6 +1098,134 @@ def setup_routes(app, discord):
             return jsonify({"ok": True})
         except Exception as e:
             print(f"[api_botlog_test] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
+    # ── Server Log (审计日志) ──
+
+    SERVERLOG_CATS = {
+        "message",
+        "member",
+        "member_update",
+        "ban",
+        "channel",
+        "role",
+        "voice",
+        "server",
+    }
+    SERVERLOG_DEFAULT = ["message", "member", "ban", "channel", "role", "server"]
+
+    @app.route("/api/guild/<string:gid>/serverlog", methods=["GET"])
+    async def api_serverlog_get(gid):
+        try:
+            if not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            g = int(gid)
+            async with aiosqlite.connect(DB_SERVERLOG) as db:
+                db.row_factory = aiosqlite.Row
+                cur = await db.execute(
+                    "SELECT * FROM serverlog_config WHERE guild_id=?", (g,)
+                )
+                row = await cur.fetchone()
+            if row:
+                d = dict(row)
+                d["guild_id"] = str(d["guild_id"])
+                d["channel_id"] = str(d["channel_id"])
+                d["enabled"] = bool(d["enabled"])
+                d["categories"] = d["categories"].split(",") if d["categories"] else []
+                d["ignored_channels"] = (
+                    d["ignored_channels"].split(",") if d["ignored_channels"] else []
+                )
+                return jsonify(d)
+            return jsonify(
+                {
+                    "guild_id": str(g),
+                    "channel_id": "0",
+                    "enabled": True,
+                    "categories": SERVERLOG_DEFAULT,
+                    "ignored_channels": [],
+                }
+            )
+        except Exception as e:
+            print(f"[api_serverlog_get] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/guild/<string:gid>/serverlog", methods=["POST"])
+    async def api_serverlog_post(gid):
+        try:
+            if not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            d = await request.get_json()
+            g = int(gid)
+            cats = [c for c in (d.get("categories") or []) if c in SERVERLOG_CATS]
+            # 用 UPSERT 只更新这三列，保留 slash 指令设的忽略频道
+            async with aiosqlite.connect(DB_SERVERLOG) as db:
+                await db.execute(
+                    "INSERT INTO serverlog_config (guild_id, channel_id, enabled, categories) "
+                    "VALUES (?, ?, ?, ?) ON CONFLICT(guild_id) DO UPDATE SET "
+                    "channel_id=excluded.channel_id, enabled=excluded.enabled, categories=excluded.categories",
+                    (
+                        g,
+                        int(d.get("channel_id", 0)),
+                        int(bool(d.get("enabled", True))),
+                        ",".join(cats),
+                    ),
+                )
+                await db.commit()
+            actor = await _resolve_actor(discord)
+            audit(
+                g,
+                "审计日志配置已更新",
+                **{"操作者": actor, "分类": ",".join(cats) or "(无)"},
+            )
+            return jsonify({"ok": True})
+        except Exception as e:
+            print(f"[api_serverlog_post] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/guild/<string:gid>/serverlog/test", methods=["POST"])
+    async def api_serverlog_test(gid):
+        try:
+            if not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            g = int(gid)
+            async with aiosqlite.connect(DB_SERVERLOG) as db:
+                cur = await db.execute(
+                    "SELECT channel_id, enabled FROM serverlog_config WHERE guild_id=?",
+                    (g,),
+                )
+                row = await cur.fetchone()
+            if not row or not row[0]:
+                return jsonify({"error": "未配置日志频道,请先选择并保存"}), 400
+            if not row[1]:
+                return jsonify({"error": "审计日志已禁用"}), 400
+            if not BOT_TOKEN:
+                return jsonify({"error": "BOT_TOKEN 未配置"}), 500
+
+            embed = {
+                "title": "🗃️ 测试消息",
+                "description": "如果你看到这条消息,说明审计日志频道配置正确!",
+                "color": 0x5A9E6F,
+                "footer": {"text": f"由网页控制台触发 · Guild ID: {g}"},
+            }
+            session = await _get_session()
+            async with session.post(
+                f"https://discord.com/api/v10/channels/{row[0]}/messages",
+                headers={"Authorization": f"Bot {BOT_TOKEN}"},
+                json={"embeds": [embed]},
+            ) as resp:
+                if resp.status >= 400:
+                    body = await resp.text()
+                    print(f"[api_serverlog_test] Discord {resp.status}: {body}")
+                    err_map = {
+                        401: "Bot Token 无效",
+                        403: "Bot 在该频道没有「发送消息」权限",
+                        404: "找不到该频道(可能已被删除)",
+                    }
+                    msg = err_map.get(resp.status, f"Discord API 错误 ({resp.status})")
+                    return jsonify({"error": msg}), 400
+            return jsonify({"ok": True})
+        except Exception as e:
+            print(f"[api_serverlog_test] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
 
     # ── Leaderboard ──

@@ -868,6 +868,52 @@
     <div class="save-bar" id="bl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="bl-save" onclick="saveBotLog()">储存设定</button></div>
 </div>
 
+<!-- ═══════ Server Log (审计日志) ═══════ -->
+<div class="mod-page" id="pg-serverlog">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="history" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>审计日志</h2><p>记录消息、成员、频道、身份组、封禁等服务器事件</p></div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">🗃️ 基本设定</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">所有审计事件会发送到这个频道，建议选一个只有管理员能看的频道</div></div>
+            <select class="cfg-select" id="sl-ch" style="max-width:220px;"><option value="0">— 未启用 —</option></select>
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">启用审计日志</div><div class="cfg-row-hint">关闭后，所有事件将被静默丢弃</div></div>
+            <label class="cfg-tog"><input type="checkbox" id="sl-enabled" checked><span class="track"></span><span class="thumb"></span></label>
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">🏷️ 记录分类</div>
+        <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:14px;">
+            <div class="cfg-row-info" style="width:100%;"><div class="cfg-row-label">事件类型</div><div class="cfg-row-hint">勾选要记录的事件分类，未勾选的会被静默丢弃。成员更新与语音活动较吵，默认关闭</div></div>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;">
+                <label class="bl-chip"><input type="checkbox" value="message"><span class="bl-dot" style="background:#E24B4A;"></span>💬 消息变更</label>
+                <label class="bl-chip"><input type="checkbox" value="member"><span class="bl-dot" style="background:#57F287;"></span>🚪 成员进出</label>
+                <label class="bl-chip"><input type="checkbox" value="member_update"><span class="bl-dot" style="background:#5865F2;"></span>✏️ 成员更新</label>
+                <label class="bl-chip"><input type="checkbox" value="ban"><span class="bl-dot" style="background:#E24B4A;"></span>🔨 封禁记录</label>
+                <label class="bl-chip"><input type="checkbox" value="channel"><span class="bl-dot" style="background:#5A9E6F;"></span>📁 频道变更</label>
+                <label class="bl-chip"><input type="checkbox" value="role"><span class="bl-dot" style="background:#EB7DAB;"></span>🏷️ 身份组变更</label>
+                <label class="bl-chip"><input type="checkbox" value="voice"><span class="bl-dot" style="background:#9B59B6;"></span>🔊 语音活动</label>
+                <label class="bl-chip"><input type="checkbox" value="server"><span class="bl-dot" style="background:#85B7EB;"></span>🛠️ 服务器更新</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="util-tip"><i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i> 想反查「谁删的消息 / 谁封的人」需要给 bot 开启「查看审计日志」权限。忽略某个频道请用指令 <code>/serverlog ignore</code>。</div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">🧪 测试</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">发送测试日志</div><div class="cfg-row-hint">向所选频道发送一条测试消息，验证配置正确</div></div>
+            <button class="btn-save" id="sl-test" onclick="testServerLog()" style="background:var(--pink-bg);color:var(--pink);">📤 发送测试</button>
+        </div>
+    </div>
+
+    <div class="save-bar" id="sl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="sl-save" onclick="saveServerLog()">储存设定</button></div>
+</div>
+
         </div><!-- content-area -->
     </main>
 
@@ -909,6 +955,7 @@ function go(mod) {
     if (mod === 'giveaway') loadGiveawayPage();
     if (mod === 'utility') loadUtility();
     if (mod === 'botlog') loadBotLog();
+    if (mod === 'serverlog') loadServerLog();
     // Re-render Lucide icons for newly visible content
     if (window.lucide) lucide.createIcons();
 }
@@ -1683,6 +1730,47 @@ async function testBotLog() {
         showToast('✅ 测试消息已发送!');
     } catch(e) { showToast('❌ ' + e.message); }
     setTimeout(() => { btn.disabled = false; btn.textContent = '📤 发送测试日志'; }, 1500);
+}
+
+/* ── Server Log (审计日志) ── */
+let _slLoaded = false;
+async function loadServerLog() {
+    if (_slLoaded) return; _slLoaded = true;
+    try {
+        const [ch, cfg] = await Promise.all([getCh(), api('/serverlog')]);
+        chOpts('sl-ch', ch, cfg.channel_id);
+        document.getElementById('sl-enabled').checked = !!cfg.enabled;
+        const wanted = new Set(cfg.categories || []);
+        document.querySelectorAll('#pg-serverlog .bl-chip input').forEach(inp => {
+            inp.checked = wanted.has(inp.value);
+        });
+        document.querySelectorAll('#sl-ch,#sl-enabled,#pg-serverlog .bl-chip input').forEach(el =>
+            el.addEventListener('change', () => markDirty('sl-savebar'))
+        );
+    } catch(e) { showToast('❌ 加载审计日志配置失败: ' + e.message); }
+}
+
+async function saveServerLog() {
+    const btn = document.getElementById('sl-save'); btn.disabled = true; btn.textContent = '保存中…';
+    try {
+        const categories = [...document.querySelectorAll('#pg-serverlog .bl-chip input:checked')].map(i => i.value);
+        await api('/serverlog', 'POST', {
+            channel_id: document.getElementById('sl-ch').value,
+            enabled: document.getElementById('sl-enabled').checked,
+            categories,
+        });
+        btn.textContent = '✅ 已保存!'; showToast('✅ 审计日志配置已保存!'); markClean('sl-savebar');
+    } catch(e) { showToast('❌ 保存失败: ' + e.message); }
+    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+}
+
+async function testServerLog() {
+    const btn = document.getElementById('sl-test'); btn.disabled = true; btn.textContent = '发送中…';
+    try {
+        await api('/serverlog/test', 'POST', {});
+        showToast('✅ 测试消息已发送!');
+    } catch(e) { showToast('❌ ' + e.message); }
+    setTimeout(() => { btn.disabled = false; btn.textContent = '📤 发送测试'; }, 1500);
 }
 
 async function loadModules() {
