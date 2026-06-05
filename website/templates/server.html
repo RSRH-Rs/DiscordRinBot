@@ -349,9 +349,41 @@
 .toast--error   .toast-icon { background:rgba(255,255,255,.18); color:#FFEAEA; }
 .toast--warning { background:#7A5A1F; color:#FFF6DC; }
 .toast--warning .toast-icon { background:rgba(255,255,255,.18); color:#FFF6DC; }
-    </style>
+    /* ═══ 移动端响应式 ═══ */
+.mobile-menu-btn { display:none; }
+.sidebar-backdrop { display:none; }
+
+@media (max-width:860px) {
+    .mobile-menu-btn {
+        display:flex; align-items:center; justify-content:center;
+        position:fixed; top:12px; left:12px; z-index:70;
+        width:42px; height:42px; padding:0; border:none; border-radius:12px;
+        background:var(--sidebar-bg); color:#F0EDE8; cursor:pointer;
+        box-shadow:0 4px 14px rgba(0,0,0,.28);
+    }
+    .sidebar {
+        position:fixed; top:0; left:0; bottom:0; z-index:80;
+        transform:translateX(-100%); transition:transform .25s ease;
+        box-shadow:4px 0 24px rgba(0,0,0,.3);
+    }
+    .sidebar.open { transform:translateX(0); }
+    .sidebar-backdrop.show {
+        display:block; position:fixed; inset:0; z-index:75;
+        background:rgba(0,0,0,.45);
+    }
+    .topbar { padding-left:64px; }
+    .content-area { padding:18px 16px 36px; }
+    .mod-banner { padding:22px 20px; }
+    .cfg-section { padding:18px 16px; }
+    .cfg-row { flex-direction:column; align-items:flex-start; }
+    .cfg-row .cfg-select, .cfg-row .cfg-input, .cfg-row .cfg-textarea { max-width:100%; width:100%; }
+}
+</style>
 </head>
 <body>
+    <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="打开菜单">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
     <aside class="sidebar">
         <div class="sidebar-inner">
             <a href="/" class="brand"><span class="brand-dot"></span>小凛 Rin</a>
@@ -377,6 +409,7 @@
             </div>
         </div>
     </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
     <main class="main-content">
         <header class="topbar">
@@ -935,7 +968,16 @@ const GID = "{{ guild.id }}";
 let _ch = null, _roles = null;
 
 /* ── Navigation ── */
+function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('open');
+    document.getElementById('sidebarBackdrop').classList.toggle('show');
+}
+function closeSidebar() {
+    document.querySelector('.sidebar').classList.remove('open');
+    document.getElementById('sidebarBackdrop').classList.remove('show');
+}
 function go(mod) {
+    closeSidebar();
     document.querySelectorAll('.mod-page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('#side-modules .nav-link').forEach(l => l.classList.remove('active'));
     const pg = document.getElementById('pg-' + mod);
@@ -1004,10 +1046,14 @@ function markClean(barId) {
     if (bar) { bar.classList.remove('dirty'); bar.querySelector('.save-hint').textContent = '修改后记得保存哦~'; }
 }
 
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, c =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 function chOpts(sel, channels, selected) {
     const el = document.getElementById(sel);
     el.innerHTML = '<option value="0">— 未设置 —</option>' +
-        channels.map(c => `<option value="${c.id}" ${String(c.id)===String(selected)?'selected':''}># ${c.name}</option>`).join('');
+        channels.map(c => `<option value="${c.id}" ${String(c.id)===String(selected)?'selected':''}># ${escapeHtml(c.name)}</option>`).join('');
 }
 
 /* ── Welcome ── */
@@ -1022,7 +1068,7 @@ async function loadWelcome() {
         document.getElementById('w-fmsg').value = cfg.farewell_msg || '';
         const autoRoles = cfg.auto_roles ? cfg.auto_roles.split(',').filter(Boolean) : [];
         document.getElementById('w-roles').innerHTML = roles.map(r =>
-            `<label class="role-opt"><input type="checkbox" value="${r.id}" ${autoRoles.includes(String(r.id))?'checked':''} onchange="markDirty('w-savebar')"> ${r.name}</label>`
+            `<label class="role-opt"><input type="checkbox" value="${r.id}" ${autoRoles.includes(String(r.id))?'checked':''} onchange="markDirty('w-savebar')"> ${escapeHtml(r.name)}</label>`
         ).join('');
         // Attach dirty listeners
         document.querySelectorAll('#w-ch,#w-fch,#w-msg,#w-fmsg').forEach(el => el.addEventListener('input', () => markDirty('w-savebar')));
@@ -1106,7 +1152,7 @@ async function loadModeration() {
     el.innerHTML = cases.map(c => {
         const d = new Date(c.created_at * 1000);
         const ts = d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-        return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${colors[c.action]||'var(--text)'}">#${c.id} ${c.action}</span><span class="case-time">${ts}</span></div><div class="case-body">${c.user_name || c.user_id} · 管理员: ${c.mod_name || c.mod_id} · 原因: ${c.reason}${c.duration?' · 时长: '+c.duration:''}</div></div>`;
+        return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${colors[c.action]||'var(--text)'}">#${c.id} ${c.action}</span><span class="case-time">${ts}</span></div><div class="case-body">${escapeHtml(c.user_name || c.user_id)} · 管理员: ${escapeHtml(c.mod_name || c.mod_id)} · 原因: ${escapeHtml(c.reason)}${c.duration?' · 时长: '+c.duration:''}</div></div>`;
     }).join('');
     // Dirty listeners
     document.querySelectorAll('#mod-log,#mod-mt,#mod-md,#mod-kt,#mod-bt').forEach(el => el.addEventListener('change', () => markDirty('mod-savebar')));
@@ -1136,7 +1182,7 @@ async function loadMusicSelects() {
         chOpts('mu-ch', ch, cfg.notify_channel || 0);
         const djSel = document.getElementById('mu-dj');
         djSel.innerHTML = '<option value="0">— 不限制 —</option>' + roles.map(r =>
-            `<option value="${r.id}" ${String(r.id)===String(cfg.dj_role||0)?'selected':''}>@ ${r.name}</option>`
+            `<option value="${r.id}" ${String(r.id)===String(cfg.dj_role||0)?'selected':''}>@ ${escapeHtml(r.name)}</option>`
         ).join('');
         document.querySelectorAll('#mu-dj,#mu-ch').forEach(el => el.addEventListener('change', () => markDirty('mu-savebar')));
     } catch(e) { showToast('❌ 加载音乐配置失败: ' + e.message); }
@@ -1162,7 +1208,7 @@ async function loadGiveaways() {
         if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state-sm" style="padding:40px;">＋<br><br>还没有任何抽奖活动</div>'; return; }
         el.innerHTML = data.map(g => {
             const d = new Date(g.end_time * 1000);
-            return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${g.ended?'var(--text-muted)':'var(--green)'}">#${g.id} ${g.prize}</span><span class="case-time">${g.ended?'已结束':'进行中'} · ${d.toLocaleDateString('zh-CN')}</span></div><div class="case-body">名额: ${g.winners_count}</div></div>`;
+            return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${g.ended?'var(--text-muted)':'var(--green)'}">#${g.id} ${escapeHtml(g.prize)}</span><span class="case-time">${g.ended?'已结束':'进行中'} · ${d.toLocaleDateString('zh-CN')}</span></div><div class="case-body">名额: ${g.winners_count}</div></div>`;
         }).join('');
     } catch(e) { showError('gw-list', '加载失败: ' + e.message); }
 }
@@ -1176,7 +1222,7 @@ async function loadLeaderboard() {
         if (!data || data.length === 0) { el.innerHTML = '<div class="empty-state-sm">暂无等级数据</div>'; return; }
         const medals = ['🥇','🥈','🥉'];
         el.innerHTML = data.map((u, i) =>
-            `<div class="case-item"><div style="display:flex;align-items:center;gap:12px;"><span style="font-size:1rem;width:24px;text-align:center;">${medals[i]||'#'+(i+1)}</span><span style="font-weight:700;flex:1;">${u.username}</span><span style="font-size:.82rem;color:var(--text-muted);">Lv.${u.level} · ${u.xp.toLocaleString()} XP</span></div></div>`
+            `<div class="case-item"><div style="display:flex;align-items:center;gap:12px;"><span style="font-size:1rem;width:24px;text-align:center;">${medals[i]||'#'+(i+1)}</span><span style="font-weight:700;flex:1;">${escapeHtml(u.username)}</span><span style="font-size:.82rem;color:var(--text-muted);">Lv.${u.level} · ${u.xp.toLocaleString()} XP</span></div></div>`
         ).join('');
     } catch(e) { showError('lb-list', '加载失败: ' + e.message); }
 }
@@ -1184,7 +1230,7 @@ async function loadLeaderboard() {
 /* ── Tag helpers ── */
 function renderTags(id, arr) {
     document.getElementById(id).innerHTML = arr.map(w =>
-        `<span class="tag-chip">${w}<span class="tag-rm" onclick="this.parentElement.remove()">×</span></span>`
+        `<span class="tag-chip">${escapeHtml(w)}<span class="tag-rm" onclick="this.parentElement.remove()">×</span></span>`
     ).join('');
 }
 function addTag(prefix) {
@@ -1377,7 +1423,7 @@ async function loadRolesPage() {
             el.innerHTML = panels.map(p => {
                 const mappings = typeof p.mappings === 'string' ? JSON.parse(p.mappings) : p.mappings;
                 const count = Object.keys(mappings).length;
-                return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:var(--pink);">${p.title || '身份组面板'}</span><span class="case-time">消息 ID: ${p.message_id} · ${count} 个映射</span></div><div class="case-body">频道 ID: ${p.channel_id}</div></div>`;
+                return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:var(--pink);">${escapeHtml(p.title || '身份组面板')}</span><span class="case-time">消息 ID: ${p.message_id} · ${count} 个映射</span></div><div class="case-body">频道 ID: ${p.channel_id}</div></div>`;
             }).join('');
         }
     } catch(e) { showError('rr-existing', '加载失败: ' + e.message); showToast('❌ 加载面板列表失败: ' + e.message); }
@@ -1387,7 +1433,7 @@ function addRoleRow() {
     if (_rrRoleCount >= 20) { showToast('最多 20 个身份组'); return; }
     _rrRoleCount++;
     const roles = window._rrAvailRoles || [];
-    const ropts = roles.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+    const ropts = roles.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
     document.getElementById('rr-roles-list').insertAdjacentHTML('beforeend', `
         <div class="rr-row" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--border-light);border-radius:10px;max-width:560px;">
             <button type="button" class="emoji-trigger rr-emoji-trigger" onclick="openEmojiPicker(this)"><span class="ep-placeholder">🎮</span></button>
@@ -1474,7 +1520,7 @@ function renderEmojiGrid(q) {
         else html = list.map(x => {
             const code = `<${x.animated?'a':''}:${x.name}:${x.id}>`;
             const safe = JSON.stringify(code).replace(/"/g,'&quot;');
-            return `<button class="ep-item" type="button" title=":${x.name}:" onclick="pickEmoji(${safe},'${x.url}')"><img src="${x.url}" alt=""></button>`;
+            return `<button class="ep-item" type="button" title=":${escapeHtml(x.name)}:" onclick="pickEmoji(${safe},'${x.url}')"><img src="${x.url}" alt=""></button>`;
         }).join('');
     }
     grid.innerHTML = html;
@@ -1527,7 +1573,7 @@ async function loadGiveawayPage() {
     const [ch, roles] = await Promise.all([getCh(), getRoles()]);
     chOpts('gw-ch', ch, 0);
     const rsel = document.getElementById('gw-role');
-    rsel.innerHTML = '<option value="0">@ 不限制</option>' + roles.map(r => `<option value="${r.id}">@ ${r.name}</option>`).join('');
+    rsel.innerHTML = '<option value="0">@ 不限制</option>' + roles.map(r => `<option value="${r.id}">@ ${escapeHtml(r.name)}</option>`).join('');
     // Set default end time to 24h from now
     const d = new Date(Date.now() + 86400000);
     document.getElementById('gw-end').value = d.toISOString().slice(0, 16);
@@ -1647,7 +1693,7 @@ function showToast(msg, type) {
     const icons = { info:'i', success:'✓', error:'✕', warning:'!' };
     const text = msg.replace(/^[❌✅⚠️ℹ️]+\s*/u, '').trim();
     el.className = 'toast toast--' + type;
-    el.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${text}</span>`;
+    el.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${escapeHtml(text)}</span>`;
     requestAnimationFrame(() => el.classList.add('show'));
     clearTimeout(_tt);
     _tt = setTimeout(() => el.classList.remove('show'), 2800);
