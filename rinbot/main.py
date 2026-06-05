@@ -2,8 +2,14 @@
 import discord
 from discord.ext import commands
 import os
+import sys
 import time
 from config import TOKEN
+
+# cogs/ 里的辅助模块（如 _botlog_helper）用绝对导入，需把 cogs 目录加进 sys.path
+COGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cogs")
+if COGS_DIR not in sys.path:
+    sys.path.insert(0, COGS_DIR)
 
 
 class HybridBot(commands.Bot):
@@ -18,7 +24,7 @@ class HybridBot(commands.Bot):
     async def setup_hook(self):
         print("--- 开始加载插件 ---")
         for filename in os.listdir("./cogs"):
-            if filename.endswith(".py"):
+            if filename.endswith(".py") and not filename.startswith("_"):
                 try:
                     await self.load_extension(f"cogs.{filename[:-3]}")
                     print(f"✅ 已加载: {filename}")
@@ -32,8 +38,7 @@ class HybridBot(commands.Bot):
         print("Bot is ready and running!")
 
         activity = discord.Activity(
-            type=discord.ActivityType.watching,
-            name="正在偷看你的聊天记录|rin-bot.com"
+            type=discord.ActivityType.watching, name="正在偷看你的聊天记录|rin-bot.com"
         )
         await self.change_presence(status=discord.Status.online, activity=activity)
 
