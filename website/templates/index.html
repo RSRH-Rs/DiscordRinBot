@@ -492,6 +492,60 @@
         .nav-r .btn-ghost:not(#btn-lang) { display:none; }
         .fc-online,.fc-xp { display:none; }
     }
+    /* ── FULL FEATURE GRID ── */
+    .fg-sec{padding:80px 0}
+    .fg{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .fgc{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;transition:transform .3s,box-shadow .3s,border-color .3s}
+    .fgc:hover{transform:translateY(-4px);box-shadow:0 16px 44px rgba(26,18,16,.08);border-color:#FFDCE6}
+    .fgc .fi{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#FFF0F5,#FFE0EA);border:1px solid #FFDCE6;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:16px}
+    .fgc h3{font-size:1.05rem;font-weight:900;letter-spacing:-.3px;margin-bottom:6px}
+    .fgc p{font-size:.82rem;color:var(--mid);line-height:1.6}
+
+    /* ── DASHBOARD SHOWCASE ── */
+    .dash-sec{padding:80px 0}
+    .dash{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:56px;background:var(--surface);border:1px solid var(--border);border-radius:28px;padding:48px;overflow:hidden}
+    .dash-eye{font-size:.7rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--pinkd);display:block;margin-bottom:14px}
+    .dash h2{font-size:2.1rem;font-weight:900;letter-spacing:-.6px;line-height:1.15;margin-bottom:14px}
+    .dash p{font-size:.95rem;color:var(--mid);line-height:1.7;margin-bottom:26px}
+    .dash-shot{background:var(--cream);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;height:230px;box-shadow:0 20px 60px rgba(26,18,16,.1)}
+    .ds-sb{width:96px;flex-shrink:0;background:var(--dark);padding:14px 10px;display:flex;flex-direction:column;gap:7px}
+    .ds-sl{height:9px;border-radius:4px;background:#4A403A}
+    .ds-sl.on{background:var(--pink)}
+    .ds-main{flex:1;padding:20px 18px}
+    .ds-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+    .ds-bar{height:11px;border-radius:5px;background:var(--warm)}
+    .ds-tog{width:34px;height:18px;border-radius:50px;background:var(--green);position:relative;flex-shrink:0}
+    .ds-tog.off{background:var(--border)}
+    .ds-tog i{position:absolute;top:2px;left:18px;width:14px;height:14px;border-radius:50%;background:#fff;display:block}
+    .ds-tog.off i{left:2px}
+
+    /* ── COMMUNITY PROTECTION ── */
+    .prot-sec{padding:80px 0}
+    .prot{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .protc{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:30px 26px;text-align:center;transition:.25s}
+    .protc:hover{transform:translateY(-4px);box-shadow:0 16px 44px rgba(26,18,16,.08)}
+    .protc .pi{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#FFF0F5,#FFE0EA);border:1px solid #FFDCE6;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 16px}
+    .protc h3{font-size:1.05rem;font-weight:900;margin-bottom:8px}
+    .protc p{font-size:.83rem;color:var(--mid);line-height:1.65}
+
+    /* ── FAQ ── */
+    .faq-sec{padding:80px 0}
+    .faq{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+    .faq details{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+    .faq summary{list-style:none;cursor:pointer;padding:18px 22px;font-size:.97rem;font-weight:800;display:flex;align-items:center;justify-content:space-between;gap:12px}
+    .faq summary::-webkit-details-marker{display:none}
+    .faq summary::after{content:'+';font-size:1.5rem;font-weight:400;color:var(--pinkd);transition:transform .2s;line-height:1}
+    .faq details[open] summary::after{transform:rotate(45deg)}
+    .faq details>div{padding:0 22px 20px;font-size:.88rem;color:var(--mid);line-height:1.7}
+
+    @media(max-width:960px){
+        .fg{grid-template-columns:1fr 1fr}
+        .dash{grid-template-columns:1fr;gap:32px;padding:32px}
+        .prot{grid-template-columns:1fr}
+    }
+    @media(max-width:600px){
+        .fg{grid-template-columns:1fr}
+    }
     </style>
 </head>
 <body>
@@ -555,136 +609,72 @@
 <div class="stats-band">
     <div class="wrap">
         <div class="stats-i">
-            <div class="stat rv"><div class="stat-n">12<em>+</em></div><div class="stat-l" id="st1">活跃服务器</div></div>
-            <div class="stat rv d1"><div class="stat-n">10<em>+</em></div><div class="stat-l" id="st2">功能模块</div></div>
+            <div class="stat rv"><div class="stat-n"><span id="stat-servers">12</span><em>+</em></div><div class="stat-l" id="st1">活跃服务器</div></div>
+            <div class="stat rv d1"><div class="stat-n"><span id="stat-modules">10</span><em>+</em></div><div class="stat-l" id="st2">功能模块</div></div>
             <div class="stat rv d2"><div class="stat-n">24<em>/7</em></div><div class="stat-l" id="st3">全天在线</div></div>
             <div class="stat rv d3"><div class="stat-n">∞</div><div class="stat-l" id="st4">持续更新</div></div>
         </div>
     </div>
 </div>
 
-<!-- TICKER -->
-<div class="ticker">
-    <div class="ticker-lbl" id="ticker-lbl">受众多 Discord 社群信赖</div>
-    <div style="overflow:hidden">
-        <div class="ticker-t">
-            <span class="ti"><span class="tp"></span>游戏社区</span>
-            <span class="ti"><span class="tp"></span>ACG 频道</span>
-            <span class="ti"><span class="tp"></span>学习小组</span>
-            <span class="ti"><span class="tp"></span>创作者团队</span>
-            <span class="ti"><span class="tp"></span>音乐电台</span>
-            <span class="ti"><span class="tp"></span>朋友小圈</span>
-            <span class="ti"><span class="tp"></span>动漫讨论区</span>
-            <span class="ti"><span class="tp"></span>技术交流</span>
-            <span class="ti"><span class="tp"></span>游戏社区</span>
-            <span class="ti"><span class="tp"></span>ACG 频道</span>
-            <span class="ti"><span class="tp"></span>学习小组</span>
-            <span class="ti"><span class="tp"></span>创作者团队</span>
-            <span class="ti"><span class="tp"></span>音乐电台</span>
-            <span class="ti"><span class="tp"></span>朋友小圈</span>
-            <span class="ti"><span class="tp"></span>动漫讨论区</span>
-            <span class="ti"><span class="tp"></span>技术交流</span>
-        </div>
-    </div>
-</div>
-
-<!-- BENTO -->
+<!-- FEATURE GRID -->
 <div class="wrap">
-<section class="bento-sec">
+<section class="fg-sec">
     <div class="sh rv">
-        <span class="eye" id="bento-eye" style="color:var(--pinkd)">核心功能</span>
-        <h2 id="bento-title">一个小凛，搞定所有</h2>
-        <p class="c" id="bento-sub" style="color:var(--mid)">嘿嘿~ One in all, all in one!</p>
+        <span class="eye" id="fg-eye" style="color:var(--pinkd)">核心功能</span>
+        <h2 id="fg-title">一个小凛，搞定所有</h2>
+        <p class="c" id="fg-sub" style="color:var(--mid)">10 个模块，一屏看全。</p>
     </div>
-    <div class="bento">
-        <!-- Music tall -->
-        <div class="bc bc-music rv">
-            <div class="bcp">
-                <div class="bct">🎵 <span id="bc1t">音乐</span></div>
-                <h3 id="bc1h">语音派对<br>立刻开始</h3>
-                <p class="ds" id="bc1d">支持 YouTube 搜索和直链，高音质低延迟。</p>
-                <div class="mv">
-                    <div class="plr">
-                        <div class="plr-h">
-                            <div class="plr-alb">🎵</div>
-                            <div>
-                                <div class="plr-title">夜に駆ける</div>
-                                <div class="plr-sub">YOASOBI · 播放中</div>
-                            </div>
-                        </div>
-                        <div class="plr-bar"><div class="plr-fill"></div></div>
-                        <div class="plr-time"><span>2:14</span><span>4:06</span></div>
-                        <div class="plr-ctr">
-                            <button class="pb">⏮</button>
-                            <button class="pb play">⏸</button>
-                            <button class="pb">⏭</button>
-                        </div>
-                    </div>
-                    <div class="cmd-hint"><span class="cc">/play</span><span id="bc1hint">搜索或粘贴链接</span></div>
-                </div>
+    <div class="fg">
+        <div class="fgc rv"><div class="fi">🎵</div><h3 id="fg1n">音乐播放</h3><p id="fg1d">队列、循环、歌单 / Spotify 导入，高音质低延迟。</p></div>
+        <div class="fgc rv d1"><div class="fi">🏆</div><h3 id="fg2n">等级系统</h3><p id="fg2d">聊天累积经验，精美等级卡片与排行榜。</p></div>
+        <div class="fgc rv d2"><div class="fi">⚖️</div><h3 id="fg3n">管理工具</h3><p id="fg3d">踢 / 封 / 禁言 / 警告 / 清屏，警告自动处罚。</p></div>
+        <div class="fgc rv"><div class="fi">🛡️</div><h3 id="fg4n">自动审核</h3><p id="fg4d">反刷屏、违禁词、链接与大写过滤，自动处理。</p></div>
+        <div class="fgc rv d1"><div class="fi">👋</div><h3 id="fg5n">欢迎新人</h3><p id="fg5d">自定义欢迎图卡、自动身份组、道别消息。</p></div>
+        <div class="fgc rv d2"><div class="fi">🏷️</div><h3 id="fg6n">反应身份组</h3><p id="fg6d">点按钮自助领取身份组，支持单选互斥。</p></div>
+        <div class="fgc rv"><div class="fi">🎉</div><h3 id="fg7n">抽奖活动</h3><p id="fg7d">倒计时自动开奖、reroll，公平透明。</p></div>
+        <div class="fgc rv d1"><div class="fi">🗃️</div><h3 id="fg8n">审计日志</h3><p id="fg8d">消息、成员、频道、身份组变动全记录。</p></div>
+        <div class="fgc rv d2"><div class="fi">🖥️</div><h3 id="fg9n">网页控制台</h3><p id="fg9d">浏览器里一键配置，改完即时生效。</p></div>
+    </div>
+</section>
+</div><!-- /wrap -->
+
+<!-- DASHBOARD SHOWCASE -->
+<div class="wrap">
+<section class="dash-sec">
+    <div class="dash rv">
+        <div>
+            <span class="dash-eye" id="dash-eye">网页控制台</span>
+            <h2 id="dash-title">不用记指令，<br>网页点点就配置好</h2>
+            <p id="dash-desc">登录后在浏览器里开关功能、设定频道、调整参数，所有改动即时生效——再也不用对着指令表敲个不停。</p>
+            <a href="/dashboard" class="btn-hero" id="dash-btn">打开控制台 →</a>
+        </div>
+        <div class="dash-shot">
+            <div class="ds-sb"><span class="ds-sl"></span><span class="ds-sl on"></span><span class="ds-sl"></span><span class="ds-sl"></span><span class="ds-sl"></span><span class="ds-sl"></span></div>
+            <div class="ds-main">
+                <div class="ds-row"><span class="ds-bar" style="width:60%"></span><span class="ds-tog"><i></i></span></div>
+                <div class="ds-row"><span class="ds-bar" style="width:78%"></span><span class="ds-tog"><i></i></span></div>
+                <div class="ds-row"><span class="ds-bar" style="width:46%"></span><span class="ds-tog off"><i></i></span></div>
+                <div class="ds-row"><span class="ds-bar" style="width:68%"></span><span class="ds-tog"><i></i></span></div>
+                <div class="ds-row"><span class="ds-bar" style="width:54%"></span><span class="ds-tog"><i></i></span></div>
             </div>
         </div>
-        <!-- Level -->
-        <div class="bc bc-lvl rv d1">
-            <div class="bcp">
-                <div class="bct">🏆 <span id="bc2t">等级</span></div>
-                <h3 id="bc2h">聊天得经验<br>爬上排行榜</h3>
-                <p class="ds" id="bc2d">聊天自动累积经验，<span class="code-d">/rank</span> 查看等级卡片。</p>
-                <div class="rv">
-                    <div class="rk">
-                        <div class="rk-row">
-                            <div class="rk-av">🌸</div>
-                            <div><div class="rk-name">Milk Chocolate</div><div class="rk-lvl">Level 5 · Rank #1</div></div>
-                        </div>
-                        <div class="xpb"><div class="xpf"></div></div>
-                        <div class="xpt"><span>1,240 XP</span><span>/ 1,800</span></div>
-                    </div>
-                    <div class="lb" style="margin-top:12px">
-                        <div class="lb-r"><div class="lb-rn g">🥇</div><div class="lb-nm">Milk Chocolate</div><div class="lb-lv">Lv.5</div></div>
-                        <div class="lb-r"><div class="lb-rn s">🥈</div><div class="lb-nm">Starlight</div><div class="lb-lv">Lv.3</div></div>
-                        <div class="lb-r"><div class="lb-rn b">🥉</div><div class="lb-nm">GamerKun</div><div class="lb-lv">Lv.2</div></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <!-- Util -->
-        <div class="bc bc-util rv d2">
-            <div class="bcp">
-                <div class="bct">🛠️ <span id="bc3t">工具</span></div>
-                <h3 id="bc3h">日常管理<br>全搞定</h3>
-                <p class="ds" id="bc3d">头像、骰子、状态监控，Owner 专属。</p>
-                <div class="uv">
-                    <div class="ur"><div class="ui">🎲</div><div class="un">/roll</div><div class="ut">娱乐</div></div>
-                    <div class="ur"><div class="ui">🖼️</div><div class="un">/avatar</div><div class="ut">工具</div></div>
-                    <div class="ur"><div class="ui">📊</div><div class="un">/status</div><div class="ut">管理</div></div>
-                </div>
-            </div>
-        </div>
-        <!-- Wide cmd -->
-        <div class="bc bc-wide rv">
-            <div class="bcp">
-                <div class="bct">⚡ <span id="bc4t">指令</span></div>
-                <h3 id="bc4h">简单好用<br>一句话搞定</h3>
-                <p class="ds" id="bc4d">支持 <span class="code-d">/</span> 斜杠与 <span class="code-d">r!</span> 前缀，任意场合好用。</p>
-                <div style="display:flex;flex-direction:column;gap:7px;margin-top:14px">
-                    <span style="display:inline-flex;align-items:center;gap:8px;background:#F5F0ED;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:.8rem;font-weight:700;transition:.2s;cursor:default;" onmouseenter="this.style.background='#FFF0F5';this.style.borderColor='#FFDCE6'" onmouseleave="this.style.background='#F5F0ED';this.style.borderColor='var(--border)'">🎵 <code style="font-family:monospace;font-size:.78rem">/play [歌名]</code></span>
-                    <span style="display:inline-flex;align-items:center;gap:8px;background:#F5F0ED;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:.8rem;font-weight:700;transition:.2s;cursor:default;" onmouseenter="this.style.background='#FFF0F5';this.style.borderColor='#FFDCE6'" onmouseleave="this.style.background='#F5F0ED';this.style.borderColor='var(--border)'">🏆 <code style="font-family:monospace;font-size:.78rem">/rank</code></span>
-                    <span style="display:inline-flex;align-items:center;gap:8px;background:#F5F0ED;border:1px solid var(--border);border-radius:9px;padding:8px 12px;font-size:.8rem;font-weight:700;transition:.2s;cursor:default;" onmouseenter="this.style.background='#FFF0F5';this.style.borderColor='#FFDCE6'" onmouseleave="this.style.background='#F5F0ED';this.style.borderColor='var(--border)'">🎲 <code style="font-family:monospace;font-size:.78rem">/roll [面数]</code></span>
-                </div>
-            </div>
-            <div class="bcp" style="display:flex;flex-direction:column;justify-content:center;">
-                <div class="term">
-                    <div class="term-bar"><span class="td r"></span><span class="td y"></span><span class="td g"></span></div>
-                    <div class="term-body">
-                        <div><span class="tp2">user&gt; </span><span class="tc">/play 夜に駆ける</span></div>
-                        <div><span class="tg">🎵 正在播放: 夜に駆ける</span></div>
-                        <div style="margin-top:4px"><span class="tp2">user&gt; </span><span class="tc">/rank</span></div>
-                        <div><span class="to">📊 Milk Chocolate · Lv.5 #1</span></div>
-                        <div style="margin-top:4px"><span class="tp2">user&gt; </span><span class="cur"></span></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    </div>
+</section>
+</div><!-- /wrap -->
+
+<!-- COMMUNITY PROTECTION -->
+<div class="wrap">
+<section class="prot-sec">
+    <div class="sh rv">
+        <span class="eye" id="prot-eye" style="color:var(--pinkd)">社区保护</span>
+        <h2 id="prot-title">守护你的服务器</h2>
+        <p class="c" id="prot-sub" style="color:var(--mid)">让捣乱的人无处下手。</p>
+    </div>
+    <div class="prot">
+        <div class="protc rv"><div class="pi">🛡️</div><h3 id="p1n">自动审核</h3><p id="p1d">刷屏、违禁词、垃圾链接、刷大写，全部自动识别处理。</p></div>
+        <div class="protc rv d1"><div class="pi">🗃️</div><h3 id="p2n">审计日志</h3><p id="p2d">消息删改、成员进出、封禁记录，全程可追溯。</p></div>
+        <div class="protc rv d2"><div class="pi">⚖️</div><h3 id="p3n">警告处罚</h3><p id="p3d">警告累计自动禁言 / 踢出 / 封禁，阶梯式处理。</p></div>
     </div>
 </section>
 </div><!-- /wrap -->
@@ -782,6 +772,20 @@
     </div>
 </section>
 
+<!-- FAQ -->
+<section class="faq-sec">
+    <div class="sh rv">
+        <span class="eye" id="faq-eye" style="color:var(--pinkd)">常见问题</span>
+        <h2 id="faq-title">你可能想问</h2>
+    </div>
+    <div class="faq">
+        <details class="rv"><summary id="q1">小凛是免费的吗？</summary><div id="a1">完全免费！所有功能都不收费，邀请即用。</div></details>
+        <details class="rv"><summary id="q2">怎么邀请到我的服务器？</summary><div id="a2">点击页面上的「邀请小凛」按钮，选择服务器并授权即可。</div></details>
+        <details class="rv"><summary id="q3">需要给哪些权限？</summary><div id="a3">建议授予管理员权限以使用全部功能；也可按需只给所需权限。</div></details>
+        <details class="rv"><summary id="q4">我的数据安全吗？</summary><div id="a4">小凛只保存运行功能所需的配置（等级、设定等）。消息内容仅用于即时审核与计算经验，处理后即丢弃，不会长期保存你的聊天记录。</div></details>
+    </div>
+</section>
+
 <!-- CTA -->
 <section class="cta-sec">
     <div class="cta rv">
@@ -860,6 +864,26 @@ const i18n = {
         fc1h:'功能',fc1l1:'音乐播放',fc1l2:'等级系统',fc1l3:'管理模块',fc1l4:'迎新 & 审核 & 抽奖…',
         fc2h:'链接',fc2l1:'控制台',fc2l2:'邀请小凛',
         fc3h:'关于',fc3l1:'服务条款',fc3l2:'隐私政策',
+        fgEye:'核心功能', fgTitle:'一个小凛，搞定所有', fgSub:'10 个模块，一屏看全。',
+        fg1n:'音乐播放', fg1d:'队列、循环、歌单 / Spotify 导入，高音质低延迟。',
+        fg2n:'等级系统', fg2d:'聊天累积经验，精美等级卡片与排行榜。',
+        fg3n:'管理工具', fg3d:'踢 / 封 / 禁言 / 警告 / 清屏，警告自动处罚。',
+        fg4n:'自动审核', fg4d:'反刷屏、违禁词、链接与大写过滤，自动处理。',
+        fg5n:'欢迎新人', fg5d:'自定义欢迎图卡、自动身份组、道别消息。',
+        fg6n:'反应身份组', fg6d:'点按钮自助领取身份组，支持单选互斥。',
+        fg7n:'抽奖活动', fg7d:'倒计时自动开奖、reroll，公平透明。',
+        fg8n:'审计日志', fg8d:'消息、成员、频道、身份组变动全记录。',
+        fg9n:'网页控制台', fg9d:'浏览器里一键配置，改完即时生效。',
+        dashEye:'网页控制台', dashTitle:'不用记指令，<br>网页点点就配置好', dashDesc:'登录后在浏览器里开关功能、设定频道、调整参数，所有改动即时生效——再也不用对着指令表敲个不停。', dashBtn:'打开控制台 →',
+        protEye:'社区保护', protTitle:'守护你的服务器', protSub:'让捣乱的人无处下手。',
+        p1n:'自动审核', p1d:'刷屏、违禁词、垃圾链接、刷大写，全部自动识别处理。',
+        p2n:'审计日志', p2d:'消息删改、成员进出、封禁记录，全程可追溯。',
+        p3n:'警告处罚', p3d:'警告累计自动禁言 / 踢出 / 封禁，阶梯式处理。',
+        faqEye:'常见问题', faqTitle:'你可能想问',
+        q1:'小凛是免费的吗？', a1:'完全免费！所有功能都不收费，邀请即用。',
+        q2:'怎么邀请到我的服务器？', a2:'点击页面上的「邀请小凛」按钮，选择服务器并授权即可。',
+        q3:'需要给哪些权限？', a3:'建议授予管理员权限以使用全部功能；也可按需只给所需权限。',
+        q4:'我的数据安全吗？', a4:'小凛只保存运行功能所需的配置（等级、设定等）。消息内容仅用于即时审核与计算经验，处理后即丢弃，不会长期保存你的聊天记录。',
     },
     en:{
         lang:'中文', title:'RinBot | All-in-One Discord Assistant',
@@ -889,6 +913,26 @@ const i18n = {
         fc1h:'Features',fc1l1:'Music',fc1l2:'Leveling',fc1l3:'Moderation',fc1l4:'Welcome & AutoMod & more…',
         fc2h:'Links',fc2l1:'Dashboard',fc2l2:'Invite Rin',
         fc3h:'About',fc3l1:'Terms of Service',fc3l2:'Privacy Policy',
+        fgEye:'Features', fgTitle:'One Rin, Everything Done', fgSub:'10 modules, all in one view.',
+        fg1n:'Music', fg1d:'Queue, loop, playlist / Spotify import. High quality, low latency.',
+        fg2n:'Leveling', fg2d:'Earn XP by chatting, with rank cards and leaderboards.',
+        fg3n:'Moderation', fg3d:'Kick / ban / mute / warn / purge, with auto-punishment.',
+        fg4n:'AutoMod', fg4d:'Anti-spam, banned words, link and caps filtering — automatic.',
+        fg5n:'Welcome', fg5d:'Custom welcome cards, auto-roles and farewell messages.',
+        fg6n:'Reaction Roles', fg6d:'Self-assign roles with buttons, exclusive mode supported.',
+        fg7n:'Giveaways', fg7d:'Auto-draw with countdown and reroll. Fair and transparent.',
+        fg8n:'Audit Log', fg8d:'Logs message, member, channel and role changes.',
+        fg9n:'Web Dashboard', fg9d:'Configure everything in your browser, applied instantly.',
+        dashEye:'Web Dashboard', dashTitle:'No commands to memorize —<br>just point and click', dashDesc:'Log in and toggle features, set channels and tweak settings right in your browser. Every change applies instantly.', dashBtn:'Open Dashboard →',
+        protEye:'Protection', protTitle:'Keep Your Server Safe', protSub:'Leave troublemakers nowhere to go.',
+        p1n:'AutoMod', p1d:'Spam, banned words, junk links and caps — detected and handled automatically.',
+        p2n:'Audit Log', p2d:'Message edits, member joins/leaves and bans — all traceable.',
+        p3n:'Auto-Punish', p3d:'Stacked warnings trigger mute / kick / ban automatically.',
+        faqEye:'FAQ', faqTitle:'You Might Be Wondering',
+        q1:'Is Rin free?', a1:'Completely free! Every feature is free — just invite and use.',
+        q2:'How do I add it to my server?', a2:'Click the "Invite Rin" button, pick your server and authorize.',
+        q3:'What permissions are needed?', a3:'Administrator is recommended for all features; or grant only what you need.',
+        q4:'Is my data safe?', a4:'Rin only stores the config needed to run features (levels, settings). Message content is used only for real-time moderation and XP, then discarded — your chat history is never kept.',
     }
 };
 
@@ -928,9 +972,26 @@ function render(){
     s('fc1-head',t.fc1h); s('fc1-l1',t.fc1l1); s('fc1-l2',t.fc1l2); s('fc1-l3',t.fc1l3); s('fc1-l4',t.fc1l4);
     s('fc2-head',t.fc2h); s('fc2-l1',t.fc2l1); s('fc2-l2',t.fc2l2);
     s('fc3-head',t.fc3h); s('fc3-l1',t.fc3l1); s('fc3-l2',t.fc3l2);
+    s('fg-eye',t.fgEye); s('fg-title',t.fgTitle); s('fg-sub',t.fgSub);
+    for(let i=1;i<=9;i++){ s('fg'+i+'n',t['fg'+i+'n']); s('fg'+i+'d',t['fg'+i+'d']); }
+    s('dash-eye',t.dashEye); s('dash-title',t.dashTitle,true); s('dash-desc',t.dashDesc); s('dash-btn',t.dashBtn);
+    s('prot-eye',t.protEye); s('prot-title',t.protTitle); s('prot-sub',t.protSub);
+    s('p1n',t.p1n); s('p1d',t.p1d); s('p2n',t.p2n); s('p2d',t.p2d); s('p3n',t.p3n); s('p3d',t.p3d);
+    s('faq-eye',t.faqEye); s('faq-title',t.faqTitle);
+    for(let i=1;i<=4;i++){ s('q'+i,t['q'+i]); s('a'+i,t['a'+i]); }
 }
 function toggleLanguage(){ lang=lang==='zh'?'en':'zh'; localStorage.setItem('rinbot_lang',lang); render(); }
 render();
+
+/* Dynamic stats from backend */
+(async()=>{
+    try{
+        const r=await fetch('/api/stats'); if(!r.ok)return;
+        const d=await r.json();
+        const set=(id,v)=>{const el=document.getElementById(id); if(el&&typeof v==='number'&&v>0) el.textContent=v;};
+        set('stat-servers',d.servers); set('stat-modules',d.modules);
+    }catch(e){}
+})();
 
 /* Sticky nav */
 const snav=document.getElementById('snav');

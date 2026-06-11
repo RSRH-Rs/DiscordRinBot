@@ -14,6 +14,9 @@ DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "automod.db"
 )
 
+# 调试开关：排查「自动审核没反应」时设 True，控制台会打印检测过程与失败原因；查完改回 False
+AUTOMOD_DEBUG = False
+
 
 class AutoMod(commands.Cog):
     """自动审核 — 社区风纪委员小凛"""
@@ -74,6 +77,13 @@ class AutoMod(commands.Cog):
                 d = dict(row)
                 cache[d["guild_id"]] = d
         self._config_cache = cache
+        if AUTOMOD_DEBUG:
+            print(f"[automod] DB 路径: {os.path.abspath(DB_PATH)}")
+            print(f"[automod] 配置已加载/刷新，共 {len(cache)} 个服务器")
+            for gid, c in cache.items():
+                print(f"  guild={gid} enabled={c.get('enabled')} "
+                      f"log_channel={c.get('log_channel')} "
+                      f"anti_spam={c.get('anti_spam')} anti_repeat={c.get('anti_repeat')}")
 
     # 每 15 秒重读配置，让网页仪表盘的修改即时生效（无需重启）
     @tasks.loop(seconds=15)
@@ -127,13 +137,17 @@ class AutoMod(commands.Cog):
     async def _log_action(self, guild: discord.Guild, embed: discord.Embed):
         cfg = await self._get_config(guild.id)
         if not cfg or not cfg.get("log_channel"):
+            if AUTOMOD_DEBUG:
+                print(f"[automod] _log_action: guild={guild.id} 未设置 log_channel")
             return
         channel = guild.get_channel(cfg["log_channel"])
-        if channel:
-            try:
-                await channel.send(embed=embed)
-            except discord.Forbidden:
-                pass
+        if not channel:
+            print(f"[automod] 日志发送失败：找不到频道 {cfg['log_channel']}（bot 看不到该频道，或频道已删）")
+            return
+        try:
+            await channel.send(embed=embed)
+        except discord.Forbidden:
+            print(f"[automod] 日志发送失败：bot 在频道 {channel.id} 无发送权限")
 
     async def _mute_user(self, member: discord.Member, reason: str, duration: int):
         """使用 Discord 原生 timeout 功能"""
@@ -143,7 +157,7 @@ class AutoMod(commands.Cog):
             until = discord.utils.utcnow() + datetime.timedelta(seconds=duration)
             await member.timeout(until, reason=reason)
         except discord.Forbidden:
-            pass
+            print("[automod] 禁言失败：bot 缺少『超时成员(Moderate Members)』权限，或 bot 身份组层级低于该成员")
 
     def _is_ignored(self, cfg: dict, channel_id: int, member: discord.Member) -> bool:
         """检查频道或身份组是否在忽略列表中"""
@@ -167,13 +181,19 @@ class AutoMod(commands.Cog):
         if not message.guild or message.author.bot:
             return
         if message.author.guild_permissions.manage_messages:
+            if AUTOMOD_DEBUG:
+                print(f"[automod] 跳过：{message.author} 有『管理消息』权限，被豁免")
             return  # 不审核管理员
 
         cfg = await self._get_config(message.guild.id)
         if not cfg or not cfg.get("enabled"):
+            if AUTOMOD_DEBUG:
+                print(f"[automod] 跳过：guild={message.guild.id} 未启用 (cfg={'无' if not cfg else cfg.get('enabled')})")
             return
 
         if self._is_ignored(cfg, message.channel.id, message.author):
+            if AUTOMOD_DEBUG:
+                print(f"[automod] 跳过：频道/身份组在忽略列表 (channel={message.channel.id})")
             return
 
         guild_id = message.guild.id
@@ -201,7 +221,7 @@ class AutoMod(commands.Cog):
                         delete_after=10,
                     )
                 except discord.Forbidden:
-                    pass
+                    print("[automod] 刷屏提示发送失败：bot 在该频道无发送权限")
                 embed = discord.Embed(
                     title="🚨 刷屏检测",
                     description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**处理:** 禁言 {mute_dur // 60} 分钟",
@@ -222,6 +242,10 @@ class AutoMod(commands.Cog):
             content = message.content.lower().strip()
             same_count = sum(1 for c, _ in cache if c == content)
 
+            if AUTOMOD_DEBUG:
+                print(f"[automod] 重复检查 guild={guild_id} user={user_id} "
+                      f"content={content!r} 相同计数={same_count}/{repeat_threshold}")
+
             if same_count >= repeat_threshold and content:
                 cache.clear()
                 try:
@@ -231,7 +255,7 @@ class AutoMod(commands.Cog):
                         delete_after=8,
                     )
                 except discord.Forbidden:
-                    pass
+                    print("[automod] 重复消息处理失败：bot 缺少『管理消息』权限（无法删除消息）")
                 embed = discord.Embed(
                     title="🔁 重复消息",
                     description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**内容:** {content[:100]}",
