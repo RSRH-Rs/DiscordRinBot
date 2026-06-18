@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全局设置 | 小凛 Rin</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
+    <style>
+        .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:4px 0 16px}
+        .htile{background:var(--card,#fff);border:1px solid var(--border,#ece8e2);border-radius:14px;padding:16px}
+        .htile .hv{font-size:1.45rem;font-weight:800;color:var(--text,#2a2320)}
+        .htile .hl{font-size:.76rem;color:var(--muted,#a99);margin-top:3px}
+        .hpill{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:700;padding:6px 13px;border-radius:999px;margin-bottom:14px}
+        .hpill.on{background:#EAF4EE;color:#2E6B43}
+        .hpill.off{background:#FCEBEB;color:#B3382F}
+        .hpill .d{width:8px;height:8px;border-radius:50%;background:currentColor}
+        .cog-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+        .cog-chip{font-size:.72rem;background:var(--warm,#f6f1ec);border:1px solid var(--border,#ece8e2);border-radius:999px;padding:3px 11px;color:var(--mid,#776);font-weight:600}
+        .avatar-row{display:flex;align-items:center;gap:16px}
+        .avatar-prev{width:72px;height:72px;border-radius:50%;object-fit:cover;border:1px solid var(--border,#ece8e2);background:var(--warm,#f6f1ec)}
+        .sec-btns{margin-top:14px}
+    </style>
+</head>
+<body>
+    <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="打开菜单">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+
+    <aside class="sidebar">
+        <div class="sidebar-inner">
+            <a href="/" class="brand"><span class="brand-dot"></span>小凛 Rin</a>
+            <nav class="side-nav">
+                <span class="nav-label">导航</span>
+                <ul>
+                    <li><a href="/dashboard" class="nav-link">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                        我的服务器
+                    </a></li>
+                </ul>
+                <span class="nav-label" style="margin-top:18px;">设置</span>
+                <ul>
+                    <li><a href="/dashboard/settings" class="nav-link active">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        全局设置
+                    </a></li>
+                </ul>
+            </nav>
+            <div class="user-card">
+                <img src="{{ user.avatar_url }}" alt="头像" class="user-avatar">
+                <div class="user-info">
+                    <div class="user-name">{{ user.name }}</div>
+                    <a href="/logout" class="logout-link">退出登录</a>
+                </div>
+            </div>
+        </div>
+    </aside>
+    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+
+    <main class="main-content">
+        <header class="topbar">
+            <div>
+                <h1 class="page-title">全局设置</h1>
+                <p class="page-sub">这些设置影响机器人本身，仅主人可改 (｡･ω･｡)</p>
+            </div>
+        </header>
+
+        <div class="content-area">
+
+            <!-- 健康状态 -->
+            <div class="cfg-section">
+                <div class="cfg-section-title" style="display:flex;justify-content:space-between;align-items:center;">
+                    <span>💓 运行状态</span>
+                    <button class="btn-save" style="padding:6px 14px;" onclick="loadHealth()">刷新</button>
+                </div>
+                <div id="health-status"><span class="hpill off"><span class="d"></span>读取中…</span></div>
+                <div class="health-grid" id="health-grid"></div>
+                <div class="cfg-row-hint">已加载模块</div>
+                <div class="cog-chips" id="cog-chips"></div>
+            </div>
+
+            <!-- Bot 形象：状态 -->
+            <div class="cfg-section">
+                <div class="cfg-section-title">🎨 Bot 形象</div>
+                <div class="cfg-row">
+                    <div class="cfg-row-info"><div class="cfg-row-label">在线状态</div><div class="cfg-row-hint">机器人在成员列表显示的状态</div></div>
+                    <select class="cfg-select" id="bp-status" style="max-width:200px;">
+                        <option value="online">🟢 在线</option>
+                        <option value="idle">🌙 闲置</option>
+                        <option value="dnd">⛔ 请勿打扰</option>
+                        <option value="invisible">⚪ 隐身</option>
+                    </select>
+                </div>
+                <div class="cfg-row">
+                    <div class="cfg-row-info"><div class="cfg-row-label">活动类型</div><div class="cfg-row-hint">显示在状态文案前的动词</div></div>
+                    <select class="cfg-select" id="bp-act-type" style="max-width:200px;">
+                        <option value="playing">正在玩</option>
+                        <option value="watching">正在看</option>
+                        <option value="listening">正在听</option>
+                        <option value="competing">正在参与</option>
+                    </select>
+                </div>
+                <div class="cfg-row">
+                    <div class="cfg-row-info"><div class="cfg-row-label">活动文案</div><div class="cfg-row-hint">例如「正在偷看你的聊天记录」</div></div>
+                    <input class="cfg-input" id="bp-act-text" maxlength="128" placeholder="活动状态文字" style="max-width:280px;">
+                </div>
+                <div class="sec-btns"><button class="btn-save" onclick="saveProfile(this)">保存形象</button></div>
+            </div>
+
+            <!-- 用户名 -->
+            <div class="cfg-section">
+                <div class="cfg-section-title">🏷️ 用户名</div>
+                <div class="cfg-row">
+                    <div class="cfg-row-info"><div class="cfg-row-label">机器人用户名</div><div class="cfg-row-hint">2–32 个字符。Discord 限制每小时最多修改 2 次</div></div>
+                    <input class="cfg-input" id="bp-username" minlength="2" maxlength="32" placeholder="新用户名" style="max-width:280px;">
+                </div>
+                <div class="sec-btns"><button class="btn-save" onclick="saveUsername(this)">更新用户名</button></div>
+            </div>
+
+            <!-- 头像 -->
+            <div class="cfg-section">
+                <div class="cfg-section-title">🖼️ 头像</div>
+                <div class="cfg-row">
+                    <div class="cfg-row-info"><div class="cfg-row-label">上传新头像</div><div class="cfg-row-hint">建议正方形 PNG / JPG / GIF</div></div>
+                    <div class="avatar-row">
+                        <img id="bp-avatar-preview" class="avatar-prev" src="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" alt="预览">
+                        <input type="file" id="bp-avatar-file" accept="image/png,image/jpeg,image/gif" onchange="previewAvatar(this)">
+                    </div>
+                </div>
+                <div class="sec-btns"><button class="btn-save" onclick="saveAvatar(this)">上传头像</button></div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="toast" class="toast toast--info" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <script>
+    let _tt;
+    function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('open');document.getElementById('sidebarBackdrop').classList.toggle('show');}
+    function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.getElementById('sidebarBackdrop').classList.remove('show');}
+    function showToast(msg){
+        const el=document.getElementById('toast');
+        let type='info';
+        if(msg.startsWith('✅'))type='success'; else if(msg.startsWith('❌'))type='error';
+        const icons={info:'i',success:'✓',error:'✕'};
+        const text=msg.replace(/^[❌✅⚠️ℹ️]+\s*/u,'').trim();
+        el.className='toast toast--'+type;
+        el.innerHTML='<span class="toast-icon">'+icons[type]+'</span><span></span>';
+        el.querySelector('span:last-child').textContent=text;
+        requestAnimationFrame(()=>el.classList.add('show'));
+        clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2800);
+    }
+    async function jpost(path,body){
+        const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok) throw new Error(d.error||('HTTP '+r.status));
+        return d;
+    }
+
+    /* ── Bot 形象 ── */
+    async function loadProfile(){
+        try{
+            const r=await fetch('/api/bot/personalizer'); if(!r.ok)return;
+            const d=await r.json();
+            if(d.bot_status) document.getElementById('bp-status').value=d.bot_status;
+            if(d.activity_type) document.getElementById('bp-act-type').value=d.activity_type;
+            document.getElementById('bp-act-text').value=d.activity_text||'';
+        }catch(e){}
+    }
+    async function saveProfile(btn){
+        btn.disabled=true;
+        try{
+            await jpost('/api/bot/personalizer',{
+                bot_status:document.getElementById('bp-status').value,
+                activity_type:document.getElementById('bp-act-type').value,
+                activity_text:document.getElementById('bp-act-text').value,
+            });
+            showToast('✅ 形象已保存!');
+        }catch(e){showToast('❌ '+e.message);}
+        btn.disabled=false;
+    }
+    async function saveUsername(btn){
+        const name=document.getElementById('bp-username').value.trim();
+        if(name.length<2||name.length>32){showToast('❌ 用户名需 2–32 字符');return;}
+        btn.disabled=true;
+        try{ await jpost('/api/bot/username',{username:name}); showToast('✅ 用户名已更新!'); }
+        catch(e){showToast('❌ '+e.message);}
+        btn.disabled=false;
+    }
+    function previewAvatar(inp){
+        const f=inp.files&&inp.files[0]; if(!f)return;
+        const r=new FileReader(); r.onload=()=>{document.getElementById('bp-avatar-preview').src=r.result;}; r.readAsDataURL(f);
+    }
+    async function saveAvatar(btn){
+        const f=document.getElementById('bp-avatar-file').files[0];
+        if(!f){showToast('❌ 请先选择图片');return;}
+        btn.disabled=true;
+        try{
+            const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});
+            await jpost('/api/bot/avatar',{avatar:b64});
+            showToast('✅ 头像已更新!');
+        }catch(e){showToast('❌ '+e.message);}
+        btn.disabled=false;
+    }
+
+    /* ── 健康状态 ── */
+    function fmtUptime(sec){
+        sec=Math.max(0,Math.floor(sec));
+        const d=Math.floor(sec/86400),h=Math.floor(sec%86400/3600),m=Math.floor(sec%3600/60);
+        if(d) return d+'天 '+h+'时';
+        if(h) return h+'时 '+m+'分';
+        return m+'分';
+    }
+    async function loadHealth(){
+        const statusEl=document.getElementById('health-status');
+        const grid=document.getElementById('health-grid');
+        const chips=document.getElementById('cog-chips');
+        try{
+            const r=await fetch('/api/bot/health'); const d=await r.json();
+            if(d.online){
+                statusEl.innerHTML='<span class="hpill on"><span class="d"></span>在线运行中</span>';
+            }else{
+                statusEl.innerHTML='<span class="hpill off"><span class="d"></span>'+(d.error||'离线')+'</span>';
+            }
+            const tiles=[];
+            if(d.started_at) tiles.push(['运行时长',fmtUptime(Date.now()/1000-d.started_at)]);
+            if(d.latency_ms!=null) tiles.push(['网关延迟',d.latency_ms+' ms']);
+            if(d.guild_count!=null) tiles.push(['服务器',d.guild_count]);
+            if(d.user_count!=null) tiles.push(['服务用户',d.user_count.toLocaleString()]);
+            if(d.cogs) tiles.push(['已加载模块',d.cogs.length]);
+            if(d.dpy) tiles.push(['discord.py',d.dpy]);
+            grid.innerHTML=tiles.map(t=>'<div class="htile"><div class="hv"></div><div class="hl"></div></div>').join('');
+            [...grid.children].forEach((el,i)=>{el.querySelector('.hv').textContent=tiles[i][1];el.querySelector('.hl').textContent=tiles[i][0];});
+            chips.innerHTML=(d.cogs||[]).map(()=>'<span class="cog-chip"></span>').join('');
+            [...chips.children].forEach((el,i)=>{el.textContent=d.cogs[i];});
+        }catch(e){
+            statusEl.innerHTML='<span class="hpill off"><span class="d"></span>读取失败</span>';
+        }
+    }
+
+    loadProfile();
+    loadHealth();
+    setInterval(loadHealth,30000);
+    </script>
+</body>
+</html>

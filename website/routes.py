@@ -10,12 +10,21 @@ from typing import Optional
 from datetime import datetime, timezone
 from config import BOT_TOKEN
 
+try:
+    from config import OWNER_ID
+except ImportError:
+    OWNER_ID = 0
+
 # Shared aiohttp session — created at app startup, closed at shutdown
 _session: Optional[aiohttp.ClientSession] = None
 
 # Username cache: uid -> (name, expiry_ts). 1-hour TTL.
 _username_cache: dict[str, tuple[str, float]] = {}
 _USERNAME_TTL = 3600
+
+# 首页统计缓存（公开接口，避免频繁打 Discord API）
+_stats_cache: dict = {"data": None, "exp": 0.0}
+_STATS_TTL = 120
 
 
 async def _get_session() -> aiohttp.ClientSession:
@@ -338,6 +347,17 @@ async def discord_api_patch(path, json_data):
         return resp.status, await resp.json()
 
 
+async def is_owner(discord_oauth) -> bool:
+    """当前登录用户是否为 bot 主人（config.OWNER_ID）"""
+    try:
+        if not OWNER_ID or not await discord_oauth.authorized:
+            return False
+        u = await discord_oauth.fetch_user()
+        return int(u.id) == int(OWNER_ID)
+    except Exception:
+        return False
+
+
 async def check_guild_access(discord_oauth, gid_str):
     try:
         if not await discord_oauth.authorized:
@@ -411,7 +431,29 @@ def setup_routes(app, discord):
                 if has_manage_permission(g):
                     g.bot_joined = int(g.id) in bot_guild_ids
                     manageable.append(g)
-            return await render_template("dashboard.html", user=user, guilds=manageable)
+            return await render_template(
+                "dashboard.html",
+                user=user,
+                guilds=manageable,
+                is_owner=await is_owner(discord),
+            )
+        except Exception as e:
+            return await render_template("error.html", error=str(e)), 500
+
+    @app.route("/dashboard/settings")
+    async def global_settings():
+        try:
+            if not await discord.authorized:
+                return await render_template("login_gate.html")
+            if not await is_owner(discord):
+                return (
+                    await render_template(
+                        "error.html", error="此页面仅限机器人主人访问"
+                    ),
+                    403,
+                )
+            user = await discord.fetch_user()
+            return await render_template("settings.html", user=user)
         except Exception as e:
             return await render_template("error.html", error=str(e)), 500
 
@@ -601,13 +643,6 @@ def setup_routes(app, discord):
             "db": "leveling.db",
         },
         {
-            "slug": "personalizer",
-            "name": "Bot 个性化",
-            "desc": "修改 Bot 头像、用户名、活动状态",
-            "icon": "palette",
-            "db": "botconfig.db",
-        },
-        {
             "slug": "utility",
             "name": "指令管理",
             "desc": "按需启用/禁用每个指令",
@@ -649,6 +684,24 @@ def setup_routes(app, discord):
                 {k: v for k, v in m.items() if k != "db"} | {"loaded": loaded}
             )
         return jsonify(result)
+
+    @app.route("/api/stats")
+    async def api_stats():
+        """首页公开统计：服务器数、功能模块数（带 120s 缓存）"""
+        now = time.time()
+        if _stats_cache["data"] and _stats_cache["exp"] > now:
+            return jsonify(_stats_cache["data"])
+        try:
+            guild_ids = await fetch_bot_guild_ids()
+            servers = len(guild_ids)
+        except Exception:
+            servers = 0
+        # 统计可展示的功能模块（排除“通用工具”这类无独立 db 的）
+        modules = len([m for m in MODULES if m["slug"] != "general"])
+        data = {"servers": servers, "modules": modules}
+        _stats_cache["data"] = data
+        _stats_cache["exp"] = now + _STATS_TTL
+        return jsonify(data)
 
     # ── Welcome ──
 
@@ -1265,10 +1318,30 @@ def setup_routes(app, discord):
 
     # ═══════ Bot Personalizer ═══════
 
+    @app.route("/api/bot/health")
+    async def api_bot_health():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        path = os.path.join(BOT_DIR, "health.json")
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+            data["online"] = (time.time() - data.get("updated_at", 0)) < 90
+            return jsonify(data)
+        except FileNotFoundError:
+            return jsonify(
+                {
+                    "online": False,
+                    "error": "暂无健康数据（bot 未运行，或未加载 health 模块）",
+                }
+            )
+        except Exception as e:
+            return jsonify({"online": False, "error": str(e)})
+
     @app.route("/api/bot/personalizer", methods=["GET"])
     async def api_bot_cfg_get():
         try:
-            if not await discord.authorized:
+            if not await is_owner(discord):
                 return jsonify({"error": "unauthorized"}), 401
             async with aiosqlite.connect(DB_BOTCONFIG) as db:
                 db.row_factory = aiosqlite.Row
@@ -1290,7 +1363,7 @@ def setup_routes(app, discord):
     @app.route("/api/bot/personalizer", methods=["POST"])
     async def api_bot_cfg_post():
         try:
-            if not await discord.authorized:
+            if not await is_owner(discord):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
             async with aiosqlite.connect(DB_BOTCONFIG) as db:
@@ -1318,7 +1391,7 @@ def setup_routes(app, discord):
     async def api_bot_username():
         """Change bot username via Discord REST API (rate limited: 2/hour)"""
         try:
-            if not await discord.authorized:
+            if not await is_owner(discord):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
             name = d.get("username", "").strip()
@@ -1339,7 +1412,7 @@ def setup_routes(app, discord):
     async def api_bot_avatar():
         """Change bot avatar via Discord REST API"""
         try:
-            if not await discord.authorized:
+            if not await is_owner(discord):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
             avatar_b64 = d.get("avatar")  # expects "data:image/png;base64,..."
