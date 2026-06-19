@@ -3,7 +3,7 @@
 
 import discord
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 import aiosqlite
 import traceback
 from datetime import datetime, timezone
@@ -46,18 +46,39 @@ class BotLog(commands.Cog):
                 levels TEXT DEFAULT 'error,warning,info,config'
             )""")
             await db.commit()
+        await self._reload()
+        if not self._refresh.is_running():
+            self._refresh.start()
+        print("✅ 系统日志模块已准备就绪!")
 
+    def cog_unload(self):
+        self._refresh.cancel()
+
+    async def _reload(self):
+        """从 DB 重新载入配置缓存（让网页改动无需重启即可生效）"""
+        cache = {}
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
                 "SELECT guild_id, channel_id, enabled, levels FROM botlog_config"
             )
             for row in await cursor.fetchall():
-                self._cache[row[0]] = {
+                cache[row[0]] = {
                     "channel_id": row[1],
                     "enabled": bool(row[2]),
                     "levels": set(row[3].split(",")) if row[3] else set(),
                 }
+        self._cache = cache
 
-        print("✅ 系统日志模块已准备就绪!")
+    @tasks.loop(seconds=30)
+    async def _refresh(self):
+        try:
+            await self._reload()
+        except Exception as e:
+            print(f"[botlog] 配置刷新失败: {e}")
+
+    @_refresh.before_loop
+    async def _before_refresh(self):
+        await self.bot.wait_until_ready()
 
     # ─── 配置 ───
 

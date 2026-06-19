@@ -1,24 +1,70 @@
 # cogs/music.py
 # RinBot — 完整音乐播放器模块
-# 功能：播放、队列、跳过、暂停/恢复、循环、音量、洗牌、正在播放、移除、清空队列
+# 功能：播放、队列、跳过、暂停/恢复、循环、音量、洗牌、移除、清空、歌单/Spotify 导入、队列存档
 
 import discord
 from discord.ext import commands
 from discord.ui import View, Button
 import yt_dlp
+import aiosqlite
 import asyncio
 import random
 import time
+import json
+import os
 from collections import deque
 from typing import Literal, Optional
 
 from config import YTDL_OPTIONS, FFMPEG_OPTIONS
 
+try:
+    from config import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
+except ImportError:
+    SPOTIFY_CLIENT_ID = SPOTIFY_CLIENT_SECRET = ""
+
+try:
+    import spotipy
+    from spotipy.oauth2 import SpotifyClientCredentials
+
+    _SPOTIPY_AVAILABLE = True
+except ImportError:
+    _SPOTIPY_AVAILABLE = False
+
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "music.db"
+)
+
+
+class MusicError(Exception):
+    """面向用户的可读错误（直接展示给点歌者）"""
+
+
+class _RestoredUser:
+    """从存档恢复时，原点歌者已不在缓存的占位对象"""
+
+    def __init__(self, uid: int, name: str):
+        self.id = uid
+        self.display_name = name
+        self.mention = f"<@{uid}>" if uid else name
+
+        class _A:
+            url = None
+
+        self.display_avatar = _A()
+
 
 class Song:
     """封装一首歌的信息"""
 
-    __slots__ = ("title", "url", "stream_url", "duration", "thumbnail", "requester")
+    __slots__ = (
+        "title",
+        "url",
+        "stream_url",
+        "duration",
+        "thumbnail",
+        "requester",
+        "stream_at",
+    )
 
     def __init__(self, title, url, stream_url, duration, thumbnail, requester):
         self.title = title
@@ -27,6 +73,9 @@ class Song:
         self.duration = duration
         self.thumbnail = thumbnail
         self.requester = requester
+        self.stream_at = (
+            time.time() if stream_url else 0.0
+        )  # 流地址获取时间，用于判断是否需重新解析
 
     @staticmethod
     def format_duration(seconds):
@@ -35,6 +84,17 @@ class Song:
         m, s = divmod(int(seconds), 60)
         h, m = divmod(m, 60)
         return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+    def to_dict(self):
+        # stream_url 会过期，不存；载入时按 url 重新解析
+        return {
+            "title": self.title,
+            "url": self.url,
+            "duration": self.duration,
+            "thumbnail": self.thumbnail,
+            "requester_id": getattr(self.requester, "id", 0),
+            "requester_name": getattr(self.requester, "display_name", "未知"),
+        }
 
 
 class GuildMusicState:
@@ -161,6 +221,19 @@ class Music(commands.Cog):
             self._states[guild_id] = GuildMusicState(self.bot, guild_id)
         return self._states[guild_id]
 
+    async def cog_load(self):
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS saved_queues (
+                    guild_id INTEGER NOT NULL,
+                    name TEXT NOT NULL,
+                    songs_json TEXT NOT NULL,
+                    created_at REAL NOT NULL,
+                    PRIMARY KEY (guild_id, name)
+                )
+            """)
+            await db.commit()
+
     def cog_unload(self):
         for state in self._states.values():
             if state._task:
@@ -228,6 +301,191 @@ class Music(commands.Cog):
         source = discord.FFmpegPCMAudio(song.stream_url, **FFMPEG_OPTIONS)
         return discord.PCMVolumeTransformer(source, volume=volume)
 
+    def _make_after(self, guild_id: int):
+        """生成 vc.play 的 after 回调：处理连续失败并续播下一首"""
+        state = self._get_state(guild_id)
+
+        def after_play(error):
+            if error:
+                print(f"[music] 播放错误 (guild {guild_id}): {error}")
+                state.fail_count += 1
+                if state.fail_count >= GuildMusicState.MAX_CONSECUTIVE_FAILURES:
+                    state.is_playing = False
+                    botlog = self.bot.get_cog("BotLog")
+                    if botlog:
+                        asyncio.run_coroutine_threadsafe(
+                            botlog.log(
+                                guild_id,
+                                "error",
+                                "音乐播放连续失败,已停止队列",
+                                f"```{str(error)[:500]}```",
+                                **{"失败次数": str(state.fail_count)},
+                            ),
+                            self.bot.loop,
+                        )
+                    return
+            else:
+                state.fail_count = 0
+            if state.is_playing:
+                asyncio.run_coroutine_threadsafe(
+                    self._play_next(guild_id), self.bot.loop
+                )
+
+        return after_play
+
+    @staticmethod
+    def _is_spotify(query: str) -> bool:
+        return "open.spotify.com" in query
+
+    @staticmethod
+    def _is_playlist_url(query: str) -> bool:
+        q = query.lower()
+        return "list=" in q or "/playlist" in q or "/sets/" in q or "/album/" in q
+
+    async def _extract_entries(self, query: str) -> list[dict]:
+        """统一入口：单曲返回 1 条，歌单/Spotify 返回多条。失败抛 MusicError 或返回 []"""
+        if self._is_spotify(query):
+            return await self._spotify_to_entries(query)
+
+        if self._is_playlist_url(query):
+            loop = asyncio.get_event_loop()
+
+            def _extract():
+                opts = {
+                    **YTDL_OPTIONS,
+                    "noplaylist": False,
+                    "extract_flat": "in_playlist",
+                }
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(query, download=False)
+                if not info or not info.get("entries"):
+                    return []
+                out = []
+                for e in info["entries"]:
+                    if not e:
+                        continue
+                    url = e.get("url") or ""
+                    if not url.startswith("http") and e.get("id"):
+                        url = f"https://www.youtube.com/watch?v={e['id']}"
+                    if not url:
+                        continue
+                    out.append(
+                        {
+                            "title": e.get("title", "未知"),
+                            "url": url,
+                            "duration": e.get("duration"),
+                            "thumbnail": e.get("thumbnail"),
+                        }
+                    )
+                return out
+
+            try:
+                return await loop.run_in_executor(None, _extract)
+            except Exception:
+                return []
+
+        # 单曲 / 关键词搜索：沿用原逻辑，stream_url 当场拿到可直接开播
+        info = await self._extract_info(query)
+        if not info:
+            return []
+        return [
+            {
+                "title": info.get("title", "未知"),
+                "url": info.get("webpage_url", query),
+                "duration": info.get("duration"),
+                "thumbnail": info.get("thumbnail"),
+                "stream_url": info.get("url", ""),
+            }
+        ]
+
+    async def _spotify_to_entries(self, url: str) -> list[dict]:
+        if not _SPOTIPY_AVAILABLE:
+            raise MusicError("Spotify 支持未安装，请先 `pip install spotipy`。")
+        if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
+            raise MusicError(
+                "Spotify 未配置，请在 config.py 填入 SPOTIFY_CLIENT_ID / SECRET。"
+            )
+
+        loop = asyncio.get_event_loop()
+
+        def _fetch():
+            sp = spotipy.Spotify(
+                auth_manager=SpotifyClientCredentials(
+                    client_id=SPOTIFY_CLIENT_ID, client_secret=SPOTIFY_CLIENT_SECRET
+                )
+            )
+            tracks, default_thumb = [], None
+            if "/track/" in url:
+                tracks.append(sp.track(url))
+            elif "/playlist/" in url:
+                res = sp.playlist_items(url, additional_types=("track",))
+                while res:
+                    tracks += [
+                        it["track"] for it in res["items"] if it and it.get("track")
+                    ]
+                    res = sp.next(res) if res.get("next") else None
+            elif "/album/" in url:
+                alb = sp.album(url)
+                imgs = alb.get("images") or []
+                default_thumb = imgs[0]["url"] if imgs else None
+                res = sp.album_tracks(url)
+                while res:
+                    tracks += [t for t in res["items"] if t]
+                    res = sp.next(res) if res.get("next") else None
+
+            out = []
+            for t in tracks:
+                if not t:
+                    continue
+                name = t.get("name", "")
+                artists = ", ".join(
+                    a["name"] for a in t.get("artists", []) if a.get("name")
+                )
+                q = f"{name} {artists}".strip()
+                if not q:
+                    continue
+                imgs = (t.get("album") or {}).get("images") or []
+                out.append(
+                    {
+                        "title": q,
+                        "url": f"ytsearch1:{q}",  # 播放时再去 YouTube 解析
+                        "duration": (
+                            round(t["duration_ms"] / 1000)
+                            if t.get("duration_ms")
+                            else None
+                        ),
+                        "thumbnail": imgs[0]["url"] if imgs else default_thumb,
+                    }
+                )
+            return out
+
+        try:
+            return await loop.run_in_executor(None, _fetch)
+        except Exception as e:
+            raise MusicError(f"Spotify 解析失败：{e}")
+
+    def _song_from_entry(self, e: dict, requester) -> Song:
+        return Song(
+            title=e.get("title", "未知"),
+            url=e.get("url", ""),
+            stream_url=e.get("stream_url", ""),
+            duration=e.get("duration"),
+            thumbnail=e.get("thumbnail"),
+            requester=requester,
+        )
+
+    def _restore_song(self, d: dict, guild) -> Song:
+        rid = d.get("requester_id", 0)
+        member = guild.get_member(rid) if rid else None
+        return Song(
+            title=d.get("title", "未知"),
+            url=d.get("url", ""),
+            stream_url="",  # 过期，播放时重新解析
+            duration=d.get("duration"),
+            thumbnail=d.get("thumbnail"),
+            requester=member or _RestoredUser(rid, d.get("requester_name", "未知")),
+        )
+
     async def _play_next(self, guild_id: int):
         """播放队列中的下一首"""
         state = self._get_state(guild_id)
@@ -253,44 +511,21 @@ class Music(commands.Cog):
             state.idle_task = asyncio.create_task(self._idle_disconnect(guild_id))
             return
 
-        # 重新获取流媒体 URL(旧 URL 可能过期)
-        info = await self._extract_info(state.current.url)
-        if info:
-            state.current.stream_url = info.get("url", state.current.stream_url)
+        # 流地址会过期；仅当为空或已超过 30 分钟才重新解析
+        # （刚入队的歌地址还新鲜，避免「第一首被提取两次」的多余等待）
+        STREAM_TTL = 1800
+        if (
+            not state.current.stream_url
+            or (time.time() - getattr(state.current, "stream_at", 0)) > STREAM_TTL
+        ):
+            info = await self._extract_info(state.current.url)
+            if info:
+                state.current.stream_url = info.get("url", state.current.stream_url)
+                state.current.stream_at = time.time()
 
         state.is_playing = True
         source = self._make_source(state.current, state.volume)
-
-        def after_play(error):
-            if error:
-                print(f"[music] 播放错误 (guild {guild_id}): {error}")
-                state.fail_count += 1
-                if state.fail_count >= GuildMusicState.MAX_CONSECUTIVE_FAILURES:
-                    print(f"[music] 连续失败 {state.fail_count} 次,停止队列")
-                    state.is_playing = False
-                    # 通知日志频道(异步,不影响主流程)
-                    botlog = self.bot.get_cog("BotLog")
-                    if botlog:
-                        asyncio.run_coroutine_threadsafe(
-                            botlog.log(
-                                guild_id,
-                                "error",
-                                "音乐播放连续失败,已停止队列",
-                                f"```{str(error)[:500]}```",
-                                **{"失败次数": str(state.fail_count)},
-                            ),
-                            self.bot.loop,
-                        )
-                    return
-            else:
-                state.fail_count = 0  # 成功播完一首,重置计数
-
-            if state.is_playing:
-                asyncio.run_coroutine_threadsafe(
-                    self._play_next(guild_id), self.bot.loop
-                )
-
-        vc.play(source, after=after_play)
+        vc.play(source, after=self._make_after(guild_id))
 
     async def _idle_disconnect(self, guild_id: int):
         """空闲 3 分钟自动断开,可被新的 /play 取消"""
@@ -306,7 +541,9 @@ class Music(commands.Cog):
     # ─── 指令:play ───
 
     @commands.hybrid_command(
-        name="play", aliases=["p"], description="播放音乐（歌名或链接），支持队列"
+        name="play",
+        aliases=["p"],
+        description="播放音乐（歌名/链接/歌单/Spotify），支持队列",
     )
     async def play(self, ctx, *, query: str):
         await ctx.defer()
@@ -316,70 +553,69 @@ class Music(commands.Cog):
 
         state = self._get_state(ctx.guild.id)
 
-        info = await self._extract_info(query)
-        if not info:
-            await ctx.send("❌ 找不到相关音乐，请换个关键词试试。")
+        try:
+            entries = await self._extract_entries(query)
+        except MusicError as e:
+            await ctx.send(f"❌ {e}")
+            return
+        if not entries:
+            await ctx.send("❌ 找不到相关音乐，请换个关键词或检查链接。")
             return
 
-        song = Song(
-            title=info.get("title", "未知"),
-            url=info.get("webpage_url", query),
-            stream_url=info.get("url", ""),
-            duration=info.get("duration"),
-            thumbnail=info.get("thumbnail"),
-            requester=ctx.author,
-        )
+        songs = [self._song_from_entry(e, ctx.author) for e in entries]
+        is_list = len(songs) > 1
+        playing = state.is_playing or vc.is_playing() or vc.is_paused()
 
-        if state.is_playing or vc.is_playing() or vc.is_paused():
-            state.queue.append(song)
-            embed = discord.Embed(
-                title="📋 已加入队列",
-                description=f"**{song.title}**\n⏱ 时长: {Song.format_duration(song.duration)}",
-                color=discord.Color.blue(),
-            )
-            embed.set_footer(
-                text=f"队列位置: #{len(state.queue)} | 请求者: {ctx.author.display_name}"
-            )
-            if song.thumbnail:
-                embed.set_thumbnail(url=song.thumbnail)
+        if playing:
+            state.queue.extend(songs)
+            if is_list:
+                embed = discord.Embed(
+                    title="📋 歌单已加入队列",
+                    description=f"成功添加 **{len(songs)}** 首歌曲。",
+                    color=discord.Color.blue(),
+                )
+                embed.set_footer(text=f"请求者: {ctx.author.display_name}")
+            else:
+                song = songs[0]
+                embed = discord.Embed(
+                    title="📋 已加入队列",
+                    description=f"**{song.title}**\n⏱ 时长: {Song.format_duration(song.duration)}",
+                    color=discord.Color.blue(),
+                )
+                embed.set_footer(
+                    text=f"队列位置: #{len(state.queue)} | 请求者: {ctx.author.display_name}"
+                )
+                if song.thumbnail:
+                    embed.set_thumbnail(url=song.thumbnail)
             await ctx.send(embed=embed)
-        else:
-            state.cancel_idle()
-            state.current = song
-            state.is_playing = True
-            source = self._make_source(song, state.volume)
-            guild_id = ctx.guild.id
+            return
 
-            def after_play(error):
-                if error:
-                    print(f"[music] 播放错误 (guild {guild_id}): {error}")
-                    state.fail_count += 1
-                    if state.fail_count >= GuildMusicState.MAX_CONSECUTIVE_FAILURES:
-                        print(f"[music] 连续失败 {state.fail_count} 次,停止队列")
-                        state.is_playing = False
-                        botlog = self.bot.get_cog("BotLog")
-                        if botlog:
-                            asyncio.run_coroutine_threadsafe(
-                                botlog.log(
-                                    guild_id,
-                                    "error",
-                                    "音乐播放连续失败,已停止队列",
-                                    f"```{str(error)[:500]}```",
-                                    **{"失败次数": str(state.fail_count)},
-                                ),
-                                self.bot.loop,
-                            )
-                        return
-                else:
-                    state.fail_count = 0
+        # 空闲：第一首立即播放，其余进队列
+        first = songs[0]
+        state.cancel_idle()
 
-                if state.is_playing:
-                    asyncio.run_coroutine_threadsafe(
-                        self._play_next(guild_id), self.bot.loop
-                    )
+        # 歌单/Spotify 条目是惰性的，开播前先解析出 stream_url
+        if not first.stream_url:
+            info = await self._extract_info(first.url)
+            if info:
+                first.stream_url = info.get("url", "")
+                first.stream_at = time.time()
+                first.title = info.get("title", first.title)
+                first.duration = first.duration or info.get("duration")
+                first.thumbnail = first.thumbnail or info.get("thumbnail")
+                first.url = info.get("webpage_url", first.url)
+        if not first.stream_url:
+            await ctx.send("❌ 第一首歌解析失败。")
+            return
 
-            vc.play(source, after=after_play)
-            await self._send_now_playing(ctx, song, state)
+        state.queue.extend(songs[1:])
+        state.current = first
+        state.is_playing = True
+        source = self._make_source(first, state.volume)
+        vc.play(source, after=self._make_after(ctx.guild.id))
+        await self._send_now_playing(ctx, first, state)
+        if is_list:
+            await ctx.send(f"📋 已将歌单中 **{len(songs)}** 首歌加入播放！")
 
     async def _send_now_playing(self, ctx, song: Song, state: GuildMusicState):
         embed = discord.Embed(color=0xFFB6C1)
@@ -665,6 +901,127 @@ class Music(commands.Cog):
         temp.insert(to_pos - 1, song)
         state.queue = deque(temp)
         await ctx.send(f"✅ 已将 **{song.title}** 移动到位置 #{to_pos}")
+
+    # ─── 指令：队列存档 ───
+
+    @commands.hybrid_command(
+        name="saveq", aliases=["savequeue"], description="保存当前队列为存档（可命名）"
+    )
+    async def saveq(self, ctx, *, name: str = "default"):
+        state = self._get_state(ctx.guild.id)
+        songs = ([state.current] if state.current else []) + list(state.queue)
+        if not songs:
+            await ctx.send("❌ 队列为空，没有可保存的内容。")
+            return
+        name = name.strip()[:50]
+        songs = songs[:500]  # 单存档上限保护
+        data = json.dumps([s.to_dict() for s in songs], ensure_ascii=False)
+
+        async with aiosqlite.connect(DB_PATH) as db:
+            cur = await db.execute(
+                "SELECT COUNT(*) FROM saved_queues WHERE guild_id=?", (ctx.guild.id,)
+            )
+            count = (await cur.fetchone())[0]
+            cur = await db.execute(
+                "SELECT 1 FROM saved_queues WHERE guild_id=? AND name=?",
+                (ctx.guild.id, name),
+            )
+            exists = await cur.fetchone()
+            if count >= 25 and not exists:
+                await ctx.send("❌ 每个服务器最多保存 25 个队列存档。")
+                return
+            await db.execute(
+                "INSERT OR REPLACE INTO saved_queues (guild_id, name, songs_json, created_at) VALUES (?,?,?,?)",
+                (ctx.guild.id, name, data, time.time()),
+            )
+            await db.commit()
+        await ctx.send(f"💾 已保存队列存档 **{name}**（{len(songs)} 首）。")
+
+    @commands.hybrid_command(
+        name="loadq", aliases=["loadqueue"], description="载入已保存的队列存档"
+    )
+    async def loadq(self, ctx, *, name: str = "default"):
+        if not await self._require_dj(ctx):
+            return
+        name = name.strip()[:50]
+        async with aiosqlite.connect(DB_PATH) as db:
+            cur = await db.execute(
+                "SELECT songs_json FROM saved_queues WHERE guild_id=? AND name=?",
+                (ctx.guild.id, name),
+            )
+            row = await cur.fetchone()
+        if not row:
+            await ctx.send(f"❌ 找不到名为 **{name}** 的存档，用 `/queues` 查看列表。")
+            return
+        try:
+            items = json.loads(row[0])
+        except Exception:
+            await ctx.send("❌ 存档数据已损坏。")
+            return
+
+        songs = [self._restore_song(d, ctx.guild) for d in items]
+        if not songs:
+            await ctx.send("❌ 存档为空。")
+            return
+
+        state = self._get_state(ctx.guild.id)
+        vc = await self._ensure_voice(ctx)
+        if not vc:
+            return
+
+        if state.is_playing or vc.is_playing() or vc.is_paused():
+            state.queue.extend(songs)
+            await ctx.send(f"💿 已将存档 **{name}** 的 {len(songs)} 首歌加入队列。")
+            return
+
+        state.queue.extend(songs)
+        state.cancel_idle()
+        await ctx.send(f"💿 正在载入存档 **{name}**（{len(songs)} 首）…")
+        await self._play_next(ctx.guild.id)
+
+    @commands.hybrid_command(
+        name="queues",
+        aliases=["savedqueues", "qlist"],
+        description="查看已保存的队列存档",
+    )
+    async def queues(self, ctx):
+        async with aiosqlite.connect(DB_PATH) as db:
+            cur = await db.execute(
+                "SELECT name, songs_json, created_at FROM saved_queues WHERE guild_id=? ORDER BY created_at DESC",
+                (ctx.guild.id,),
+            )
+            rows = await cur.fetchall()
+        if not rows:
+            await ctx.send("📭 还没有保存任何队列存档。用 `/saveq` 保存当前队列。")
+            return
+        embed = discord.Embed(
+            title="💾 已保存的队列存档", color=discord.Color.blurple()
+        )
+        for name, sj, _ in rows[:25]:
+            try:
+                n = len(json.loads(sj))
+            except Exception:
+                n = "?"
+            embed.add_field(name=name, value=f"{n} 首", inline=True)
+        await ctx.send(embed=embed)
+
+    @commands.hybrid_command(
+        name="delqueue", aliases=["delq"], description="删除一个队列存档"
+    )
+    async def delqueue(self, ctx, *, name: str):
+        if not await self._require_dj(ctx):
+            return
+        name = name.strip()[:50]
+        async with aiosqlite.connect(DB_PATH) as db:
+            cur = await db.execute(
+                "DELETE FROM saved_queues WHERE guild_id=? AND name=?",
+                (ctx.guild.id, name),
+            )
+            await db.commit()
+        if cur.rowcount:
+            await ctx.send(f"🗑 已删除存档 **{name}**。")
+        else:
+            await ctx.send(f"❌ 找不到名为 **{name}** 的存档。")
 
     # ─── 指令：join ───
 
