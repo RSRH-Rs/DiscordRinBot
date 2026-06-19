@@ -63,6 +63,7 @@ DB_CMDTOGGLE = os.path.join(BOT_DIR, "commandtoggle.db")
 DB_MUSIC = os.path.join(BOT_DIR, "musicconfig.db")
 DB_BOTLOG = os.path.join(BOT_DIR, "botlog.db")
 DB_SERVERLOG = os.path.join(BOT_DIR, "serverlog.db")
+DB_GLOBAL = os.path.join(BOT_DIR, "globalsettings.db")
 
 
 async def ensure_tables():
@@ -174,6 +175,23 @@ async def ensure_tables():
                 enabled INTEGER DEFAULT 1,
                 categories TEXT DEFAULT '',
                 ignored_channels TEXT DEFAULT '')""")
+            await db.commit()
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            await db.execute("""CREATE TABLE IF NOT EXISTS global_flags (
+                key TEXT PRIMARY KEY,
+                value TEXT DEFAULT '')""")
+            await db.execute("""CREATE TABLE IF NOT EXISTS blacklist (
+                user_id INTEGER PRIMARY KEY,
+                reason TEXT DEFAULT '',
+                added_at REAL DEFAULT 0)""")
+            await db.execute("""CREATE TABLE IF NOT EXISTS broadcasts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                sent_count INTEGER DEFAULT 0,
+                total_count INTEGER DEFAULT 0,
+                created_at REAL DEFAULT 0,
+                done_at REAL DEFAULT 0)""")
             await db.commit()
         print(f"✅ Dashboard DB 就绪 (路径: {BOT_DIR})")
     except Exception as e:
@@ -1337,6 +1355,130 @@ def setup_routes(app, discord):
             )
         except Exception as e:
             return jsonify({"online": False, "error": str(e)})
+
+    # ── 全局：维护模式 / 黑名单 / 公告（owner-only）──
+
+    @app.route("/api/bot/maintenance", methods=["GET"])
+    async def api_maint_get():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            cur = await db.execute(
+                "SELECT key, value FROM global_flags WHERE key IN ('maintenance','maintenance_msg')"
+            )
+            rows = dict(await cur.fetchall())
+        return jsonify(
+            {
+                "maintenance": rows.get("maintenance") == "1",
+                "message": rows.get("maintenance_msg", ""),
+            }
+        )
+
+    @app.route("/api/bot/maintenance", methods=["POST"])
+    async def api_maint_post():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        d = await request.get_json()
+        on = "1" if d.get("maintenance") else "0"
+        msg = (d.get("message") or "")[:300]
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            await db.execute(
+                "INSERT OR REPLACE INTO global_flags (key, value) VALUES ('maintenance', ?)",
+                (on,),
+            )
+            await db.execute(
+                "INSERT OR REPLACE INTO global_flags (key, value) VALUES ('maintenance_msg', ?)",
+                (msg,),
+            )
+            await db.commit()
+        return jsonify({"ok": True})
+
+    @app.route("/api/bot/blacklist", methods=["GET"])
+    async def api_bl_get():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            cur = await db.execute(
+                "SELECT user_id, reason, added_at FROM blacklist ORDER BY added_at DESC"
+            )
+            rows = await cur.fetchall()
+        return jsonify(
+            [{"user_id": str(r[0]), "reason": r[1], "added_at": r[2]} for r in rows]
+        )
+
+    @app.route("/api/bot/blacklist", methods=["POST"])
+    async def api_bl_add():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        d = await request.get_json()
+        try:
+            uid = int(str(d.get("user_id", "")).strip())
+        except ValueError:
+            return jsonify({"error": "用户 ID 必须是数字"}), 400
+        if OWNER_ID and uid == int(OWNER_ID):
+            return jsonify({"error": "不能把自己加入黑名单"}), 400
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            await db.execute(
+                "INSERT OR REPLACE INTO blacklist (user_id, reason, added_at) VALUES (?, ?, ?)",
+                (uid, (d.get("reason") or "")[:200], time.time()),
+            )
+            await db.commit()
+        return jsonify({"ok": True})
+
+    @app.route("/api/bot/blacklist/remove", methods=["POST"])
+    async def api_bl_remove():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        d = await request.get_json()
+        try:
+            uid = int(str(d.get("user_id", "")).strip())
+        except ValueError:
+            return jsonify({"error": "无效 ID"}), 400
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            await db.execute("DELETE FROM blacklist WHERE user_id=?", (uid,))
+            await db.commit()
+        return jsonify({"ok": True})
+
+    @app.route("/api/bot/announce", methods=["POST"])
+    async def api_announce():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        d = await request.get_json()
+        msg = (d.get("message") or "").strip()
+        if not msg:
+            return jsonify({"error": "公告内容不能为空"}), 400
+        if len(msg) > 1800:
+            return jsonify({"error": "公告过长（最多 1800 字）"}), 400
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            await db.execute(
+                "INSERT INTO broadcasts (message, status, created_at) VALUES (?, 'pending', ?)",
+                (msg, time.time()),
+            )
+            await db.commit()
+        return jsonify({"ok": True})
+
+    @app.route("/api/bot/announce/recent")
+    async def api_announce_recent():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            cur = await db.execute(
+                "SELECT message, status, sent_count, total_count, created_at "
+                "FROM broadcasts ORDER BY id DESC LIMIT 5"
+            )
+            rows = await cur.fetchall()
+        return jsonify(
+            [
+                {
+                    "message": r[0],
+                    "status": r[1],
+                    "sent": r[2],
+                    "total": r[3],
+                    "created_at": r[4],
+                }
+                for r in rows
+            ]
+        )
 
     @app.route("/api/bot/personalizer", methods=["GET"])
     async def api_bot_cfg_get():

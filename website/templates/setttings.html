@@ -132,6 +132,46 @@
                 <div class="sec-btns"><button class="btn-save" onclick="saveAvatar(this)">上传头像</button></div>
             </div>
 
+            <!-- 全局公告 -->
+            <div class="cfg-section">
+                <div class="cfg-section-title">📢 全局公告</div>
+                <div class="cfg-row" style="flex-direction:column;align-items:stretch;gap:10px;">
+                    <div class="cfg-row-info"><div class="cfg-row-label">向所有服务器广播</div><div class="cfg-row-hint">发送到每个服务器的系统频道（没有则发第一个可发言的频道）</div></div>
+                    <textarea class="cfg-textarea" id="ann-msg" maxlength="1800" placeholder="输入公告内容…" style="width:100%;min-height:90px;"></textarea>
+                </div>
+                <div class="sec-btns"><button class="btn-save" onclick="sendAnnounce(this)">发送给所有服务器</button></div>
+                <div class="cfg-row-hint" style="margin-top:18px;">最近发送</div>
+                <div id="ann-recent" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
+            </div>
+
+            <!-- 维护模式 -->
+            <div class="cfg-section">
+                <div class="cfg-section-title">🔧 维护模式</div>
+                <div class="cfg-row">
+                    <div class="cfg-row-info"><div class="cfg-row-label">开启维护模式</div><div class="cfg-row-hint">开启后，除主人外所有人都无法使用指令</div></div>
+                    <label class="cfg-tog"><input type="checkbox" id="maint-on"><span class="track"></span><span class="thumb"></span></label>
+                </div>
+                <div class="cfg-row">
+                    <div class="cfg-row-info"><div class="cfg-row-label">提示文案</div><div class="cfg-row-hint">用户尝试使用指令时看到的提示</div></div>
+                    <input class="cfg-input" id="maint-msg" maxlength="300" placeholder="🔧 机器人维护中，请稍后再试" style="max-width:300px;">
+                </div>
+                <div class="sec-btns"><button class="btn-save" onclick="saveMaint(this)">保存</button></div>
+            </div>
+
+            <!-- 黑名单 -->
+            <div class="cfg-section">
+                <div class="cfg-section-title">🚫 黑名单</div>
+                <div class="cfg-row" style="flex-direction:column;align-items:stretch;gap:10px;">
+                    <div class="cfg-row-info"><div class="cfg-row-label">禁止用户使用 Bot</div><div class="cfg-row-hint">填 Discord 用户 ID，黑名单用户无法使用任何指令</div></div>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <input class="cfg-input" id="bl-id" placeholder="用户 ID" style="max-width:180px;">
+                        <input class="cfg-input" id="bl-reason" placeholder="原因（可选）" style="max-width:180px;">
+                        <button class="btn-save" onclick="addBlacklist(this)">加入黑名单</button>
+                    </div>
+                </div>
+                <div id="bl-list" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
+            </div>
+
         </div>
     </main>
 
@@ -241,8 +281,79 @@
         }
     }
 
+    /* ── 全局公告 ── */
+    function esc(s){const d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
+    async function sendAnnounce(btn){
+        const msg=document.getElementById('ann-msg').value.trim();
+        if(!msg){showToast('❌ 公告内容不能为空');return;}
+        if(!confirm('确定向所有服务器发送这条公告？')) return;
+        btn.disabled=true;
+        try{ await jpost('/api/bot/announce',{message:msg}); showToast('✅ 已加入发送队列，稍后送达'); document.getElementById('ann-msg').value=''; setTimeout(loadRecent,1500); }
+        catch(e){showToast('❌ '+e.message);}
+        btn.disabled=false;
+    }
+    async function loadRecent(){
+        const box=document.getElementById('ann-recent');
+        try{
+            const r=await fetch('/api/bot/announce/recent'); const list=await r.json();
+            if(!Array.isArray(list)||!list.length){box.innerHTML='<div class="cfg-row-hint">暂无记录</div>';return;}
+            const stat={pending:'⏳ 队列中',sending:'📤 发送中',done:'✅ 已发送'};
+            box.innerHTML=list.map(b=>{
+                const snip=esc(b.message.length>40?b.message.slice(0,40)+'…':b.message);
+                const s=stat[b.status]||esc(b.status);
+                const cnt=b.status==='done'?` (${b.sent}/${b.total})`:'';
+                return `<div style="display:flex;justify-content:space-between;gap:12px;font-size:.82rem;padding:8px 12px;background:var(--warm,#f6f1ec);border-radius:10px;"><span style="color:var(--mid,#776);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${snip}</span><span style="flex-shrink:0;color:var(--muted,#a99);">${s}${cnt}</span></div>`;
+            }).join('');
+        }catch(e){}
+    }
+
+    /* ── 维护模式 ── */
+    async function loadMaint(){
+        try{
+            const r=await fetch('/api/bot/maintenance'); const d=await r.json();
+            document.getElementById('maint-on').checked=!!d.maintenance;
+            document.getElementById('maint-msg').value=d.message||'';
+        }catch(e){}
+    }
+    async function saveMaint(btn){
+        btn.disabled=true;
+        try{
+            await jpost('/api/bot/maintenance',{maintenance:document.getElementById('maint-on').checked,message:document.getElementById('maint-msg').value});
+            showToast('✅ 维护设置已保存');
+        }catch(e){showToast('❌ '+e.message);}
+        btn.disabled=false;
+    }
+
+    /* ── 黑名单 ── */
+    async function loadBlacklist(){
+        const box=document.getElementById('bl-list');
+        try{
+            const r=await fetch('/api/bot/blacklist'); const list=await r.json();
+            if(!Array.isArray(list)||!list.length){box.innerHTML='<div class="cfg-row-hint">黑名单为空</div>';return;}
+            box.innerHTML=list.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;background:var(--warm,#f6f1ec);border-radius:10px;"><span style="font-size:.85rem;"><b>${esc(b.user_id)}</b>${b.reason?' · <span style="color:var(--mid,#776);">'+esc(b.reason)+'</span>':''}</span><button class="btn-save" style="padding:4px 12px;font-size:.78rem;" onclick="removeBlacklist('${esc(b.user_id)}')">移除</button></div>`).join('');
+        }catch(e){}
+    }
+    async function addBlacklist(btn){
+        const id=document.getElementById('bl-id').value.trim();
+        if(!/^\d{5,}$/.test(id)){showToast('❌ 请输入有效的用户 ID');return;}
+        btn.disabled=true;
+        try{
+            await jpost('/api/bot/blacklist',{user_id:id,reason:document.getElementById('bl-reason').value});
+            document.getElementById('bl-id').value='';document.getElementById('bl-reason').value='';
+            showToast('✅ 已加入黑名单'); loadBlacklist();
+        }catch(e){showToast('❌ '+e.message);}
+        btn.disabled=false;
+    }
+    async function removeBlacklist(id){
+        try{ await jpost('/api/bot/blacklist/remove',{user_id:id}); showToast('✅ 已移除'); loadBlacklist(); }
+        catch(e){showToast('❌ '+e.message);}
+    }
+
     loadProfile();
     loadHealth();
+    loadMaint();
+    loadBlacklist();
+    loadRecent();
     setInterval(loadHealth,30000);
     </script>
 </body>
