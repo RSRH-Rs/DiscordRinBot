@@ -14,6 +14,13 @@ import json
 import os
 from collections import deque
 from typing import Literal, Optional
+from concurrent.futures import ProcessPoolExecutor
+
+
+def _ytdl_run(query: str, opts: dict):
+    """在独立进程里跑 yt-dlp，避免 CPU 密集解析霸占主进程 GIL 导致交互超时"""
+    with yt_dlp.YoutubeDL(opts) as ydl:
+        return ydl.extract_info(query, download=False)
 
 from config import YTDL_OPTIONS, FFMPEG_OPTIONS
 
@@ -258,6 +265,12 @@ class Music(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self._states: dict[int, GuildMusicState] = {}
+        self._pool = None
+
+    def _get_pool(self) -> ProcessPoolExecutor:
+        if self._pool is None:
+            self._pool = ProcessPoolExecutor(max_workers=2)
+        return self._pool
 
     def _get_state(self, guild_id: int) -> GuildMusicState:
         if guild_id not in self._states:
@@ -281,6 +294,8 @@ class Music(commands.Cog):
         for state in self._states.values():
             if state._task:
                 state._task.cancel()
+        if self._pool:
+            self._pool.shutdown(wait=False)
 
     # ─── 内部工具 ───
 
@@ -324,21 +339,18 @@ class Music(commands.Cog):
         return ch or ctx.channel
 
     async def _extract_info(self, query: str) -> Optional[dict]:
-        """用 yt-dlp 提取音频信息（异步包装）"""
         loop = asyncio.get_event_loop()
         opts = {**YTDL_OPTIONS, "extract_flat": False}
-
-        def _extract():
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(query, download=False)
-                if "entries" in info:
-                    return info["entries"][0] if info["entries"] else None
-                return info
-
         try:
-            return await loop.run_in_executor(None, _extract)
+            info = await loop.run_in_executor(self._get_pool(), _ytdl_run, query, opts)
         except Exception:
             return None
+        if not info:
+            return None
+        if "entries" in info:
+            entries = info["entries"]
+            return entries[0] if entries else None
+        return info
 
     def _make_source(self, song: Song, volume: float):
         source = discord.FFmpegPCMAudio(song.stream_url, **FFMPEG_OPTIONS)
@@ -491,16 +503,11 @@ class Music(commands.Cog):
         """扁平搜索前 n 个候选（不逐个完整解析，快）"""
         loop = asyncio.get_event_loop()
         opts = {**YTDL_OPTIONS, "extract_flat": True, "noplaylist": True}
-
-        def _run():
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(f"ytsearch{n}:{query}", download=False)
-                return info.get("entries", []) if info else []
-
         try:
-            entries = await loop.run_in_executor(None, _run)
+            info = await loop.run_in_executor(self._get_pool(), _ytdl_run, f"ytsearch{n}:{query}", opts)
         except Exception:
             return []
+        entries = info.get("entries", []) if info else []
         out = []
         for e in entries:
             if not e:
