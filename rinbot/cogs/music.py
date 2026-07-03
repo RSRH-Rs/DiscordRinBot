@@ -56,7 +56,15 @@ class _RestoredUser:
 class Song:
     """封装一首歌的信息"""
 
-    __slots__ = ("title", "url", "stream_url", "duration", "thumbnail", "requester", "stream_at")
+    __slots__ = (
+        "title",
+        "url",
+        "stream_url",
+        "duration",
+        "thumbnail",
+        "requester",
+        "stream_at",
+    )
 
     def __init__(self, title, url, stream_url, duration, thumbnail, requester):
         self.title = title
@@ -65,7 +73,9 @@ class Song:
         self.duration = duration
         self.thumbnail = thumbnail
         self.requester = requester
-        self.stream_at = time.time() if stream_url else 0.0  # 流地址获取时间，用于判断是否需重新解析
+        self.stream_at = (
+            time.time() if stream_url else 0.0
+        )  # 流地址获取时间，用于判断是否需重新解析
 
     @staticmethod
     def format_duration(seconds):
@@ -212,16 +222,20 @@ class SearchView(View):
         for i, r in enumerate(results):
             dur = Song.format_duration(r["duration"])
             desc = f"{r['uploader']} · {dur}" if r["uploader"] else dur
-            options.append(discord.SelectOption(
-                label=r["title"][:100], value=str(i), description=desc[:100]
-            ))
+            options.append(
+                discord.SelectOption(
+                    label=r["title"][:100], value=str(i), description=desc[:100]
+                )
+            )
         select = discord.ui.Select(placeholder="选择要播放的歌曲…", options=options)
         select.callback = self._on_select
         self.add_item(select)
 
     async def _on_select(self, interaction: discord.Interaction):
         if interaction.user.id != self.ctx.author.id:
-            await interaction.response.send_message("只有发起搜索的人能选择哦。", ephemeral=True)
+            await interaction.response.send_message(
+                "只有发起搜索的人能选择哦。", ephemeral=True
+            )
             return
         idx = int(interaction.data["values"][0])
         await interaction.response.defer()
@@ -390,7 +404,11 @@ class Music(commands.Cog):
             loop = asyncio.get_event_loop()
 
             def _extract():
-                opts = {**YTDL_OPTIONS, "noplaylist": False, "extract_flat": "in_playlist"}
+                opts = {
+                    **YTDL_OPTIONS,
+                    "noplaylist": False,
+                    "extract_flat": "in_playlist",
+                }
                 with yt_dlp.YoutubeDL(opts) as ydl:
                     info = ydl.extract_info(query, download=False)
                 if not info or not info.get("entries"):
@@ -404,12 +422,14 @@ class Music(commands.Cog):
                         url = f"https://www.youtube.com/watch?v={e['id']}"
                     if not url:
                         continue
-                    out.append({
-                        "title": e.get("title", "未知"),
-                        "url": url,
-                        "duration": e.get("duration"),
-                        "thumbnail": e.get("thumbnail"),
-                    })
+                    out.append(
+                        {
+                            "title": e.get("title", "未知"),
+                            "url": url,
+                            "duration": e.get("duration"),
+                            "thumbnail": e.get("thumbnail"),
+                        }
+                    )
                 return out
 
             try:
@@ -421,19 +441,23 @@ class Music(commands.Cog):
         info = await self._extract_info(query)
         if not info:
             return []
-        return [{
-            "title": info.get("title", "未知"),
-            "url": info.get("webpage_url", query),
-            "duration": info.get("duration"),
-            "thumbnail": info.get("thumbnail"),
-            "stream_url": info.get("url", ""),
-        }]
+        return [
+            {
+                "title": info.get("title", "未知"),
+                "url": info.get("webpage_url", query),
+                "duration": info.get("duration"),
+                "thumbnail": info.get("thumbnail"),
+                "stream_url": info.get("url", ""),
+            }
+        ]
 
     async def _spotify_to_entries(self, url: str) -> list[dict]:
         if not _SPOTIPY_AVAILABLE:
             raise MusicError("Spotify 支持未安装，请先 `pip install spotipy`。")
         if not SPOTIFY_CLIENT_ID or not SPOTIFY_CLIENT_SECRET:
-            raise MusicError("Spotify 未配置，请在 config.py 填入 SPOTIFY_CLIENT_ID / SECRET。")
+            raise MusicError(
+                "Spotify 未配置，请在 config.py 填入 SPOTIFY_CLIENT_ID / SECRET。"
+            )
 
         loop = asyncio.get_event_loop()
 
@@ -449,7 +473,9 @@ class Music(commands.Cog):
             elif "/playlist/" in url:
                 res = sp.playlist_items(url, additional_types=("track",))
                 while res:
-                    tracks += [it["track"] for it in res["items"] if it and it.get("track")]
+                    tracks += [
+                        it["track"] for it in res["items"] if it and it.get("track")
+                    ]
                     res = sp.next(res) if res.get("next") else None
             elif "/album/" in url:
                 alb = sp.album(url)
@@ -465,17 +491,25 @@ class Music(commands.Cog):
                 if not t:
                     continue
                 name = t.get("name", "")
-                artists = ", ".join(a["name"] for a in t.get("artists", []) if a.get("name"))
+                artists = ", ".join(
+                    a["name"] for a in t.get("artists", []) if a.get("name")
+                )
                 q = f"{name} {artists}".strip()
                 if not q:
                     continue
                 imgs = (t.get("album") or {}).get("images") or []
-                out.append({
-                    "title": q,
-                    "url": f"ytsearch1:{q}",  # 播放时再去 YouTube 解析
-                    "duration": round(t["duration_ms"] / 1000) if t.get("duration_ms") else None,
-                    "thumbnail": imgs[0]["url"] if imgs else default_thumb,
-                })
+                out.append(
+                    {
+                        "title": q,
+                        "url": f"ytsearch1:{q}",  # 播放时再去 YouTube 解析
+                        "duration": (
+                            round(t["duration_ms"] / 1000)
+                            if t.get("duration_ms")
+                            else None
+                        ),
+                        "thumbnail": imgs[0]["url"] if imgs else default_thumb,
+                    }
+                )
             return out
 
         try:
@@ -502,16 +536,21 @@ class Music(commands.Cog):
             if not e:
                 continue
             vid = e.get("id")
-            url = e.get("url") or (f"https://www.youtube.com/watch?v={vid}" if vid else "")
+            url = e.get("url") or (
+                f"https://www.youtube.com/watch?v={vid}" if vid else ""
+            )
             if not url:
                 continue
-            out.append({
-                "title": e.get("title", "未知"),
-                "url": url,
-                "duration": e.get("duration"),
-                "thumbnail": e.get("thumbnail"),
-                "uploader": e.get("uploader") or e.get("channel") or "",
-            })
+            out.append(
+                {
+                    "title": e.get("title", "未知"),
+                    "url": url,
+                    "duration": e.get("duration"),
+                    "thumbnail": e.get("thumbnail")
+                    or (f"https://i.ytimg.com/vi/{vid}/mqdefault.jpg" if vid else None),
+                    "uploader": e.get("uploader") or e.get("channel") or "",
+                }
+            )
         return out
 
     def _song_from_entry(self, e: dict, requester) -> Song:
@@ -564,7 +603,10 @@ class Music(commands.Cog):
         # 流地址会过期；仅当为空或已超过 30 分钟才重新解析
         # （刚入队的歌地址还新鲜，避免「第一首被提取两次」的多余等待）
         STREAM_TTL = 1800
-        if not state.current.stream_url or (time.time() - getattr(state.current, "stream_at", 0)) > STREAM_TTL:
+        if (
+            not state.current.stream_url
+            or (time.time() - getattr(state.current, "stream_at", 0)) > STREAM_TTL
+        ):
             info = await self._extract_info(state.current.url)
             if info:
                 state.current.stream_url = info.get("url", state.current.stream_url)
@@ -662,26 +704,32 @@ class Music(commands.Cog):
         if is_list:
             await ctx.send(f"📋 已将歌单中 **{len(songs)}** 首歌加入播放！")
 
-    @commands.hybrid_command(name="search", aliases=["sc"], description="搜索歌曲并从结果中选择播放")
+    @commands.hybrid_command(
+        name="search", aliases=["sc"], description="搜索歌曲并从结果中选择播放"
+    )
     async def search(self, ctx, *, query: str):
         await ctx.defer()
         results = await self._search_flat(query, 5)
         if not results:
             await ctx.send("❌ 没找到相关歌曲，换个关键词试试。")
             return
-        lines = []
+        embeds = []
         for i, r in enumerate(results, 1):
             dur = Song.format_duration(r["duration"])
-            up = f" · {r['uploader']}" if r["uploader"] else ""
-            lines.append(f"**{i}.** {r['title']}  `{dur}`{up}")
-        embed = discord.Embed(
-            title=f"🔍 “{query}” 的搜索结果",
-            description="\n".join(lines),
-            color=0xFFB6C1,
-        )
-        embed.set_footer(text="60 秒内从下方菜单选择")
+            desc = f"👤 {r['uploader']}　⏱ {dur}" if r["uploader"] else f"⏱ {dur}"
+            e = discord.Embed(
+                title=f"{i}. {r['title'][:250]}",
+                url=r["url"],
+                description=desc,
+                color=0xFFB6C1,
+            )
+            if r.get("thumbnail"):
+                e.set_thumbnail(url=r["thumbnail"])
+            embeds.append(e)
+        embeds[0].set_author(name=f"🔍 “{query}” 的搜索结果")
+        embeds[-1].set_footer(text="60 秒内从下方菜单选择要播放的歌曲")
         view = SearchView(self, ctx, results)
-        view.message = await ctx.send(embed=embed, view=view)
+        view.message = await ctx.send(embeds=embeds, view=view)
 
     async def _send_now_playing(self, ctx, song: Song, state: GuildMusicState):
         embed = discord.Embed(color=0xFFB6C1)
@@ -1046,7 +1094,9 @@ class Music(commands.Cog):
         await self._play_next(ctx.guild.id)
 
     @commands.hybrid_command(
-        name="queues", aliases=["savedqueues", "qlist"], description="查看已保存的队列存档"
+        name="queues",
+        aliases=["savedqueues", "qlist"],
+        description="查看已保存的队列存档",
     )
     async def queues(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
@@ -1058,7 +1108,9 @@ class Music(commands.Cog):
         if not rows:
             await ctx.send("📭 还没有保存任何队列存档。用 `/saveq` 保存当前队列。")
             return
-        embed = discord.Embed(title="💾 已保存的队列存档", color=discord.Color.blurple())
+        embed = discord.Embed(
+            title="💾 已保存的队列存档", color=discord.Color.blurple()
+        )
         for name, sj, _ in rows[:25]:
             try:
                 n = len(json.loads(sj))
@@ -1067,7 +1119,9 @@ class Music(commands.Cog):
             embed.add_field(name=name, value=f"{n} 首", inline=True)
         await ctx.send(embed=embed)
 
-    @commands.hybrid_command(name="delqueue", aliases=["delq"], description="删除一个队列存档")
+    @commands.hybrid_command(
+        name="delqueue", aliases=["delq"], description="删除一个队列存档"
+    )
     async def delqueue(self, ctx, *, name: str):
         if not await self._require_dj(ctx):
             return
