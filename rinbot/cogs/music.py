@@ -236,16 +236,15 @@ class SearchView(View):
             return
         idx = int(interaction.data["values"][0])
         await interaction.response.defer()
-        for c in self.children:
-            c.disabled = True
+        chosen = self.results[idx]
         try:
             if self.message:
-                await self.message.edit(view=self)
+                await self.message.edit(content=f"✅ 已选择：**{chosen['title']}**", embeds=[], view=None)
         except Exception:
             pass
         vc = await self.cog._ensure_voice(self.ctx)
         if vc:
-            song = self.cog._song_from_entry(self.results[idx], self.ctx.author)
+            song = self.cog._song_from_entry(chosen, self.ctx.author)
             await self.cog._enqueue(self.ctx, vc, [song])
         self.stop()
 
@@ -605,6 +604,10 @@ class Music(commands.Cog):
     )
     async def play(self, ctx, *, query: str):
         await ctx.defer()
+        # 关键词走选择菜单（避免选错），链接/歌单直接播
+        if not query.strip().lower().startswith(("http://", "https://")):
+            await self._show_picker(ctx, query)
+            return
         vc = await self._ensure_voice(ctx)
         if not vc:
             return
@@ -614,7 +617,7 @@ class Music(commands.Cog):
             await ctx.send(f"❌ {e}")
             return
         if not entries:
-            await ctx.send("❌ 找不到相关音乐，请换个关键词或检查链接。")
+            await ctx.send("❌ 找不到相关音乐，请检查链接。")
             return
         songs = [self._song_from_entry(e, ctx.author) for e in entries]
         await self._enqueue(ctx, vc, songs)
@@ -676,6 +679,9 @@ class Music(commands.Cog):
     @commands.hybrid_command(name="search", aliases=["sc"], description="搜索歌曲并从结果中选择播放")
     async def search(self, ctx, *, query: str):
         await ctx.defer()
+        await self._show_picker(ctx, query)
+
+    async def _show_picker(self, ctx, query: str):
         results = await self._search_flat(query, 5)
         if not results:
             await ctx.send("❌ 没找到相关歌曲，换个关键词试试。")
