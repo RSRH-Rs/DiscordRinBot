@@ -141,9 +141,24 @@ class Welcome(commands.Cog):
                     farewell_channel INTEGER DEFAULT 0,
                     auto_roles TEXT DEFAULT '',
                     welcome_msg TEXT DEFAULT '欢迎 {member} 加入 {server}！🎉',
-                    farewell_msg TEXT DEFAULT '{member} 离开了我们... 👋'
+                    farewell_msg TEXT DEFAULT '{member} 离开了我们... 👋',
+                    show_card INTEGER DEFAULT 0,
+                    welcome_title TEXT DEFAULT '',
+                    author_icon TEXT DEFAULT '',
+                    thumbnail_url TEXT DEFAULT ''
                 )
             """)
+            # 旧库补列
+            for ddl in (
+                "show_card INTEGER DEFAULT 0",
+                "welcome_title TEXT DEFAULT ''",
+                "author_icon TEXT DEFAULT ''",
+                "thumbnail_url TEXT DEFAULT ''",
+            ):
+                try:
+                    await db.execute(f"ALTER TABLE welcome_config ADD COLUMN {ddl}")
+                except Exception:
+                    pass
             await db.commit()
         print("✅ 迎新 & 道别系统已准备就绪！")
 
@@ -264,6 +279,35 @@ class Welcome(commands.Cog):
     # ─── 事件监听 ───
 
     @commands.Cog.listener()
+    def _build_welcome_embed(self, member, config):
+        guild = member.guild
+        title = (config.get("welcome_title") or "").strip() or f"欢迎来到 {guild.name}"
+        icon = (config.get("author_icon") or "").strip() or (
+            guild.icon.url if guild.icon else None
+        )
+        thumb = (config.get("thumbnail_url") or "").strip() or member.display_avatar.url
+        msg = (config.get("welcome_msg") or "欢迎 {member} 加入 {server}！🎉").format(
+            member=member.mention, server=guild.name
+        )
+        embed = discord.Embed(description=msg, color=discord.Color.pink())
+        embed.set_author(name=title, icon_url=icon)
+        embed.set_thumbnail(url=thumb)
+        return embed
+
+    async def _render_card_file(self, member):
+        try:
+            avatar_data = await member.display_avatar.with_size(256).read()
+            avatar_img = Image.open(io.BytesIO(avatar_data))
+        except Exception:
+            avatar_img = Image.new("RGBA", (256, 256), (200, 200, 200, 255))
+        buf = self._generate_welcome_card(
+            member_name=member.display_name,
+            guild_name=member.guild.name,
+            member_count=member.guild.member_count,
+            avatar_img=avatar_img,
+        )
+        return discord.File(fp=buf, filename="welcome.png")
+
     async def on_member_join(self, member: discord.Member):
         if member.bot:
             return
@@ -283,7 +327,7 @@ class Welcome(commands.Cog):
                     except discord.Forbidden:
                         pass
 
-        # 2. 发送欢迎图卡
+        # 2. 发送欢迎卡
         channel_id = config.get("welcome_channel", 0)
         if not channel_id:
             return
@@ -291,33 +335,14 @@ class Welcome(commands.Cog):
         if not channel:
             return
 
-        # 获取头像
-        try:
-            avatar_data = await member.display_avatar.with_size(256).read()
-            avatar_img = Image.open(io.BytesIO(avatar_data))
-        except Exception:
-            avatar_img = Image.new("RGBA", (256, 256), (200, 200, 200, 255))
+        embed = self._build_welcome_embed(member, config)
+        files = []
+        if config.get("show_card", 0):
+            card = await self._render_card_file(member)
+            files.append(card)
+            embed.set_image(url="attachment://welcome.png")
 
-        # 生成图卡
-        card_buffer = self._generate_welcome_card(
-            member_name=member.display_name,
-            guild_name=member.guild.name,
-            member_count=member.guild.member_count,
-            avatar_img=avatar_img,
-        )
-
-        embed = discord.Embed(
-            description=config["welcome_msg"].format(
-                member=member.mention, server=member.guild.name
-            ),
-            color=discord.Color.pink(),
-        )
-        embed.set_footer(text=f"ID: {member.id}")
-
-        await channel.send(
-            embed=embed,
-            file=discord.File(fp=card_buffer, filename="welcome.png"),
-        )
+        await channel.send(embed=embed, files=files)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
@@ -388,32 +413,71 @@ class Welcome(commands.Cog):
         preview = text.format(member=ctx.author.mention, server=ctx.guild.name)
         await ctx.send(f"✅ 已更新 {msg_type} 消息！\n预览: {preview}")
 
-    @commands.hybrid_command(name="welcome_test", description="[管理] 测试欢迎图卡效果")
+    @commands.hybrid_command(name="welcome_test", description="[管理] 预览欢迎卡片效果")
     @commands.has_permissions(manage_guild=True)
     async def welcome_test(self, ctx):
         await ctx.defer()
-        try:
-            avatar_data = await ctx.author.display_avatar.with_size(256).read()
-            avatar_img = Image.open(io.BytesIO(avatar_data))
-        except Exception:
-            avatar_img = Image.new("RGBA", (256, 256), (200, 200, 200, 255))
-
-        card_buffer = self._generate_welcome_card(
-            member_name=ctx.author.display_name,
-            guild_name=ctx.guild.name,
-            member_count=ctx.guild.member_count,
-            avatar_img=avatar_img,
-        )
         config = await self._get_config(ctx.guild.id) or {}
-        msg = config.get("welcome_msg", "欢迎 {member} 加入 {server}！🎉")
+        embed = self._build_welcome_embed(ctx.author, config)
+        files = []
+        if config.get("show_card", 0):
+            card = await self._render_card_file(ctx.author)
+            files.append(card)
+            embed.set_image(url="attachment://welcome.png")
+        await ctx.send(embed=embed, files=files)
 
-        embed = discord.Embed(
-            title="🧪 欢迎图卡预览",
-            description=msg.format(member=ctx.author.mention, server=ctx.guild.name),
-            color=discord.Color.pink(),
-        )
+    @commands.hybrid_command(
+        name="welcome_title", description="[管理] 自定义欢迎卡标题"
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def welcome_title(self, ctx, *, text: str):
+        await self._set_config(ctx.guild.id, "welcome_title", text[:200])
+        await ctx.send(f"✅ 欢迎卡标题已设为：{text[:200]}", ephemeral=True)
+
+    @commands.hybrid_command(
+        name="welcome_icon", description="[管理] 自定义标题小图标（留空恢复服务器头像）"
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def welcome_icon(self, ctx, url: str = ""):
+        url = url.strip()
+        if url and not url.lower().startswith(("http://", "https://")):
+            await ctx.send(
+                "❌ 请提供有效图片链接（http/https），或留空恢复默认。", ephemeral=True
+            )
+            return
+        await self._set_config(ctx.guild.id, "author_icon", url)
         await ctx.send(
-            embed=embed, file=discord.File(fp=card_buffer, filename="welcome_test.png")
+            "✅ 已恢复默认（服务器头像）。" if not url else "✅ 标题图标已更新。",
+            ephemeral=True,
+        )
+
+    @commands.hybrid_command(
+        name="welcome_thumbnail",
+        aliases=["welcome_thumb"],
+        description="[管理] 自定义右侧缩略图（留空恢复用户头像）",
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def welcome_thumbnail(self, ctx, url: str = ""):
+        url = url.strip()
+        if url and not url.lower().startswith(("http://", "https://")):
+            await ctx.send(
+                "❌ 请提供有效图片链接（http/https），或留空恢复默认。", ephemeral=True
+            )
+            return
+        await self._set_config(ctx.guild.id, "thumbnail_url", url)
+        await ctx.send(
+            "✅ 已恢复默认（用户头像）。" if not url else "✅ 缩略图已更新。",
+            ephemeral=True,
+        )
+
+    @commands.hybrid_command(
+        name="welcome_card", description="[管理] 是否附带图片横幅卡面"
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def welcome_card(self, ctx, enabled: bool):
+        await self._set_config(ctx.guild.id, "show_card", 1 if enabled else 0)
+        await ctx.send(
+            f"✅ 图片横幅已{'开启' if enabled else '关闭'}。", ephemeral=True
         )
 
     @commands.hybrid_command(

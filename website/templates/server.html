@@ -151,6 +151,26 @@
         <div class="warn-box">⚠️ 请确保该身份组的位置在机器人下方，并且机器人有管理身份组权限</div>
     </div>
 
+    <div class="cfg-section">
+        <div class="cfg-section-title">🎨 欢迎卡样式</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">卡片标题</div><div class="cfg-row-hint">留空则显示「欢迎来到 服务器名」</div></div>
+            <input class="cfg-input" id="w-title" maxlength="200" placeholder="欢迎来到 服务器名" style="max-width:280px;">
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">标题小图标链接</div><div class="cfg-row-hint">留空使用服务器头像</div></div>
+            <input class="cfg-input" id="w-icon" placeholder="https://…（留空=服务器头像）" style="max-width:280px;">
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">右侧缩略图链接</div><div class="cfg-row-hint">留空使用新成员头像</div></div>
+            <input class="cfg-input" id="w-thumb" placeholder="https://…（留空=用户头像）" style="max-width:280px;">
+        </div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">附带图片横幅</div><div class="cfg-row-hint">额外发送一张生成的横幅大图</div></div>
+            <label class="cfg-tog"><input type="checkbox" id="w-card"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+    </div>
+
     <div class="save-bar" id="w-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="w-save" onclick="saveWelcome()">储存设定</button></div>
 </div>
 

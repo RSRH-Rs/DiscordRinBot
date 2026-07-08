@@ -107,12 +107,16 @@ async function loadWelcome() {
         chOpts('w-fch', ch, cfg.farewell_channel);
         document.getElementById('w-msg').value = cfg.welcome_msg || '';
         document.getElementById('w-fmsg').value = cfg.farewell_msg || '';
+        document.getElementById('w-title').value = cfg.welcome_title || '';
+        document.getElementById('w-icon').value = cfg.author_icon || '';
+        document.getElementById('w-thumb').value = cfg.thumbnail_url || '';
+        document.getElementById('w-card').checked = !!cfg.show_card;
         const autoRoles = cfg.auto_roles ? cfg.auto_roles.split(',').filter(Boolean) : [];
         document.getElementById('w-roles').innerHTML = roles.map(r =>
             `<label class="role-opt"><input type="checkbox" value="${r.id}" ${autoRoles.includes(String(r.id))?'checked':''} onchange="markDirty('w-savebar')"> ${escapeHtml(r.name)}</label>`
         ).join('');
         // Attach dirty listeners
-        document.querySelectorAll('#w-ch,#w-fch,#w-msg,#w-fmsg').forEach(el => el.addEventListener('input', () => markDirty('w-savebar')));
+        document.querySelectorAll('#w-ch,#w-fch,#w-msg,#w-fmsg,#w-title,#w-icon,#w-thumb,#w-card').forEach(el => el.addEventListener('input', () => markDirty('w-savebar')));
     } catch(e) { showToast('❌ 加载欢迎配置失败: ' + e.message); }
 }
 async function saveWelcome() {
@@ -124,6 +128,10 @@ async function saveWelcome() {
         auto_roles: checked.join(','),
         welcome_msg: document.getElementById('w-msg').value,
         farewell_msg: document.getElementById('w-fmsg').value,
+        welcome_title: document.getElementById('w-title').value,
+        author_icon: document.getElementById('w-icon').value,
+        thumbnail_url: document.getElementById('w-thumb').value,
+        show_card: document.getElementById('w-card').checked,
     });
     btn.textContent = '✅ 已保存！'; showToast('✅ 欢迎配置已保存！'); markClean('w-savebar');
     setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
