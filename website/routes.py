@@ -74,7 +74,22 @@ async def ensure_tables():
                 guild_id INTEGER PRIMARY KEY, welcome_channel INTEGER DEFAULT 0,
                 farewell_channel INTEGER DEFAULT 0, auto_roles TEXT DEFAULT '',
                 welcome_msg TEXT DEFAULT '欢迎 {member} 加入 {server}！🎉',
-                farewell_msg TEXT DEFAULT '{member} 离开了我们... 👋')""")
+                farewell_msg TEXT DEFAULT '{member} 离开了我们... 👋',
+                show_card INTEGER DEFAULT 0, welcome_title TEXT DEFAULT '',
+                author_icon TEXT DEFAULT '', thumbnail_url TEXT DEFAULT '',
+                enabled INTEGER DEFAULT 1, image_url TEXT DEFAULT '')""")
+            for ddl in (
+                "show_card INTEGER DEFAULT 0",
+                "welcome_title TEXT DEFAULT ''",
+                "author_icon TEXT DEFAULT ''",
+                "thumbnail_url TEXT DEFAULT ''",
+                "enabled INTEGER DEFAULT 1",
+                "image_url TEXT DEFAULT ''",
+            ):
+                try:
+                    await db.execute(f"ALTER TABLE welcome_config ADD COLUMN {ddl}")
+                except Exception:
+                    pass
             await db.commit()
         async with aiosqlite.connect(DB_AUTOMOD) as db:
             await db.execute("""CREATE TABLE IF NOT EXISTS automod_config (
@@ -192,6 +207,8 @@ async def ensure_tables():
                 total_count INTEGER DEFAULT 0,
                 created_at REAL DEFAULT 0,
                 done_at REAL DEFAULT 0)""")
+            await db.execute("""CREATE TABLE IF NOT EXISTS global_disabled_cmds (
+                name TEXT PRIMARY KEY)""")
             await db.commit()
         print(f"✅ Dashboard DB 就绪 (路径: {BOT_DIR})")
     except Exception as e:
@@ -273,6 +290,17 @@ async def discord_api_put(path):
         timeout=aiohttp.ClientTimeout(total=5),
     ) as resp:
         return resp.status == 204
+
+
+async def discord_api_delete(path):
+    headers = {"Authorization": f"Bot {BOT_TOKEN}"}
+    s = await _get_session()
+    async with s.delete(
+        f"https://discord.com/api/v10{path}",
+        headers=headers,
+        timeout=aiohttp.ClientTimeout(total=8),
+    ) as resp:
+        return resp.status in (200, 204)
 
 
 # 等级配色和 emoji,跟 cogs/botlog.py 对齐
@@ -745,6 +773,12 @@ def setup_routes(app, discord):
                     "auto_roles": "",
                     "welcome_msg": "欢迎 {member} 加入 {server}！🎉",
                     "farewell_msg": "{member} 离开了我们... 👋",
+                    "show_card": 0,
+                    "welcome_title": "",
+                    "author_icon": "",
+                    "thumbnail_url": "",
+                    "enabled": 1,
+                    "image_url": "",
                 }
             )
         except Exception as e:
@@ -765,13 +799,22 @@ def setup_routes(app, discord):
                 await db.execute(
                     """UPDATE welcome_config SET
                     welcome_channel=?, farewell_channel=?, auto_roles=?,
-                    welcome_msg=?, farewell_msg=? WHERE guild_id=?""",
+                    welcome_msg=?, farewell_msg=?,
+                    show_card=?, welcome_title=?, author_icon=?, thumbnail_url=?,
+                    enabled=?, image_url=?
+                    WHERE guild_id=?""",
                     (
                         int(d.get("welcome_channel", 0)),
                         int(d.get("farewell_channel", 0)),
                         d.get("auto_roles", ""),
                         d.get("welcome_msg", ""),
                         d.get("farewell_msg", ""),
+                        1 if d.get("show_card") else 0,
+                        (d.get("welcome_title") or "")[:200],
+                        (d.get("author_icon") or "").strip(),
+                        (d.get("thumbnail_url") or "").strip(),
+                        1 if d.get("enabled", True) else 0,
+                        (d.get("image_url") or "").strip(),
                         g,
                     ),
                 )
@@ -1479,6 +1522,74 @@ def setup_routes(app, discord):
                 for r in rows
             ]
         )
+
+    @app.route("/api/bot/guilds")
+    async def api_bot_guilds():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        data = await discord_api_get("/users/@me/guilds?with_counts=true")
+        if data is None:
+            return jsonify({"error": "无法获取服务器列表"}), 502
+        out = [
+            {
+                "id": str(g["id"]),
+                "name": g.get("name", ""),
+                "icon": g.get("icon"),
+                "members": g.get("approximate_member_count"),
+            }
+            for g in data
+        ]
+        out.sort(key=lambda x: (x["members"] or 0), reverse=True)
+        return jsonify(out)
+
+    @app.route("/api/bot/guilds/leave", methods=["POST"])
+    async def api_bot_guild_leave():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        d = await request.get_json()
+        gid = str(d.get("guild_id", "")).strip()
+        if not gid.isdigit():
+            return jsonify({"error": "无效的服务器 ID"}), 400
+        ok = await discord_api_delete(f"/users/@me/guilds/{gid}")
+        if not ok:
+            return jsonify({"error": "退出失败（可能已不在该服务器）"}), 502
+        return jsonify({"ok": True})
+
+    @app.route("/api/bot/commands")
+    async def api_bot_commands():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        cmds = []
+        try:
+            with open(os.path.join(BOT_DIR, "health.json"), encoding="utf-8") as f:
+                cmds = json.load(f).get("commands", [])
+        except Exception:
+            pass
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            cur = await db.execute("SELECT name FROM global_disabled_cmds")
+            disabled = [r[0] for r in await cur.fetchall()]
+        return jsonify({"commands": cmds, "disabled": disabled})
+
+    @app.route("/api/bot/commands/toggle", methods=["POST"])
+    async def api_bot_command_toggle():
+        if not await is_owner(discord):
+            return jsonify({"error": "unauthorized"}), 401
+        d = await request.get_json()
+        name = (d.get("name") or "").strip()
+        if not name:
+            return jsonify({"error": "缺少指令名"}), 400
+        async with aiosqlite.connect(DB_GLOBAL) as db:
+            if d.get("disabled"):
+                await db.execute(
+                    "INSERT OR IGNORE INTO global_disabled_cmds (name) VALUES (?)",
+                    (name,),
+                )
+            else:
+                await db.execute(
+                    "DELETE FROM global_disabled_cmds WHERE name=?", (name,)
+                )
+            await db.commit()
+        return jsonify({"ok": True})
 
     @app.route("/api/bot/personalizer", methods=["GET"])
     async def api_bot_cfg_get():

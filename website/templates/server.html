@@ -112,16 +112,53 @@
 
 <!-- ═══════ 欢迎新成员 ═══════ -->
 <div class="mod-page" id="pg-welcome">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="smile-plus" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>欢迎新成员</h2><p>给予新成员身份组、欢迎讯息</p></div>
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="smile-plus" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>欢迎新成员</h2><p>编辑加入时的欢迎讯息</p></div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">✉️ 欢迎讯息内容</div>
-        <div class="cfg-row-info" style="margin-bottom:12px;">
-            <div class="cfg-row-label">欢迎消息</div>
-            <div class="cfg-row-hint">编辑讯息的标题、内文。可用 {member} = @用户, {server} = 服务器名</div>
+        <div class="cfg-row">
+            <div class="cfg-row-info"><div class="cfg-row-label">启用欢迎讯息</div><div class="cfg-row-hint">是否在成员加入时发送欢迎讯息</div></div>
+            <label class="cfg-tog"><input type="checkbox" id="w-enabled"><span class="track"></span><span class="thumb"></span></label>
         </div>
-        <textarea class="cfg-textarea" id="w-msg" placeholder="欢迎 {member} 加入 {server}！🎉"></textarea>
-        <div style="margin-top:16px;">
+        <div style="margin-top:14px;">
+            <div class="cfg-row-label">欢迎讯息发送频道 <span style="color:#e8899a;">*</span></div>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">欢迎讯息会发送到的频道</div>
+            <select class="cfg-select" id="w-ch" style="max-width:100%;"><option value="0">#</option></select>
+        </div>
+        <div class="warn-box" style="margin-top:12px;">💡 可用变量：<code>{member}</code> = @用户、<code>{server}</code> = 服务器名；图片处可填 <code>%avatar%</code> = 用户头像、<code>%server%</code> = 服务器头像，或直接粘贴图片链接。</div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">✉️ 欢迎讯息</div>
+        <div style="margin-bottom:14px;">
+            <div class="cfg-row-label">标题</div>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">留空则显示「欢迎来到 服务器名」</div>
+            <input class="cfg-input" id="w-title" maxlength="200" placeholder="欢迎来到 服务器名" style="max-width:100%;">
+        </div>
+        <div style="margin-bottom:14px;">
+            <div class="cfg-row-label">内文</div>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">卡片正文，可用 {member} / {server}</div>
+            <textarea class="cfg-textarea" id="w-msg" placeholder="欢迎 {member} 加入 {server}！🎉"></textarea>
+        </div>
+        <div style="margin-bottom:14px;">
+            <div class="cfg-row-label">缩图</div>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">右侧小图。填 %avatar% 用用户头像，或图片链接</div>
+            <input class="cfg-input" id="w-thumb" placeholder="%avatar%" style="max-width:100%;">
+        </div>
+        <div>
+            <div class="cfg-row-label">大图</div>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">底部大图，留空则不显示。填图片链接或 %avatar% / %server%</div>
+            <input class="cfg-input" id="w-image" placeholder="https://…（留空关闭）" style="max-width:100%;">
+        </div>
+    </div>
+
+    <div class="cfg-section">
+        <div class="cfg-section-title">👋 道别讯息</div>
+        <div style="margin-bottom:14px;">
+            <div class="cfg-row-label">道别频道</div>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">成员离开时发送的频道</div>
+            <select class="cfg-select" id="w-fch" style="max-width:100%;"><option value="0">#</option></select>
+        </div>
+        <div>
             <div class="cfg-row-label">道别消息</div>
             <div class="cfg-row-hint" style="margin-bottom:8px;">成员离开时发送的消息</div>
             <textarea class="cfg-textarea" id="w-fmsg" placeholder="{member} 离开了我们... 👋"></textarea>
@@ -129,44 +166,15 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">📢 发送频道</div>
-        <div class="cfg-columns">
-            <div>
-                <div class="cfg-row-label">欢迎频道</div>
-                <div class="cfg-row-hint" style="margin-bottom:8px;">在该频道发送欢迎图卡</div>
-                <select class="cfg-select" id="w-ch" style="max-width:280px;"><option value="0">#</option></select>
-            </div>
-            <div>
-                <div class="cfg-row-label">道别频道</div>
-                <div class="cfg-row-hint" style="margin-bottom:8px;">在该频道发送道别消息</div>
-                <select class="cfg-select" id="w-fch" style="max-width:280px;"><option value="0">#</option></select>
-            </div>
-        </div>
-    </div>
-
-    <div class="cfg-section">
         <div class="cfg-section-title">🏷 新成员身份组</div>
-        <div class="cfg-row-hint" style="margin-bottom:10px;">新加入的成员将可以收到该身份组</div>
+        <div class="cfg-row-hint" style="margin-bottom:10px;">新加入的成员将自动获得这些身份组</div>
         <div class="role-select-list" id="w-roles"></div>
-        <div class="warn-box">⚠️ 请确保该身份组的位置在机器人下方，并且机器人有管理身份组权限</div>
+        <div class="warn-box">⚠️ 请确保身份组位置在机器人下方，且机器人有「管理身份组」权限</div>
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🎨 欢迎卡样式</div>
         <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">卡片标题</div><div class="cfg-row-hint">留空则显示「欢迎来到 服务器名」</div></div>
-            <input class="cfg-input" id="w-title" maxlength="200" placeholder="欢迎来到 服务器名" style="max-width:280px;">
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">标题小图标链接</div><div class="cfg-row-hint">留空使用服务器头像</div></div>
-            <input class="cfg-input" id="w-icon" placeholder="https://…（留空=服务器头像）" style="max-width:280px;">
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">右侧缩略图链接</div><div class="cfg-row-hint">留空使用新成员头像</div></div>
-            <input class="cfg-input" id="w-thumb" placeholder="https://…（留空=用户头像）" style="max-width:280px;">
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">附带图片横幅</div><div class="cfg-row-hint">额外发送一张生成的横幅大图</div></div>
+            <div class="cfg-row-info"><div class="cfg-row-label">附带图片横幅</div><div class="cfg-row-hint">额外发送一张自动生成的横幅大图</div></div>
             <label class="cfg-tog"><input type="checkbox" id="w-card"><span class="track"></span><span class="thumb"></span></label>
         </div>
     </div>

@@ -145,7 +145,9 @@ class Welcome(commands.Cog):
                     show_card INTEGER DEFAULT 0,
                     welcome_title TEXT DEFAULT '',
                     author_icon TEXT DEFAULT '',
-                    thumbnail_url TEXT DEFAULT ''
+                    thumbnail_url TEXT DEFAULT '',
+                    enabled INTEGER DEFAULT 1,
+                    image_url TEXT DEFAULT ''
                 )
             """)
             # 旧库补列
@@ -154,6 +156,8 @@ class Welcome(commands.Cog):
                 "welcome_title TEXT DEFAULT ''",
                 "author_icon TEXT DEFAULT ''",
                 "thumbnail_url TEXT DEFAULT ''",
+                "enabled INTEGER DEFAULT 1",
+                "image_url TEXT DEFAULT ''",
             ):
                 try:
                     await db.execute(f"ALTER TABLE welcome_config ADD COLUMN {ddl}")
@@ -279,19 +283,34 @@ class Welcome(commands.Cog):
     # ─── 事件监听 ───
 
     @commands.Cog.listener()
+    @staticmethod
+    def _resolve_img(value, member):
+        v = (value or "").strip()
+        if not v or v == "%avatar%":
+            return member.display_avatar.url if v != "" else None
+        if v == "%server%":
+            return member.guild.icon.url if member.guild.icon else None
+        return v if v.lower().startswith(("http://", "https://")) else None
+
     def _build_welcome_embed(self, member, config):
+        if not config.get("enabled", 1):
+            return None
         guild = member.guild
         title = (config.get("welcome_title") or "").strip() or f"欢迎来到 {guild.name}"
         icon = (config.get("author_icon") or "").strip() or (
             guild.icon.url if guild.icon else None
         )
-        thumb = (config.get("thumbnail_url") or "").strip() or member.display_avatar.url
+        thumb = self._resolve_img(config.get("thumbnail_url") or "%avatar%", member)
+        big = self._resolve_img(config.get("image_url"), member)
         msg = (config.get("welcome_msg") or "欢迎 {member} 加入 {server}！🎉").format(
             member=member.mention, server=guild.name
         )
         embed = discord.Embed(description=msg, color=discord.Color.pink())
         embed.set_author(name=title, icon_url=icon)
-        embed.set_thumbnail(url=thumb)
+        if thumb:
+            embed.set_thumbnail(url=thumb)
+        if big:
+            embed.set_image(url=big)
         return embed
 
     async def _render_card_file(self, member):
@@ -336,6 +355,8 @@ class Welcome(commands.Cog):
             return
 
         embed = self._build_welcome_embed(member, config)
+        if embed is None:
+            return
         files = []
         if config.get("show_card", 0):
             card = await self._render_card_file(member)
@@ -419,12 +440,47 @@ class Welcome(commands.Cog):
         await ctx.defer()
         config = await self._get_config(ctx.guild.id) or {}
         embed = self._build_welcome_embed(ctx.author, config)
+        if embed is None:
+            await ctx.send("ℹ️ 欢迎讯息当前已停用。", ephemeral=True)
+            return
         files = []
         if config.get("show_card", 0):
             card = await self._render_card_file(ctx.author)
             files.append(card)
             embed.set_image(url="attachment://welcome.png")
         await ctx.send(embed=embed, files=files)
+
+    @commands.hybrid_command(
+        name="welcome_toggle", description="[管理] 开启/关闭欢迎讯息"
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def welcome_toggle(self, ctx, enabled: bool):
+        await self._set_config(ctx.guild.id, "enabled", 1 if enabled else 0)
+        await ctx.send(
+            f"✅ 欢迎讯息已{'开启' if enabled else '关闭'}。", ephemeral=True
+        )
+
+    @commands.hybrid_command(
+        name="welcome_image",
+        description="[管理] 自定义大图（留空关闭；支持 %avatar% / %server%）",
+    )
+    @commands.has_permissions(manage_guild=True)
+    async def welcome_image(self, ctx, url: str = ""):
+        url = url.strip()
+        if (
+            url
+            and url not in ("%avatar%", "%server%")
+            and not url.lower().startswith(("http://", "https://"))
+        ):
+            await ctx.send(
+                "❌ 请提供有效链接，或 %avatar% / %server%，或留空关闭。",
+                ephemeral=True,
+            )
+            return
+        await self._set_config(ctx.guild.id, "image_url", url)
+        await ctx.send(
+            "✅ 已关闭大图。" if not url else "✅ 大图已更新。", ephemeral=True
+        )
 
     @commands.hybrid_command(
         name="welcome_title", description="[管理] 自定义欢迎卡标题"
