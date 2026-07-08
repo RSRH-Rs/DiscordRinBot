@@ -282,7 +282,6 @@ class Welcome(commands.Cog):
 
     # ─── 事件监听 ───
 
-    @commands.Cog.listener()
     @staticmethod
     def _fmt_text(text, member, member_repr=None):
         # 统一 %xx%，同时兼容旧的 {xx}
@@ -341,6 +340,7 @@ class Welcome(commands.Cog):
         )
         return discord.File(fp=buf, filename="welcome.png")
 
+    @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         if member.bot:
             return
