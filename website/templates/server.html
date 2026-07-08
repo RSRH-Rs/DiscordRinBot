@@ -124,7 +124,7 @@
             <div class="cfg-row-hint" style="margin-bottom:8px;">欢迎讯息会发送到的频道</div>
             <select class="cfg-select" id="w-ch" style="max-width:100%;"><option value="0">#</option></select>
         </div>
-        <div class="warn-box" style="margin-top:12px;">💡 可用变量：<code>{member}</code> = @用户、<code>{server}</code> = 服务器名；图片处可填 <code>%avatar%</code> = 用户头像、<code>%server%</code> = 服务器头像，或直接粘贴图片链接。</div>
+        <div class="warn-box" style="margin-top:12px;">💡 可用变量：<code>%member%</code> = @用户、<code>%server%</code> = 服务器名；图片处可填 <code>%avatar%</code> = 用户头像、<code>%server_avatar%</code> = 服务器头像，或直接粘贴图片链接。</div>
     </div>
 
     <div class="cfg-section">
@@ -136,8 +136,8 @@
         </div>
         <div style="margin-bottom:14px;">
             <div class="cfg-row-label">内文</div>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">卡片正文，可用 {member} / {server}</div>
-            <textarea class="cfg-textarea" id="w-msg" placeholder="欢迎 {member} 加入 {server}！🎉"></textarea>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">卡片正文，可用 %member% / %server%</div>
+            <textarea class="cfg-textarea" id="w-msg" placeholder="欢迎 %member% 加入 %server%！🎉"></textarea>
         </div>
         <div style="margin-bottom:14px;">
             <div class="cfg-row-label">缩图</div>
@@ -146,7 +146,7 @@
         </div>
         <div>
             <div class="cfg-row-label">大图</div>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">底部大图，留空则不显示。填图片链接或 %avatar% / %server%</div>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">底部大图，留空则不显示。填图片链接或 %avatar% / %server_avatar%</div>
             <input class="cfg-input" id="w-image" placeholder="https://…（留空关闭）" style="max-width:100%;">
         </div>
     </div>
@@ -161,7 +161,7 @@
         <div>
             <div class="cfg-row-label">道别消息</div>
             <div class="cfg-row-hint" style="margin-bottom:8px;">成员离开时发送的消息</div>
-            <textarea class="cfg-textarea" id="w-fmsg" placeholder="{member} 离开了我们... 👋"></textarea>
+            <textarea class="cfg-textarea" id="w-fmsg" placeholder="%member% 离开了我们... 👋"></textarea>
         </div>
     </div>
 

@@ -73,8 +73,8 @@ async def ensure_tables():
             await db.execute("""CREATE TABLE IF NOT EXISTS welcome_config (
                 guild_id INTEGER PRIMARY KEY, welcome_channel INTEGER DEFAULT 0,
                 farewell_channel INTEGER DEFAULT 0, auto_roles TEXT DEFAULT '',
-                welcome_msg TEXT DEFAULT '欢迎 {member} 加入 {server}！🎉',
-                farewell_msg TEXT DEFAULT '{member} 离开了我们... 👋',
+                welcome_msg TEXT DEFAULT '欢迎 %member% 加入 %server%！🎉',
+                farewell_msg TEXT DEFAULT '%member% 离开了我们... 👋',
                 show_card INTEGER DEFAULT 0, welcome_title TEXT DEFAULT '',
                 author_icon TEXT DEFAULT '', thumbnail_url TEXT DEFAULT '',
                 enabled INTEGER DEFAULT 1, image_url TEXT DEFAULT '')""")
@@ -771,8 +771,8 @@ def setup_routes(app, discord):
                     "welcome_channel": 0,
                     "farewell_channel": 0,
                     "auto_roles": "",
-                    "welcome_msg": "欢迎 {member} 加入 {server}！🎉",
-                    "farewell_msg": "{member} 离开了我们... 👋",
+                    "welcome_msg": "欢迎 %member% 加入 %server%！🎉",
+                    "farewell_msg": "%member% 离开了我们... 👋",
                     "show_card": 0,
                     "welcome_title": "",
                     "author_icon": "",
