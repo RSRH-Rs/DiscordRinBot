@@ -872,7 +872,7 @@ def setup_routes(app, discord):
 
     @app.route("/api/stats")
     async def api_stats():
-        """首页公开统计：服务器数、功能模块数（带 120s 缓存）"""
+        """首页公开统计：服务器数、功能模块数、可用指令数（带 120s 缓存）"""
         now = time.time()
         if _stats_cache["data"] and _stats_cache["exp"] > now:
             return jsonify(_stats_cache["data"])
@@ -883,7 +883,15 @@ def setup_routes(app, discord):
             servers = 0
         # 统计可展示的功能模块（排除“通用工具”这类无独立 db 的）
         modules = len([m for m in MODULES if m["slug"] != "general"])
-        data = {"servers": servers, "modules": modules}
+        commands = 0
+        try:
+            with open(os.path.join(BOT_DIR, "health.json"), encoding="utf-8") as f:
+                command_snapshot = json.load(f).get("commands", [])
+            if isinstance(command_snapshot, list):
+                commands = len(command_snapshot)
+        except (OSError, ValueError, TypeError):
+            pass
+        data = {"servers": servers, "modules": modules, "commands": commands}
         _stats_cache["data"] = data
         _stats_cache["exp"] = now + _STATS_TTL
         return jsonify(data)

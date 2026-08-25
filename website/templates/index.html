@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pg-title">小凛 Rin | 全能 Discord 助手</title>
+    <title id="pg-title">小凛 Rin | Discord 服务器管理与互动 Bot</title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,800;0,900;1,800&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
     /* ── RESET & ROOT ── */
     :root {
@@ -19,6 +20,7 @@
         --mid:    #7A6860;
         --muted:  #B09888;
         --green:  #52B870;
+        --lavender:#8474C8;
         --surface:#FFFFFF;
     }
     *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
@@ -113,6 +115,7 @@
         box-shadow:0 6px 24px rgba(26,18,16,.22); transition:all .22s;
     }
     .btn-hero:hover { transform:translateY(-2px); box-shadow:0 10px 32px rgba(26,18,16,.3); background:var(--dark2); }
+    .btn-hero svg,.btn-cta svg { width:18px; height:18px; stroke-width:2.4; }
     .btn-hero-ghost { font-size:.92rem; font-weight:800; color:var(--mid); display:flex; align-items:center; gap:5px; }
     .btn-hero-ghost:hover { color:var(--dark); }
 
@@ -338,8 +341,9 @@
         width:68px; height:68px; border-radius:14px; flex-shrink:0;
         background:linear-gradient(135deg, var(--pink), var(--pinkd));
         display:flex; align-items:center; justify-content:center;
-        font-size:2rem; box-shadow:0 8px 24px rgba(255,183,197,.3);
+        box-shadow:0 8px 24px rgba(255,183,197,.3);
     }
+    .mc-art svg{width:30px;height:30px;stroke-width:1.8}
     .mc-title { font-size:1.1rem; font-weight:900; margin-bottom:3px; color:#FAF0F4; }
     .mc-sub   { font-size:.78rem; color:rgba(255,230,235,.5); }
     .mc-bar   { height:5px; background:rgba(255,255,255,.12); border-radius:5px; }
@@ -350,9 +354,12 @@
     .mc-btn:hover { background:rgba(255,255,255,.14); }
     .mc-btn.play { width:48px; height:48px; background:var(--pink); color:var(--dark); font-size:1.1rem; box-shadow:0 6px 18px rgba(255,183,197,.35); }
     .mc-btn.play:hover { background:var(--pinkd); color:#fff; }
+    .mc-btn svg{width:16px;height:16px;stroke-width:2.2}
+    .mc-btn.play svg{width:19px;height:19px}
     .mc-queue { margin-top:20px; display:flex; flex-direction:column; gap:6px; }
     .mq-item { display:flex; align-items:center; gap:10px; padding:9px 12px; border-radius:10px; background:rgba(255,255,255,.05); font-size:.8rem; }
-    .mq-ic  { font-size:1rem; flex-shrink:0; }
+    .mq-ic  { flex-shrink:0; color:var(--pink); display:flex; }
+    .mq-ic svg{width:14px;height:14px}
     .mq-nm  { flex:1; font-weight:700; color:rgba(255,240,244,.8); }
     .mq-du  { font-size:.68rem; color:rgba(255,230,235,.35); font-weight:700; }
 
@@ -362,7 +369,7 @@
         border-radius:22px; padding:28px; backdrop-filter:blur(10px);
     }
     .lc-head { display:flex; align-items:center; gap:14px; margin-bottom:20px; }
-    .lc-av { width:58px; height:58px; border-radius:50%; background:linear-gradient(135deg,#74C69D,#40A874); display:flex; align-items:center; justify-content:center; font-size:1.6rem; flex-shrink:0; box-shadow:0 6px 18px rgba(116,198,157,.3); }
+    .lc-av { width:58px; height:58px; border-radius:50%; background:linear-gradient(135deg,#74C69D,#40A874); display:flex; align-items:center; justify-content:center; font-size:.84rem; font-weight:900; letter-spacing:.5px; color:#fff; flex-shrink:0; box-shadow:0 6px 18px rgba(116,198,157,.3); }
     .lc-name { font-size:1.05rem; font-weight:900; color:#F0FAF4; margin-bottom:3px; }
     .lc-rank { font-size:.74rem; color:rgba(180,230,200,.5); font-weight:700; }
     .lc-bar  { height:8px; background:rgba(255,255,255,.1); border-radius:8px; }
@@ -370,8 +377,8 @@
     .lc-xp   { display:flex; justify-content:space-between; font-size:.7rem; font-weight:700; color:rgba(180,230,200,.45); margin-top:6px; }
     .lc-lb   { margin-top:20px; display:flex; flex-direction:column; gap:7px; }
     .ll { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:11px; background:rgba(255,255,255,.05); font-size:.82rem; }
-    .ll-rk { font-size:.8rem; width:20px; text-align:center; flex-shrink:0; }
-    .ll-av { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.9rem; flex-shrink:0; }
+    .ll-rk { font-size:.67rem; font-weight:900; color:#74C69D; width:20px; text-align:center; flex-shrink:0; }
+    .ll-av { width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:.56rem; font-weight:900; color:rgba(240,250,244,.8); flex-shrink:0; }
     .ll-nm { flex:1; font-weight:700; color:rgba(240,250,244,.8); }
     .ll-lv { font-size:.7rem; color:rgba(180,230,200,.4); font-weight:700; }
 
@@ -422,7 +429,8 @@
         bottom:-100px; right:-60px; pointer-events:none;
     }
     .cta-in { position:relative; z-index:1; max-width:540px; margin:0 auto; }
-    .cta-em { font-size:2.8rem; margin-bottom:18px; display:block; }
+    .cta-em { width:52px;height:52px;border-radius:15px;background:rgba(255,183,197,.12);color:var(--pink);margin:0 auto 20px;display:flex;align-items:center;justify-content:center; }
+    .cta-em svg{width:25px;height:25px}
     .cta h2 { font-size:2.4rem; font-weight:900; letter-spacing:-.8px; line-height:1.14; color:#FAF0F4; margin-bottom:14px; }
     .cta p  { font-size:.97rem; color:rgba(255,200,215,.5); margin-bottom:36px; }
     .cta-btns { display:flex; justify-content:center; align-items:center; gap:12px; flex-wrap:wrap; }
@@ -480,6 +488,19 @@
         .cta h2 { font-size:2rem; }
     }
     @media(max-width:600px){
+        .wrap{padding:0 20px}
+        .topnav{padding:18px 0}
+        .nav-i{gap:12px}
+        .logo{font-size:1.05rem;gap:7px;white-space:nowrap}
+        .logo .d{width:8px;height:8px}
+        .nav-r{gap:0}
+        .btn-ghost{font-size:.76rem;padding:7px 9px;white-space:nowrap}
+        .btn-pill{font-size:.76rem;padding:8px 12px;white-space:nowrap}
+        .snav-i{padding:10px 18px;gap:10px}
+        .snav-logo{font-size:.88rem;white-space:nowrap}
+        .snav-r .btn-ghost{display:none}
+        .hero{padding:34px 0 60px;gap:36px;overflow:hidden}
+        .hero-img-wrap{order:initial;max-width:300px}
         .hero h1 { font-size:2.2rem; }
         .bento { grid-template-columns:1fr; }
         .bc-music,.bc-lvl,.bc-util,.bc-wide { grid-column:1/2; }
@@ -497,9 +518,13 @@
     .fg{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
     .fgc{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;transition:transform .3s,box-shadow .3s,border-color .3s}
     .fgc:hover{transform:translateY(-4px);box-shadow:0 16px 44px rgba(26,18,16,.08);border-color:#FFDCE6}
-    .fgc .fi{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#FFF0F5,#FFE0EA);border:1px solid #FFDCE6;display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin-bottom:16px}
+    .fgc .fi{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#FFF0F5,#FFE0EA);border:1px solid #FFDCE6;display:flex;align-items:center;justify-content:center;color:var(--pinkd);margin-bottom:16px}
+    .fgc .fi svg{width:21px;height:21px;stroke-width:2.2}
     .fgc h3{font-size:1.05rem;font-weight:900;letter-spacing:-.3px;margin-bottom:6px}
     .fgc p{font-size:.82rem;color:var(--mid);line-height:1.6}
+    .fgc.primary{min-height:186px;padding:30px;background:linear-gradient(145deg,#fff,#FFF7F9)}
+    .fgc.primary .fi{width:50px;height:50px}
+    .fgc.primary h3{font-size:1.16rem}
 
     /* ── DASHBOARD SHOWCASE ── */
     .dash-sec{padding:80px 0}
@@ -507,13 +532,20 @@
     .dash-eye{font-size:.7rem;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--pinkd);display:block;margin-bottom:14px}
     .dash h2{font-size:2.1rem;font-weight:900;letter-spacing:-.6px;line-height:1.15;margin-bottom:14px}
     .dash p{font-size:.95rem;color:var(--mid);line-height:1.7;margin-bottom:26px}
-    .dash-shot{background:var(--cream);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;height:230px;box-shadow:0 20px 60px rgba(26,18,16,.1)}
-    .ds-sb{width:96px;flex-shrink:0;background:var(--dark);padding:14px 10px;display:flex;flex-direction:column;gap:7px}
-    .ds-sl{height:9px;border-radius:4px;background:#4A403A}
-    .ds-sl.on{background:var(--pink)}
+    .dash-shot{background:var(--cream);border:1px solid var(--border);border-radius:16px;overflow:hidden;display:flex;min-height:260px;box-shadow:0 20px 60px rgba(26,18,16,.1)}
+    .ds-sb{width:132px;flex-shrink:0;background:var(--dark);padding:18px 12px;display:flex;flex-direction:column;gap:7px}
+    .ds-brand{color:#fff;font-size:.74rem;font-weight:900;padding:0 8px 10px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:4px}
+    .ds-nav{display:flex;align-items:center;gap:7px;color:#A99D96;font-size:.64rem;font-weight:700;padding:8px;border-radius:7px}
+    .ds-nav svg{width:12px;height:12px}
+    .ds-nav.on{background:rgba(255,183,197,.14);color:var(--pink)}
     .ds-main{flex:1;padding:20px 18px}
-    .ds-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
-    .ds-bar{height:11px;border-radius:5px;background:var(--warm)}
+    .ds-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .ds-title{font-size:.82rem;font-weight:900}
+    .ds-status{display:flex;align-items:center;gap:5px;font-size:.6rem;font-weight:800;color:var(--green);background:#EAF7EE;padding:4px 8px;border-radius:50px}
+    .ds-status::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green)}
+    .ds-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;padding:10px 11px;background:#fff;border:1px solid var(--border);border-radius:9px}
+    .ds-label{font-size:.67rem;font-weight:800;color:var(--dark)}
+    .ds-meta{font-size:.56rem;color:var(--muted);display:block;margin-top:1px}
     .ds-tog{width:34px;height:18px;border-radius:50px;background:var(--green);position:relative;flex-shrink:0}
     .ds-tog.off{background:var(--border)}
     .ds-tog i{position:absolute;top:2px;left:18px;width:14px;height:14px;border-radius:50%;background:#fff;display:block}
@@ -524,9 +556,20 @@
     .prot{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
     .protc{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:30px 26px;text-align:center;transition:.25s}
     .protc:hover{transform:translateY(-4px);box-shadow:0 16px 44px rgba(26,18,16,.08)}
-    .protc .pi{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#FFF0F5,#FFE0EA);border:1px solid #FFDCE6;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 16px}
+    .protc .pi{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,#FFF0F5,#FFE0EA);border:1px solid #FFDCE6;display:flex;align-items:center;justify-content:center;color:var(--pinkd);margin:0 auto 16px}
+    .protc .pi svg{width:24px;height:24px;stroke-width:2.1}
     .protc h3{font-size:1.05rem;font-weight:900;margin-bottom:8px}
     .protc p{font-size:.83rem;color:var(--mid);line-height:1.65}
+
+    /* ── PRODUCT TRUST ── */
+    .trust-sec{padding:80px 0}
+    .trust{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .trust-card{background:var(--dark);border:1px solid rgba(255,255,255,.06);border-radius:20px;padding:28px;color:#FAF0F4;position:relative;overflow:hidden}
+    .trust-card::after{content:'';position:absolute;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(255,183,197,.12),transparent 68%);right:-55px;top:-55px}
+    .trust-icon{width:42px;height:42px;border-radius:12px;background:rgba(255,183,197,.12);display:flex;align-items:center;justify-content:center;color:var(--pink);margin-bottom:18px}
+    .trust-icon svg{width:20px;height:20px}
+    .trust-card h3{font-size:1.02rem;font-weight:900;margin-bottom:8px;position:relative;z-index:1}
+    .trust-card p{font-size:.82rem;line-height:1.7;color:rgba(250,240,244,.6);position:relative;z-index:1}
 
     /* ── FAQ ── */
     .faq-sec{padding:80px 0}
@@ -542,9 +585,12 @@
         .fg{grid-template-columns:1fr 1fr}
         .dash{grid-template-columns:1fr;gap:32px;padding:32px}
         .prot{grid-template-columns:1fr}
+        .trust{grid-template-columns:1fr}
     }
     @media(max-width:600px){
         .fg{grid-template-columns:1fr}
+        .ds-sb{width:108px}
+        .dash-shot{min-height:250px}
     }
     </style>
 </head>
@@ -556,7 +602,7 @@
         <div class="snav-logo"><span class="d"></span>小凛 Rin</div>
         <div class="snav-r">
             <a href="/dashboard" class="btn-ghost" id="sn-dash"></a>
-            <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+            <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
                target="_blank" class="btn-pill" id="sn-invite">邀请入驻 +</a>
         </div>
     </div>
@@ -571,7 +617,7 @@
             <div class="nav-r">
                 <button class="btn-ghost" id="btn-lang" onclick="toggleLanguage()">English</button>
                 <a href="/dashboard" class="btn-ghost" id="btn-dashboard"></a>
-                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
                    target="_blank" class="btn-pill" id="btn-invite">邀请入驻 +</a>
             </div>
         </div>
@@ -581,11 +627,11 @@
     <section class="hero">
         <div class="hero-text rv">
             <div class="hero-badge"><span class="pip"></span><span id="hero-tag">在线中</span></div>
-            <h1 id="hero-title">你的全能<br><em>Discord</em><br>小助手。</h1>
-            <p class="hero-sub" id="hero-desc">哼哼，小凛可不只会唱歌哦！无论是管理社区、活跃气氛，还是陪大家解闷，只要敲敲 <span class="code-d">r!help</span>，小凛通通帮你搞定！</p>
+            <h1 id="hero-title">让服务器管理<br>少一点重复，<br><em>多一点互动。</em></h1>
+            <p class="hero-sub" id="hero-desc">音乐、审核、迎新、身份组与抽奖，集中在一个 Bot 和网页控制台。常用操作交给斜杠命令，复杂配置在浏览器里完成。</p>
             <div class="hero-btns">
-                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" class="btn-hero" id="btn-hero">✨ 立即邀请小凛</a>
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="btn-hero"><i data-lucide="plus" aria-hidden="true"></i><span id="btn-hero">添加到服务器</span></a>
                 <a href="/dashboard" class="btn-hero-ghost" id="btn-dash-hero">控制台 →</a>
             </div>
         </div>
@@ -594,7 +640,7 @@
             <div class="hero-img-box">
                 <img src="{{ url_for('static', filename='rinbot_bg.jpg') }}" alt="小凛 Rin">
             </div>
-            <div class="fc fc-online"><span class="gd"></span><span id="badge-on">在线 · 今天也在哦！</span></div>
+            <div class="fc fc-online"><span class="gd"></span><span id="badge-on">服务在线</span></div>
             <div class="fc fc-xp">
                 <div class="lv">Lv.5</div>
                 <div class="lb" id="badge-xp">XP 进度</div>
@@ -611,52 +657,58 @@
         <div class="stats-i">
             <div class="stat rv"><div class="stat-n"><span id="stat-servers">12</span><em>+</em></div><div class="stat-l" id="st1">活跃服务器</div></div>
             <div class="stat rv d1"><div class="stat-n"><span id="stat-modules">10</span><em>+</em></div><div class="stat-l" id="st2">功能模块</div></div>
-            <div class="stat rv d2"><div class="stat-n">24<em>/7</em></div><div class="stat-l" id="st3">全天在线</div></div>
-            <div class="stat rv d3"><div class="stat-n">∞</div><div class="stat-l" id="st4">持续更新</div></div>
+            <div class="stat rv d2"><div class="stat-n"><span id="stat-commands">60</span><em>+</em></div><div class="stat-l" id="st3">可用指令</div></div>
+            <div class="stat rv d3"><div class="stat-n">24<em>/7</em></div><div class="stat-l" id="st4">服务运行</div></div>
         </div>
     </div>
 </div>
 
 <!-- FEATURE GRID -->
 <div class="wrap">
-<section class="fg-sec">
+<section class="fg-sec" id="features">
     <div class="sh rv">
         <span class="eye" id="fg-eye" style="color:var(--pinkd)">核心功能</span>
-        <h2 id="fg-title">一个小凛，搞定所有</h2>
-        <p class="c" id="fg-sub" style="color:var(--mid)">10 个模块，一屏看全。</p>
+        <h2 id="fg-title">按场景找到需要的功能</h2>
+        <p class="c" id="fg-sub" style="color:var(--mid)">从社区互动到日常管理，每个模块都可以单独配置。</p>
     </div>
     <div class="fg">
-        <div class="fgc rv"><div class="fi">🎵</div><h3 id="fg1n">音乐播放</h3><p id="fg1d">队列、循环、歌单 / Spotify 导入，高音质低延迟。</p></div>
-        <div class="fgc rv d1"><div class="fi">🏆</div><h3 id="fg2n">等级系统</h3><p id="fg2d">聊天累积经验，精美等级卡片与排行榜。</p></div>
-        <div class="fgc rv d2"><div class="fi">⚖️</div><h3 id="fg3n">管理工具</h3><p id="fg3d">踢 / 封 / 禁言 / 警告 / 清屏，警告自动处罚。</p></div>
-        <div class="fgc rv"><div class="fi">🛡️</div><h3 id="fg4n">自动审核</h3><p id="fg4d">反刷屏、违禁词、链接与大写过滤，自动处理。</p></div>
-        <div class="fgc rv d1"><div class="fi">👋</div><h3 id="fg5n">欢迎新人</h3><p id="fg5d">自定义欢迎图卡、自动身份组、道别消息。</p></div>
-        <div class="fgc rv d2"><div class="fi">🏷️</div><h3 id="fg6n">反应身份组</h3><p id="fg6d">点按钮自助领取身份组，支持单选互斥。</p></div>
-        <div class="fgc rv"><div class="fi">🎉</div><h3 id="fg7n">抽奖活动</h3><p id="fg7d">倒计时自动开奖、reroll，公平透明。</p></div>
-        <div class="fgc rv d1"><div class="fi">🗃️</div><h3 id="fg8n">审计日志</h3><p id="fg8d">消息、成员、频道、身份组变动全记录。</p></div>
-        <div class="fgc rv d2"><div class="fi">🖥️</div><h3 id="fg9n">网页控制台</h3><p id="fg9d">浏览器里一键配置，改完即时生效。</p></div>
+        <div class="fgc primary rv"><div class="fi"><i data-lucide="music"></i></div><h3 id="fg1n">音乐与队列</h3><p id="fg1d">搜索、直链、歌单、循环和存档队列集中管理。</p></div>
+        <div class="fgc primary rv d1"><div class="fi"><i data-lucide="shield-check"></i></div><h3 id="fg2n">自动管理</h3><p id="fg2d">审核规则、警告处罚和管理记录形成完整流程。</p></div>
+        <div class="fgc primary rv d2"><div class="fi"><i data-lucide="sliders-horizontal"></i></div><h3 id="fg3n">网页配置</h3><p id="fg3d">频道、身份组和功能开关都能在控制台中完成。</p></div>
+        <div class="fgc rv"><div class="fi"><i data-lucide="trophy"></i></div><h3 id="fg4n">等级系统</h3><p id="fg4d">聊天积累经验，通过等级卡和排行榜反馈活跃度。</p></div>
+        <div class="fgc rv d1"><div class="fi"><i data-lucide="user-plus"></i></div><h3 id="fg5n">欢迎与身份组</h3><p id="fg5d">欢迎消息、自动身份组和成员自助领取面板。</p></div>
+        <div class="fgc rv d2"><div class="fi"><i data-lucide="gift"></i></div><h3 id="fg6n">抽奖活动</h3><p id="fg6d">设置参与条件、结束时间、获奖人数和重新抽取。</p></div>
+        <div class="fgc rv"><div class="fi"><i data-lucide="gavel"></i></div><h3 id="fg7n">管理工具</h3><p id="fg7d">封禁、禁言、警告、清理消息和频道控制。</p></div>
+        <div class="fgc rv d1"><div class="fi"><i data-lucide="history"></i></div><h3 id="fg8n">审计日志</h3><p id="fg8d">记录消息、成员、频道、身份组和封禁变动。</p></div>
+        <div class="fgc rv d2"><div class="fi"><i data-lucide="toggle-right"></i></div><h3 id="fg9n">指令开关</h3><p id="fg9d">按服务器启用或禁用指令，保留需要的功能。</p></div>
     </div>
 </section>
 </div><!-- /wrap -->
 
 <!-- DASHBOARD SHOWCASE -->
 <div class="wrap">
-<section class="dash-sec">
+<section class="dash-sec" id="dashboard-preview">
     <div class="dash rv">
         <div>
             <span class="dash-eye" id="dash-eye">网页控制台</span>
-            <h2 id="dash-title">不用记指令，<br>网页点点就配置好</h2>
-            <p id="dash-desc">登录后在浏览器里开关功能、设定频道、调整参数，所有改动即时生效——再也不用对着指令表敲个不停。</p>
+            <h2 id="dash-title">复杂配置，<br>放到网页里完成</h2>
+            <p id="dash-desc">选择服务器后即可设置频道、身份组、审核规则与日志。保存结果和错误原因都会直接显示，不需要反复查指令参数。</p>
             <a href="/dashboard" class="btn-hero" id="dash-btn">打开控制台 →</a>
         </div>
         <div class="dash-shot">
-            <div class="ds-sb"><span class="ds-sl"></span><span class="ds-sl on"></span><span class="ds-sl"></span><span class="ds-sl"></span><span class="ds-sl"></span><span class="ds-sl"></span></div>
+            <div class="ds-sb">
+                <div class="ds-brand">RinBot</div>
+                <div class="ds-nav on"><i data-lucide="layout-dashboard"></i><span id="ds-nav1">概览</span></div>
+                <div class="ds-nav"><i data-lucide="user-plus"></i><span id="ds-nav2">欢迎设置</span></div>
+                <div class="ds-nav"><i data-lucide="shield-check"></i><span id="ds-nav3">自动审核</span></div>
+                <div class="ds-nav"><i data-lucide="history"></i><span id="ds-nav4">审计日志</span></div>
+            </div>
             <div class="ds-main">
-                <div class="ds-row"><span class="ds-bar" style="width:60%"></span><span class="ds-tog"><i></i></span></div>
-                <div class="ds-row"><span class="ds-bar" style="width:78%"></span><span class="ds-tog"><i></i></span></div>
-                <div class="ds-row"><span class="ds-bar" style="width:46%"></span><span class="ds-tog off"><i></i></span></div>
-                <div class="ds-row"><span class="ds-bar" style="width:68%"></span><span class="ds-tog"><i></i></span></div>
-                <div class="ds-row"><span class="ds-bar" style="width:54%"></span><span class="ds-tog"><i></i></span></div>
+                <div class="ds-head"><span class="ds-title" id="ds-title">服务器配置</span><span class="ds-status" id="ds-status">已连接</span></div>
+                <div class="ds-row"><span><span class="ds-label" id="ds-row1">欢迎新成员</span><span class="ds-meta" id="ds-meta1">#welcome</span></span><span class="ds-tog"><i></i></span></div>
+                <div class="ds-row"><span><span class="ds-label" id="ds-row2">自动审核</span><span class="ds-meta" id="ds-meta2">反刷屏与链接过滤</span></span><span class="ds-tog"><i></i></span></div>
+                <div class="ds-row"><span><span class="ds-label" id="ds-row3">等级系统</span><span class="ds-meta" id="ds-meta3">聊天经验与排行榜</span></span><span class="ds-tog"><i></i></span></div>
+                <div class="ds-row"><span><span class="ds-label" id="ds-row4">管理日志</span><span class="ds-meta" id="ds-meta4">#moderation-log</span></span><span class="ds-tog off"><i></i></span></div>
             </div>
         </div>
     </div>
@@ -665,35 +717,51 @@
 
 <!-- COMMUNITY PROTECTION -->
 <div class="wrap">
-<section class="prot-sec">
+<section class="prot-sec" id="protection">
     <div class="sh rv">
         <span class="eye" id="prot-eye" style="color:var(--pinkd)">社区保护</span>
-        <h2 id="prot-title">守护你的服务器</h2>
-        <p class="c" id="prot-sub" style="color:var(--mid)">让捣乱的人无处下手。</p>
+        <h2 id="prot-title">自动处理重复的管理工作</h2>
+        <p class="c" id="prot-sub" style="color:var(--mid)">规则可以调整，处理结果有记录，需要时也能人工介入。</p>
     </div>
     <div class="prot">
-        <div class="protc rv"><div class="pi">🛡️</div><h3 id="p1n">自动审核</h3><p id="p1d">刷屏、违禁词、垃圾链接、刷大写，全部自动识别处理。</p></div>
-        <div class="protc rv d1"><div class="pi">🗃️</div><h3 id="p2n">审计日志</h3><p id="p2d">消息删改、成员进出、封禁记录，全程可追溯。</p></div>
-        <div class="protc rv d2"><div class="pi">⚖️</div><h3 id="p3n">警告处罚</h3><p id="p3d">警告累计自动禁言 / 踢出 / 封禁，阶梯式处理。</p></div>
+        <div class="protc rv"><div class="pi"><i data-lucide="scan-text"></i></div><h3 id="p1n">内容审核</h3><p id="p1d">识别刷屏、违禁词、链接与重复内容，并按规则处理。</p></div>
+        <div class="protc rv d1"><div class="pi"><i data-lucide="history"></i></div><h3 id="p2n">操作记录</h3><p id="p2d">消息删改、成员进出和管理操作都能集中查看。</p></div>
+        <div class="protc rv d2"><div class="pi"><i data-lucide="list-checks"></i></div><h3 id="p3n">分级处罚</h3><p id="p3d">根据警告次数自动禁言、踢出或封禁，阈值由管理员设置。</p></div>
+    </div>
+</section>
+</div><!-- /wrap -->
+
+<!-- PRODUCT TRUST -->
+<div class="wrap">
+<section class="trust-sec" id="trust">
+    <div class="sh rv">
+        <span class="eye" id="trust-eye" style="color:var(--pinkd)">清晰可控</span>
+        <h2 id="trust-title">知道 Bot 正在做什么</h2>
+        <p class="c" id="trust-sub" style="color:var(--mid)">配置状态、权限要求和数据范围都应该清楚说明。</p>
+    </div>
+    <div class="trust">
+        <div class="trust-card rv"><div class="trust-icon"><i data-lucide="activity"></i></div><h3 id="tr1n">配置状态可见</h3><p id="tr1d">功能是否开启、频道是否设置、保存是否成功，都能在控制台确认。</p></div>
+        <div class="trust-card rv d1"><div class="trust-icon"><i data-lucide="key-round"></i></div><h3 id="tr2n">权限问题直接提示</h3><p id="tr2d">缺少管理频道、身份组或消息权限时，Bot 会说明原因，而不是静默失败。</p></div>
+        <div class="trust-card rv d2"><div class="trust-icon"><i data-lucide="database"></i></div><h3 id="tr3n">数据用途说清楚</h3><p id="tr3d">Bot 不建立完整聊天归档；启用消息审计后，删除或编辑事件会发送到管理员指定的日志频道。</p></div>
     </div>
 </section>
 </div><!-- /wrap -->
 
 <!-- MUSIC FEATURE SECTION -->
-<section class="feat-section feat-music">
+<section class="feat-section feat-music" id="music">
     <div class="wrap">
         <div class="feat-inner rv">
             <div class="feat-text">
-                <span class="feat-eye" id="fm-eye">🎵 音乐系统</span>
-                <h2 class="feat-title" id="fm-title">让语音频道变成<br>专属派对电台</h2>
-                <p class="feat-desc" id="fm-desc">支持 YouTube 搜索与直链，一句 <span class="code">/play</span> 立即开唱。高音质、低延迟，小凛陪你嗨到天亮！</p>
-                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" class="feat-link" id="fm-link">立即邀请小凛 →</a>
+                <span class="feat-eye" id="fm-eye">音乐系统</span>
+                <h2 class="feat-title" id="fm-title">搜索、排队与控制<br>都在一个播放器里</h2>
+                <p class="feat-desc" id="fm-desc">通过 <span class="code">/play</span> 搜索歌曲或粘贴链接，支持队列、循环、音量、歌单和 Spotify 导入。播放控制遵循语音频道与 DJ 权限设置。</p>
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="feat-link" id="fm-link">添加到服务器 →</a>
             </div>
             <div>
                 <div class="music-card">
                     <div class="mc-header">
-                        <div class="mc-art">🎵</div>
+                        <div class="mc-art"><i data-lucide="disc-3"></i></div>
                         <div>
                             <div class="mc-title">夜に駆ける</div>
                             <div class="mc-sub">YOASOBI · 正在播放</div>
@@ -702,13 +770,13 @@
                     <div class="mc-bar"><div class="mc-fill"></div></div>
                     <div class="mc-time"><span>2:14</span><span>4:06</span></div>
                     <div class="mc-ctr">
-                        <button class="mc-btn">⏮</button>
-                        <button class="mc-btn play">⏸</button>
-                        <button class="mc-btn">⏭</button>
+                        <button class="mc-btn" type="button" aria-label="上一首"><i data-lucide="skip-back"></i></button>
+                        <button class="mc-btn play" type="button" aria-label="暂停"><i data-lucide="pause"></i></button>
+                        <button class="mc-btn" type="button" aria-label="下一首"><i data-lucide="skip-forward"></i></button>
                     </div>
                     <div class="mc-queue">
-                        <div class="mq-item"><span class="mq-ic">🎵</span><span class="mq-nm">Kick Back — 米津玄師</span><span class="mq-du">4:18</span></div>
-                        <div class="mq-item"><span class="mq-ic">🎵</span><span class="mq-nm">Fight Song — Eve</span><span class="mq-du">3:52</span></div>
+                        <div class="mq-item"><span class="mq-ic"><i data-lucide="list-music"></i></span><span class="mq-nm">Kick Back — 米津玄師</span><span class="mq-du">4:18</span></div>
+                        <div class="mq-item"><span class="mq-ic"><i data-lucide="list-music"></i></span><span class="mq-nm">Fight Song — Eve</span><span class="mq-du">3:52</span></div>
                     </div>
                 </div>
             </div>
@@ -717,28 +785,28 @@
 </section>
 
 <!-- LEVEL FEATURE SECTION -->
-<section class="feat-section feat-level">
+<section class="feat-section feat-level" id="leveling">
     <div class="wrap">
         <div class="feat-inner rev rv">
             <div class="feat-text">
-                <span class="feat-eye" id="fl-eye">🏆 等级系统</span>
-                <h2 class="feat-title" id="fl-title">聊天即得经验值<br>冲击服务器排行榜</h2>
-                <p class="feat-desc" id="fl-desc">发言自动累积经验，曲线式算法越聊越高级。用 <span class="code">/rank</span> 看看谁才是最活跃的成员！</p>
-                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" class="feat-link" id="fl-link">立即邀请小凛 →</a>
+                <span class="feat-eye" id="fl-eye">等级系统</span>
+                <h2 class="feat-title" id="fl-title">让社区活跃度<br>有清晰反馈</h2>
+                <p class="feat-desc" id="fl-desc">成员聊天时积累经验，通过 <span class="code">/rank</span> 查看等级卡片，通过排行榜了解长期活跃情况。</p>
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="feat-link" id="fl-link">添加到服务器 →</a>
             </div>
             <div>
                 <div class="level-card">
                     <div class="lc-head">
-                        <div class="lc-av">🌸</div>
+                        <div class="lc-av">MC</div>
                         <div><div class="lc-name">Milk Chocolate</div><div class="lc-rank">Level 5 · Rank #1</div></div>
                     </div>
                     <div class="lc-bar"><div class="lc-fill"></div></div>
                     <div class="lc-xp"><span>1,240 XP</span><span>/ 1,800</span></div>
                     <div class="lc-lb">
-                        <div class="ll"><span class="ll-rk">🥇</span><div class="ll-av" style="background:rgba(255,183,197,.2)">🌸</div><span class="ll-nm">Milk Chocolate</span><span class="ll-lv">Lv.5</span></div>
-                        <div class="ll"><span class="ll-rk">🥈</span><div class="ll-av" style="background:rgba(116,198,157,.2)">✨</div><span class="ll-nm">Starlight</span><span class="ll-lv">Lv.3</span></div>
-                        <div class="ll"><span class="ll-rk">🥉</span><div class="ll-av" style="background:rgba(255,209,102,.2)">🎮</div><span class="ll-nm">GamerKun</span><span class="ll-lv">Lv.2</span></div>
+                        <div class="ll"><span class="ll-rk">01</span><div class="ll-av" style="background:rgba(255,183,197,.2)">MC</div><span class="ll-nm">Milk Chocolate</span><span class="ll-lv">Lv.5</span></div>
+                        <div class="ll"><span class="ll-rk">02</span><div class="ll-av" style="background:rgba(116,198,157,.2)">ST</div><span class="ll-nm">Starlight</span><span class="ll-lv">Lv.3</span></div>
+                        <div class="ll"><span class="ll-rk">03</span><div class="ll-av" style="background:rgba(255,209,102,.2)">GK</div><span class="ll-nm">GamerKun</span><span class="ll-lv">Lv.2</span></div>
                     </div>
                 </div>
             </div>
@@ -750,24 +818,24 @@
 <div class="wrap">
 <section class="how-sec">
     <div class="sh rv">
-        <span class="eye" id="hw-eye" style="color:var(--pinkd)">超简单</span>
-        <h2 id="hw-title">三步就能拥有小凛</h2>
+        <span class="eye" id="hw-eye" style="color:var(--pinkd)">开始使用</span>
+        <h2 id="hw-title">从邀请到可用，只需三步</h2>
     </div>
     <div class="steps">
         <div class="step rv">
             <div class="step-num">1</div>
-            <h4 id="s1h">点击邀请</h4>
-            <p id="s1d">点击「邀请入驻」按钮，选择你的服务器并授权小凛加入。</p>
+            <h4 id="s1h">添加到服务器</h4>
+            <p id="s1d">选择你有管理权限的服务器，确认小凛需要的权限。</p>
         </div>
         <div class="step rv d1">
             <div class="step-num">2</div>
-            <h4 id="s2h">敲 r!help</h4>
-            <p id="s2d">在任意频道发送 <span class="code-d">r!help</span>，查看所有可用指令。</p>
+            <h4 id="s2h">完成基础配置</h4>
+            <p id="s2d">进入控制台设置欢迎频道、日志频道和需要启用的模块。</p>
         </div>
         <div class="step rv d2">
             <div class="step-num">3</div>
-            <h4 id="s3h">开始玩吧！</h4>
-            <p id="s3d">放音乐、刷等级、用工具…小凛 24/7 全天陪着你 (´• ω •`)ﾉ</p>
+            <h4 id="s3h">开始使用</h4>
+            <p id="s3d">在 Discord 输入 <span class="code-d">/help</span>，查看当前服务器可以使用的指令。</p>
         </div>
     </div>
 </section>
@@ -776,13 +844,13 @@
 <section class="faq-sec">
     <div class="sh rv">
         <span class="eye" id="faq-eye" style="color:var(--pinkd)">常见问题</span>
-        <h2 id="faq-title">你可能想问</h2>
+        <h2 id="faq-title">使用前可能想了解</h2>
     </div>
     <div class="faq">
-        <details class="rv"><summary id="q1">小凛是免费的吗？</summary><div id="a1">完全免费！所有功能都不收费，邀请即用。</div></details>
+        <details class="rv"><summary id="q1">小凛是免费的吗？</summary><div id="a1">目前所有功能都可以免费使用，没有付费等级或隐藏模块。</div></details>
         <details class="rv"><summary id="q2">怎么邀请到我的服务器？</summary><div id="a2">点击页面上的「邀请小凛」按钮，选择服务器并授权即可。</div></details>
-        <details class="rv"><summary id="q3">需要给哪些权限？</summary><div id="a3">建议授予管理员权限以使用全部功能；也可按需只给所需权限。</div></details>
-        <details class="rv"><summary id="q4">我的数据安全吗？</summary><div id="a4">小凛只保存运行功能所需的配置（等级、设定等）。消息内容仅用于即时审核与计算经验，处理后即丢弃，不会长期保存你的聊天记录。</div></details>
+        <details class="rv"><summary id="q3">需要给哪些权限？</summary><div id="a3">邀请链接只请求音乐、管理、审核、日志和身份组功能实际使用的权限，不包含管理员权限。Bot 的角色仍需位于被管理身份组和成员之上。</div></details>
+        <details class="rv"><summary id="q4">小凛会保存哪些数据？</summary><div id="a4">小凛会保存等级、功能配置和必要的管理记录，不会建立完整聊天归档。若服务器启用了消息审计，删除或编辑事件的内容会发送到管理员指定的 Discord 日志频道。</div></details>
     </div>
 </section>
 
@@ -790,12 +858,12 @@
 <section class="cta-sec">
     <div class="cta rv">
         <div class="cta-in">
-            <span class="cta-em">✨</span>
-            <h2 id="cta-title">准备好了吗？<br>让小凛加入你的服务器！</h2>
-            <p id="cta-desc">嘿嘿，点一下就能拥有小凛~ One in all, all in one!</p>
+            <span class="cta-em"><i data-lucide="sparkles"></i></span>
+            <h2 id="cta-title">先从一台服务器开始</h2>
+            <p id="cta-desc">邀请完成后进入控制台，按你的社区需求逐项开启功能。</p>
             <div class="cta-btns">
-                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" class="btn-cta" id="cta-invite">✨ 立即邀请小凛</a>
+                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
+                   target="_blank" class="btn-cta"><i data-lucide="plus" aria-hidden="true"></i><span id="cta-invite">添加到服务器</span></a>
                 <a href="/dashboard" class="btn-cta-ghost" id="cta-dash">进入控制台 →</a>
             </div>
         </div>
@@ -807,25 +875,25 @@
     <div class="footer-g">
         <div>
             <div class="f-logo"><span class="d" style="width:9px;height:9px;background:var(--pink);border-radius:50%;display:inline-block"></span>小凛 RinBot</div>
-            <p class="f-tag" id="footer-tagline">元气满满的全能 Discord 助手。<br>One in all, all in one!</p>
+            <p class="f-tag" id="footer-tagline">把服务器管理、自动化与社区互动放在同一个控制台里。</p>
         </div>
         <div class="fc2"><h4 id="fc1-head">功能</h4><ul>
-            <li><a href="#" id="fc1-l1">音乐播放</a></li>
-            <li><a href="#" id="fc1-l2">等级系统</a></li>
-            <li><a href="#" id="fc1-l3">管理模块</a></li>
-            <li><a href="#" id="fc1-l4">迎新 & 审核 & 抽奖…</a></li>
+            <li><a href="#music" id="fc1-l1">音乐播放</a></li>
+            <li><a href="#leveling" id="fc1-l2">等级系统</a></li>
+            <li><a href="#protection" id="fc1-l3">管理与审核</a></li>
+            <li><a href="#dashboard-preview" id="fc1-l4">网页控制台</a></li>
         </ul></div>
         <div class="fc2"><h4 id="fc2-head">链接</h4><ul>
             <li><a href="/dashboard" id="fc2-l1">控制台</a></li>
-            <li><a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands" target="_blank" id="fc2-l2">邀请小凛</a></li>
+            <li><a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands" target="_blank" id="fc2-l2">邀请小凛</a></li>
         </ul></div>
-        <div class="fc2"><h4 id="fc3-head">关于</h4><ul>
-            <li><a href="#" id="fc3-l1">服务条款</a></li>
-            <li><a href="#" id="fc3-l2">隐私政策</a></li>
+        <div class="fc2"><h4 id="fc3-head">项目</h4><ul>
+            <li><a href="https://github.com/RSRH-Rs/DiscordRinBot" target="_blank" id="fc3-l1">GitHub</a></li>
+            <li><a href="https://github.com/RSRH-Rs/DiscordRinBot/issues" target="_blank" id="fc3-l2">反馈问题</a></li>
         </ul></div>
     </div>
     <div class="foot-bot">
-        <span>&copy; 2026 RinBot. Made with <span class="hrt">💖</span></span>
+        <span>&copy; 2026 RinBot. Built for Discord communities.</span>
         <span>Created by <span class="aut">Milk Chocolate</span></span>
     </div>
 </footer>
@@ -837,102 +905,114 @@ const userIsLoggedIn = {{ 'true' if is_logged_in else 'false' }};
 
 const i18n = {
     zh:{
-        lang:'English', title:'小凛 Rin | 全能 Discord 助手',
-        invite:'邀请入驻 +',
-        dash: userIsLoggedIn ? '进入控制台 ⚙️' : '登录后台 ⚙️',
-        heroTag:'在线中',
-        heroTitle:'你的全能<br><em>Discord</em><br>小助手。',
-        heroDesc:'哼哼，小凛可不只会唱歌哦！无论是管理社区、活跃气氛，还是陪大家解闷，只要敲敲 <span class="code-d">r!help</span>，小凛通通帮你搞定！',
-        heroBtn:'✨ 立即邀请小凛', heroDash:'控制台 →',
-        badgeOn:'在线 · 今天也在哦！', badgeXp:'XP 进度',
-        st1:'活跃服务器', st2:'功能模块', st3:'全天在线', st4:'持续更新',
-        tickerLbl:'受众多 Discord 社群信赖',
-        bentoEye:'核心功能', bentoTitle:'一个小凛，搞定所有', bentoSub:'嘿嘿~ One in all, all in one!',
+        lang:'English', title:'小凛 Rin | Discord 服务器管理与互动 Bot',
+        invite:'添加到服务器',
+        dash: userIsLoggedIn ? '进入控制台' : '登录控制台',
+        heroTag:'服务在线',
+        heroTitle:'让服务器管理<br>少一点重复，<br><em>多一点互动。</em>',
+        heroDesc:'音乐、审核、迎新、身份组与抽奖，集中在一个 Bot 和网页控制台。常用操作交给斜杠命令，复杂配置在浏览器里完成。',
+        heroBtn:'添加到服务器', heroDash:'查看控制台 →',
+        badgeOn:'服务在线', badgeXp:'XP 进度',
+        st1:'活跃服务器', st2:'功能模块', st3:'可用指令', st4:'服务运行',
+        tickerLbl:'RinBot 运行状态',
+        bentoEye:'核心功能', bentoTitle:'按场景找到需要的功能', bentoSub:'每个模块都可以单独配置。',
         bc1t:'音乐', bc1h:'语音派对<br>立刻开始', bc1d:'支持 YouTube 搜索和直链，高音质低延迟。', bc1hint:'搜索或粘贴链接',
         bc2t:'等级', bc2h:'聊天得经验<br>爬上排行榜', bc2d:'<span class="code-d">/rank</span> 查看等级卡片。',
         bc3t:'工具', bc3h:'日常管理<br>全搞定', bc3d:'头像、骰子、状态监控，Owner 专属。',
         bc4t:'指令', bc4h:'简单好用<br>一句话搞定', bc4d:'支持 <span class="code-d">/</span> 斜杠与 <span class="code-d">r!</span> 前缀，任意场合好用。',
-        fmEye:'🎵 音乐系统', fmTitle:'让语音频道变成<br>专属派对电台', fmDesc:'支持 YouTube 搜索与直链，一句 <span class="code">/play</span> 立即开唱。高音质、低延迟，小凛陪你嗨到天亮！', fmLink:'立即邀请小凛 →',
-        flEye:'🏆 等级系统', flTitle:'聊天即得经验值<br>冲击服务器排行榜', flDesc:'发言自动累积经验，曲线式算法越聊越高级。用 <span class="code">/rank</span> 看看谁才是最活跃的成员！', flLink:'立即邀请小凛 →',
-        hwEye:'超简单', hwTitle:'三步就能拥有小凛',
-        s1h:'点击邀请', s1d:'点击「邀请入驻」按钮，选择你的服务器并授权小凛加入。',
-        s2h:'敲 r!help', s2d:'在任意频道发送 <span class="code-d">r!help</span>，查看所有可用指令。',
-        s3h:'开始玩吧！', s3d:'放音乐、刷等级、用工具…小凛 24/7 全天陪着你 (´• ω •`)ﾉ',
-        ctaTitle:'准备好了吗？<br>让小凛加入你的服务器！', ctaDesc:'嘿嘿，点一下就能拥有小凛~ One in all, all in one!',
-        ctaInvite:'✨ 立即邀请小凛', ctaDash:'进入控制台 →',
-        footerTagline:'元气满满的全能 Discord 助手。<br>One in all, all in one!',
-        fc1h:'功能',fc1l1:'音乐播放',fc1l2:'等级系统',fc1l3:'管理模块',fc1l4:'迎新 & 审核 & 抽奖…',
+        fmEye:'音乐系统', fmTitle:'搜索、排队与控制<br>都在一个播放器里', fmDesc:'通过 <span class="code">/play</span> 搜索歌曲或粘贴链接，支持队列、循环、音量、歌单和 Spotify 导入。播放控制遵循语音频道与 DJ 权限设置。', fmLink:'添加到服务器 →',
+        flEye:'等级系统', flTitle:'让社区活跃度<br>有清晰反馈', flDesc:'成员聊天时积累经验，通过 <span class="code">/rank</span> 查看等级卡片，通过排行榜了解长期活跃情况。', flLink:'添加到服务器 →',
+        hwEye:'开始使用', hwTitle:'从邀请到可用，只需三步',
+        s1h:'添加到服务器', s1d:'选择你有管理权限的服务器，确认小凛需要的权限。',
+        s2h:'完成基础配置', s2d:'进入控制台设置欢迎频道、日志频道和需要启用的模块。',
+        s3h:'开始使用', s3d:'在 Discord 输入 <span class="code-d">/help</span>，查看当前服务器可以使用的指令。',
+        ctaTitle:'先从一台服务器开始', ctaDesc:'邀请完成后进入控制台，按你的社区需求逐项开启功能。',
+        ctaInvite:'添加到服务器', ctaDash:'进入控制台 →',
+        footerTagline:'把服务器管理、自动化与社区互动放在同一个控制台里。',
+        fc1h:'功能',fc1l1:'音乐播放',fc1l2:'等级系统',fc1l3:'管理与审核',fc1l4:'网页控制台',
         fc2h:'链接',fc2l1:'控制台',fc2l2:'邀请小凛',
-        fc3h:'关于',fc3l1:'服务条款',fc3l2:'隐私政策',
-        fgEye:'核心功能', fgTitle:'一个小凛，搞定所有', fgSub:'10 个模块，一屏看全。',
-        fg1n:'音乐播放', fg1d:'队列、循环、歌单 / Spotify 导入，高音质低延迟。',
-        fg2n:'等级系统', fg2d:'聊天累积经验，精美等级卡片与排行榜。',
-        fg3n:'管理工具', fg3d:'踢 / 封 / 禁言 / 警告 / 清屏，警告自动处罚。',
-        fg4n:'自动审核', fg4d:'反刷屏、违禁词、链接与大写过滤，自动处理。',
-        fg5n:'欢迎新人', fg5d:'自定义欢迎图卡、自动身份组、道别消息。',
-        fg6n:'反应身份组', fg6d:'点按钮自助领取身份组，支持单选互斥。',
-        fg7n:'抽奖活动', fg7d:'倒计时自动开奖、reroll，公平透明。',
-        fg8n:'审计日志', fg8d:'消息、成员、频道、身份组变动全记录。',
-        fg9n:'网页控制台', fg9d:'浏览器里一键配置，改完即时生效。',
-        dashEye:'网页控制台', dashTitle:'不用记指令，<br>网页点点就配置好', dashDesc:'登录后在浏览器里开关功能、设定频道、调整参数，所有改动即时生效——再也不用对着指令表敲个不停。', dashBtn:'打开控制台 →',
-        protEye:'社区保护', protTitle:'守护你的服务器', protSub:'让捣乱的人无处下手。',
-        p1n:'自动审核', p1d:'刷屏、违禁词、垃圾链接、刷大写，全部自动识别处理。',
-        p2n:'审计日志', p2d:'消息删改、成员进出、封禁记录，全程可追溯。',
-        p3n:'警告处罚', p3d:'警告累计自动禁言 / 踢出 / 封禁，阶梯式处理。',
-        faqEye:'常见问题', faqTitle:'你可能想问',
-        q1:'小凛是免费的吗？', a1:'完全免费！所有功能都不收费，邀请即用。',
+        fc3h:'项目',fc3l1:'GitHub',fc3l2:'反馈问题',
+        fgEye:'核心功能', fgTitle:'按场景找到需要的功能', fgSub:'从社区互动到日常管理，每个模块都可以单独配置。',
+        fg1n:'音乐与队列', fg1d:'搜索、直链、歌单、循环和存档队列集中管理。',
+        fg2n:'自动管理', fg2d:'审核规则、警告处罚和管理记录形成完整流程。',
+        fg3n:'网页配置', fg3d:'频道、身份组和功能开关都能在控制台中完成。',
+        fg4n:'等级系统', fg4d:'聊天积累经验，通过等级卡和排行榜反馈活跃度。',
+        fg5n:'欢迎与身份组', fg5d:'欢迎消息、自动身份组和成员自助领取面板。',
+        fg6n:'抽奖活动', fg6d:'设置参与条件、结束时间、获奖人数和重新抽取。',
+        fg7n:'管理工具', fg7d:'封禁、禁言、警告、清理消息和频道控制。',
+        fg8n:'审计日志', fg8d:'记录消息、成员、频道、身份组和封禁变动。',
+        fg9n:'指令开关', fg9d:'按服务器启用或禁用指令，保留需要的功能。',
+        dashEye:'网页控制台', dashTitle:'复杂配置，<br>放到网页里完成', dashDesc:'选择服务器后即可设置频道、身份组、审核规则与日志。保存结果和错误原因都会直接显示，不需要反复查指令参数。', dashBtn:'打开控制台 →',
+        dsNav1:'概览',dsNav2:'欢迎设置',dsNav3:'自动审核',dsNav4:'审计日志',dsTitle:'服务器配置',dsStatus:'已连接',
+        dsRow1:'欢迎新成员',dsMeta1:'#welcome',dsRow2:'自动审核',dsMeta2:'反刷屏与链接过滤',dsRow3:'等级系统',dsMeta3:'聊天经验与排行榜',dsRow4:'管理日志',dsMeta4:'#moderation-log',
+        protEye:'社区保护', protTitle:'自动处理重复的管理工作', protSub:'规则可以调整，处理结果有记录，需要时也能人工介入。',
+        p1n:'内容审核', p1d:'识别刷屏、违禁词、链接与重复内容，并按规则处理。',
+        p2n:'操作记录', p2d:'消息删改、成员进出和管理操作都能集中查看。',
+        p3n:'分级处罚', p3d:'根据警告次数自动禁言、踢出或封禁，阈值由管理员设置。',
+        trustEye:'清晰可控',trustTitle:'知道 Bot 正在做什么',trustSub:'配置状态、权限要求和数据范围都应该清楚说明。',
+        tr1n:'配置状态可见',tr1d:'功能是否开启、频道是否设置、保存是否成功，都能在控制台确认。',
+        tr2n:'权限问题直接提示',tr2d:'缺少管理频道、身份组或消息权限时，Bot 会说明原因，而不是静默失败。',
+        tr3n:'数据用途说清楚',tr3d:'Bot 不建立完整聊天归档；启用消息审计后，删除或编辑事件会发送到管理员指定的日志频道。',
+        faqEye:'常见问题', faqTitle:'使用前可能想了解',
+        q1:'小凛是免费的吗？', a1:'目前所有功能都可以免费使用，没有付费等级或隐藏模块。',
         q2:'怎么邀请到我的服务器？', a2:'点击页面上的「邀请小凛」按钮，选择服务器并授权即可。',
-        q3:'需要给哪些权限？', a3:'建议授予管理员权限以使用全部功能；也可按需只给所需权限。',
-        q4:'我的数据安全吗？', a4:'小凛只保存运行功能所需的配置（等级、设定等）。消息内容仅用于即时审核与计算经验，处理后即丢弃，不会长期保存你的聊天记录。',
+        q3:'需要给哪些权限？', a3:'邀请链接只请求音乐、管理、审核、日志和身份组功能实际使用的权限，不包含管理员权限。Bot 的角色仍需位于被管理身份组和成员之上。',
+        q4:'小凛会保存哪些数据？', a4:'小凛会保存等级、功能配置和必要的管理记录，不会建立完整聊天归档。若服务器启用了消息审计，删除或编辑事件的内容会发送到管理员指定的 Discord 日志频道。',
     },
     en:{
-        lang:'中文', title:'RinBot | All-in-One Discord Assistant',
-        invite:'Add to Server +',
-        dash: userIsLoggedIn ? 'Dashboard ⚙️' : 'Login ⚙️',
-        heroTag:'Now Online',
-        heroTitle:'Your Ultimate<br><em>Discord</em><br>Assistant.',
-        heroDesc:'Hehe, Rin isn\'t just about singing! Whether it\'s managing your community, livening up the mood, or just hanging out — type <span class="code-d">r!help</span> and Rin handles it all!',
-        heroBtn:'✨ Invite Rin Now', heroDash:'Dashboard →',
-        badgeOn:'Online · Here today too!', badgeXp:'XP Progress',
-        st1:'Active Servers', st2:'Modules', st3:'Always Online', st4:'Always Updating',
-        tickerLbl:'Trusted by Discord communities worldwide',
-        bentoEye:'Features', bentoTitle:'One Rin, Everything Done', bentoSub:'Hehe~ One in all, all in one!',
+        lang:'中文', title:'RinBot | Discord Management and Community Bot',
+        invite:'Add to Server',
+        dash: userIsLoggedIn ? 'Open Dashboard' : 'Dashboard Login',
+        heroTag:'Service Online',
+        heroTitle:'Less repetitive work.<br>More time for<br><em>your community.</em>',
+        heroDesc:'Music, moderation, welcome messages, roles and giveaways in one bot and one web dashboard. Use slash commands for quick actions and the browser for detailed setup.',
+        heroBtn:'Add to Server', heroDash:'View Dashboard →',
+        badgeOn:'Service Online', badgeXp:'XP Progress',
+        st1:'Active Servers', st2:'Feature Modules', st3:'Available Commands', st4:'Service Coverage',
+        tickerLbl:'RinBot service status',
+        bentoEye:'Features', bentoTitle:'Find features by use case', bentoSub:'Enable and configure each module separately.',
         bc1t:'Music', bc1h:'Party Time<br>Starts Now', bc1d:'YouTube search and direct links. High quality, low latency.', bc1hint:'Search or paste a link',
         bc2t:'Leveling', bc2h:'Chat to Earn XP<br>Top the Leaderboard', bc2d:' Use <span class="code-d">/rank</span> for your rank card.',
         bc3t:'Utility', bc3h:'Daily Management<br>All Covered', bc3d:'Avatar, dice, server stats and owner-only commands.',
         bc4t:'Commands', bc4h:'Simple & Powerful<br>One Line Away', bc4d:'Supports both <span class="code-d">/</span> slash commands and <span class="code-d">r!</span> prefix.',
-        fmEye:'🎵 Music', fmTitle:'Turn Your Voice Channel<br>Into a Party Station', fmDesc:'YouTube search and direct links. Type <span class="code">/play</span> and the music starts — high quality, low latency!', fmLink:'Invite Rin Now →',
-        flEye:'🏆 Leveling', flTitle:'Chat to Earn XP &<br>Climb the Leaderboard', flDesc:'Earn XP just by chatting. Curve-based algorithm makes every level feel earned. Type <span class="code">/rank</span> to see your rank card!', flLink:'Invite Rin Now →',
-        hwEye:'Easy as 1-2-3', hwTitle:'3 Steps to Get Rin',
-        s1h:'Click Invite', s1d:'Click "Add to Server", pick your server, and authorize Rin to join.',
-        s2h:'Type r!help', s2d:'Send <span class="code-d">r!help</span> in any channel to see all available commands.',
-        s3h:"Let's Go!", s3d:'Play music, earn XP, use tools… Rin is with you 24/7 (´• ω •`)ﾉ',
-        ctaTitle:"Ready?<br>Let Rin Join Your Server!", ctaDesc:'Hehe, just one click and Rin is yours~ One in all, all in one!',
-        ctaInvite:'✨ Invite Rin Now', ctaDash:'Dashboard →',
-        footerTagline:'Your energetic all-in-one Discord assistant.<br>One in all, all in one!',
-        fc1h:'Features',fc1l1:'Music',fc1l2:'Leveling',fc1l3:'Moderation',fc1l4:'Welcome & AutoMod & more…',
+        fmEye:'Music', fmTitle:'Search, queue and control<br>in one player', fmDesc:'Use <span class="code">/play</span> to search or paste a link. Queues, loops, volume, playlists and Spotify imports are supported, with voice-channel and DJ permission checks.', fmLink:'Add to Server →',
+        flEye:'Leveling', flTitle:'Make community activity<br>easy to understand', flDesc:'Members earn XP through conversation, view rank cards with <span class="code">/rank</span>, and track long-term activity on the leaderboard.', flLink:'Add to Server →',
+        hwEye:'Getting Started', hwTitle:'From invite to ready in three steps',
+        s1h:'Add to Server', s1d:'Choose a server you manage and review the permissions Rin requests.',
+        s2h:'Complete Basic Setup', s2d:'Use the dashboard to select welcome and log channels, then enable the modules you need.',
+        s3h:'Start Using Rin', s3d:'Type <span class="code-d">/help</span> in Discord to see the commands available in that server.',
+        ctaTitle:'Start with one server', ctaDesc:'After inviting Rin, open the dashboard and enable features as your community needs them.',
+        ctaInvite:'Add to Server', ctaDash:'Open Dashboard →',
+        footerTagline:'Server management, automation and community tools in one dashboard.',
+        fc1h:'Features',fc1l1:'Music',fc1l2:'Leveling',fc1l3:'Moderation & Safety',fc1l4:'Web Dashboard',
         fc2h:'Links',fc2l1:'Dashboard',fc2l2:'Invite Rin',
-        fc3h:'About',fc3l1:'Terms of Service',fc3l2:'Privacy Policy',
-        fgEye:'Features', fgTitle:'One Rin, Everything Done', fgSub:'10 modules, all in one view.',
-        fg1n:'Music', fg1d:'Queue, loop, playlist / Spotify import. High quality, low latency.',
-        fg2n:'Leveling', fg2d:'Earn XP by chatting, with rank cards and leaderboards.',
-        fg3n:'Moderation', fg3d:'Kick / ban / mute / warn / purge, with auto-punishment.',
-        fg4n:'AutoMod', fg4d:'Anti-spam, banned words, link and caps filtering — automatic.',
-        fg5n:'Welcome', fg5d:'Custom welcome cards, auto-roles and farewell messages.',
-        fg6n:'Reaction Roles', fg6d:'Self-assign roles with buttons, exclusive mode supported.',
-        fg7n:'Giveaways', fg7d:'Auto-draw with countdown and reroll. Fair and transparent.',
-        fg8n:'Audit Log', fg8d:'Logs message, member, channel and role changes.',
-        fg9n:'Web Dashboard', fg9d:'Configure everything in your browser, applied instantly.',
-        dashEye:'Web Dashboard', dashTitle:'No commands to memorize —<br>just point and click', dashDesc:'Log in and toggle features, set channels and tweak settings right in your browser. Every change applies instantly.', dashBtn:'Open Dashboard →',
-        protEye:'Protection', protTitle:'Keep Your Server Safe', protSub:'Leave troublemakers nowhere to go.',
-        p1n:'AutoMod', p1d:'Spam, banned words, junk links and caps — detected and handled automatically.',
-        p2n:'Audit Log', p2d:'Message edits, member joins/leaves and bans — all traceable.',
-        p3n:'Auto-Punish', p3d:'Stacked warnings trigger mute / kick / ban automatically.',
-        faqEye:'FAQ', faqTitle:'You Might Be Wondering',
-        q1:'Is Rin free?', a1:'Completely free! Every feature is free — just invite and use.',
+        fc3h:'Project',fc3l1:'GitHub',fc3l2:'Report an Issue',
+        fgEye:'Features', fgTitle:'Find features by use case', fgSub:'From community activity to daily moderation, each module can be configured separately.',
+        fg1n:'Music & Queues', fg1d:'Manage search, direct links, playlists, loops and saved queues.',
+        fg2n:'Automated Moderation', fg2d:'Connect moderation rules, warning thresholds and action records.',
+        fg3n:'Web Configuration', fg3d:'Set channels, roles and feature switches from the dashboard.',
+        fg4n:'Leveling', fg4d:'Turn conversation activity into XP, rank cards and leaderboards.',
+        fg5n:'Welcome & Roles', fg5d:'Welcome messages, automatic roles and self-service role panels.',
+        fg6n:'Giveaways', fg6d:'Set entry requirements, end times, winner counts and rerolls.',
+        fg7n:'Moderation Tools', fg7d:'Ban, timeout, warn, purge messages and control channels.',
+        fg8n:'Audit Log', fg8d:'Track message, member, channel, role and ban changes.',
+        fg9n:'Command Controls', fg9d:'Enable or disable commands per server and keep only what you need.',
+        dashEye:'Web Dashboard', dashTitle:'Handle detailed setup<br>in the browser', dashDesc:'Choose a server, then configure channels, roles, moderation rules and logs. Save results and errors are shown directly, without looking up command parameters.', dashBtn:'Open Dashboard →',
+        dsNav1:'Overview',dsNav2:'Welcome',dsNav3:'AutoMod',dsNav4:'Audit Log',dsTitle:'Server Settings',dsStatus:'Connected',
+        dsRow1:'Welcome Members',dsMeta1:'#welcome',dsRow2:'AutoMod',dsMeta2:'Spam and link filters',dsRow3:'Leveling',dsMeta3:'Chat XP and leaderboard',dsRow4:'Moderation Log',dsMeta4:'#moderation-log',
+        protEye:'Community Safety', protTitle:'Automate repetitive moderation work', protSub:'Rules stay configurable, actions stay visible, and moderators can step in when needed.',
+        p1n:'Content Filters', p1d:'Detect spam, banned words, links and repeated content, then apply configured actions.',
+        p2n:'Action History', p2d:'Review message changes, member events and moderation actions in one place.',
+        p3n:'Escalating Actions', p3d:'Apply timeout, kick or ban based on warning counts set by administrators.',
+        trustEye:'Clear and Controllable',trustTitle:'Know what the bot is doing',trustSub:'Configuration status, permission requirements and data boundaries should be explicit.',
+        tr1n:'Visible Configuration State',tr1d:'Confirm whether a feature is enabled, which channel it uses and whether a save succeeded.',
+        tr2n:'Actionable Permission Errors',tr2d:'If channel, role or message permissions are missing, Rin explains the problem instead of failing silently.',
+        tr3n:'Clear Data Use',tr3d:'Rin does not build a complete chat archive. If message auditing is enabled, deleted or edited message events are sent to the administrator-selected log channel.',
+        faqEye:'FAQ', faqTitle:'What to know before you start',
+        q1:'Is Rin free?', a1:'All current features are free to use, with no paid tier or hidden modules.',
         q2:'How do I add it to my server?', a2:'Click the "Invite Rin" button, pick your server and authorize.',
-        q3:'What permissions are needed?', a3:'Administrator is recommended for all features; or grant only what you need.',
-        q4:'Is my data safe?', a4:'Rin only stores the config needed to run features (levels, settings). Message content is used only for real-time moderation and XP, then discarded — your chat history is never kept.',
+        q3:'What permissions are needed?', a3:'The invite requests only the permissions used by music, moderation, safety, logging and role features; it does not request Administrator. The bot role must still sit above roles and members it needs to manage.',
+        q4:'What data does Rin keep?', a4:'Rin stores levels, feature settings and necessary moderation records, but does not build a complete chat archive. If message auditing is enabled, deleted or edited message events are sent to the Discord log channel selected by administrators.',
     }
 };
 
@@ -975,13 +1055,22 @@ function render(){
     s('fg-eye',t.fgEye); s('fg-title',t.fgTitle); s('fg-sub',t.fgSub);
     for(let i=1;i<=9;i++){ s('fg'+i+'n',t['fg'+i+'n']); s('fg'+i+'d',t['fg'+i+'d']); }
     s('dash-eye',t.dashEye); s('dash-title',t.dashTitle,true); s('dash-desc',t.dashDesc); s('dash-btn',t.dashBtn);
+    for(let i=1;i<=4;i++){
+        s('ds-nav'+i,t['dsNav'+i]);
+        s('ds-row'+i,t['dsRow'+i]);
+        s('ds-meta'+i,t['dsMeta'+i]);
+    }
+    s('ds-title',t.dsTitle); s('ds-status',t.dsStatus);
     s('prot-eye',t.protEye); s('prot-title',t.protTitle); s('prot-sub',t.protSub);
     s('p1n',t.p1n); s('p1d',t.p1d); s('p2n',t.p2n); s('p2d',t.p2d); s('p3n',t.p3n); s('p3d',t.p3d);
+    s('trust-eye',t.trustEye); s('trust-title',t.trustTitle); s('trust-sub',t.trustSub);
+    for(let i=1;i<=3;i++){ s('tr'+i+'n',t['tr'+i+'n']); s('tr'+i+'d',t['tr'+i+'d']); }
     s('faq-eye',t.faqEye); s('faq-title',t.faqTitle);
     for(let i=1;i<=4;i++){ s('q'+i,t['q'+i]); s('a'+i,t['a'+i]); }
 }
 function toggleLanguage(){ lang=lang==='zh'?'en':'zh'; localStorage.setItem('rinbot_lang',lang); render(); }
 render();
+if(window.lucide) window.lucide.createIcons();
 
 /* Dynamic stats from backend */
 (async()=>{
@@ -989,7 +1078,7 @@ render();
         const r=await fetch('/api/stats'); if(!r.ok)return;
         const d=await r.json();
         const set=(id,v)=>{const el=document.getElementById(id); if(el&&typeof v==='number'&&v>0) el.textContent=v;};
-        set('stat-servers',d.servers); set('stat-modules',d.modules);
+        set('stat-servers',d.servers); set('stat-modules',d.modules); set('stat-commands',d.commands);
     }catch(e){}
 })();
 
