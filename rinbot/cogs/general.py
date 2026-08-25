@@ -7,9 +7,12 @@ import psutil
 import time
 import datetime
 import random
+import os
 from typing import Literal
 
-BOTCONFIG_DB = "botconfig.db"
+BOTCONFIG_DB = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "botconfig.db"
+)
 
 
 class General(commands.Cog):

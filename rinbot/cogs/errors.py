@@ -4,6 +4,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
+import traceback
 
 
 def _friendly(error) -> str | None:
@@ -74,6 +75,30 @@ class ErrorHandler(commands.Cog):
         if msg is None:
             return
         if msg == "__UNEXPECTED__":
+            original = getattr(error, "original", error)
+            if interaction.guild:
+                botlog = self.bot.get_cog("BotLog")
+                if botlog:
+                    tb = "".join(
+                        traceback.format_exception(
+                            type(original), original, original.__traceback__
+                        )
+                    )
+                    try:
+                        await botlog.log(
+                            interaction.guild.id,
+                            "error",
+                            f"Slash 指令执行失败: /{getattr(interaction.command, 'qualified_name', '未知指令')}",
+                            f"```py\n{tb[-1500:]}\n```",
+                            **{
+                                "用户": interaction.user.mention,
+                                "频道": interaction.channel.mention
+                                if interaction.channel
+                                else "私信",
+                            },
+                        )
+                    except Exception:
+                        pass
             print(
                 f"[app error] {getattr(interaction.command, 'name', None)}: {getattr(error, 'original', error)!r}"
             )

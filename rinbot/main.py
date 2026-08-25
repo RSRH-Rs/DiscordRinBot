@@ -23,7 +23,7 @@ class HybridBot(commands.Bot):
 
     async def setup_hook(self):
         print("--- 开始加载插件 ---")
-        for filename in os.listdir("./cogs"):
+        for filename in os.listdir(COGS_DIR):
             if filename.endswith(".py") and not filename.startswith("_"):
                 try:
                     await self.load_extension(f"cogs.{filename[:-3]}")

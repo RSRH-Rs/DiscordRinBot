@@ -5,12 +5,15 @@
 import discord
 from discord.ext import commands, tasks
 import aiosqlite
+import os
 from datetime import datetime, timezone
 from typing import Literal, Optional
 
 from _botlog_helper import audit
 
-DB_PATH = "serverlog.db"
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "serverlog.db"
+)
 
 # 事件分类元数据（顺序即 status 展示顺序）
 CATEGORY_META = {

@@ -15,7 +15,9 @@ import os
 import aiosqlite
 from _botlog_helper import audit
 
-DB_PATH = "welcome.db"
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "welcome.db"
+)
 
 
 class WelcomeSetupView(View):
@@ -129,7 +131,9 @@ class Welcome(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        self.assets_path = "./assets"
+        self.assets_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets"
+        )
         self.font_name = "LXGWWenKaiTC-Regular.ttf"
 
     async def cog_load(self):
@@ -348,6 +352,8 @@ class Welcome(commands.Cog):
         config = await self._get_config(member.guild.id)
         if not config:
             return
+        if not config.get("enabled", 1):
+            return
 
         # 1. 自动分配身份组
         if config["auto_roles"]:
@@ -385,6 +391,8 @@ class Welcome(commands.Cog):
             return
         config = await self._get_config(member.guild.id)
         if not config:
+            return
+        if not config.get("enabled", 1):
             return
 
         channel_id = config.get("farewell_channel", 0)

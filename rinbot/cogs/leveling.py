@@ -9,6 +9,9 @@ import random
 import time
 import math
 
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(BASE_DIR, "leveling.db")
+
 
 # --- 辅助函数：经验值格式化 ---
 def format_xp_number(num):
@@ -27,7 +30,7 @@ class Leveling(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         # --- 🔧 配置路径 (根据上面的文件夹结构) ---
-        self.assets_path = "./assets"
+        self.assets_path = os.path.join(BASE_DIR, "assets")
         self.bg_name = "rin_bot_leveling_bg.png"
         self.font_name = "LXGWWenKaiTC-Regular.ttf"
         self.flower_name = "flower.png"
@@ -40,7 +43,7 @@ class Leveling(commands.Cog):
 
     async def cog_load(self):
         """插件加载时自动初始化数据库"""
-        async with aiosqlite.connect("leveling.db") as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     guild_id INTEGER,
@@ -174,14 +177,15 @@ class Leveling(commands.Cog):
         user_id = message.author.id
         now = time.time()
 
-        if user_id in self.cooldowns:
-            if now - self.cooldowns[user_id] < self.cooldown_sec:
+        cooldown_key = (message.guild.id, user_id)
+        if cooldown_key in self.cooldowns:
+            if now - self.cooldowns[cooldown_key] < self.cooldown_sec:
                 return
 
-        self.cooldowns[user_id] = now
+        self.cooldowns[cooldown_key] = now
         xp_gain = random.randint(self.xp_min, self.xp_max)
 
-        async with aiosqlite.connect("leveling.db") as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
                 "INSERT OR IGNORE INTO users (guild_id, user_id, xp, level) VALUES (?, ?, 0, 0)",
                 (message.guild.id, user_id),
@@ -227,7 +231,7 @@ class Leveling(commands.Cog):
         rank_num = 1
 
         # 从数据库获取数据
-        async with aiosqlite.connect("leveling.db") as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
                 "SELECT xp, level FROM users WHERE guild_id = ? AND user_id = ?",
                 (guild_id, user_id),
@@ -280,7 +284,7 @@ class Leveling(commands.Cog):
         per_page = 10
         offset = (page - 1) * per_page
 
-        async with aiosqlite.connect("leveling.db") as db:
+        async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
                 "SELECT COUNT(*) FROM users WHERE guild_id = ? AND xp > 0",
                 (ctx.guild.id,),

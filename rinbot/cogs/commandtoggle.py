@@ -9,10 +9,14 @@
 import discord
 from discord.ext import commands, tasks
 import aiosqlite
+import os
 
 from _botlog_helper import audit
 
-DB_PATH = "commandtoggle.db"
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "commandtoggle.db",
+)
 
 # 这些指令永远不能被禁用
 PROTECTED_COMMANDS = {

@@ -1,13 +1,3 @@
-# cogs/dev.py
-# RinBot — Developer & Hot-Reload Module
-# 功能：
-#   • /hot_update [cog] [sync_scope] — 热更新代码 + 可选同步指令
-#   • /load   <cog>      — 加载新 cog
-#   • /unload <cog>      — 卸载 cog
-#   • /extensions        — 查看所有扩展状态
-#   • /sync  [scope]     — 手动同步斜杠指令
-#   • r!eval <code>      — 动态执行 Python（Owner 专属，高危）
-
 import discord
 from discord.ext import commands
 import os
@@ -16,7 +6,7 @@ from typing import Literal, Optional
 from io import StringIO
 import contextlib
 
-COGS_DIR = "./cogs"
+COGS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 # ─────────────────────────────────────────────
@@ -42,15 +32,13 @@ class Dev(commands.Cog):
     def _all_cog_exts(self) -> list[str]:
         if not os.path.isdir(COGS_DIR):
             return []
-        return [
-            f"cogs.{f[:-3]}"
-            for f in os.listdir(COGS_DIR)
-            if f.endswith(".py")
-        ]
+        return [f"cogs.{f[:-3]}" for f in os.listdir(COGS_DIR) if f.endswith(".py")]
 
     # ──────────────── 指令：hot_update ────────────────
 
-    @commands.hybrid_command(name="hot_update", description="[Dev] 热更新代码并可选同步指令")
+    @commands.hybrid_command(
+        name="hot_update", description="[Dev] 热更新代码并可选同步指令"
+    )
     @commands.is_owner()
     async def hot_update(
         self,
@@ -70,12 +58,16 @@ class Dev(commands.Cog):
             ext = cog if cog.startswith("cogs.") else f"cogs.{cog}"
             ok, err = await self._smart_reload(ext)
             short = ext.replace("cogs.", "")
-            log.append(f"{'✅' if ok else '❌'} `{short}` {'重载成功' if ok else f'失败：{err}'}")
+            log.append(
+                f"{'✅' if ok else '❌'} `{short}` {'重载成功' if ok else f'失败：{err}'}"
+            )
         else:
             for ext in self._all_cog_exts():
                 ok, err = await self._smart_reload(ext)
                 short = ext.replace("cogs.", "")
-                log.append(f"{'✅' if ok else '❌'} `{short}` {'— ' + err if not ok else ''}")
+                log.append(
+                    f"{'✅' if ok else '❌'} `{short}` {'— ' + err if not ok else ''}"
+                )
 
         # ── 2. 同步（可选）──
         try:
@@ -114,7 +106,9 @@ class Dev(commands.Cog):
 
     # ──────────────── 指令：unload ────────────────
 
-    @commands.hybrid_command(name="unload", description="[Dev] 卸载一个 Cog（Dev 自身无法卸载）")
+    @commands.hybrid_command(
+        name="unload", description="[Dev] 卸载一个 Cog（Dev 自身无法卸载）"
+    )
     @commands.is_owner()
     async def unload_cmd(self, ctx, cog: str):
         await ctx.defer(ephemeral=True)
@@ -130,7 +124,9 @@ class Dev(commands.Cog):
 
     # ──────────────── 指令：extensions ────────────────
 
-    @commands.hybrid_command(name="extensions", aliases=["exts"], description="[Dev] 查看所有扩展加载状态")
+    @commands.hybrid_command(
+        name="extensions", aliases=["exts"], description="[Dev] 查看所有扩展加载状态"
+    )
     @commands.is_owner()
     async def extensions_cmd(self, ctx):
         all_files = set(self._all_cog_exts())
@@ -159,18 +155,26 @@ class Dev(commands.Cog):
 
     @commands.hybrid_command(name="sync", description="[Dev] 同步斜杠指令树")
     @commands.is_owner()
-    async def sync_cmd(self, ctx, scope: Literal["guild", "global", "clear_guild"] = "guild"):
+    async def sync_cmd(
+        self, ctx, scope: Literal["guild", "global", "clear_guild"] = "guild"
+    ):
         await ctx.defer(ephemeral=True)
 
         try:
             if scope == "guild":
                 self.bot.tree.copy_global_to(guild=ctx.guild)
                 synced = await self.bot.tree.sync(guild=ctx.guild)
-                await ctx.send(f"⚡ 已同步 **{len(synced)}** 个指令到本服务器（即时生效）", ephemeral=True)
+                await ctx.send(
+                    f"⚡ 已同步 **{len(synced)}** 个指令到本服务器（即时生效）",
+                    ephemeral=True,
+                )
 
             elif scope == "global":
                 synced = await self.bot.tree.sync()
-                await ctx.send(f"🌎 已向全球推送 **{len(synced)}** 个指令（最长 1 小时生效）", ephemeral=True)
+                await ctx.send(
+                    f"🌎 已向全球推送 **{len(synced)}** 个指令（最长 1 小时生效）",
+                    ephemeral=True,
+                )
 
             elif scope == "clear_guild":
                 self.bot.tree.clear_commands(guild=ctx.guild)
@@ -182,7 +186,7 @@ class Dev(commands.Cog):
 
     # ──────────────── 指令：boteval ────────────────
 
-    @commands.command(name="eval", hidden=True)   # 只保留前缀版本，更安全
+    @commands.command(name="eval", hidden=True)  # 只保留前缀版本，更安全
     @commands.is_owner()
     async def boteval(self, ctx, *, code: str):
         """动态执行 Python 代码（仅 Owner，极度危险）"""
@@ -216,14 +220,22 @@ class Dev(commands.Cog):
 
         output = stdout.getvalue()
         color = discord.Color.green() if not error else discord.Color.red()
-        embed = discord.Embed(title="📟 Eval", color=color, timestamp=discord.utils.utcnow())
+        embed = discord.Embed(
+            title="📟 Eval", color=color, timestamp=discord.utils.utcnow()
+        )
 
         if output:
-            embed.add_field(name="stdout", value=f"```\n{output[:1000]}\n```", inline=False)
+            embed.add_field(
+                name="stdout", value=f"```\n{output[:1000]}\n```", inline=False
+            )
         if result is not None:
-            embed.add_field(name="返回值", value=f"```py\n{repr(result)[:500]}\n```", inline=False)
+            embed.add_field(
+                name="返回值", value=f"```py\n{repr(result)[:500]}\n```", inline=False
+            )
         if error:
-            embed.add_field(name="❌ 错误", value=f"```py\n{error[:1000]}\n```", inline=False)
+            embed.add_field(
+                name="❌ 错误", value=f"```py\n{error[:1000]}\n```", inline=False
+            )
         if not (output or result or error):
             embed.description = "✅ 执行完毕，无输出。"
 

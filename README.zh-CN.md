@@ -102,7 +102,7 @@
 ```bash
 git clone https://github.com/RSRH-Rs/DiscordRinBot.git
 cd DiscordRinBot
-pip install -r requirements.txt
+pip install -r rinbot/requirements.txt
 ```
 
 ### 2. 填写配置

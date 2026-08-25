@@ -14,10 +14,13 @@ import aiosqlite
 import random
 import time
 import asyncio
+import os
 from typing import Optional
 from _botlog_helper import audit
 
-DB_PATH = "giveaway.db"
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "giveaway.db"
+)
 GIVEAWAY_EMOJI = "🎉"
 
 
@@ -36,7 +39,7 @@ class GiveawayEntryButton(View):
         # 查找这个消息对应的抽奖
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
-                "SELECT id, ended FROM giveaways WHERE message_id = ?",
+                "SELECT id, ended, restrict_role FROM giveaways WHERE message_id = ?",
                 (interaction.message.id,),
             )
             row = await cursor.fetchone()
@@ -45,12 +48,20 @@ class GiveawayEntryButton(View):
                     "❌ 找不到该抽奖活动。", ephemeral=True
                 )
                 return
-            giveaway_id, ended = row
+            giveaway_id, ended, restrict_role = row
             if ended:
                 await interaction.response.send_message(
                     "❌ 这个抽奖已经结束了。", ephemeral=True
                 )
                 return
+
+            if restrict_role:
+                member_roles = getattr(interaction.user, "roles", ())
+                if not any(role.id == restrict_role for role in member_roles):
+                    await interaction.response.send_message(
+                        "❌ 你没有参加该抽奖所需的身份组。", ephemeral=True
+                    )
+                    return
 
             # 检查是否已参加
             cursor2 = await db.execute(
@@ -112,9 +123,16 @@ class Giveaway(commands.Cog):
                     prize TEXT NOT NULL,
                     winners_count INTEGER DEFAULT 1,
                     end_time REAL NOT NULL,
-                    ended INTEGER DEFAULT 0
+                    ended INTEGER DEFAULT 0,
+                    restrict_role INTEGER DEFAULT 0
                 )
             """)
+            try:
+                await db.execute(
+                    "ALTER TABLE giveaways ADD COLUMN restrict_role INTEGER DEFAULT 0"
+                )
+            except Exception:
+                pass
             await db.execute("""
                 CREATE TABLE IF NOT EXISTS giveaway_entries (
                     giveaway_id INTEGER,
@@ -316,7 +334,7 @@ class Giveaway(commands.Cog):
 
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
-                "INSERT INTO giveaways (guild_id, channel_id, message_id, host_id, prize, winners_count, end_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO giveaways (guild_id, channel_id, message_id, host_id, prize, winners_count, end_time, restrict_role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     ctx.guild.id,
                     ctx.channel.id,
@@ -325,6 +343,7 @@ class Giveaway(commands.Cog):
                     prize,
                     winners,
                     end_time,
+                    0,
                 ),
             )
             await db.commit()

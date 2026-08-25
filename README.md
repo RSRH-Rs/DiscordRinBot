@@ -102,7 +102,7 @@ Built with Quart + Discord OAuth2. Live at [rin-bot.com](https://rin-bot.com).
 ```bash
 git clone https://github.com/RSRH-Rs/DiscordRinBot.git
 cd DiscordRinBot
-pip install -r requirements.txt
+pip install -r rinbot/requirements.txt
 ```
 
 ### 2. Configure

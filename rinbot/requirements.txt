@@ -5,3 +5,5 @@ psutil
 aiosqlite
 aiohttp
 davey>=0.1.4
+quart
+quart-discord

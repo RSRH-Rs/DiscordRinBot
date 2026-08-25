@@ -129,7 +129,13 @@ async def ensure_tables():
                 channel_id INTEGER NOT NULL, message_id INTEGER DEFAULT 0,
                 host_id INTEGER NOT NULL, prize TEXT NOT NULL,
                 winners_count INTEGER DEFAULT 1, end_time REAL NOT NULL,
-                ended INTEGER DEFAULT 0)""")
+                ended INTEGER DEFAULT 0, restrict_role INTEGER DEFAULT 0)""")
+            try:
+                await db.execute(
+                    "ALTER TABLE giveaways ADD COLUMN restrict_role INTEGER DEFAULT 0"
+                )
+            except Exception:
+                pass
             await db.execute("""CREATE TABLE IF NOT EXISTS giveaway_entries (
                 giveaway_id INTEGER, user_id INTEGER,
                 PRIMARY KEY (giveaway_id, user_id))""")
@@ -417,6 +423,64 @@ async def check_guild_access(discord_oauth, gid_str):
         return False
 
 
+async def _validate_guild_resources(
+    gid, channel_ids=(), role_ids=(), assignable_roles=False
+):
+    """Validate IDs supplied by the browser against the target guild."""
+    try:
+        channel_ids = {int(v) for v in channel_ids if v not in (None, "", 0, "0")}
+        role_ids = {int(v) for v in role_ids if v not in (None, "", 0, "0")}
+    except (TypeError, ValueError):
+        return False
+
+    if channel_ids:
+        channels = await discord_api_get(f"/guilds/{int(gid)}/channels")
+        if channels is None:
+            return None
+        available = {
+            int(c["id"])
+            for c in channels
+            if c.get("type") in (0, 5) and c.get("id")
+        }
+        if not channel_ids.issubset(available):
+            return False
+
+    if role_ids:
+        roles = await discord_api_get(f"/guilds/{int(gid)}/roles")
+        if roles is None:
+            return None
+        available = {
+            int(r["id"])
+            for r in roles
+            if r.get("id") and r.get("name") != "@everyone"
+        }
+        if not role_ids.issubset(available):
+            return False
+        if assignable_roles:
+            bot_user = await discord_api_get("/users/@me")
+            if not bot_user:
+                return None
+            bot_member = await discord_api_get(
+                f"/guilds/{int(gid)}/members/{bot_user.get('id', 0)}"
+            )
+            if not bot_member:
+                return None
+            bot_role_ids = {int(value) for value in bot_member.get("roles", [])}
+            bot_positions = [
+                int(role.get("position", 0))
+                for role in roles
+                if int(role.get("id", 0)) in bot_role_ids
+            ]
+            bot_top_position = max(bot_positions, default=0)
+            for role in roles:
+                if int(role.get("id", 0)) in role_ids and (
+                    role.get("managed") or int(role.get("position", 0)) >= bot_top_position
+                ):
+                    return False
+
+    return True
+
+
 def setup_routes(app, discord):
 
     @app.before_serving
@@ -499,7 +563,7 @@ def setup_routes(app, discord):
                     403,
                 )
             user = await discord.fetch_user()
-            return await render_template("settings.html", user=user)
+            return await render_template("setttings.html", user=user)
         except Exception as e:
             return await render_template("error.html", error=str(e)), 500
 
@@ -610,9 +674,9 @@ def setup_routes(app, discord):
 
             guild_data = await discord_api_get(f"/guilds/{gid}?with_counts=true")
             channels = await discord_api_get(f"/guilds/{gid}/channels")
-            me = await discord_api_get(
-                f"/guilds/{gid}/members/{app.config.get('DISCORD_CLIENT_ID', 0)}"
-            )
+            bot_user = await discord_api_get("/users/@me")
+            bot_id = bot_user.get("id", "0") if bot_user else "0"
+            me = await discord_api_get(f"/guilds/{gid}/members/{bot_id}")
 
             if not guild_data:
                 return jsonify({"error": "无法获取服务器信息"}), 502
@@ -792,6 +856,17 @@ def setup_routes(app, discord):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
             g = int(gid)
+            auto_roles = [x for x in str(d.get("auto_roles", "")).split(",") if x]
+            resources = await _validate_guild_resources(
+                g,
+                channel_ids=[d.get("welcome_channel", 0), d.get("farewell_channel", 0)],
+                role_ids=auto_roles,
+                assignable_roles=True,
+            )
+            if resources is None:
+                return jsonify({"error": "无法验证服务器资源"}), 502
+            if not resources:
+                return jsonify({"error": "频道或身份组不属于当前服务器"}), 400
             async with aiosqlite.connect(DB_WELCOME) as db:
                 await db.execute(
                     "INSERT OR IGNORE INTO welcome_config (guild_id) VALUES (?)", (g,)
@@ -886,10 +961,24 @@ def setup_routes(app, discord):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
             g = int(gid)
+            resources = await _validate_guild_resources(g, channel_ids=[d.get("log_channel", 0)])
+            if resources is None:
+                return jsonify({"error": "无法验证日志频道"}), 502
+            if not resources:
+                return jsonify({"error": "日志频道不属于当前服务器"}), 400
             async with aiosqlite.connect(DB_AUTOMOD) as db:
                 await db.execute(
                     "INSERT OR IGNORE INTO automod_config (guild_id) VALUES (?)", (g,)
                 )
+                cur = await db.execute(
+                    "SELECT ignored_channels, ignored_roles FROM automod_config WHERE guild_id=?",
+                    (g,),
+                )
+                old = await cur.fetchone()
+                old_channels = json.loads(old[0] or "[]") if old else []
+                old_roles = json.loads(old[1] or "[]") if old else []
+                ignored_channels = d.get("ignored_channels", old_channels)
+                ignored_roles = d.get("ignored_roles", old_roles)
                 await db.execute(
                     """UPDATE automod_config SET
                     enabled=?, log_channel=?, anti_spam=?, spam_threshold=?, spam_interval=?,
@@ -912,8 +1001,8 @@ def setup_routes(app, discord):
                         int(d.get("anti_repeat", 1)),
                         int(d.get("repeat_threshold", 3)),
                         int(d.get("mute_duration", 300)),
-                        json.dumps(d.get("ignored_channels", []), ensure_ascii=False),
-                        json.dumps(d.get("ignored_roles", []), ensure_ascii=False),
+                        json.dumps(ignored_channels, ensure_ascii=False),
+                        json.dumps(ignored_roles, ensure_ascii=False),
                         g,
                     ),
                 )
@@ -962,6 +1051,11 @@ def setup_routes(app, discord):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
             g = int(gid)
+            resources = await _validate_guild_resources(g, channel_ids=[d.get("log_channel", 0)])
+            if resources is None:
+                return jsonify({"error": "无法验证日志频道"}), 502
+            if not resources:
+                return jsonify({"error": "日志频道不属于当前服务器"}), 400
             async with aiosqlite.connect(DB_MODERATION) as db:
                 await db.execute(
                     "INSERT OR IGNORE INTO mod_config (guild_id) VALUES (?)", (g,)
@@ -1090,6 +1184,15 @@ def setup_routes(app, discord):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
             g = int(gid)
+            resources = await _validate_guild_resources(
+                g,
+                channel_ids=[d.get("notify_channel", 0)],
+                role_ids=[d.get("dj_role", 0)],
+            )
+            if resources is None:
+                return jsonify({"error": "无法验证音乐配置资源"}), 502
+            if not resources:
+                return jsonify({"error": "频道或身份组不属于当前服务器"}), 400
             async with aiosqlite.connect(DB_MUSIC) as db:
                 await db.execute(
                     "INSERT OR REPLACE INTO music_config (guild_id, dj_role, notify_channel) VALUES (?, ?, ?)",
@@ -1144,6 +1247,11 @@ def setup_routes(app, discord):
             d = await request.get_json()
             g = int(gid)
             valid_levels = {"error", "warning", "info", "config"}
+            resources = await _validate_guild_resources(g, channel_ids=[d.get("channel_id", 0)])
+            if resources is None:
+                return jsonify({"error": "无法验证日志频道"}), 502
+            if not resources:
+                return jsonify({"error": "日志频道不属于当前服务器"}), 400
             levels = [l for l in (d.get("levels") or []) if l in valid_levels]
             async with aiosqlite.connect(DB_BOTLOG) as db:
                 await db.execute(
@@ -1271,6 +1379,11 @@ def setup_routes(app, discord):
             d = await request.get_json()
             g = int(gid)
             cats = [c for c in (d.get("categories") or []) if c in SERVERLOG_CATS]
+            resources = await _validate_guild_resources(g, channel_ids=[d.get("channel_id", 0)])
+            if resources is None:
+                return jsonify({"error": "无法验证日志频道"}), 502
+            if not resources:
+                return jsonify({"error": "日志频道不属于当前服务器"}), 400
             # 用 UPSERT 只更新这三列，保留 slash 指令设的忽略频道
             async with aiosqlite.connect(DB_SERVERLOG) as db:
                 await db.execute(
@@ -1730,6 +1843,18 @@ def setup_routes(app, discord):
             if len(mappings_list) > 25:
                 return jsonify({"error": "最多 25 个身份组(5 行 × 5 个按钮)"}), 400
 
+            role_ids = [m.get("role_id") for m in mappings_list]
+            resources = await _validate_guild_resources(
+                gid,
+                channel_ids=[channel_id],
+                role_ids=role_ids,
+                assignable_roles=True,
+            )
+            if resources is None:
+                return jsonify({"error": "无法验证频道或身份组"}), 502
+            if not resources:
+                return jsonify({"error": "频道或身份组不属于当前服务器"}), 400
+
             # ── 构造按钮 components(每行最多 5 个,最多 5 行)──
             mapping_dict = {}
             components = []
@@ -1843,6 +1968,19 @@ def setup_routes(app, discord):
             if not prize or not channel_id or end_time <= 0:
                 return jsonify({"error": "缺少必填字段"}), 400
 
+            if len(prize) > 500:
+                return jsonify({"error": "奖品描述最多 500 个字符"}), 400
+            if winners_count < 1 or winners_count > 20:
+                return jsonify({"error": "中奖人数范围为 1-20"}), 400
+
+            resources = await _validate_guild_resources(
+                gid, channel_ids=[channel_id], role_ids=[restrict_role]
+            )
+            if resources is None:
+                return jsonify({"error": "无法验证抽奖资源"}), 502
+            if not resources:
+                return jsonify({"error": "频道或身份组不属于当前服务器"}), 400
+
             if end_time <= time.time():
                 return jsonify({"error": "结束时间必须在未来"}), 400
 
@@ -1897,7 +2035,7 @@ def setup_routes(app, discord):
 
             async with aiosqlite.connect(DB_GIVEAWAY) as db:
                 await db.execute(
-                    "INSERT INTO giveaways (guild_id, channel_id, message_id, host_id, prize, winners_count, end_time) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO giveaways (guild_id, channel_id, message_id, host_id, prize, winners_count, end_time, restrict_role) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         g,
                         int(channel_id),
@@ -1906,6 +2044,7 @@ def setup_routes(app, discord):
                         prize,
                         winners_count,
                         end_time,
+                        int(restrict_role or 0),
                     ),
                 )
                 await db.commit()
@@ -1931,6 +2070,7 @@ def setup_routes(app, discord):
     # Static command registry — matches bot's actual commands
     COMMAND_REGISTRY = [
         {"name": "play", "desc": "播放音乐 (歌名或链接)", "cog": "Music"},
+        {"name": "search", "desc": "搜索歌曲并选择播放", "cog": "Music"},
         {"name": "queue", "desc": "查看播放队列", "cog": "Music"},
         {"name": "skip", "desc": "跳过当前歌曲", "cog": "Music"},
         {"name": "pause", "desc": "暂停播放", "cog": "Music"},
@@ -1944,6 +2084,10 @@ def setup_routes(app, discord):
         {"name": "remove", "desc": "从队列移除指定歌曲", "cog": "Music"},
         {"name": "clear", "desc": "清空播放队列", "cog": "Music"},
         {"name": "join", "desc": "加入你的语音频道", "cog": "Music"},
+        {"name": "saveq", "desc": "保存当前播放队列", "cog": "Music"},
+        {"name": "loadq", "desc": "载入播放队列存档", "cog": "Music"},
+        {"name": "queues", "desc": "查看播放队列存档", "cog": "Music"},
+        {"name": "delqueue", "desc": "删除播放队列存档", "cog": "Music"},
         {"name": "rank", "desc": "查看你的等级卡片", "cog": "Leveling"},
         {"name": "kick", "desc": "踢出成员", "cog": "Moderation"},
         {"name": "ban", "desc": "永久封禁成员", "cog": "Moderation"},
@@ -1960,6 +2104,8 @@ def setup_routes(app, discord):
         {"name": "lock", "desc": "锁定频道", "cog": "Moderation"},
         {"name": "unlock", "desc": "解锁频道", "cog": "Moderation"},
         {"name": "modlog", "desc": "查看管理操作日志", "cog": "Moderation"},
+        {"name": "modlog_channel", "desc": "设置管理日志频道", "cog": "Moderation"},
+        {"name": "warn_config", "desc": "配置警告自动处罚阈值", "cog": "Moderation"},
         {"name": "status", "desc": "显示服务器详细状态", "cog": "General"},
         {"name": "roll", "desc": "投掷骰子 (默认6面)", "cog": "General"},
         {"name": "avatar", "desc": "查看用户的大图头像", "cog": "General"},
@@ -1968,6 +2114,14 @@ def setup_routes(app, discord):
         {"name": "setbio", "desc": "修改机器人的简介", "cog": "General"},
         {"name": "welcome_setup", "desc": "配置迎新和道别系统", "cog": "Welcome"},
         {"name": "welcome_test", "desc": "测试欢迎图卡效果", "cog": "Welcome"},
+        {"name": "welcome_message", "desc": "自定义欢迎/道别消息", "cog": "Welcome"},
+        {"name": "welcome_toggle", "desc": "开启或关闭欢迎模块", "cog": "Welcome"},
+        {"name": "welcome_image", "desc": "设置欢迎大图", "cog": "Welcome"},
+        {"name": "welcome_title", "desc": "设置欢迎卡标题", "cog": "Welcome"},
+        {"name": "welcome_icon", "desc": "设置欢迎标题图标", "cog": "Welcome"},
+        {"name": "welcome_thumbnail", "desc": "设置欢迎缩略图", "cog": "Welcome"},
+        {"name": "welcome_card", "desc": "开启或关闭欢迎卡片", "cog": "Welcome"},
+        {"name": "welcome_disable", "desc": "禁用迎新与道别系统", "cog": "Welcome"},
         {"name": "rr_create", "desc": "创建反应身份组面板", "cog": "ReactionRoles"},
         {"name": "rr_add", "desc": "添加 emoji → 身份组映射", "cog": "ReactionRoles"},
         {"name": "rr_remove", "desc": "移除一个 emoji 映射", "cog": "ReactionRoles"},
@@ -1992,6 +2146,7 @@ def setup_routes(app, discord):
         "eval",
         "help",
     }
+    COMMAND_NAMES = {item["name"] for item in COMMAND_REGISTRY}
 
     @app.route("/api/guild/<string:gid>/commands", methods=["GET"])
     async def api_commands_get(gid):
@@ -2030,6 +2185,8 @@ def setup_routes(app, discord):
             d = await request.get_json()
             name = d.get("name", "")
             enabled = d.get("enabled", True)
+            if name not in COMMAND_NAMES:
+                return jsonify({"error": "未知指令"}), 400
             if name in PROTECTED:
                 return jsonify({"error": "核心指令不能被禁用"}), 400
             g = int(gid)

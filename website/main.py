@@ -1,8 +1,5 @@
 import os
 
-# 开发环境允许 HTTP (生产环境删掉这行，用 HTTPS)
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-
 from quart import Quart
 from quart_discord import DiscordOAuth2Session
 from config import Config
@@ -24,4 +21,8 @@ discord_oauth = DiscordOAuth2Session(app)
 setup_routes(app, discord_oauth)
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(
+        host=os.getenv("RINBOT_WEB_HOST", "127.0.0.1"),
+        port=int(os.getenv("RINBOT_WEB_PORT", "5000")),
+        debug=os.getenv("RINBOT_DEBUG", "0") == "1",
+    )

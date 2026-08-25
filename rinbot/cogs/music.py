@@ -136,8 +136,38 @@ class NowPlayingView(View):
         self.ctx = ctx
         self.state = state
 
+    async def _can_control(self, interaction: discord.Interaction) -> bool:
+        """按钮控制必须遵守 DJ 配置，并且用户要在 Bot 所在语音频道。"""
+        guild = interaction.guild
+        vc = guild.voice_client if guild else None
+        if not guild or not vc or not vc.channel:
+            await interaction.response.send_message(
+                "❌ 当前没有可控制的语音播放。", ephemeral=True
+            )
+            return False
+
+        member = interaction.user
+        if member.guild_permissions.manage_guild:
+            return True
+        if member not in vc.channel.members:
+            await interaction.response.send_message(
+                "❌ 你必须在我所在的语音频道中才能控制播放。", ephemeral=True
+            )
+            return False
+
+        music_config = self.music_cog.bot.get_cog("MusicConfig")
+        dj_role_id = music_config.get_config(guild.id).get("dj_role", 0) if music_config else 0
+        if dj_role_id and not any(role.id == dj_role_id for role in member.roles):
+            await interaction.response.send_message(
+                "❌ 你没有 DJ 权限，无法控制播放。", ephemeral=True
+            )
+            return False
+        return True
+
     @discord.ui.button(emoji="⏸️", style=discord.ButtonStyle.secondary)
     async def pause_btn(self, interaction: discord.Interaction, button: Button):
+        if not await self._can_control(interaction):
+            return
         vc = interaction.guild.voice_client
         if vc and vc.is_playing():
             vc.pause()
@@ -154,6 +184,8 @@ class NowPlayingView(View):
 
     @discord.ui.button(emoji="⏭️", style=discord.ButtonStyle.secondary)
     async def skip_btn(self, interaction: discord.Interaction, button: Button):
+        if not await self._can_control(interaction):
+            return
         vc = interaction.guild.voice_client
         if vc and (vc.is_playing() or vc.is_paused()):
             vc.stop()
@@ -167,6 +199,8 @@ class NowPlayingView(View):
         label="循环: 关", emoji="🔁", style=discord.ButtonStyle.secondary
     )
     async def loop_btn(self, interaction: discord.Interaction, button: Button):
+        if not await self._can_control(interaction):
+            return
         state = self.music_cog._get_state(interaction.guild.id)
         modes = ["off", "single", "queue"]
         labels = {"off": "循环: 关", "single": "单曲循环", "queue": "队列循环"}
@@ -179,6 +213,8 @@ class NowPlayingView(View):
 
     @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary)
     async def shuffle_btn(self, interaction: discord.Interaction, button: Button):
+        if not await self._can_control(interaction):
+            return
         state = self.music_cog._get_state(interaction.guild.id)
         if len(state.queue) < 2:
             await interaction.response.send_message(
@@ -194,6 +230,8 @@ class NowPlayingView(View):
 
     @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.secondary)
     async def stop_btn(self, interaction: discord.Interaction, button: Button):
+        if not await self._can_control(interaction):
+            return
         state = self.music_cog._get_state(interaction.guild.id)
         state.clear()
         vc = interaction.guild.voice_client
@@ -579,6 +617,17 @@ class Music(commands.Cog):
             if info:
                 state.current.stream_url = info.get("url", state.current.stream_url)
                 state.current.stream_at = time.time()
+
+        if not state.current.stream_url:
+            failed_title = state.current.title
+            print(f"[music] 无法解析音频流，跳过：{failed_title}")
+            state.current = None
+            state.is_playing = False
+            if state.queue:
+                await self._play_next(guild_id)
+            else:
+                state.idle_task = asyncio.create_task(self._idle_disconnect(guild_id))
+            return
 
         state.is_playing = True
         source = self._make_source(state.current, state.volume)

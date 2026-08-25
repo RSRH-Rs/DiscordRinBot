@@ -6,10 +6,13 @@ from discord import app_commands
 from discord.ext import commands, tasks
 import aiosqlite
 import traceback
+import os
 from datetime import datetime, timezone
 from typing import Optional
 
-DB_PATH = "botlog.db"
+DB_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "botlog.db"
+)
 
 LEVEL_META = {
     "error": {"emoji": "❌", "color": 0xE24B4A, "label": "错误"},
@@ -26,16 +29,6 @@ class BotLog(commands.Cog):
         self.bot = bot
         # 缓存: {guild_id: {"channel_id": int, "enabled": bool, "levels": set[str]}}
         self._cache: dict[int, dict] = {}
-        # hook slash command 错误 handler,保存原 handler 以便链式调用
-        self._original_tree_error = bot.tree.on_error
-        bot.tree.on_error = self._on_app_command_error
-
-    def cog_unload(self):
-        # 还原原 handler,避免 cog reload 后引用残留
-        try:
-            self.bot.tree.on_error = self._original_tree_error
-        except Exception:
-            pass
 
     async def cog_load(self):
         async with aiosqlite.connect(DB_PATH) as db:
@@ -175,65 +168,6 @@ class BotLog(commands.Cog):
             f"```py\n{tb[-1500:]}\n```",
             **{"用户": ctx.author.mention, "频道": ctx.channel.mention},
         )
-
-    async def _on_app_command_error(
-        self, interaction: discord.Interaction, error: app_commands.AppCommandError
-    ):
-        """slash command 错误 — 替换默认 tree.on_error 接住所有 slash 异常"""
-        # 解包 CommandInvokeError 拿到真正的底层异常
-        original = getattr(error, "original", error)
-
-        # 忽略预期错误(不污染日志)
-        if isinstance(
-            error,
-            (
-                app_commands.CommandNotFound,
-                app_commands.MissingPermissions,
-                app_commands.CheckFailure,
-                app_commands.CommandOnCooldown,
-            ),
-        ):
-            # 让原 handler 处理(通常是给用户回复一条提示)
-            if self._original_tree_error:
-                try:
-                    await self._original_tree_error(interaction, error)
-                except Exception:
-                    pass
-            return
-
-        # 记录到 botlog 频道
-        if interaction.guild:
-            cmd = (
-                interaction.command.qualified_name
-                if interaction.command
-                else "未知指令"
-            )
-            tb = "".join(
-                traceback.format_exception(
-                    type(original), original, original.__traceback__
-                )
-            )
-            channel_mention = (
-                interaction.channel.mention if interaction.channel else "私信"
-            )
-            await self.log(
-                interaction.guild.id,
-                "error",
-                f"Slash 指令执行失败: /{cmd}",
-                f"```py\n{tb[-1500:]}\n```",
-                **{"用户": interaction.user.mention, "频道": channel_mention},
-            )
-
-        # 给用户一个反馈,避免 Discord 显示"应用未响应"
-        try:
-            msg = "❌ 执行指令时发生错误,管理员已收到通知。"
-            if interaction.response.is_done():
-                await interaction.followup.send(msg, ephemeral=True)
-            else:
-                await interaction.response.send_message(msg, ephemeral=True)
-        except Exception:
-            pass
-
 
 async def setup(bot):
     await bot.add_cog(BotLog(bot))
