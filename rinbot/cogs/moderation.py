@@ -24,6 +24,7 @@ from discord.ext import commands, tasks
 import aiosqlite
 import datetime
 import os
+import re
 import time
 from typing import Literal, Optional
 
@@ -251,25 +252,18 @@ class Moderation(commands.Cog):
 
     def _parse_duration(self, s: str) -> Optional[int]:
         """解析时长字符串 → 秒数"""
+        s = s.strip().lower()
+        if not re.fullmatch(r"(?:\d+[dhms])+", s):
+            return None
         total = 0
-        buf = ""
-        for ch in s.lower():
-            if ch.isdigit():
-                buf += ch
-            elif ch in ("d", "h", "m", "s") and buf:
-                n = int(buf)
-                if ch == "d":
-                    total += n * 86400
-                elif ch == "h":
-                    total += n * 3600
-                elif ch == "m":
-                    total += n * 60
-                elif ch == "s":
-                    total += n
-                buf = ""
-            else:
+        seen_units = set()
+        multipliers = {"d": 86400, "h": 3600, "m": 60, "s": 1}
+        for number, unit in re.findall(r"(\d+)([dhms])", s):
+            if unit in seen_units:
                 return None
-        return total if total > 0 else None
+            seen_units.add(unit)
+            total += int(number) * multipliers[unit]
+        return total if 0 < total <= 10 * 365 * 86400 else None
 
     def _format_duration(self, seconds: int) -> str:
         parts = []

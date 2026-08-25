@@ -54,11 +54,19 @@ def _format_command(cmd) -> str:
     return f"**`/{cmd.qualified_name}`** — {desc}"
 
 
-def _collect_commands(cog) -> list:
+def _command_is_disabled(bot, guild_id, cmd) -> bool:
+    if not guild_id:
+        return False
+    toggle = bot.get_cog("CommandToggle")
+    root_name = cmd.qualified_name.split()[0]
+    return bool(toggle and toggle.is_disabled(guild_id, root_name))
+
+
+def _collect_commands(cog, bot, guild_id=None) -> list:
     """收集 cog 下所有可见命令(展开 hybrid group 的子命令)"""
     lines = []
     for cmd in cog.get_commands():
-        if cmd.hidden:
+        if cmd.hidden or _command_is_disabled(bot, guild_id, cmd):
             continue
         if isinstance(cmd, commands.HybridGroup) or isinstance(cmd, commands.Group):
             for sub in cmd.commands:
@@ -70,8 +78,9 @@ def _collect_commands(cog) -> list:
 
 
 class HelpDropdown(Select):
-    def __init__(self, bot):
+    def __init__(self, bot, guild_id=None):
         self.bot = bot
+        self.guild_id = guild_id
         options = [
             discord.SelectOption(
                 label="🏠 首页", description="回到功能概览", value="home"
@@ -84,7 +93,7 @@ class HelpDropdown(Select):
             cog = bot.get_cog(cog_name)
             if not cog:
                 continue
-            if not _collect_commands(cog):
+            if not _collect_commands(cog, bot, guild_id):
                 continue
             options.append(
                 discord.SelectOption(
@@ -106,12 +115,12 @@ class HelpDropdown(Select):
         value = self.values[0]
 
         if value == "home":
-            embed = _build_home_embed(self.bot)
+            embed = _build_home_embed(self.bot, interaction.guild_id)
         else:
             cog = self.bot.get_cog(value)
             meta = COG_META.get(value, {"emoji": "📂", "label": value, "desc": ""})
             if cog:
-                lines = _collect_commands(cog)
+                lines = _collect_commands(cog, self.bot, interaction.guild_id)
                 embed = discord.Embed(
                     title=f"{meta['emoji']} {meta['label']}",
                     description=(
@@ -132,7 +141,7 @@ class HelpDropdown(Select):
         await interaction.response.edit_message(embed=embed)
 
 
-def _build_home_embed(bot):
+def _build_home_embed(bot, guild_id=None):
     embed = discord.Embed(
         title="✨ 小凛 RinBot 指令中心",
         description=(
@@ -148,7 +157,7 @@ def _build_home_embed(bot):
         if cog_name in HIDDEN_COGS:
             continue
         cog = bot.get_cog(cog_name)
-        if cog and _collect_commands(cog):
+        if cog and _collect_commands(cog, bot, guild_id):
             available.append(f"{meta['emoji']} **{meta['label']}** — *{meta['desc']}*")
 
     if available:
@@ -163,9 +172,9 @@ def _build_home_embed(bot):
 
 
 class HelpView(View):
-    def __init__(self, bot):
+    def __init__(self, bot, guild_id=None):
         super().__init__(timeout=120)
-        self.add_item(HelpDropdown(bot))
+        self.add_item(HelpDropdown(bot, guild_id))
 
 
 class Help(commands.Cog):
@@ -174,8 +183,9 @@ class Help(commands.Cog):
 
     @commands.hybrid_command(name="help", description="打开交互式指令菜单")
     async def help(self, ctx):
-        embed = _build_home_embed(self.bot)
-        view = HelpView(self.bot)
+        guild_id = ctx.guild.id if ctx.guild else None
+        embed = _build_home_embed(self.bot, guild_id)
+        view = HelpView(self.bot, guild_id)
         await ctx.send(embed=embed, view=view)
 
 

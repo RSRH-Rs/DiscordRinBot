@@ -26,6 +26,24 @@ class Health(commands.Cog):
     def cog_unload(self):
         self._write.cancel()
 
+    def _command_snapshot(self) -> list[dict]:
+        """Export the real top-level command list for the web dashboard."""
+        cog_labels = {"CommandToggle": "System", "Help": "System"}
+        hidden_cogs = {"Dev", "BotConfig", "MusicConfig"}
+        result = []
+        for command in self.bot.commands:
+            cog_name = command.cog_name or "Other"
+            if command.hidden or cog_name in hidden_cogs:
+                continue
+            result.append(
+                {
+                    "name": command.name,
+                    "desc": command.description or "暂无介绍",
+                    "cog": cog_labels.get(cog_name, cog_name),
+                }
+            )
+        return sorted(result, key=lambda item: (item["cog"], item["name"]))
+
     @tasks.loop(seconds=30)
     async def _write(self):
         try:
@@ -42,11 +60,14 @@ class Health(commands.Cog):
                 "guild_count": len(self.bot.guilds),
                 "user_count": sum((g.member_count or 0) for g in self.bot.guilds),
                 "cogs": sorted(self.bot.cogs.keys()),
+                "commands": self._command_snapshot(),
                 "py": platform.python_version(),
                 "dpy": discord.__version__,
             }
-            with open(HEALTH_PATH, "w", encoding="utf-8") as f:
+            temp_path = HEALTH_PATH + ".tmp"
+            with open(temp_path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False)
+            os.replace(temp_path, HEALTH_PATH)
         except Exception as e:
             print(f"[health] 写入失败: {e}")
 

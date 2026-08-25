@@ -344,10 +344,27 @@ class Music(commands.Cog):
         channel = ctx.author.voice.channel
         if ctx.voice_client:
             if ctx.voice_client.channel != channel:
+                current_channel = ctx.voice_client.channel
+                has_listeners = any(not member.bot for member in current_channel.members)
+                active = ctx.voice_client.is_playing() or ctx.voice_client.is_paused()
+                if (active or has_listeners) and not self._is_privileged_dj(ctx):
+                    await ctx.send(
+                        f"❌ 我正在 **{current_channel.name}** 使用中。请先加入该频道，或联系管理员/DJ移动我。",
+                        ephemeral=True,
+                    )
+                    return None
                 await ctx.voice_client.move_to(channel)
         else:
             await channel.connect(self_deaf=True)
         return ctx.voice_client
+
+    def _is_privileged_dj(self, ctx) -> bool:
+        """Whether a member may move an active player between voice channels."""
+        if ctx.author.guild_permissions.manage_guild:
+            return True
+        mc = self.bot.get_cog("MusicConfig")
+        dj_role_id = mc.get_config(ctx.guild.id).get("dj_role", 0) if mc else 0
+        return bool(dj_role_id and any(r.id == dj_role_id for r in ctx.author.roles))
 
     async def _require_dj(self, ctx) -> bool:
         """控制类命令使用。无配置/管理员/有 DJ 角色 → 通过。"""
@@ -363,6 +380,21 @@ class Music(commands.Cog):
             return True
         await ctx.send("❌ 你没有 DJ 权限,无法使用此指令。", ephemeral=True)
         return False
+
+    async def _require_voice_control(self, ctx) -> bool:
+        """Apply the same voice-channel and DJ checks used by player buttons."""
+        if not await self._require_dj(ctx):
+            return False
+        vc = ctx.voice_client
+        if not vc or ctx.author.guild_permissions.manage_guild:
+            return True
+        if not ctx.author.voice or ctx.author.voice.channel != vc.channel:
+            await ctx.send(
+                "❌ 你必须在我所在的语音频道中才能控制播放。",
+                ephemeral=True,
+            )
+            return False
+        return True
 
     def _get_notify_channel(self, ctx) -> discord.TextChannel:
         """返回配置的通知频道,未配置则返回 ctx.channel"""
@@ -800,7 +832,7 @@ class Music(commands.Cog):
         name="skip", aliases=["s", "next"], description="跳过当前歌曲（或投票跳过）"
     )
     async def skip(self, ctx):
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         vc = ctx.voice_client
         if not vc or not (vc.is_playing() or vc.is_paused()):
@@ -833,7 +865,7 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="pause", description="暂停播放")
     async def pause(self, ctx):
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         vc = ctx.voice_client
         if vc and vc.is_playing():
@@ -844,7 +876,7 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="resume", aliases=["unpause"], description="恢复播放")
     async def resume(self, ctx):
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         vc = ctx.voice_client
         if vc and vc.is_paused():
@@ -861,7 +893,7 @@ class Music(commands.Cog):
         description="停止播放、清空队列并离开",
     )
     async def stop(self, ctx):
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         state = self._get_state(ctx.guild.id)
         state.clear()
@@ -939,7 +971,7 @@ class Music(commands.Cog):
         name="remove", aliases=["rm"], description="从队列中移除指定位置的歌曲"
     )
     async def remove(self, ctx, position: int):
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         state = self._get_state(ctx.guild.id)
         if position < 1 or position > len(state.queue):
@@ -955,7 +987,7 @@ class Music(commands.Cog):
         name="clear", aliases=["cls"], description="清空播放队列（不影响当前播放）"
     )
     async def clear_queue(self, ctx):
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         state = self._get_state(ctx.guild.id)
         count = len(state.queue)
@@ -966,7 +998,7 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="shuffle", description="随机打乱队列顺序")
     async def shuffle(self, ctx):
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         state = self._get_state(ctx.guild.id)
         if len(state.queue) < 2:
@@ -983,7 +1015,7 @@ class Music(commands.Cog):
         name="loop", aliases=["repeat"], description="设置循环模式"
     )
     async def loop(self, ctx, mode: Literal["off", "single", "queue"] = None):
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         state = self._get_state(ctx.guild.id)
         if mode is None:
@@ -1005,7 +1037,7 @@ class Music(commands.Cog):
         if level is None:
             await ctx.send(f"🔊 当前音量: **{int(state.volume * 100)}%**")
             return
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         if level < 0 or level > 200:
             await ctx.send("❌ 音量范围: 0-200")
@@ -1020,7 +1052,7 @@ class Music(commands.Cog):
 
     @commands.hybrid_command(name="move", description="移动队列中的歌曲位置")
     async def move(self, ctx, from_pos: int, to_pos: int):
-        if not await self._require_dj(ctx):
+        if not await self._require_voice_control(ctx):
             return
         state = self._get_state(ctx.guild.id)
         q = state.queue
@@ -1159,15 +1191,18 @@ class Music(commands.Cog):
             return
         await ctx.defer()
         destination = ctx.author.voice.channel
-        if ctx.voice_client:
-            if ctx.voice_client.channel.id == destination.id:
+        old_channel = ctx.voice_client.channel if ctx.voice_client else None
+        vc = await self._ensure_voice(ctx)
+        if not vc:
+            return
+        if old_channel:
+            if old_channel.id == destination.id:
                 await ctx.send("✅ 我已经在你的频道里了。")
             else:
-                old = ctx.voice_client.channel.name
-                await ctx.voice_client.move_to(destination)
-                await ctx.send(f"➡️ 已从 {old} 移动到 **{destination.name}**")
+                await ctx.send(
+                    f"➡️ 已从 {old_channel.name} 移动到 **{destination.name}**"
+                )
         else:
-            await destination.connect(self_deaf=True)
             await ctx.send(f"👋 已加入语音频道: **{destination.name}**")
 
     # ─── 自动断开（所有人离开语音时）───

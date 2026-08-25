@@ -11,7 +11,8 @@ import discord
 from discord.ext import commands, tasks
 from discord.ui import View, Button
 import aiosqlite
-import random
+import re
+import secrets
 import time
 import asyncio
 import os
@@ -141,6 +142,15 @@ class Giveaway(commands.Cog):
                     FOREIGN KEY (giveaway_id) REFERENCES giveaways(id)
                 )
             """)
+            await db.execute("""
+                CREATE TABLE IF NOT EXISTS giveaway_winners (
+                    giveaway_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    selected_at REAL NOT NULL,
+                    PRIMARY KEY (giveaway_id, user_id),
+                    FOREIGN KEY (giveaway_id) REFERENCES giveaways(id)
+                )
+            """)
             await db.commit()
 
         # 注册持久化 View
@@ -176,55 +186,85 @@ class Giveaway(commands.Cog):
 
     def _parse_duration(self, duration_str: str) -> Optional[int]:
         """解析时长字符串，如 1h, 30m, 2d, 1d12h"""
+        duration_str = duration_str.strip().lower()
+        if not re.fullmatch(r"(?:\d+[dhms])+", duration_str):
+            return None
         total = 0
-        num_buf = ""
-        for ch in duration_str.lower():
-            if ch.isdigit():
-                num_buf += ch
-            elif ch in ("d", "h", "m", "s"):
-                if not num_buf:
-                    return None
-                n = int(num_buf)
-                if ch == "d":
-                    total += n * 86400
-                elif ch == "h":
-                    total += n * 3600
-                elif ch == "m":
-                    total += n * 60
-                elif ch == "s":
-                    total += n
-                num_buf = ""
-            else:
+        seen_units = set()
+        multipliers = {"d": 86400, "h": 3600, "m": 60, "s": 1}
+        for number, unit in re.findall(r"(\d+)([dhms])", duration_str):
+            if unit in seen_units:
                 return None
-        return total if total > 0 else None
+            seen_units.add(unit)
+            total += int(number) * multipliers[unit]
+        return total if 0 < total <= 365 * 86400 else None
 
     async def _pick_winners(self, giveaway_id: int, count: int) -> list[int]:
         async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                "SELECT guild_id, restrict_role FROM giveaways WHERE id = ?",
+                (giveaway_id,),
+            )
+            giveaway = await cursor.fetchone()
+            if not giveaway:
+                return []
             cursor = await db.execute(
                 "SELECT user_id FROM giveaway_entries WHERE giveaway_id = ?",
                 (giveaway_id,),
             )
             entries = [row[0] for row in await cursor.fetchall()]
+            cursor = await db.execute(
+                "SELECT user_id FROM giveaway_winners WHERE giveaway_id = ?",
+                (giveaway_id,),
+            )
+            previous_winners = {row[0] for row in await cursor.fetchall()}
 
-        if not entries:
+        guild_id, restrict_role = giveaway
+        guild = self.bot.get_guild(guild_id)
+        if not guild:
             return []
-        return random.sample(entries, min(count, len(entries)))
+        eligible = []
+        for user_id in entries:
+            member = guild.get_member(user_id)
+            if not member or member.bot or user_id in previous_winners:
+                continue
+            if restrict_role and not any(
+                role.id == restrict_role for role in member.roles
+            ):
+                continue
+            eligible.append(user_id)
+        if not eligible:
+            return []
+        return secrets.SystemRandom().sample(eligible, min(count, len(eligible)))
+
+    async def _record_winners(self, giveaway_id: int, winners: list[int]):
+        if not winners:
+            return
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.executemany(
+                "INSERT OR IGNORE INTO giveaway_winners (giveaway_id, user_id, selected_at) VALUES (?, ?, ?)",
+                [(giveaway_id, user_id, time.time()) for user_id in winners],
+            )
+            await db.commit()
 
     async def _end_giveaway(self, giveaway_id: int):
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
-                "SELECT guild_id, channel_id, message_id, prize, winners_count, host_id FROM giveaways WHERE id = ?",
+                "SELECT guild_id, channel_id, message_id, prize, winners_count, host_id, ended FROM giveaways WHERE id = ?",
                 (giveaway_id,),
             )
             row = await cursor.fetchone()
-            if not row:
+            if not row or row[6]:
                 return
-            guild_id, channel_id, message_id, prize, winners_count, host_id = row
+            guild_id, channel_id, message_id, prize, winners_count, host_id, _ = row
 
-            await db.execute(
-                "UPDATE giveaways SET ended = 1 WHERE id = ?", (giveaway_id,)
+            cursor = await db.execute(
+                "UPDATE giveaways SET ended = 1 WHERE id = ? AND ended = 0",
+                (giveaway_id,),
             )
             await db.commit()
+            if cursor.rowcount != 1:
+                return
 
         guild = self.bot.get_guild(guild_id)
         if not guild:
@@ -234,6 +274,7 @@ class Giveaway(commands.Cog):
             return
 
         winners = await self._pick_winners(giveaway_id, winners_count)
+        await self._record_winners(giveaway_id, winners)
 
         # 更新原消息
         try:
@@ -248,7 +289,7 @@ class Giveaway(commands.Cog):
             else:
                 embed = discord.Embed(
                     title="🎊 抽奖结束",
-                    description=f"**奖品:** {prize}\n没有人参加抽奖 😢",
+                    description=f"**奖品:** {prize}\n没有符合资格的参与者 😢",
                     color=discord.Color.dark_grey(),
                 )
             embed.set_footer(text=f"抽奖 ID: {giveaway_id} | 由 小凛 公正开奖")
@@ -306,7 +347,9 @@ class Giveaway(commands.Cog):
 
         seconds = self._parse_duration(duration)
         if not seconds:
-            await ctx.send("❌ 无效的时间格式！示例: `1h`, `30m`, `2d`, `1d12h`")
+            await ctx.send(
+                "❌ 无效的时间格式或时间超过 365 天！示例: `1h`, `30m`, `2d`, `1d12h`"
+            )
             return
 
         if winners < 1 or winners > 20:
@@ -388,6 +431,9 @@ class Giveaway(commands.Cog):
     @giveaway_group.command(name="reroll", description="[管理] 重新抽取获奖者")
     @commands.has_permissions(manage_guild=True)
     async def gw_reroll(self, ctx, giveaway_id: int, count: int = 1):
+        if count < 1 or count > 20:
+            await ctx.send("❌ 中奖人数范围: 1-20")
+            return
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
                 "SELECT channel_id, prize, ended FROM giveaways WHERE id = ? AND guild_id = ?",
@@ -403,6 +449,7 @@ class Giveaway(commands.Cog):
 
         winners = await self._pick_winners(giveaway_id, count)
         if winners:
+            await self._record_winners(giveaway_id, winners)
             winner_mentions = ", ".join(f"<@{uid}>" for uid in winners)
             await ctx.send(f"🎉 Reroll 结果: {winner_mentions} 赢得了 **{row[1]}**!")
             await audit(
@@ -416,7 +463,7 @@ class Giveaway(commands.Cog):
                 },
             )
         else:
-            await ctx.send("❌ 没有参与者可以 Reroll。")
+            await ctx.send("❌ 没有新的合格参与者可以 Reroll。")
 
     @giveaway_group.command(name="list", description="查看当前活跃的抽奖活动")
     async def gw_list(self, ctx):

@@ -2071,6 +2071,8 @@ def setup_routes(app, discord):
 
             if end_time <= time.time():
                 return jsonify({"error": "结束时间必须在未来"}), 400
+            if end_time > time.time() + 365 * 86400:
+                return jsonify({"error": "抽奖最长可以设置 365 天"}), 400
 
             end_ts = int(end_time)
 
@@ -2177,6 +2179,7 @@ def setup_routes(app, discord):
         {"name": "queues", "desc": "查看播放队列存档", "cog": "Music"},
         {"name": "delqueue", "desc": "删除播放队列存档", "cog": "Music"},
         {"name": "rank", "desc": "查看你的等级卡片", "cog": "Leveling"},
+        {"name": "leaderboard", "desc": "查看服务器等级排行榜", "cog": "Leveling"},
         {"name": "kick", "desc": "踢出成员", "cog": "Moderation"},
         {"name": "ban", "desc": "永久封禁成员", "cog": "Moderation"},
         {"name": "tempban", "desc": "临时封禁成员", "cog": "Moderation"},
@@ -2214,14 +2217,17 @@ def setup_routes(app, discord):
         {"name": "rr_add", "desc": "添加 emoji → 身份组映射", "cog": "ReactionRoles"},
         {"name": "rr_remove", "desc": "移除一个 emoji 映射", "cog": "ReactionRoles"},
         {"name": "rr_list", "desc": "列出所有面板", "cog": "ReactionRoles"},
+        {"name": "rr_exclusive", "desc": "切换面板的单选/多选模式", "cog": "ReactionRoles"},
         {"name": "rr_delete", "desc": "删除面板", "cog": "ReactionRoles"},
         {"name": "giveaway", "desc": "抽奖管理 (start/end/reroll)", "cog": "Giveaway"},
         {"name": "automod", "desc": "自动审核配置面板", "cog": "AutoMod"},
         {"name": "automod_words", "desc": "管理违禁词列表", "cog": "AutoMod"},
         {"name": "automod_whitelist", "desc": "管理链接白名单", "cog": "AutoMod"},
         {"name": "automod_ignore", "desc": "管理审核忽略列表", "cog": "AutoMod"},
+        {"name": "serverlog", "desc": "配置服务器审计日志", "cog": "ServerLog"},
         {"name": "toggle", "desc": "启用/禁用指定指令", "cog": "System"},
         {"name": "togglelist", "desc": "查看已禁用的指令", "cog": "System"},
+        {"name": "help", "desc": "打开交互式指令菜单", "cog": "System"},
     ]
     PROTECTED = {
         "toggle",
@@ -2234,7 +2240,34 @@ def setup_routes(app, discord):
         "eval",
         "help",
     }
-    COMMAND_NAMES = {item["name"] for item in COMMAND_REGISTRY}
+    def _current_command_registry():
+        """Prefer the Bot's live command snapshot, with the static list as fallback."""
+        try:
+            with open(os.path.join(BOT_DIR, "health.json"), encoding="utf-8") as f:
+                commands = json.load(f).get("commands")
+            if not isinstance(commands, list) or not commands:
+                raise ValueError("missing command snapshot")
+            cleaned = []
+            seen = set()
+            for item in commands:
+                if not isinstance(item, dict):
+                    continue
+                name = item.get("name")
+                if not isinstance(name, str) or not name or name in seen:
+                    continue
+                seen.add(name)
+                cleaned.append(
+                    {
+                        "name": name,
+                        "desc": str(item.get("desc") or "暂无介绍")[:200],
+                        "cog": str(item.get("cog") or "Other")[:50],
+                    }
+                )
+            if cleaned:
+                return cleaned
+        except (OSError, ValueError, TypeError, json.JSONDecodeError):
+            pass
+        return COMMAND_REGISTRY
 
     @app.route("/api/guild/<string:gid>/commands", methods=["GET"])
     async def api_commands_get(gid):
@@ -2250,7 +2283,7 @@ def setup_routes(app, discord):
                 rows = await cur.fetchall()
                 disabled = {r[0] for r in rows}
             result = []
-            for cmd in COMMAND_REGISTRY:
+            for cmd in _current_command_registry():
                 result.append(
                     {
                         "name": cmd["name"],
@@ -2271,9 +2304,14 @@ def setup_routes(app, discord):
             if not await check_guild_access(discord, gid):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
-            name = d.get("name", "")
+            if not isinstance(d, dict):
+                return jsonify({"error": "请求格式无效"}), 400
+            name = (d.get("name") or "").strip()
             enabled = d.get("enabled", True)
-            if name not in COMMAND_NAMES:
+            if not isinstance(enabled, bool):
+                return jsonify({"error": "启用状态格式无效"}), 400
+            command_names = {item["name"] for item in _current_command_registry()}
+            if name not in command_names:
                 return jsonify({"error": "未知指令"}), 400
             if name in PROTECTED:
                 return jsonify({"error": "核心指令不能被禁用"}), 400
@@ -2296,4 +2334,59 @@ def setup_routes(app, discord):
             return jsonify({"ok": True, "name": name, "enabled": enabled})
         except Exception as e:
             print(f"[api_commands_toggle] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/guild/<string:gid>/commands/bulk-toggle", methods=["POST"])
+    async def api_commands_bulk_toggle(gid):
+        """Update a command group in one database transaction."""
+        try:
+            if not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            d = await request.get_json()
+            if not isinstance(d, dict):
+                return jsonify({"error": "请求格式无效"}), 400
+            names = d.get("names")
+            enabled = d.get("enabled")
+            if not isinstance(names, list) or not names or len(names) > 100:
+                return jsonify({"error": "指令列表格式无效"}), 400
+            if not isinstance(enabled, bool):
+                return jsonify({"error": "启用状态格式无效"}), 400
+
+            if any(not isinstance(name, str) or not name for name in names):
+                return jsonify({"error": "指令名格式无效"}), 400
+            names = list(dict.fromkeys(names))
+            command_names = {item["name"] for item in _current_command_registry()}
+            unknown = [name for name in names if name not in command_names]
+            protected = [name for name in names if name in PROTECTED]
+            if unknown:
+                return jsonify({"error": f"未知指令: {', '.join(unknown)}"}), 400
+            if protected:
+                return jsonify(
+                    {"error": f"核心指令不能被禁用: {', '.join(protected)}"}
+                ), 400
+
+            g = int(gid)
+            async with aiosqlite.connect(DB_CMDTOGGLE) as db:
+                if enabled:
+                    await db.executemany(
+                        "DELETE FROM disabled_commands WHERE guild_id=? AND command_name=?",
+                        [(g, name) for name in names],
+                    )
+                else:
+                    await db.executemany(
+                        "INSERT OR IGNORE INTO disabled_commands (guild_id, command_name) VALUES (?, ?)",
+                        [(g, name) for name in names],
+                    )
+                await db.commit()
+
+            actor = await _resolve_actor(discord)
+            action = "启用" if enabled else "禁用"
+            audit(
+                g,
+                f"批量{action}了指令",
+                **{"操作者": actor, "指令": ", ".join(f"/{name}" for name in names)},
+            )
+            return jsonify({"ok": True, "names": names, "enabled": enabled})
+        except Exception as e:
+            print(f"[api_commands_bulk_toggle] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500

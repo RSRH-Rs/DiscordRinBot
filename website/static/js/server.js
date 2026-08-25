@@ -1,5 +1,5 @@
 const GID = window.GID || "";
-let _ch = null, _roles = null;
+let _ch = null, _roles = null, _chPromise = null, _rolesPromise = null;
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 const AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
 
@@ -72,8 +72,24 @@ async function apiGlobal(path, method='GET', body=null) {
     }
     return r.json();
 }
-async function getCh() { if (!_ch) try { _ch = await api('/channels'); } catch(e) { _ch = []; } return _ch || []; }
-async function getRoles() { if (!_roles) try { _roles = await api('/roles'); } catch(e) { _roles = []; } return _roles || []; }
+async function getCh() {
+    if (_ch !== null) return _ch;
+    if (!_chPromise) {
+        _chPromise = api('/channels')
+            .then(data => { _ch = data; return data; })
+            .finally(() => { _chPromise = null; });
+    }
+    return _chPromise;
+}
+async function getRoles() {
+    if (_roles !== null) return _roles;
+    if (!_rolesPromise) {
+        _rolesPromise = api('/roles')
+            .then(data => { _roles = data; return data; })
+            .finally(() => { _rolesPromise = null; });
+    }
+    return _rolesPromise;
+}
 
 /* ── Skeleton loading ── */
 function showSkeleton(elId, count=3) {
@@ -415,15 +431,17 @@ async function toggleCommand(name, enabled, cog) {
             updateSummary();
             showToast(enabled ? `✅ /${name} 已启用` : `⏹ /${name} 已禁用`);
         } else { showToast('❌ ' + (r.error || '操作失败')); }
-    } catch(e) { showToast('❌ 网络错误'); }
+    } catch(e) { showToast('❌ ' + e.message); }
 }
 
 async function toggleCategory(cog, enabled) {
     if (!_cmdData) return;
     const cmds = _cmdData.filter(c => c.cog === cog && !c.protected);
-    const promises = cmds.map(c => api('/commands/toggle', 'POST', { name: c.name, enabled }));
+    if (cmds.length === 0) return;
     try {
-        await Promise.all(promises);
+        await api('/commands/bulk-toggle', 'POST', {
+            names: cmds.map(c => c.name), enabled
+        });
         for (const c of cmds) {
             c.enabled = enabled;
             const row = document.getElementById('cr-' + c.name);
@@ -436,7 +454,11 @@ async function toggleCategory(cog, enabled) {
         updateCogCount(cog);
         updateSummary();
         showToast(enabled ? `✅ ${cog} 全部指令已启用` : `⏹ ${cog} 全部指令已禁用`);
-    } catch(e) { showToast('❌ 批量操作失败'); }
+    } catch(e) {
+        showToast('❌ 批量操作失败: ' + e.message);
+        _cmdData = null;
+        await loadUtility();
+    }
 }
 
 function updateCogCount(cog) {
@@ -471,10 +493,10 @@ let _rrLoaded = false, _rrRoleCount = 0;
 async function loadRolesPage() {
     if (_rrLoaded) return; _rrLoaded = true;
     showSkeleton('rr-existing', 2);
-    const [ch, roles] = await Promise.all([getCh(), getRoles()]);
-    chOpts('rr-ch', ch, 0);
-    window._rrAvailRoles = roles;
     try {
+        const [ch, roles] = await Promise.all([getCh(), getRoles()]);
+        chOpts('rr-ch', ch, 0);
+        window._rrAvailRoles = roles;
         const panels = await api('/reactionroles');
         const el = document.getElementById('rr-existing');
         if (!panels || panels.length === 0) { el.innerHTML = '<div class="empty-state-sm">还没有任何面板</div>'; }
@@ -485,7 +507,11 @@ async function loadRolesPage() {
                 return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:var(--pink);">${escapeHtml(p.title || '身份组面板')}</span><span class="case-time">消息 ID: ${p.message_id} · ${count} 个映射</span></div><div class="case-body">频道 ID: ${p.channel_id}</div></div>`;
             }).join('');
         }
-    } catch(e) { showError('rr-existing', '加载失败: ' + e.message); showToast('❌ 加载面板列表失败: ' + e.message); }
+    } catch(e) {
+        _rrLoaded = false;
+        showError('rr-existing', '加载失败，请重新打开此页面重试: ' + e.message);
+        showToast('❌ 加载身份组配置失败: ' + e.message);
+    }
     if (window.lucide) lucide.createIcons();
 }
 function addRoleRow() {
@@ -629,14 +655,20 @@ async function sendRRPanel() {
 let _gwPageLoaded = false;
 async function loadGiveawayPage() {
     if (_gwPageLoaded) return; _gwPageLoaded = true;
-    const [ch, roles] = await Promise.all([getCh(), getRoles()]);
-    chOpts('gw-ch', ch, 0);
-    const rsel = document.getElementById('gw-role');
-    rsel.innerHTML = '<option value="0">@ 不限制</option>' + roles.map(r => `<option value="${r.id}">@ ${escapeHtml(r.name)}</option>`).join('');
-    // Set default end time to 24h from now
-    const d = new Date(Date.now() + 86400000);
-    document.getElementById('gw-end').value = d.toISOString().slice(0, 16);
-    loadGiveaways(); // Load existing list
+    try {
+        const [ch, roles] = await Promise.all([getCh(), getRoles()]);
+        chOpts('gw-ch', ch, 0);
+        const rsel = document.getElementById('gw-role');
+        rsel.innerHTML = '<option value="0">@ 不限制</option>' + roles.map(r => `<option value="${r.id}">@ ${escapeHtml(r.name)}</option>`).join('');
+        // Set default end time to 24h from now
+        const d = new Date(Date.now() + 86400000);
+        document.getElementById('gw-end').value = d.toISOString().slice(0, 16);
+        loadGiveaways(); // Load existing list
+    } catch(e) {
+        _gwPageLoaded = false;
+        showError('gw-list', '加载频道或身份组失败，请重新打开此页面重试: ' + e.message);
+        showToast('❌ 加载抽奖配置失败: ' + e.message);
+    }
 }
 async function createGiveaway() {
     const prize = document.getElementById('gw-prize').value.trim();
@@ -649,6 +681,7 @@ async function createGiveaway() {
     if (!endStr) { showToast('请选择结束时间'); return; }
     const endTime = Math.floor(new Date(endStr).getTime() / 1000);
     if (endTime <= Math.floor(Date.now() / 1000)) { showToast('结束时间必须在未来'); return; }
+    if (endTime > Math.floor(Date.now() / 1000) + 365 * 86400) { showToast('抽奖最长可以设置 365 天'); return; }
     const btn = document.getElementById('gw-create-btn'); btn.disabled = true; btn.textContent = '建立中…';
     try {
         const r = await api('/giveaway/create', 'POST', {
@@ -660,7 +693,7 @@ async function createGiveaway() {
             document.getElementById('gw-prize').value = '';
             _gwPageLoaded = false; loadGiveawayPage();
         } else { showToast('❌ ' + (r.error || '建立失败')); }
-    } catch(e) { showToast('❌ 网络错误'); }
+    } catch(e) { showToast('❌ ' + e.message); }
     btn.disabled = false; btn.textContent = '建立';
 }
 
