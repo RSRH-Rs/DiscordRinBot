@@ -1,13 +1,19 @@
 from quart import redirect, url_for, render_template, session, jsonify, request
 import asyncio
+import base64
+import binascii
 import time
 import traceback
 import aiohttp
 import aiosqlite
 import json
 import os
+from io import BytesIO
 from typing import Optional
 from datetime import datetime, timezone
+from urllib.parse import urlparse
+
+from PIL import Image, UnidentifiedImageError
 from config import BOT_TOKEN
 
 try:
@@ -25,6 +31,75 @@ _USERNAME_TTL = 3600
 # 首页统计缓存（公开接口，避免频繁打 Discord API）
 _stats_cache: dict = {"data": None, "exp": 0.0}
 _STATS_TTL = 120
+
+_MAX_IMAGE_URL_LENGTH = 2048
+_MAX_AVATAR_BYTES = 5 * 1024 * 1024
+_MAX_AVATAR_DIMENSION = 4096
+_ALLOWED_AVATAR_MIMES = {
+    "image/png": "PNG",
+    "image/jpeg": "JPEG",
+    "image/gif": "GIF",
+    "image/webp": "WEBP",
+}
+_IMAGE_PLACEHOLDERS = {"%avatar%", "%server_avatar%"}
+
+
+def _normalize_image_url(value, *, allow_placeholders=True) -> str:
+    """Return a safe optional HTTP(S) image URL or supported placeholder."""
+    if value in (None, ""):
+        return ""
+    if not isinstance(value, str):
+        raise ValueError("图片链接格式无效")
+    value = value.strip()
+    if allow_placeholders and value in _IMAGE_PLACEHOLDERS:
+        return value
+    if len(value) > _MAX_IMAGE_URL_LENGTH or any(ord(ch) < 32 for ch in value):
+        raise ValueError("图片链接过长或包含非法字符")
+    parsed = urlparse(value)
+    try:
+        hostname = parsed.hostname
+    except ValueError as exc:
+        raise ValueError("图片链接格式无效") from exc
+    if parsed.scheme.lower() not in {"http", "https"} or not hostname:
+        raise ValueError("图片链接必须是有效的 HTTP 或 HTTPS 地址")
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError("图片链接不能包含登录凭据")
+    return value
+
+
+def _validate_avatar_data_uri(value) -> Optional[str]:
+    """Validate an avatar data URI; return an error message when invalid."""
+    if not isinstance(value, str):
+        return "头像数据格式无效"
+    header, separator, payload = value.partition(",")
+    if not separator or not header.lower().endswith(";base64"):
+        return "头像必须使用 Base64 data URI"
+    mime = header[5:-7].lower() if header.lower().startswith("data:") else ""
+    expected_format = _ALLOWED_AVATAR_MIMES.get(mime)
+    if expected_format is None:
+        return "仅支持 PNG、JPEG、GIF 或 WebP 图片"
+    if len(payload) > ((_MAX_AVATAR_BYTES + 2) // 3) * 4:
+        return "头像文件不能超过 5 MB"
+    try:
+        raw = base64.b64decode(payload, validate=True)
+    except (binascii.Error, ValueError):
+        return "头像 Base64 数据无效"
+    if not raw or len(raw) > _MAX_AVATAR_BYTES:
+        return "头像文件不能为空且不能超过 5 MB"
+    try:
+        with Image.open(BytesIO(raw)) as image:
+            width, height = image.size
+            actual_format = (image.format or "").upper()
+            if width < 1 or height < 1:
+                return "头像尺寸无效"
+            if width > _MAX_AVATAR_DIMENSION or height > _MAX_AVATAR_DIMENSION:
+                return "头像尺寸不能超过 4096×4096"
+            if actual_format != expected_format:
+                return "头像声明的类型与实际文件不一致"
+            image.verify()
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError):
+        return "头像文件损坏或不是有效图片"
+    return None
 
 
 async def _get_session() -> aiohttp.ClientSession:
@@ -563,7 +638,7 @@ def setup_routes(app, discord):
                     403,
                 )
             user = await discord.fetch_user()
-            return await render_template("setttings.html", user=user)
+            return await render_template("settings.html", user=user)
         except Exception as e:
             return await render_template("error.html", error=str(e)), 500
 
@@ -855,6 +930,8 @@ def setup_routes(app, discord):
             if not await check_guild_access(discord, gid):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
+            if not isinstance(d, dict):
+                return jsonify({"error": "请求内容必须是 JSON 对象"}), 400
             g = int(gid)
             auto_roles = [x for x in str(d.get("auto_roles", "")).split(",") if x]
             resources = await _validate_guild_resources(
@@ -867,6 +944,12 @@ def setup_routes(app, discord):
                 return jsonify({"error": "无法验证服务器资源"}), 502
             if not resources:
                 return jsonify({"error": "频道或身份组不属于当前服务器"}), 400
+            try:
+                author_icon = _normalize_image_url(d.get("author_icon"))
+                thumbnail_url = _normalize_image_url(d.get("thumbnail_url"))
+                image_url = _normalize_image_url(d.get("image_url"))
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
             async with aiosqlite.connect(DB_WELCOME) as db:
                 await db.execute(
                     "INSERT OR IGNORE INTO welcome_config (guild_id) VALUES (?)", (g,)
@@ -886,10 +969,10 @@ def setup_routes(app, discord):
                         d.get("farewell_msg", ""),
                         1 if d.get("show_card") else 0,
                         (d.get("welcome_title") or "")[:200],
-                        (d.get("author_icon") or "").strip(),
-                        (d.get("thumbnail_url") or "").strip(),
+                        author_icon,
+                        thumbnail_url,
                         1 if d.get("enabled", True) else 0,
-                        (d.get("image_url") or "").strip(),
+                        image_url,
                         g,
                     ),
                 )
@@ -1781,9 +1864,14 @@ def setup_routes(app, discord):
             if not await is_owner(discord):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
+            if not isinstance(d, dict):
+                return jsonify({"error": "请求内容必须是 JSON 对象"}), 400
             avatar_b64 = d.get("avatar")  # expects "data:image/png;base64,..."
             if not avatar_b64:
                 return jsonify({"error": "missing avatar data"}), 400
+            avatar_error = _validate_avatar_data_uri(avatar_b64)
+            if avatar_error:
+                return jsonify({"error": avatar_error}), 400
             status, body = await discord_api_patch("/users/@me", {"avatar": avatar_b64})
             if status == 200:
                 return jsonify({"ok": True})

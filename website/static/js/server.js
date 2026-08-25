@@ -1,5 +1,13 @@
 const GID = window.GID || "";
 let _ch = null, _roles = null;
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+
+function avatarFileError(file) {
+    if (!AVATAR_TYPES.has(file.type)) return '仅支持 PNG、JPEG、GIF 或 WebP 图片';
+    if (file.size > AVATAR_MAX_BYTES) return '头像文件不能超过 5 MB';
+    return '';
+}
 
 /* ── Navigation ── */
 function toggleSidebar() {
@@ -684,6 +692,13 @@ function updatePreview() {
 function previewAvatar(input) {
     if (!input.files || !input.files[0]) return;
     const file = input.files[0];
+    const error = avatarFileError(file);
+    if (error) {
+        input.value = '';
+        _avData = null;
+        showToast('❌ ' + error);
+        return;
+    }
     const reader = new FileReader();
     reader.onload = function(e) {
         _avData = e.target.result; // data:image/...;base64,...

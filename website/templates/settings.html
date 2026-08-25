@@ -126,7 +126,7 @@
                     <div class="cfg-row-info"><div class="cfg-row-label">上传新头像</div><div class="cfg-row-hint">建议正方形 PNG / JPG / GIF</div></div>
                     <div class="avatar-row">
                         <img id="bp-avatar-preview" class="avatar-prev" src="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" alt="预览">
-                        <input type="file" id="bp-avatar-file" accept="image/png,image/jpeg,image/gif" onchange="previewAvatar(this)">
+                        <input type="file" id="bp-avatar-file" accept="image/png,image/jpeg,image/gif,image/webp" onchange="previewAvatar(this)">
                     </div>
                 </div>
                 <div class="sec-btns"><button class="btn-save" onclick="saveAvatar(this)">上传头像</button></div>
@@ -179,6 +179,13 @@
 
     <script>
     let _tt;
+    const AVATAR_MAX_BYTES=5*1024*1024;
+    const AVATAR_TYPES=new Set(['image/png','image/jpeg','image/gif','image/webp']);
+    function avatarFileError(f){
+        if(!AVATAR_TYPES.has(f.type))return '仅支持 PNG、JPEG、GIF 或 WebP 图片';
+        if(f.size>AVATAR_MAX_BYTES)return '头像文件不能超过 5 MB';
+        return '';
+    }
     function toggleSidebar(){document.querySelector('.sidebar').classList.toggle('open');document.getElementById('sidebarBackdrop').classList.toggle('show');}
     function closeSidebar(){document.querySelector('.sidebar').classList.remove('open');document.getElementById('sidebarBackdrop').classList.remove('show');}
     function showToast(msg){
@@ -232,11 +239,15 @@
     }
     function previewAvatar(inp){
         const f=inp.files&&inp.files[0]; if(!f)return;
+        const err=avatarFileError(f);
+        if(err){inp.value='';showToast('❌ '+err);return;}
         const r=new FileReader(); r.onload=()=>{document.getElementById('bp-avatar-preview').src=r.result;}; r.readAsDataURL(f);
     }
     async function saveAvatar(btn){
         const f=document.getElementById('bp-avatar-file').files[0];
         if(!f){showToast('❌ 请先选择图片');return;}
+        const err=avatarFileError(f);
+        if(err){showToast('❌ '+err);return;}
         btn.disabled=true;
         try{
             const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});

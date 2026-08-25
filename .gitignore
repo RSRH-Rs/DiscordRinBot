@@ -3,3 +3,10 @@ venv/
 *.db
 *.json
 config.py
+.env
+.env.*
+!.env.example
+*.bak
+*_backup_*/
+rinbot-*.zip
+.codex-server-known-hosts

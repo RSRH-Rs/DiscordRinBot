@@ -7,6 +7,12 @@ from io import StringIO
 import contextlib
 
 COGS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+EVAL_ENABLED = os.getenv("RINBOT_ENABLE_EVAL", "0").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
 
 
 # ─────────────────────────────────────────────
@@ -190,6 +196,11 @@ class Dev(commands.Cog):
     @commands.is_owner()
     async def boteval(self, ctx, *, code: str):
         """动态执行 Python 代码（仅 Owner，极度危险）"""
+        if not EVAL_ENABLED:
+            await ctx.send(
+                "⛔ Eval 已在生产环境禁用；仅可通过 RINBOT_ENABLE_EVAL=1 临时开启。"
+            )
+            return
         # 去掉 markdown 代码块
         code = code.strip("`")
         if code.startswith("python\n") or code.startswith("py\n"):
