@@ -56,6 +56,8 @@ class Health(commands.Cog):
             data = {
                 "started_at": self.started_at,
                 "updated_at": time.time(),
+                "gateway_connected": self.bot.is_ready() and not self.bot.is_closed(),
+                "guild_ids": [str(g.id) for g in self.bot.guilds],
                 "latency_ms": latency_ms,
                 "guild_count": len(self.bot.guilds),
                 "user_count": sum((g.member_count or 0) for g in self.bot.guilds),

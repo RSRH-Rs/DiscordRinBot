@@ -11,12 +11,10 @@ function avatarFileError(file) {
 
 /* ── Navigation ── */
 function toggleSidebar() {
-    document.querySelector('.sidebar').classList.toggle('open');
-    document.getElementById('sidebarBackdrop').classList.toggle('show');
+    DashboardUI.toggleSidebar();
 }
 function closeSidebar() {
-    document.querySelector('.sidebar').classList.remove('open');
-    document.getElementById('sidebarBackdrop').classList.remove('show');
+    DashboardUI.closeSidebar(false);
 }
 // 让键盘用户能用 Enter/空格 触发导航项（它们是 <a> 无 href，靠 onclick）
 document.addEventListener('keydown', (e) => {
@@ -26,14 +24,18 @@ document.addEventListener('keydown', (e) => {
     }
 });
 function go(mod) {
+    const current=document.querySelector('.mod-page.active');
+    if(current?.id==='pg-'+mod){closeSidebar();return;}
+    if(!DashboardUI.confirmSwitch(current))return;
     closeSidebar();
     document.querySelectorAll('.mod-page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('#side-modules .nav-link').forEach(l => l.classList.remove('active'));
     const pg = document.getElementById('pg-' + mod);
     const nl = document.querySelector(`[data-mod="${mod}"]`);
     if (pg) pg.classList.add('active');
+    document.querySelectorAll('[data-for-module]').forEach(el=>{el.hidden=el.dataset.forModule!=='pg-'+mod;});
     if (nl) nl.classList.add('active');
-    window.scrollTo(0, 0);
+    document.querySelector('.main-content').scrollTo(0, 0);
     // lazy load data
     if (mod === 'welcome') loadWelcome();
     if (mod === 'automod') loadAutoMod();
@@ -104,11 +106,12 @@ function showError(elId, msg) {
 /* ── Dirty tracking (unsaved changes) ── */
 function markDirty(barId) {
     const bar = document.getElementById(barId);
-    if (bar) { bar.classList.add('dirty'); bar.querySelector('.save-hint').textContent = '⚠️ 你有未保存的更改'; }
+    if (bar) DashboardUI.changed(bar.closest('.mod-page'));
 }
 function markClean(barId) {
     const bar = document.getElementById(barId);
-    if (bar) { bar.classList.remove('dirty'); bar.querySelector('.save-hint').textContent = '修改后记得保存哦~'; }
+    if (bar) DashboardUI.clean(bar.closest('.mod-page'));
+    loadModules();
 }
 
 function escapeHtml(s) {
@@ -142,11 +145,12 @@ async function loadWelcome() {
         ).join('');
         // Attach dirty listeners
         document.querySelectorAll('#w-ch,#w-fch,#w-msg,#w-fmsg,#w-title,#w-thumb,#w-image,#w-card,#w-enabled').forEach(el => el.addEventListener('input', () => markDirty('w-savebar')));
-    } catch(e) { showToast('❌ 加载欢迎配置失败: ' + e.message); }
+    } catch(e) { _wLoaded=false; throw e; }
 }
 async function saveWelcome() {
     const btn = document.getElementById('w-save'); btn.disabled = true; btn.textContent = '保存中…';
     const checked = [...document.querySelectorAll('#w-roles input:checked')].map(i => i.value);
+    try {
     await api('/welcome', 'POST', {
         welcome_channel: document.getElementById('w-ch').value,
         farewell_channel: document.getElementById('w-fch').value,
@@ -160,7 +164,8 @@ async function saveWelcome() {
         enabled: document.getElementById('w-enabled').checked,
     });
     btn.textContent = '✅ 已保存！'; showToast('✅ 欢迎配置已保存！'); markClean('w-savebar');
-    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+    } catch(e) { showToast('❌ 保存失败，输入已保留，可重试：' + e.message); }
+    finally { btn.disabled = false; btn.textContent = '保存设置'; }
 }
 
 /* ── AutoMod ── */
@@ -185,10 +190,11 @@ async function loadAutoMod() {
     renderTags('am-wl-tags', cfg.link_whitelist || []);
     // Dirty listeners
     document.querySelectorAll('#am-enabled,#am-spam,#am-bw,#am-link,#am-caps,#am-repeat,#am-log,#am-st,#am-si,#am-mute,#am-ct,#am-rt').forEach(el => el.addEventListener('change', () => markDirty('am-savebar')));
-    } catch(e) { showToast('❌ 加载审核配置失败: ' + e.message); }
+    } catch(e) { _amLoaded=false; throw e; }
 }
 async function saveAutoMod() {
     const btn = document.getElementById('am-save'); btn.disabled = true; btn.textContent = '保存中…';
+    try {
     await api('/automod', 'POST', {
         enabled: document.getElementById('am-enabled').checked ? 1 : 0,
         log_channel: document.getElementById('am-log').value,
@@ -206,7 +212,8 @@ async function saveAutoMod() {
         mute_duration: +document.getElementById('am-mute').value,
     });
     btn.textContent = '✅ 已保存！'; showToast('✅ 审核配置已保存！'); markClean('am-savebar');
-    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+    } catch(e) { showToast('❌ 保存失败，输入已保留，可重试：' + e.message); }
+    finally { btn.disabled = false; btn.textContent = '保存设置'; }
 }
 
 /* ── Moderation ── */
@@ -222,16 +229,16 @@ async function loadModeration() {
     document.getElementById('mod-kt').value = cfg.warn_kick_threshold || 0;
     document.getElementById('mod-bt').value = cfg.warn_ban_threshold || 0;
     const el = document.getElementById('mod-cases');
-    if (!cases || cases.length === 0) { el.innerHTML = '<div class="empty-state-sm">暂无管理记录</div>'; return; }
+    if (!cases || cases.length === 0) { el.innerHTML = '<div class="empty-state-sm">暂无管理记录</div>'; }
     const colors = {kick:'#E8899A',ban:'#E24B4A',tempban:'#E24B4A',mute:'#EF9F27',warn:'#FFD166',unban:'#5A9E6F',unmute:'#5A9E6F',purge:'#85B7EB'};
-    el.innerHTML = cases.map(c => {
+    if(cases?.length) el.innerHTML = cases.map(c => {
         const d = new Date(c.created_at * 1000);
         const ts = d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
         return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${colors[c.action]||'var(--text)'}">#${c.id} ${c.action}</span><span class="case-time">${ts}</span></div><div class="case-body">${escapeHtml(c.user_name || c.user_id)} · 管理员: ${escapeHtml(c.mod_name || c.mod_id)} · 原因: ${escapeHtml(c.reason)}${c.duration?' · 时长: '+c.duration:''}</div></div>`;
     }).join('');
     // Dirty listeners
     document.querySelectorAll('#mod-log,#mod-mt,#mod-md,#mod-kt,#mod-bt').forEach(el => el.addEventListener('change', () => markDirty('mod-savebar')));
-    } catch(e) { showToast('❌ 加载管理配置失败: ' + e.message); showError('mod-cases', e.message); }
+    } catch(e) { _modLoaded=false; throw e; }
 }
 async function saveModeration() {
     const btn = document.getElementById('mod-save'); btn.disabled = true; btn.textContent = '保存中…';
@@ -253,14 +260,14 @@ let _muLoaded = false;
 async function loadMusicSelects() {
     if (_muLoaded) return; _muLoaded = true;
     try {
-        const [ch, roles, cfg] = await Promise.all([getCh(), getRoles(), api('/music').catch(()=>({}))]);
+        const [ch, roles, cfg] = await Promise.all([getCh(), getRoles(), api('/music')]);
         chOpts('mu-ch', ch, cfg.notify_channel || 0);
         const djSel = document.getElementById('mu-dj');
         djSel.innerHTML = '<option value="0">— 不限制 —</option>' + roles.map(r =>
             `<option value="${r.id}" ${String(r.id)===String(cfg.dj_role||0)?'selected':''}>@ ${escapeHtml(r.name)}</option>`
         ).join('');
         document.querySelectorAll('#mu-dj,#mu-ch').forEach(el => el.addEventListener('change', () => markDirty('mu-savebar')));
-    } catch(e) { showToast('❌ 加载音乐配置失败: ' + e.message); }
+    } catch(e) { _muLoaded=false; throw e; }
 }
 async function saveMusic() {
     const btn = document.getElementById('mu-save'); btn.disabled = true; btn.textContent = '保存中…';
@@ -305,15 +312,17 @@ async function loadLeaderboard() {
 /* ── Tag helpers ── */
 function renderTags(id, arr) {
     document.getElementById(id).innerHTML = arr.map(w =>
-        `<span class="tag-chip">${escapeHtml(w)}<span class="tag-rm" onclick="this.parentElement.remove()">×</span></span>`
+        `<span class="tag-chip">${escapeHtml(w)}<button type="button" class="tag-rm" aria-label="移除此项" onclick="removeTag(this)">×</button></span>`
     ).join('');
 }
 function addTag(prefix) {
     const inp = document.getElementById(prefix + '-new');
     const w = inp.value.trim(); if (!w) return; inp.value = '';
     document.getElementById(prefix + '-tags').insertAdjacentHTML('beforeend',
-        `<span class="tag-chip">${w}<span class="tag-rm" onclick="this.parentElement.remove()">×</span></span>`);
+        `<span class="tag-chip">${escapeHtml(w)}<button type="button" class="tag-rm" aria-label="移除此项" onclick="removeTag(this)">×</button></span>`);
+    DashboardUI.changed('pg-automod');
 }
+function removeTag(button){button.parentElement.remove();DashboardUI.changed('pg-automod');}
 function collectTags(id) {
     return [...document.querySelectorAll('#' + id + ' .tag-chip')].map(t => t.firstChild.textContent.trim());
 }
@@ -524,9 +533,10 @@ function addRoleRow() {
             <button type="button" class="emoji-trigger rr-emoji-trigger" onclick="openEmojiPicker(this)" aria-label="选择 emoji"><span class="ep-placeholder">🎮</span></button>
             <input type="hidden" class="rr-emoji" value="">
             <select class="cfg-select rr-role" style="flex:1;max-width:none;" aria-label="选择身份组">${ropts}</select>
-            <button onclick="this.parentElement.remove();_rrRoleCount--;" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.1rem;padding:4px 8px;" title="移除" aria-label="移除这一行">✕</button>
+            <button onclick="this.parentElement.remove();_rrRoleCount--;DashboardUI.changed('pg-roles');" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.1rem;padding:4px 8px;" title="移除" aria-label="移除这一行">✕</button>
         </div>
     `);
+    DashboardUI.changed('pg-roles');
 }
 
 /* ── Emoji Picker ── */
@@ -622,6 +632,7 @@ function pickEmoji(code, imgUrl) {
     }
     document.getElementById('emoji-picker').style.display = 'none';
     document.removeEventListener('click', closeEmojiPickerOnOutside);
+    DashboardUI.changed('pg-roles');
 }
 async function sendRRPanel() {
     const ch = document.getElementById('rr-ch').value;
@@ -645,7 +656,8 @@ async function sendRRPanel() {
         const r = await api('/reactionroles/send', 'POST', { channel_id: ch, title, content, mappings, exclusive });
         if (r.ok) {
             showToast('✅ 身份组面板已发送到频道!');
-            _rrLoaded = false; loadRolesPage();
+            DashboardUI.clean('pg-roles');
+            _rrLoaded = false; await loadRolesPage();
         } else { showToast('❌ ' + (r.error || '发送失败')); }
     } catch(e) { showToast('❌ 网络错误'); }
     btn.disabled = false; btn.textContent = '送出';
@@ -691,7 +703,8 @@ async function createGiveaway() {
         if (r.ok) {
             showToast('✅ 抽奖活动已建立！');
             document.getElementById('gw-prize').value = '';
-            _gwPageLoaded = false; loadGiveawayPage();
+            DashboardUI.clean('pg-giveaway');
+            _gwPageLoaded = false; await loadGiveawayPage();
         } else { showToast('❌ ' + (r.error || '建立失败')); }
     } catch(e) { showToast('❌ ' + e.message); }
     btn.disabled = false; btn.textContent = '建立';
@@ -851,7 +864,7 @@ async function loadBotLog() {
         document.querySelectorAll('#bl-ch,#bl-enabled,#pg-botlog .bl-chip input').forEach(el =>
             el.addEventListener('change', () => markDirty('bl-savebar'))
         );
-    } catch(e) { showToast('❌ 加载日志配置失败: ' + e.message); }
+    } catch(e) { _blLoaded=false; throw e; }
 }
 
 async function saveBotLog() {
@@ -892,7 +905,7 @@ async function loadServerLog() {
         document.querySelectorAll('#sl-ch,#sl-enabled,#pg-serverlog .bl-chip input').forEach(el =>
             el.addEventListener('change', () => markDirty('sl-savebar'))
         );
-    } catch(e) { showToast('❌ 加载审计日志配置失败: ' + e.message); }
+    } catch(e) { _slLoaded=false; throw e; }
 }
 
 async function saveServerLog() {
@@ -918,19 +931,48 @@ async function testServerLog() {
     setTimeout(() => { btn.disabled = false; btn.textContent = '📤 发送测试'; }, 1500);
 }
 
+let _modulesSignature = null;
 async function loadModules() {
     try {
-        const r = await fetch('/api/modules');
-        if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const mods = await r.json();
-        renderSidebar(mods);
-        renderOverviewCards(mods);
+        const data = await api('/modules');
+        const mods = data.modules;
+        updateBotStatus(data.bot_state);
+        const signature=JSON.stringify(mods);
+        // Polling unchanged status must not replace the user's focused navigation.
+        if(signature!==_modulesSignature){
+            renderSidebar(mods);
+            renderOverviewCards(mods);
+            _modulesSignature=signature;
+        }
+        const note=document.getElementById('runtime-note');
+        note.textContent='开关状态来自本服务器已保存的配置；模块是否加载来自运行报告。配置变更可能稍后生效。';
         if (window.lucide) lucide.createIcons();
     } catch(e) {
+        _modulesSignature=null;
+        updateBotStatus('unknown');
+        document.querySelectorAll('.nav-status').forEach(el=>{el.className='nav-status pending';el.title='运行状态未知';el.setAttribute('aria-label','运行状态未知');});
         console.error('loadModules', e);
-        document.getElementById('ov-modules').innerHTML = '<div class="error-state">模块列表加载失败</div>';
+        document.getElementById('ov-modules').innerHTML = '<div class="error-state">模块状态读取失败 <button type="button" class="tag-add-btn" onclick="loadModules()">重试</button></div>';
         showToast('❌ 模块列表加载失败: ' + e.message);
     }
+}
+
+function updateBotStatus(state){
+    const labels={online:'小凛在线',offline:'小凛暂时离线',stale:'运行状态已过期',unknown:'运行状态未知',not_joined:'小凛未加入'};
+    document.querySelectorAll('[data-bot-status]').forEach(el=>{
+        el.dataset.state=state;
+        el.querySelector('.status-label').textContent=labels[state]||labels.unknown;
+    });
+}
+function moduleLabel(m){
+    if(m.loaded===false)return '模块未加载';
+    if(m.loaded!==true)return '运行状态未知';
+    return ({enabled:'已开启',disabled:'未开启',unconfigured:'未配置',configured:'已配置',default:'默认设置',available:'模块可用',unknown:'配置读取失败'})[m.config_state]||'模块可用';
+}
+function moduleStatusClass(m){
+    if(m.loaded!==true)return m.loaded===false?'off':'pending';
+    if(m.config_state==='unknown')return 'pending';
+    return ['disabled','unconfigured'].includes(m.config_state)?'off':'on';
 }
 
 function renderSidebar(mods) {
@@ -942,23 +984,53 @@ function renderSidebar(mods) {
         const li = document.createElement('li');
         li.innerHTML = `<a class="nav-link" data-mod="${m.slug}" role="button" tabindex="0" onclick="go('${m.slug}')">
             <i data-lucide="${m.icon}" style="width:16px;height:16px;"></i> ${escapeHtml(m.name)}
-            <span class="nav-status ${m.loaded ? 'on' : 'off'}"></span>
+            <span class="nav-status ${moduleStatusClass(m)}" title="${moduleLabel(m)}" aria-label="${moduleLabel(m)}"></span>
         </a>`;
         sb.appendChild(li);
     }
+    const active=document.querySelector('.mod-page.active')?.id.replace('pg-','');
+    sb.querySelectorAll('[data-mod]').forEach(el=>el.classList.toggle('active',el.dataset.mod===active));
 }
 
 function renderOverviewCards(mods) {
     const grid = document.getElementById('ov-modules');
     grid.innerHTML = mods.map(m => `
-        <div class="mod-card ${m.loaded ? '' : 'mod-card--off'}" ${m.loaded ? `onclick="go('${m.slug}')"` : ''}>
+        <button type="button" class="mod-card ${m.loaded===true ? '' : 'mod-card--off'}" onclick="go('${m.slug}')">
             <div class="mod-card-head">
                 <div class="mod-card-icon"><i data-lucide="${m.icon}" style="width:22px;height:22px;"></i></div>
-                <div class="mod-card-name">${m.name}</div>
-                <span class="mod-status-badge ${m.loaded ? '' : 'mod-status-badge--off'}">${m.loaded ? '已启用' : '未启用'}</span>
+                <div class="mod-card-name">${escapeHtml(m.name)}</div>
+                <span class="mod-status-badge ${m.loaded===true && !['disabled','unconfigured','unknown'].includes(m.config_state) ? '' : 'mod-status-badge--off'}">${moduleLabel(m)}</span>
             </div>
-            <div class="mod-card-desc">${m.desc}</div>
-            <div class="mod-card-btn">${m.loaded ? '开始设定 →' : '暂不可用'}</div>
-        </div>
+            <div class="mod-card-desc">${escapeHtml(m.desc)}</div>
+            <div class="mod-card-btn">查看设置</div>
+        </button>
     `).join('');
 }
+
+// Loaded defaults must not overwrite drafts; failed loads are explicitly retryable.
+function guardedLoader(mod, original, loaded){
+    let pending=null;
+    const wrapped=()=>{
+        if(pending)return pending;
+        if(loaded())return Promise.resolve();
+        pending=DashboardUI.loading('pg-'+mod, async()=>{
+            await original();
+            if(!loaded())throw new Error('load failed');
+        },wrapped).finally(()=>{pending=null;});
+        return pending;
+    };
+    return wrapped;
+}
+loadWelcome=guardedLoader('welcome',loadWelcome,()=>_wLoaded);
+loadAutoMod=guardedLoader('automod',loadAutoMod,()=>_amLoaded);
+loadModeration=guardedLoader('moderation',loadModeration,()=>_modLoaded);
+loadMusicSelects=guardedLoader('music',loadMusicSelects,()=>_muLoaded);
+loadBotLog=guardedLoader('botlog',loadBotLog,()=>_blLoaded);
+loadServerLog=guardedLoader('serverlog',loadServerLog,()=>_slLoaded);
+loadRolesPage=guardedLoader('roles',loadRolesPage,()=>_rrLoaded);
+loadGiveawayPage=guardedLoader('giveaway',loadGiveawayPage,()=>_gwPageLoaded);
+for(const [name,mod] of Object.entries({saveWelcome:'welcome',saveAutoMod:'automod',saveModeration:'moderation',saveMusic:'music',saveBotLog:'botlog',saveServerLog:'serverlog',sendRRPanel:'roles',createGiveaway:'giveaway'})){
+    const original=window[name];
+    window[name]=(...args)=>DashboardUI.saving('pg-'+mod,()=>original(...args));
+}
+setInterval(()=>{if(!document.hidden)loadModules();},30000);

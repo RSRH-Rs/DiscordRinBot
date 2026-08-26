@@ -9,12 +9,13 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}">
 </head>
 <body>
-    <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="打开菜单">
+    <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="打开菜单" aria-controls="sideNav" aria-expanded="false">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
-    <aside class="sidebar">
+    <aside class="sidebar" id="sideNav">
         <div class="sidebar-inner">
             <a href="/" class="brand"><span class="brand-dot"></span>小凛 Rin</a>
             <nav class="side-nav">
@@ -47,10 +48,11 @@
                 <h1 class="page-title" id="page-title">{{ guild.name }}</h1>
                 <p class="page-sub" id="page-sub">服务器配置面板</p>
             </div>
-            <div class="bot-online-badge"><span class="pip"></span>小凛在线</div>
+            <div class="bot-online-badge" data-bot-status data-state="unknown" role="status"><span class="pip"></span><span class="status-label">正在读取状态…</span></div>
         </header>
 
         <div class="content-area">
+            <div class="draft-notice" id="draft-notice" hidden role="status">有未保存的更改，离开前记得保存哦。</div>
 
 <!-- ═══════ 概览 ═══════ -->
 <div class="mod-page active" id="pg-overview">
@@ -59,20 +61,20 @@
         返回服务器列表
     </a>
     <!-- Server header -->
-    <div style="display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--border-light);border-radius:20px;padding:20px 24px;margin-bottom:24px;">
+    <div class="server-summary" style="display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--border-light);border-radius:20px;padding:20px 24px;margin-bottom:24px;">
         {% if guild.icon_url %}
             <img src="{{ guild.icon_url }}" style="width:64px;height:64px;border-radius:16px;object-fit:cover;box-shadow:0 4px 16px rgba(90,74,66,.1);">
         {% else %}
             <div style="width:64px;height:64px;border-radius:16px;background:var(--pink-bg);border:1px solid var(--pink-border);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:var(--pink);">{{ guild.name[0]|upper }}</div>
         {% endif %}
-        <div style="flex:1;min-width:0;">
+        <div class="server-summary-info">
             <div style="font-size:1.25rem;font-weight:800;letter-spacing:-.3px;margin-bottom:4px;">{{ guild.name }}</div>
             <div style="font-size:.79rem;color:var(--text-muted);font-weight:600;display:flex;gap:14px;flex-wrap:wrap;">
                 <span style="display:flex;align-items:center;gap:5px;"><i data-lucide="user" style="width:12px;height:12px;"></i> 管理员：{{ user.name }}</span>
                 <span style="display:flex;align-items:center;gap:5px;"><i data-lucide="hash" style="width:12px;height:12px;"></i> ID: {{ guild.id }}</span>
             </div>
         </div>
-        <div style="display:inline-flex;align-items:center;gap:6px;flex-shrink:0;background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);font-size:.72rem;font-weight:800;padding:5px 12px;border-radius:50px;"><span style="width:6px;height:6px;background:var(--green);border-radius:50%;animation:pip-pulse 2s infinite;"></span>小凛在线</div>
+        <div class="bot-online-badge" data-bot-status data-state="unknown"><span class="pip"></span><span class="status-label">正在读取状态…</span></div>
     </div>
     <div class="ov-grid">
         <div class="ov-card"><div class="ov-label">成员数</div><div class="ov-val" id="ov-members">—</div></div>
@@ -91,6 +93,7 @@
         <div class="skel skel-block"></div>
         <div class="skel skel-block"></div>
     </div>
+    <p class="runtime-note" id="runtime-note">模块状态以最近一次运行报告为准；配置保存后可能需要稍等片刻生效。</p>
 </div>
 
 <!-- ═══════ 音乐 ═══════ -->
@@ -183,7 +186,7 @@
 </div>
 
 <!-- ═══════ 领取身份组 ═══════ -->
-<div class="mod-page" id="pg-roles">
+<div class="mod-page" id="pg-roles" data-draft-hint="编辑好面板后，点「送出」才会发到频道哦。">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="tags" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>领取身份组讯息</h2><p>让成员使用选单来选取自己需要的身份组</p></div>
 
     <div class="cfg-section">
@@ -340,7 +343,7 @@
 </div>
 
 <!-- ═══════ 抽奖 ═══════ -->
-<div class="mod-page" id="pg-giveaway">
+<div class="mod-page" id="pg-giveaway" data-draft-hint="填好活动内容后，点「建立」才会创建抽奖哦。">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="gift" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>抽奖管理</h2><p>机器人帮你管理，让你可以专注在奖品丰厚的抽奖活动</p></div>
 
     <div class="cfg-section">
@@ -622,6 +625,7 @@
     </div>
 
 <script>window.GID = "{{ guild.id }}";</script>
+<script src="{{ url_for('static', filename='js/dashboard-ui.js') }}"></script>
 <script src="{{ url_for('static', filename='js/server.js') }}"></script>
 </body>
 </html>

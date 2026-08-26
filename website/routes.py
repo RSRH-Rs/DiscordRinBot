@@ -3,12 +3,14 @@ import asyncio
 import base64
 import binascii
 import time
+import math
 import traceback
 import aiohttp
 import aiosqlite
 import json
 import os
 from io import BytesIO
+from pathlib import Path
 from typing import Optional
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -151,6 +153,72 @@ DB_MUSIC = os.path.join(BOT_DIR, "musicconfig.db")
 DB_BOTLOG = os.path.join(BOT_DIR, "botlog.db")
 DB_SERVERLOG = os.path.join(BOT_DIR, "serverlog.db")
 DB_GLOBAL = os.path.join(BOT_DIR, "globalsettings.db")
+
+_MODULE_COGS = {
+    "music": "Music", "welcome": "Welcome", "roles": "ReactionRoles",
+    "automod": "AutoMod", "moderation": "Moderation", "giveaway": "Giveaway",
+    "leveling": "Leveling", "utility": "CommandToggle", "botlog": "BotLog",
+    "serverlog": "ServerLog", "general": "General",
+}
+
+
+def _runtime_health() -> dict:
+    """A heartbeat is evidence of freshness, not by itself a gateway connection."""
+    try:
+        with open(os.path.join(BOT_DIR, "health.json"), encoding="utf-8") as f:
+            data = json.load(f)
+        stamp = float(data.get("updated_at", 0))
+        if not math.isfinite(stamp):
+            raise ValueError("invalid heartbeat timestamp")
+        fresh = 0 <= time.time() - stamp < 90
+        state = "stale" if not fresh else (
+            "online" if data.get("gateway_connected") is True else
+            "offline" if data.get("gateway_connected") is False else "unknown"
+        )
+        cogs = data.get("cogs")
+        return {"state": state, "fresh": fresh, "updated_at": stamp,
+                "cogs": cogs if fresh and isinstance(cogs, list) else None,
+                "guild_ids": data.get("guild_ids") if fresh else None}
+    except (OSError, ValueError, TypeError, AttributeError):
+        return {"state": "unknown", "fresh": False, "updated_at": None, "cogs": None, "guild_ids": None}
+
+
+async def _guild_module_config(slug: str, gid: int) -> str:
+    """Read saved configuration without creating a DB or implying live activation."""
+    specs = {
+        "welcome": (DB_WELCOME, "welcome_config"),
+        "automod": (DB_AUTOMOD, "automod_config"),
+        "music": (DB_MUSIC, "music_config"),
+        "moderation": (DB_MODERATION, "mod_config"),
+        "botlog": (DB_BOTLOG, "botlog_config"),
+        "serverlog": (DB_SERVERLOG, "serverlog_config"),
+    }
+    if slug not in specs:
+        return "available"
+    filename, table = specs[slug]
+    default = "default" if slug in {"music", "moderation"} else "unconfigured"
+    if not os.path.isfile(filename):
+        return default
+    try:
+        uri = Path(filename).resolve().as_uri() + "?mode=ro"
+        async with aiosqlite.connect(uri, uri=True, timeout=2) as db:
+            db.row_factory = aiosqlite.Row
+            cur = await db.execute(f"SELECT * FROM {table} WHERE guild_id=?", (gid,))
+            row = await cur.fetchone()
+        if row is None:
+            return default
+        cfg = dict(row)
+        if slug in {"welcome", "automod", "botlog", "serverlog"}:
+            if not cfg.get("enabled", 1):
+                return "disabled"
+            if slug == "welcome" and not (cfg.get("welcome_channel") or cfg.get("farewell_channel") or cfg.get("auto_roles")):
+                return "unconfigured"
+            if slug in {"botlog", "serverlog"} and not cfg.get("channel_id"):
+                return "unconfigured"
+            return "enabled"
+        return "configured"
+    except (aiosqlite.Error, OSError, ValueError):
+        return "unknown"
 
 
 async def ensure_tables():
@@ -871,16 +939,32 @@ def setup_routes(app, discord):
 
     @app.route("/api/modules")
     async def api_modules():
+        health = _runtime_health()
         result = []
         for m in MODULES:
-            if m["db"] is None:
-                loaded = True
-            else:
-                loaded = os.path.exists(os.path.join(BOT_DIR, m["db"]))
+            loaded = (_MODULE_COGS[m["slug"]] in health["cogs"]
+                      if health["cogs"] is not None else None)
             result.append(
                 {k: v for k, v in m.items() if k != "db"} | {"loaded": loaded}
             )
         return jsonify(result)
+
+    @app.route("/api/guild/<string:gid>/modules")
+    async def api_guild_modules(gid):
+        if not gid.isascii() or not gid.isdigit() or not await check_guild_access(discord, gid):
+            return jsonify({"error": "unauthorized"}), 401
+        health = _runtime_health()
+        state = health["state"]
+        if isinstance(health["guild_ids"], list) and gid not in health["guild_ids"]:
+            state = "not_joined"
+        configs = await asyncio.gather(*(_guild_module_config(m["slug"], int(gid)) for m in MODULES))
+        result = []
+        for m, config_state in zip(MODULES, configs):
+            loaded = (_MODULE_COGS[m["slug"]] in health["cogs"]
+                      if health["cogs"] is not None else None)
+            result.append({k:v for k,v in m.items() if k != "db"} |
+                          {"loaded": loaded, "config_state": config_state})
+        return jsonify({"bot_state": state, "updated_at": health["updated_at"], "modules": result})
 
     @app.route("/api/stats")
     async def api_stats():
@@ -1603,7 +1687,9 @@ def setup_routes(app, discord):
         try:
             with open(path, encoding="utf-8") as f:
                 data = json.load(f)
-            data["online"] = (time.time() - data.get("updated_at", 0)) < 90
+            runtime = _runtime_health()
+            data["state"] = runtime["state"]
+            data["online"] = runtime["state"] == "online"
             return jsonify(data)
         except FileNotFoundError:
             return jsonify(
