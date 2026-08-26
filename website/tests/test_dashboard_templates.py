@@ -72,4 +72,11 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn('机器人运行日志',html)
         self.assertIn('服务器事件日志',html)
 
+    def test_homepage_tab_title_stays_short_in_both_languages(self):
+        html=(ROOT/'templates/index.html').read_text(encoding='utf-8')
+        self.assertIn('<title id="pg-title">小凛Rinbot</title>',html)
+        self.assertIn("lang:'English', title:'小凛Rinbot'",html)
+        self.assertIn("lang:'中文', title:'小凛Rinbot'",html)
+        self.assertIn('document.title=t.title;',html)
+
 if __name__=='__main__':unittest.main()
