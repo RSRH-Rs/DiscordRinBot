@@ -10,3 +10,5 @@ config.py
 *_backup_*/
 rinbot-*.zip
 .codex-server-known-hosts
+/.claude/
+/output/
