@@ -8,7 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826b">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260826b">
     <style>
         .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:4px 0 16px}
         .htile{background:var(--card,#fff);border:1px solid var(--border,#ece8e2);border-radius:14px;padding:16px}
@@ -65,16 +66,23 @@
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 
     <main class="main-content">
-        <header class="topbar">
+        <header class="topbar settings-topbar">
             <div>
                 <h1 class="page-title">全局设置</h1>
                 <p class="page-sub">这些设置影响机器人本身，仅主人可改 (｡･ω･｡)</p>
             </div>
+            <nav class="settings-tabs" aria-label="全局设置分区">
+                <a href="#profile" data-settings-tab="profile">小凛资料<span class="tab-draft" hidden>未保存</span></a>
+                <a href="#runtime" data-settings-tab="runtime">运行状态<span class="tab-draft" hidden>未保存</span></a>
+                <a href="#admin" data-settings-tab="admin">全局管理<span class="tab-draft" hidden>未保存</span></a>
+            </nav>
         </header>
 
         <div class="content-area">
             <div class="draft-notice" id="draft-notice" hidden role="status">有未保存的更改，离开前记得保存哦。选择图片或填写公告不会自动上传、发送。</div>
 
+            <section data-settings-panel="runtime" aria-labelledby="settings-runtime-title">
+            <h2 class="group-title" id="settings-runtime-title" tabindex="-1">小凛现在怎么样？</h2>
             <!-- 健康状态 -->
             <div class="cfg-section">
                 <div class="cfg-section-title" style="display:flex;justify-content:space-between;align-items:center;">
@@ -86,10 +94,14 @@
                 <div class="cfg-row-hint">已加载模块</div>
                 <div class="cog-chips" id="cog-chips"></div>
             </div>
+            </section>
 
+            <section data-settings-panel="profile" aria-labelledby="settings-profile-title">
+            <h2 class="group-title" id="settings-profile-title" tabindex="-1">给小凛换个心情吧</h2>
+            <p class="group-intro">头像、名字和活动状态都在这里。每一项改好后分别保存就好啦。</p>
             <!-- Bot 形象：状态 -->
             <div class="cfg-section" id="draft-profile" data-draft>
-                <div class="cfg-section-title">🎨 Bot 形象</div>
+                <div class="cfg-section-title">活动状态</div>
                 <div class="cfg-row">
                     <div class="cfg-row-info"><div class="cfg-row-label">在线状态</div><div class="cfg-row-hint">机器人在成员列表显示的状态</div></div>
                     <select class="cfg-select" id="bp-status" style="max-width:200px;">
@@ -112,12 +124,12 @@
                     <div class="cfg-row-info"><div class="cfg-row-label">活动文案</div><div class="cfg-row-hint">例如「正在偷看你的聊天记录」</div></div>
                     <input class="cfg-input" id="bp-act-text" maxlength="128" placeholder="活动状态文字" style="max-width:280px;">
                 </div>
-                <div class="sec-btns"><button class="btn-save" onclick="saveProfile(this)">保存形象</button></div>
+                <div class="sec-btns"><button class="btn-save" onclick="saveProfile(this)">保存设置</button></div>
             </div>
 
             <!-- 用户名 -->
             <div class="cfg-section" id="draft-username" data-draft data-draft-hint="填好名字后，记得点「更新用户名」哦。">
-                <div class="cfg-section-title">🏷️ 用户名</div>
+                <div class="cfg-section-title">小凛的名字</div>
                 <div class="cfg-row">
                     <div class="cfg-row-info"><div class="cfg-row-label">机器人用户名</div><div class="cfg-row-hint">2–32 个字符。Discord 限制每小时最多修改 2 次</div></div>
                     <input class="cfg-input" id="bp-username" minlength="2" maxlength="32" placeholder="新用户名" style="max-width:280px;">
@@ -127,12 +139,13 @@
 
             <!-- 头像 -->
             <div class="cfg-section" id="draft-avatar" data-draft data-draft-hint="选好图片后，点「上传头像」才会更换哦。">
-                <div class="cfg-section-title">🖼️ 头像</div>
+                <div class="cfg-section-title">小凛的头像</div>
                 <div class="cfg-row">
                     <div class="cfg-row-info"><label class="cfg-row-label" for="bp-avatar-file">小凛的头像</label><div class="cfg-row-hint" id="bp-avatar-hint">默认显示当前头像。支持 PNG / JPG / GIF / WebP，最大 5 MB；选好后点「上传头像」才会更换。</div></div>
                     <div class="avatar-row">
                         <img id="bp-avatar-preview" class="avatar-prev" src="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" data-fallback="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" alt="小凛的头像" width="72" height="72" onerror="avatarImageError()">
-                        <input type="file" id="bp-avatar-file" accept="image/png,image/jpeg,image/gif,image/webp" aria-describedby="bp-avatar-hint bp-avatar-state" onchange="previewAvatar(this)">
+                        <label class="file-picker-label" for="bp-avatar-file">选一张新头像</label>
+                        <input class="sr-only" type="file" id="bp-avatar-file" accept="image/png,image/jpeg,image/gif,image/webp" aria-describedby="bp-avatar-hint bp-avatar-state" onchange="previewAvatar(this)">
                     </div>
                 </div>
                 <p id="bp-avatar-state" class="cfg-row-hint avatar-feedback" role="status" aria-live="polite">正在读取小凛的当前头像…</p>
@@ -140,8 +153,12 @@
             </div>
 
             <!-- 全局公告 -->
+            </section>
+            <section data-settings-panel="admin" aria-labelledby="settings-admin-title">
+            <h2 class="group-title" id="settings-admin-title" tabindex="-1">全局管理</h2>
+            <p class="admin-warning">这里的操作会影响所有服务器。发公告、开维护或加入黑名单之前，再确认一下哦。</p>
             <div class="cfg-section" id="draft-announce" data-draft data-draft-hint="写好后检查一下，点发送才会发出去哦。">
-                <div class="cfg-section-title">📢 全局公告</div>
+                <div class="cfg-section-title">全局公告</div>
                 <div class="cfg-row" style="flex-direction:column;align-items:stretch;gap:10px;">
                     <div class="cfg-row-info"><div class="cfg-row-label">向所有服务器广播</div><div class="cfg-row-hint">发送到每个服务器的系统频道（没有则发第一个可发言的频道）</div></div>
                     <textarea class="cfg-textarea" id="ann-msg" maxlength="1800" placeholder="输入公告内容…" style="width:100%;min-height:90px;"></textarea>
@@ -153,7 +170,7 @@
 
             <!-- 维护模式 -->
             <div class="cfg-section" id="draft-maint" data-draft>
-                <div class="cfg-section-title">🔧 维护模式</div>
+                <div class="cfg-section-title">维护模式</div>
                 <div class="cfg-row">
                     <div class="cfg-row-info"><div class="cfg-row-label">开启维护模式</div><div class="cfg-row-hint">开启后，除主人外所有人都无法使用指令</div></div>
                     <label class="cfg-tog"><input type="checkbox" id="maint-on"><span class="track"></span><span class="thumb"></span></label>
@@ -162,12 +179,12 @@
                     <div class="cfg-row-info"><div class="cfg-row-label">提示文案</div><div class="cfg-row-hint">用户尝试使用指令时看到的提示</div></div>
                     <input class="cfg-input" id="maint-msg" maxlength="300" placeholder="🔧 机器人维护中，请稍后再试" style="max-width:300px;">
                 </div>
-                <div class="sec-btns"><button class="btn-save" onclick="saveMaint(this)">保存</button></div>
+                <div class="sec-btns"><button class="btn-save" onclick="saveMaint(this)">保存设置</button></div>
             </div>
 
             <!-- 黑名单 -->
             <div class="cfg-section" id="draft-blacklist" data-draft data-draft-hint="确认用户 ID 后，点「加入黑名单」生效。">
-                <div class="cfg-section-title">🚫 黑名单</div>
+                <div class="cfg-section-title">黑名单</div>
                 <div class="cfg-row" style="flex-direction:column;align-items:stretch;gap:10px;">
                     <div class="cfg-row-info"><div class="cfg-row-label">禁止用户使用 Bot</div><div class="cfg-row-hint">填 Discord 用户 ID，黑名单用户无法使用任何指令</div></div>
                     <div style="display:flex;gap:8px;flex-wrap:wrap;">
@@ -178,13 +195,15 @@
                 </div>
                 <div id="bl-list" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
             </div>
+            </section>
 
         </div>
     </main>
 
     <div id="toast" class="toast toast--info" role="status" aria-live="polite" aria-atomic="true"></div>
 
-    <script src="{{ url_for('static', filename='js/dashboard-ui.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826b"></script>
+    <script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826b"></script>
     <script>
     let _tt;
     const AVATAR_MAX_BYTES=5*1024*1024;
@@ -297,7 +316,7 @@
             const img=document.getElementById('bp-avatar-preview');
             img.src=r.result;
             img.alt='新头像预览（尚未上传）';
-            document.getElementById('bp-avatar-state').textContent='新头像预览，还没上传哦。';
+            document.getElementById('bp-avatar-state').textContent='已选择 '+f.name+'，这是预览，还没上传哦。';
             document.getElementById('bp-avatar-reset').hidden=false;
             DashboardUI.changed('draft-avatar');
         };
@@ -378,8 +397,9 @@
     async function loadRecent(){
         const box=document.getElementById('ann-recent');
         try{
-            const r=await fetch('/api/bot/announce/recent'); const list=await r.json();
-            if(!Array.isArray(list)||!list.length){box.innerHTML='<div class="cfg-row-hint">暂无记录</div>';return;}
+            const r=await fetch('/api/bot/announce/recent'); if(!r.ok)throw new Error('read failed'); const list=await r.json();
+            if(!Array.isArray(list))throw new Error('invalid list');
+            if(!list.length){box.innerHTML='<div class="cfg-row-hint">暂无记录</div>';return;}
             const stat={pending:'⏳ 队列中',sending:'📤 发送中',done:'✅ 已发送'};
             box.innerHTML=list.map(b=>{
                 const snip=esc(b.message.length>40?b.message.slice(0,40)+'…':b.message);
@@ -387,7 +407,7 @@
                 const cnt=b.status==='done'?` (${b.sent}/${b.total})`:'';
                 return `<div style="display:flex;justify-content:space-between;gap:12px;font-size:.82rem;padding:8px 12px;background:var(--warm,#f6f1ec);border-radius:10px;"><span style="color:var(--mid,#776);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${snip}</span><span style="flex-shrink:0;color:var(--muted,#a99);">${s}${cnt}</span></div>`;
             }).join('');
-        }catch(e){}
+        }catch(e){renderReadFailure(box,'暂时没读到发送记录。',loadRecent);}
     }
 
     /* ── 维护模式 ── */
@@ -399,6 +419,7 @@
         }catch(e){throw e;}
     }
     async function saveMaint(btn){
+        if(document.getElementById('maint-on').checked&&!confirm('开启后，除主人外所有人都暂时不能使用指令。确定让小凛进入维护模式吗？'))return;
         btn.disabled=true;
         try{
             await jpost('/api/bot/maintenance',{maintenance:document.getElementById('maint-on').checked,message:document.getElementById('maint-msg').value});
@@ -412,14 +433,20 @@
     async function loadBlacklist(){
         const box=document.getElementById('bl-list');
         try{
-            const r=await fetch('/api/bot/blacklist'); const list=await r.json();
-            if(!Array.isArray(list)||!list.length){box.innerHTML='<div class="cfg-row-hint">黑名单为空</div>';return;}
+            const r=await fetch('/api/bot/blacklist'); if(!r.ok)throw new Error('read failed'); const list=await r.json();
+            if(!Array.isArray(list))throw new Error('invalid list');
+            if(!list.length){box.innerHTML='<div class="cfg-row-hint">黑名单为空</div>';return;}
             box.innerHTML=list.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;background:var(--warm,#f6f1ec);border-radius:10px;"><span style="font-size:.85rem;"><b>${esc(b.user_id)}</b>${b.reason?' · <span style="color:var(--mid,#776);">'+esc(b.reason)+'</span>':''}</span><button class="btn-save" style="padding:4px 12px;font-size:.78rem;" onclick="removeBlacklist('${esc(b.user_id)}')">移除</button></div>`).join('');
-        }catch(e){}
+        }catch(e){renderReadFailure(box,'暂时没读到黑名单，不代表名单为空哦。',loadBlacklist);}
+    }
+    function renderReadFailure(box,message,retry){
+        box.replaceChildren();const text=document.createElement('p');text.className='cfg-row-hint';text.textContent=message;
+        const button=document.createElement('button');button.type='button';button.className='tag-add-btn';button.textContent='重试';button.onclick=retry;box.append(text,button);
     }
     async function addBlacklist(btn){
         const id=document.getElementById('bl-id').value.trim();
         if(!/^\d{5,}$/.test(id)){showToast('❌ 请输入有效的用户 ID');return;}
+        if(!confirm('确定将用户 '+id+' 加入黑名单吗？这会在所有服务器禁止该用户使用小凛。'))return;
         btn.disabled=true;
         try{
             await jpost('/api/bot/blacklist',{user_id:id,reason:document.getElementById('bl-reason').value});

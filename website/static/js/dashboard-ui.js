@@ -24,6 +24,7 @@ window.DashboardUI = (() => {
         if (hint) hint.textContent = state.saving ? '正在保存，请稍等…' : dirty ? '有未保存的更改' : (root.dataset.draftHint || '改好后记得保存哦。');
         const notice = document.getElementById('draft-notice');
         if (notice) notice.hidden = ![...drafts].some(([r,s]) => s.saving || snapshot(r) !== s.saved);
+        if(document.dispatchEvent)document.dispatchEvent(new Event('dashboard:drafts-changed'));
     }
     function register(root) {
         if (drafts.has(root)) return;
@@ -46,8 +47,11 @@ window.DashboardUI = (() => {
     function dirty(id) { const root=rootOf(id), state=drafts.get(root); return !!state && (state.saving || snapshot(root)!==state.saved); }
     function confirmSwitch(id) {
         const root=rootOf(id);
-        if (!root || !dirty(root)) return true;
-        if (drafts.get(root).saving) return false;
+        return confirmLeave(root ? [root] : []);
+    }
+    function confirmLeave(roots) {
+        if (roots.some(root=>drafts.get(root)?.saving)) return false;
+        if (!roots.some(dirty)) return true;
         return window.confirm('这一页还有未保存的更改。切换后会暂时保留，但刷新或离开控制台会丢失。仍要切换吗？');
     }
     async function saving(id, action) {
@@ -120,5 +124,5 @@ window.DashboardUI = (() => {
         });
         window.matchMedia('(min-width:861px)').addEventListener('change', e=>{if(e.matches)closeSidebar(false);});
     });
-    return {snapshot,clean,changed,dirty,confirmSwitch,saving,loading,toggleSidebar,closeSidebar};
+    return {snapshot,clean,changed,dirty,confirmSwitch,confirmLeave,saving,loading,toggleSidebar,closeSidebar};
 })();

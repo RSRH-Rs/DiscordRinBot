@@ -9,7 +9,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826b">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260826b">
 </head>
 <body>
     <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="打开菜单" aria-controls="sideNav" aria-expanded="false">
@@ -28,7 +29,7 @@
                 </ul>
                 <span class="nav-label" style="margin-top:18px;">{{ guild.name }}</span>
                 <ul id="side-modules">
-                    <li><a class="nav-link active" data-mod="overview" role="button" tabindex="0" onclick="go('overview')"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> 概览</a></li>
+                    <li><a href="#overview" class="nav-link active" data-mod="overview"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> 概览</a></li>
                 </ul>
             </nav>
             <div class="user-card">
@@ -46,7 +47,7 @@
         <header class="topbar">
             <div>
                 <h1 class="page-title" id="page-title">{{ guild.name }}</h1>
-                <p class="page-sub" id="page-sub">服务器配置面板</p>
+                <nav class="page-sub page-trail" aria-label="当前位置"><a href="/dashboard">我的服务器</a><span aria-hidden="true">/</span><a href="#overview" data-mod="overview">概览</a><span id="page-sub" aria-current="page"></span></nav>
             </div>
             <div class="bot-online-badge" data-bot-status data-state="unknown" role="status"><span class="pip"></span><span class="status-label">正在读取状态…</span></div>
         </header>
@@ -76,6 +77,7 @@
         </div>
         <div class="bot-online-badge" data-bot-status data-state="unknown"><span class="pip"></span><span class="status-label">正在读取状态…</span></div>
     </div>
+    <section class="setup-guide" aria-label="配置起步清单"><h2>第一次见面？从这里开始吧</h2><p>这些都是按需设置，不用一口气填完哦。</p><div id="setup-checklist">正在读取配置…</div><p class="setup-note">身份组相关功能：请在 Discord 检查小凛的身份组位置和权限，这里不会把它们当作已验证。</p></section>
     <div class="ov-grid">
         <div class="ov-card"><div class="ov-label">成员数</div><div class="ov-val" id="ov-members">—</div></div>
         <div class="ov-card"><div class="ov-label">在线成员</div><div class="ov-val" id="ov-online" style="color:var(--green);">—</div></div>
@@ -100,7 +102,7 @@
 <div class="mod-page" id="pg-music">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="music" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>音乐系统</h2><p>完整播放器：队列、循环、音量、洗牌、投票跳过</p></div>
     <div class="cfg-section">
-        <div class="cfg-section-title">🎵 基本设定</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 基本设定</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">DJ 身份组</div><div class="cfg-row-hint">限制特定身份组才能操作音乐指令（留空 = 所有人可用）</div></div>
             <select class="cfg-select" id="mu-dj" style="max-width:220px;"><option value="0">— 不限制 —</option></select>
@@ -110,7 +112,7 @@
             <select class="cfg-select" id="mu-ch" style="max-width:220px;"><option value="0">#</option></select>
         </div>
     </div>
-    <div class="save-bar" id="mu-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mu-save" onclick="saveMusic()">储存设定</button></div>
+    <div class="save-bar" id="mu-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mu-save" onclick="saveMusic()">保存设置</button></div>
 </div>
 
 <!-- ═══════ 欢迎新成员 ═══════ -->
@@ -131,7 +133,7 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">✉️ 欢迎讯息</div>
+        <div class="cfg-section-title"><i data-lucide="mail" style="width:15px;height:15px;" aria-hidden="true"></i> 欢迎讯息</div>
         <div style="margin-bottom:14px;">
             <div class="cfg-row-label">标题</div>
             <div class="cfg-row-hint" style="margin-bottom:8px;">留空则显示「欢迎来到 服务器名」</div>
@@ -155,7 +157,7 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">👋 道别讯息</div>
+        <div class="cfg-section-title"><i data-lucide="log-out" style="width:15px;height:15px;" aria-hidden="true"></i> 道别讯息</div>
         <div style="margin-bottom:14px;">
             <div class="cfg-row-label">道别频道</div>
             <div class="cfg-row-hint" style="margin-bottom:8px;">成员离开时发送的频道</div>
@@ -169,7 +171,7 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🏷 新成员身份组</div>
+        <div class="cfg-section-title"><i data-lucide="tags" style="width:15px;height:15px;" aria-hidden="true"></i> 新成员身份组</div>
         <div class="cfg-row-hint" style="margin-bottom:10px;">新加入的成员将自动获得这些身份组</div>
         <div class="role-select-list" id="w-roles"></div>
         <div class="warn-box">⚠️ 请确保身份组位置在机器人下方，且机器人有「管理身份组」权限</div>
@@ -182,12 +184,12 @@
         </div>
     </div>
 
-    <div class="save-bar" id="w-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="w-save" onclick="saveWelcome()">储存设定</button></div>
+    <div class="save-bar" id="w-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="w-save" onclick="saveWelcome()">保存设置</button></div>
 </div>
 
 <!-- ═══════ 领取身份组 ═══════ -->
-<div class="mod-page" id="pg-roles" data-draft-hint="编辑好面板后，点「送出」才会发到频道哦。">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="tags" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>领取身份组讯息</h2><p>让成员使用选单来选取自己需要的身份组</p></div>
+<div class="mod-page" id="pg-roles" data-draft-hint="编辑好面板后，点「发送面板」才会发到频道哦。">
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="tags" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>领取身份组讯息</h2><p>点一下按钮，找到和自己合拍的身份组吧</p></div>
 
     <div class="cfg-section">
         <div class="cfg-section-title"><i data-lucide="send" style="width:14px;height:14px;"></i> 发送频道</div>
@@ -197,7 +199,7 @@
 
     <div class="cfg-section">
         <div class="cfg-section-title"><i data-lucide="list" style="width:14px;height:14px;"></i> 身份组清单</div>
-        <div class="cfg-row-hint" style="margin-bottom:10px;">身份组选项将会出现在讯息下方的反应</div>
+        <div class="cfg-row-hint" style="margin-bottom:10px;">每个身份组会对应一个消息下方的按钮</div>
         <div id="rr-roles-list" style="display:flex;flex-direction:column;gap:8px;"></div>
         <button class="tag-add-btn" style="margin-top:12px;" onclick="addRoleRow()">+ 新增身份组</button>
         <div class="warn-box">⚠️ 最多可选 20 个身份组。请确保身份组位置在机器人下方</div>
@@ -207,7 +209,7 @@
         <div class="cfg-section-title"><i data-lucide="file-text" style="width:14px;height:14px;"></i> 内文</div>
         <div class="cfg-row-hint" style="margin-bottom:8px;">领取讯息的标题和描述</div>
         <input class="cfg-input" id="rr-title" placeholder="🏷 身份组选择" style="margin-bottom:10px;">
-        <textarea class="cfg-textarea" id="rr-content" placeholder="点击下方的按钮来领取身分组"></textarea>
+        <textarea class="cfg-textarea" id="rr-content" placeholder="点击下方的按钮来领取身份组"></textarea>
     </div>
 
     <div class="cfg-section">
@@ -222,8 +224,8 @@
     </div>
 
     <div class="save-bar">
-        <span class="save-hint">配置好后点击送出，小凛会在频道发送领取面板</span>
-        <button class="btn-save" id="rr-send" onclick="sendRRPanel()">送出</button>
+        <span class="save-hint">配置好后点击发送面板，小凛会发到选定频道</span>
+        <button class="btn-save" id="rr-send" onclick="sendRRPanel()">发送面板</button>
     </div>
 
     <div class="cfg-section" style="margin-top:52px;">
@@ -237,7 +239,7 @@
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="shield-check" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>自动审核</h2><p>自动拦截违规内容和刷屏行为，保护服务器环境</p></div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">⚙️ 总开关 & 日志</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 总开关 & 日志</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">启用自动审核</div><div class="cfg-row-hint">开启/关闭整个审核系统</div></div>
             <label class="cfg-tog"><input type="checkbox" id="am-enabled"><span class="track"></span><span class="thumb"></span></label>
@@ -249,7 +251,7 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🚫 反刷屏</div>
+        <div class="cfg-section-title"><i data-lucide="shield" style="width:15px;height:15px;" aria-hidden="true"></i> 反刷屏</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">启用反刷屏</div><div class="cfg-row-hint">短时间内发大量消息自动禁言</div></div>
             <label class="cfg-tog"><input type="checkbox" id="am-spam"><span class="track"></span><span class="thumb"></span></label>
@@ -268,7 +270,7 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🤬 违禁词过滤</div>
+        <div class="cfg-section-title"><i data-lucide="message-circle" style="width:15px;height:15px;" aria-hidden="true"></i> 违禁词过滤</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">启用违禁词过滤</div></div>
             <label class="cfg-tog"><input type="checkbox" id="am-bw"><span class="track"></span><span class="thumb"></span></label>
@@ -281,7 +283,7 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🔗 链接过滤</div>
+        <div class="cfg-section-title"><i data-lucide="link" style="width:15px;height:15px;" aria-hidden="true"></i> 链接过滤</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">启用链接过滤</div><div class="cfg-row-hint">自动删除非白名单域名的链接</div></div>
             <label class="cfg-tog"><input type="checkbox" id="am-link"><span class="track"></span><span class="thumb"></span></label>
@@ -294,7 +296,7 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">📝 其他</div>
+        <div class="cfg-section-title"><i data-lucide="sliders-horizontal" style="width:15px;height:15px;" aria-hidden="true"></i> 其他</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">大写轰炸过滤</div><div class="cfg-row-hint">超过阈值百分比的大写字母</div></div>
             <div style="display:flex;align-items:center;gap:6px;">
@@ -311,7 +313,7 @@
         </div>
     </div>
 
-    <div class="save-bar" id="am-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="am-save" onclick="saveAutoMod()">储存设定</button></div>
+    <div class="save-bar" id="am-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="am-save" onclick="saveAutoMod()">保存设置</button></div>
 </div>
 
 <!-- ═══════ 管理模块 ═══════ -->
@@ -319,7 +321,7 @@
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="gavel" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>管理模块</h2><p>kick / ban / tempban / mute / warn / purge / lock — 全套管理指令</p></div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">📋 管理日志频道</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 管理日志频道</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">所有 kick/ban/warn/mute 操作自动记录到此频道</div></div>
             <select class="cfg-select" id="mod-log" style="max-width:220px;"><option value="0">#</option></select>
@@ -327,17 +329,17 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">⚠️ 警告自动处罚阈值</div>
+        <div class="cfg-section-title"><i data-lucide="shield" style="width:15px;height:15px;" aria-hidden="true"></i> 警告自动处罚阈值</div>
         <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">🔇 自动禁言</div><div class="cfg-row-hint">达到几次警告自动禁言 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-mt" value="3" min="0" max="50"></div>
         <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">⏱ 禁言时长 (秒)</div></div><input class="cfg-num" type="number" id="mod-md" value="600" min="60" max="86400"></div>
         <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">👢 自动踢出</div><div class="cfg-row-hint">达到几次警告自动踢出 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-kt" value="0" min="0" max="50"></div>
         <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">🔨 自动封禁</div><div class="cfg-row-hint">达到几次警告自动封禁 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-bt" value="0" min="0" max="50"></div>
     </div>
 
-    <div class="save-bar" id="mod-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mod-save" onclick="saveModeration()">储存设定</button></div>
+    <div class="save-bar" id="mod-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mod-save" onclick="saveModeration()">保存设置</button></div>
 
     <div class="cfg-section" style="margin-top:52px;">
-        <div class="cfg-section-title">📜 最近管理操作</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 最近管理操作</div>
         <div id="mod-cases"><div class="empty-state-sm">加载中…</div></div>
     </div>
 </div>
@@ -384,7 +386,7 @@
 <div class="mod-page" id="pg-leveling">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="trophy" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>等级系统</h2><p>小凛独家经验算法，发言即积累经验</p></div>
     <div class="cfg-section">
-        <div class="cfg-section-title">🏅 排行榜</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 排行榜</div>
         <div id="lb-list"><div class="empty-state-sm">加载中…</div></div>
     </div>
 </div>
@@ -393,7 +395,7 @@
 <div class="mod-page" id="pg-general">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="wrench" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>通用工具</h2><p>开箱即用的实用指令，无需额外配置</p></div>
     <div class="cfg-section">
-        <div class="cfg-section-title">📋 可用指令</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 可用指令</div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
             <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/status</code> 服务器状态</div>
             <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/avatar</code> 查看头像</div>
@@ -413,7 +415,7 @@
         <!-- Left: settings -->
         <div>
             <div class="cfg-section">
-                <div class="cfg-section-title">🖼 头像</div>
+                <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 头像</div>
                 <div style="display:flex;align-items:center;gap:20px;">
                     <div id="bp-av-preview" style="width:80px;height:80px;border-radius:20px;background:var(--bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:2rem;overflow:hidden;cursor:pointer;flex-shrink:0;" onclick="document.getElementById('bp-av-file').click()">
                         <img id="bp-av-img" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
@@ -453,7 +455,7 @@
             </div>
 
             <div class="cfg-section">
-                <div class="cfg-section-title">🎮 活动</div>
+                <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 活动</div>
                 <div class="cfg-columns">
                     <div>
                         <div class="cfg-row-label">Activity Type 活动类型</div>
@@ -473,7 +475,7 @@
                 </div>
             </div>
 
-            <div class="save-bar" style="margin:-18px -28px -40px;"><span class="save-hint">修改后 30 秒内自动生效</span><button class="btn-save" id="bp-save" onclick="savePersonalizer()">储存设定</button></div>
+            <div class="save-bar" style="margin:-18px -28px -40px;"><span class="save-hint">修改后 30 秒内自动生效</span><button class="btn-save" id="bp-save" onclick="savePersonalizer()">保存设置</button></div>
         </div>
 
         <!-- Right: preview -->
@@ -517,7 +519,8 @@
 <!-- ═══════ Utility (指令开关) ═══════ -->
 <div class="mod-page" id="pg-utility">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="sliders-horizontal" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>指令管理</h2><p>按需启用或禁用每个指令，完全掌控你的服务器</p></div>
-    <div class="util-tip"><i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i> 点击分类标题展开查看详细指令，右侧开关可以单独或批量启用/禁用。修改即时生效，无需重启。</div>
+    <div class="util-tip"><i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i> 开关会立即保存，不用再点保存哦。批量操作只影响当前筛选结果，不会改到隐藏的指令。</div>
+    <div class="search-toolbar command-search"><label for="command-search">查找指令</label><input type="search" id="command-search" class="cfg-input" data-draft-ignore placeholder="指令名称、说明或分类…"><label class="sr-only" for="command-filter">指令状态</label><select id="command-filter" class="cfg-select" data-draft-ignore><option value="all">全部状态</option><option value="enabled">已开启</option><option value="disabled">已关闭</option></select><span id="util-search-status" role="status"></span></div>
     <div id="util-summary" style="font-size:.85rem;color:var(--text-muted);margin-bottom:18px;font-weight:600;"></div>
     <div id="util-commands"><div class="empty-state-sm">加载中…</div></div>
 </div>
@@ -527,7 +530,7 @@
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="scroll-text" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>系统日志</h2><p>将 bot 内部活动转发到指定频道，出问题时一眼定位</p></div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">📜 基本设定</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 基本设定</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">所有系统日志会发送到这个频道，建议选一个只有管理员能看的频道</div></div>
             <select class="cfg-select" id="bl-ch" style="max-width:220px;"><option value="0">— 未启用 —</option></select>
@@ -539,7 +542,7 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🏷️ 接收等级</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 接收等级</div>
         <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:14px;">
             <div class="cfg-row-info" style="width:100%;"><div class="cfg-row-label">日志类型</div><div class="cfg-row-hint">勾选要接收的日志等级，不勾选的等级会被静默丢弃</div></div>
             <div style="display:flex;flex-wrap:wrap;gap:10px;">
@@ -552,14 +555,14 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🧪 测试</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 测试</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">发送测试日志</div><div class="cfg-row-hint">向所选频道发送一条测试消息，验证配置正确</div></div>
             <button class="btn-save" id="bl-test" onclick="testBotLog()" style="background:var(--pink-bg);color:var(--pink);">📤 发送测试</button>
         </div>
     </div>
 
-    <div class="save-bar" id="bl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="bl-save" onclick="saveBotLog()">储存设定</button></div>
+    <div class="save-bar" id="bl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="bl-save" onclick="saveBotLog()">保存设置</button></div>
 </div>
 
 <!-- ═══════ Server Log (审计日志) ═══════ -->
@@ -567,7 +570,7 @@
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="history" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>审计日志</h2><p>记录消息、成员、频道、身份组、封禁等服务器事件</p></div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🗃️ 基本设定</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 基本设定</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">所有审计事件会发送到这个频道，建议选一个只有管理员能看的频道</div></div>
             <select class="cfg-select" id="sl-ch" style="max-width:220px;"><option value="0">— 未启用 —</option></select>
@@ -579,7 +582,7 @@
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🏷️ 记录分类</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 记录分类</div>
         <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:14px;">
             <div class="cfg-row-info" style="width:100%;"><div class="cfg-row-label">事件类型</div><div class="cfg-row-hint">勾选要记录的事件分类，未勾选的会被静默丢弃。成员更新与语音活动较吵，默认关闭</div></div>
             <div style="display:flex;flex-wrap:wrap;gap:10px;">
@@ -598,14 +601,14 @@
     <div class="util-tip"><i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i> 想反查「谁删的消息 / 谁封的人」需要给 bot 开启「查看审计日志」权限。忽略某个频道请用指令 <code>/serverlog ignore</code>。</div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title">🧪 测试</div>
+        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 测试</div>
         <div class="cfg-row">
             <div class="cfg-row-info"><div class="cfg-row-label">发送测试日志</div><div class="cfg-row-hint">向所选频道发送一条测试消息，验证配置正确</div></div>
             <button class="btn-save" id="sl-test" onclick="testServerLog()" style="background:var(--pink-bg);color:var(--pink);">📤 发送测试</button>
         </div>
     </div>
 
-    <div class="save-bar" id="sl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="sl-save" onclick="saveServerLog()">储存设定</button></div>
+    <div class="save-bar" id="sl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="sl-save" onclick="saveServerLog()">保存设置</button></div>
 </div>
 
         </div><!-- content-area -->
@@ -625,7 +628,9 @@
     </div>
 
 <script>window.GID = "{{ guild.id }}";</script>
-<script src="{{ url_for('static', filename='js/dashboard-ui.js') }}"></script>
-<script src="{{ url_for('static', filename='js/server.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826b"></script>
+<script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826b"></script>
+<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20260826b"></script>
+<script src="{{ url_for('static', filename='js/server.js') }}?v=20260826b"></script>
 </body>
 </html>

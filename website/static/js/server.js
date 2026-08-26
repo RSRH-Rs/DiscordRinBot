@@ -23,18 +23,26 @@ document.addEventListener('keydown', (e) => {
         e.target.click();
     }
 });
+let moduleRouter;
 function go(mod) {
-    const current=document.querySelector('.mod-page.active');
-    if(current?.id==='pg-'+mod){closeSidebar();return;}
-    if(!DashboardUI.confirmSwitch(current))return;
+    if(moduleRouter?.current()===mod){closeSidebar();return true;}
+    return moduleRouter?.navigate(mod) || false;
+}
+function showModule(mod, initial=false) {
+    closeEmojiPicker();
     closeSidebar();
     document.querySelectorAll('.mod-page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('#side-modules .nav-link').forEach(l => l.classList.remove('active'));
+    document.querySelectorAll('#side-modules .nav-link').forEach(l => {l.classList.remove('active');l.removeAttribute('aria-current');});
     const pg = document.getElementById('pg-' + mod);
     const nl = document.querySelector(`[data-mod="${mod}"]`);
     if (pg) pg.classList.add('active');
     document.querySelectorAll('[data-for-module]').forEach(el=>{el.hidden=el.dataset.forModule!=='pg-'+mod;});
-    if (nl) nl.classList.add('active');
+    if (nl) {nl.classList.add('active');nl.setAttribute('aria-current','page');}
+    const title=pg?.querySelector('h2');
+    const name=mod==='overview'?'概览':title?.textContent || '设置';
+    document.getElementById('page-sub').textContent=mod==='overview'?'':' / '+name;
+    document.title=name+' · '+document.getElementById('page-title').textContent+' · 小凛 Rin';
+    if(title&&!initial){title.tabIndex=-1;title.focus({preventScroll:true});}
     document.querySelector('.main-content').scrollTo(0, 0);
     // lazy load data
     if (mod === 'welcome') loadWelcome();
@@ -51,6 +59,7 @@ function go(mod) {
     if (mod === 'serverlog') loadServerLog();
     // Re-render Lucide icons for newly visible content
     if (window.lucide) lucide.createIcons();
+    window.DashboardPreview?.refresh();
 }
 
 /* ── API helper with error handling ── */
@@ -252,7 +261,7 @@ async function saveModeration() {
         });
         btn.textContent = '✅ 已保存！'; showToast('✅ 管理配置已保存！'); markClean('mod-savebar');
     } catch(e) { showToast('❌ 保存失败: ' + e.message); }
-    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+    setTimeout(() => { btn.disabled = false; btn.textContent = '保存设置'; }, 1500);
 }
 
 /* ── Music config ── */
@@ -278,7 +287,7 @@ async function saveMusic() {
         });
         btn.textContent = '✅ 已保存！'; showToast('✅ 音乐配置已保存！'); markClean('mu-savebar');
     } catch(e) { showToast('❌ 保存失败: ' + e.message); }
-    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+    setTimeout(() => { btn.disabled = false; btn.textContent = '保存设置'; }, 1500);
 }
 
 /* ── Giveaway list ── */
@@ -328,11 +337,16 @@ function collectTags(id) {
 }
 
 /* ── Utility (Command Toggle) ── */
-let _utLoaded = false, _cmdData = null;
+let _cmdData = null, _cmdPromise = null;
+async function getCommands(){
+    if(_cmdData!==null)return _cmdData;
+    if(!_cmdPromise)_cmdPromise=api('/commands').then(data=>{_cmdData=data;return data;}).finally(()=>{_cmdPromise=null;});
+    return _cmdPromise;
+}
 
 async function loadOverviewStats() {
     try {
-        const cmds = await api('/commands');
+        const cmds = await getCommands();
         _cmdData = cmds;
         const total = cmds.length;
         const enabled = cmds.filter(c => c.enabled).length;
@@ -348,140 +362,80 @@ async function loadOverviewStats() {
     }
 }
 
+let _cmdSaving=false;
+window.addEventListener('beforeunload',e=>{if(_cmdSaving){e.preventDefault();e.returnValue='';}});
+function matchingCommands(){
+    const query=document.getElementById('command-search').value;
+    const state=document.getElementById('command-filter').value;
+    return (_cmdData||[]).filter(c=>DashboardExtras.matches(c.name+' '+c.desc+' '+c.cog,query) &&
+        (state==='all'||(state==='enabled'?c.enabled:!c.enabled)));
+}
 async function loadUtility() {
-    showSkeleton('util-commands', 4);
-    if (!_cmdData) await loadOverviewStats();
-    const cmds = _cmdData;
-    const el = document.getElementById('util-commands');
-    if (!cmds || cmds.length === 0) { el.innerHTML = '<div class="empty-state-sm">没有可用指令</div>'; return; }
-
-    const total = cmds.length;
-    const enabled = cmds.filter(c => c.enabled).length;
-    document.getElementById('util-summary').textContent = `共 ${total} 个指令，${enabled} 个已启用`;
-
-    const groups = {};
-    for (const c of cmds) {
-        if (!groups[c.cog]) groups[c.cog] = [];
-        groups[c.cog].push(c);
+    if(_cmdSaving)return;
+    const el=document.getElementById('util-commands');
+    try{
+        if(!_cmdData){showSkeleton('util-commands',4);await getCommands();}
+        renderUtility();
+    }catch(e){
+        el.replaceChildren();
+        const message=document.createElement('p');message.textContent='指令读取失败，请重试。';
+        const retry=document.createElement('button');retry.className='tag-add-btn';retry.textContent='重试';retry.onclick=()=>{_cmdData=null;loadUtility();};
+        el.append(message,retry);
     }
-
-    let html = '';
-    for (const [cog, commands] of Object.entries(groups)) {
-        const cogEnabled = commands.filter(c => c.enabled).length;
-        const cogTotal = commands.length;
-        const allOn = cogEnabled === cogTotal;
-
-        html += `<div class="cmd-group-header" id="cg-${cog}" onclick="toggleCollapse('${cog}')" style="cursor:pointer;">
-            <div style="display:flex;align-items:center;">
-                <svg class="cmd-group-chevron" id="chev-${cog}" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
-                <span class="cmd-group-label">${cog}</span>
-                <span class="cmd-group-count" id="cgc-${cog}">${cogEnabled} / ${cogTotal}</span>
-            </div>
-            <label class="cfg-tog" onclick="event.stopPropagation()">
-                <input type="checkbox" ${allOn?'checked':''} onchange="toggleCategory('${cog}', this.checked)">
-                <span class="track"></span>
-                <span class="thumb"></span>
-            </label>
-        </div>`;
-
-        html += `<div class="cmd-group-body collapsed" id="cgb-${cog}">`;
-        for (const c of commands) {
-            const checked = c.enabled ? 'checked' : '';
-            const disabled = c.protected ? 'disabled' : '';
-            const opacity = !c.enabled && !c.protected ? 'opacity:.5;' : c.protected ? 'opacity:.6;' : '';
-            html += `<div class="cmd-row" id="cr-${c.name}" data-cog="${cog}" style="${opacity}">
-                <div class="cmd-info">
-                    <div class="cmd-name">${c.name}</div>
-                    <div class="cmd-desc">${c.desc}</div>
-                </div>
-                <div class="cmd-toggle">
-                    <label class="cfg-tog">
-                        <input type="checkbox" ${checked} ${disabled} onchange="toggleCommand('${c.name}', this.checked, '${cog}')">
-                        <span class="track"></span>
-                        <span class="thumb"></span>
-                    </label>
-                </div>
-            </div>`;
+}
+function renderUtility(){
+    if(!_cmdData)return;
+    const el=document.getElementById('util-commands');
+    const opened=new Set([...el.querySelectorAll('details[open]')].map(d=>d.dataset.cog));
+    const filtering=!!document.getElementById('command-search').value.trim()||document.getElementById('command-filter').value!=='all';
+    const visible=matchingCommands();
+    const groups=new Map();
+    visible.forEach(c=>{if(!groups.has(c.cog))groups.set(c.cog,[]);groups.get(c.cog).push(c);});
+    el.replaceChildren();
+    for(const [cog,commands] of groups){
+        const group=document.createElement('details');group.className='command-group';group.dataset.cog=cog;group.open=filtering||opened.has(cog);
+        const summary=document.createElement('summary');summary.textContent=cog+' · '+commands.length+' 条';group.append(summary);
+        const bulk=document.createElement('button');bulk.type='button';bulk.className='tag-add-btn command-bulk';
+        const editable=commands.filter(c=>!c.protected),allOn=editable.length>0&&editable.every(c=>c.enabled);
+        bulk.textContent=(allOn?'关闭':'开启')+'本组'+(filtering?'筛选结果':'全部')+'（'+editable.length+' 条）';
+        bulk.disabled=_cmdSaving||!editable.length;bulk.onclick=()=>toggleCategory(cog,!allOn);group.append(bulk);
+        for(const c of commands){
+            const row=document.createElement('div');row.className='cmd-row';row.id='cr-'+c.name;
+            const info=document.createElement('div');info.className='cmd-info';
+            const name=document.createElement('div');name.className='cmd-name';name.textContent=c.name;
+            const desc=document.createElement('div');desc.className='cmd-desc';desc.textContent=c.desc+(c.protected?' · 必需指令，不可关闭':'');
+            info.append(name,desc);
+            const label=document.createElement('label');label.className='cfg-tog';
+            const input=document.createElement('input');input.type='checkbox';input.checked=c.enabled;input.disabled=c.protected||_cmdSaving;
+            input.setAttribute('aria-label','启用 /'+c.name);input.onchange=()=>toggleCommand(c.name,input.checked,cog);
+            const track=document.createElement('span');track.className='track';const thumb=document.createElement('span');thumb.className='thumb';
+            label.append(input,track,thumb);row.append(info,label);group.append(row);
         }
-        html += `</div>`;
+        el.append(group);
     }
-    el.innerHTML = html;
-    if (window.lucide) lucide.createIcons();
+    if(!visible.length){const empty=document.createElement('p');empty.className='empty-state-sm';empty.textContent='没有匹配的指令，换个关键词或筛选条件试试吧。';el.append(empty);}
+    el.inert=_cmdSaving;
+    document.getElementById('util-search-status').textContent='显示 '+visible.length+' / '+_cmdData.length+' 条指令';
+    updateSummary();
 }
-
-function toggleCollapse(cog) {
-    const body = document.getElementById('cgb-' + cog);
-    const chev = document.getElementById('chev-' + cog);
-    if (!body) return;
-    if (body.classList.contains('collapsed')) {
-        body.style.maxHeight = body.scrollHeight + 'px';
-        body.classList.remove('collapsed');
-        if (chev) chev.classList.add('open');
-    } else {
-        body.style.maxHeight = body.scrollHeight + 'px';
-        requestAnimationFrame(() => { body.style.maxHeight = '0'; });
-        body.classList.add('collapsed');
-        if (chev) chev.classList.remove('open');
-    }
+async function changeCommands(commands,enabled){
+    if(_cmdSaving||!commands.length)return;
+    _cmdSaving=true;
+    document.getElementById('util-commands').inert=true;
+    try{
+        const body=commands.length===1?{name:commands[0].name,enabled}:{names:commands.map(c=>c.name),enabled};
+        const result=await api(commands.length===1?'/commands/toggle':'/commands/bulk-toggle','POST',body);
+        if(!result.ok)throw new Error(result.error||'操作失败');
+        commands.forEach(c=>{c.enabled=enabled;});
+        showToast('✅ 已'+(enabled?'开启':'关闭')+' '+commands.length+' 条指令');
+    }catch(e){showToast('❌ 修改失败，开关已恢复：'+e.message);}
+    finally{_cmdSaving=false;renderUtility();}
 }
-
-async function toggleCommand(name, enabled, cog) {
-    try {
-        const r = await api('/commands/toggle', 'POST', { name, enabled });
-        if (r.ok) {
-            const row = document.getElementById('cr-' + name);
-            if (row) row.style.opacity = enabled ? '' : '.5';
-            // Update local data
-            if (_cmdData) {
-                const c = _cmdData.find(x => x.name === name);
-                if (c) c.enabled = enabled;
-            }
-            updateCogCount(cog);
-            updateSummary();
-            showToast(enabled ? `✅ /${name} 已启用` : `⏹ /${name} 已禁用`);
-        } else { showToast('❌ ' + (r.error || '操作失败')); }
-    } catch(e) { showToast('❌ ' + e.message); }
+async function toggleCommand(name,enabled){
+    return changeCommands((_cmdData||[]).filter(c=>c.name===name&&!c.protected),enabled);
 }
-
-async function toggleCategory(cog, enabled) {
-    if (!_cmdData) return;
-    const cmds = _cmdData.filter(c => c.cog === cog && !c.protected);
-    if (cmds.length === 0) return;
-    try {
-        await api('/commands/bulk-toggle', 'POST', {
-            names: cmds.map(c => c.name), enabled
-        });
-        for (const c of cmds) {
-            c.enabled = enabled;
-            const row = document.getElementById('cr-' + c.name);
-            if (row) {
-                row.style.opacity = enabled ? '' : '.5';
-                const cb = row.querySelector('input[type=checkbox]');
-                if (cb) cb.checked = enabled;
-            }
-        }
-        updateCogCount(cog);
-        updateSummary();
-        showToast(enabled ? `✅ ${cog} 全部指令已启用` : `⏹ ${cog} 全部指令已禁用`);
-    } catch(e) {
-        showToast('❌ 批量操作失败: ' + e.message);
-        _cmdData = null;
-        await loadUtility();
-    }
-}
-
-function updateCogCount(cog) {
-    if (!_cmdData) return;
-    const cmds = _cmdData.filter(c => c.cog === cog);
-    const en = cmds.filter(c => c.enabled).length;
-    const el = document.getElementById('cgc-' + cog);
-    if (el) el.textContent = `${en} / ${cmds.length}`;
-    // Update category toggle checkbox
-    const header = document.getElementById('cg-' + cog);
-    if (header) {
-        const cb = header.querySelector('input[type=checkbox]');
-        if (cb) cb.checked = en === cmds.length;
-    }
+async function toggleCategory(cog,enabled){
+    return changeCommands(matchingCommands().filter(c=>c.cog===cog&&!c.protected),enabled);
 }
 
 function updateSummary() {
@@ -569,22 +523,31 @@ async function openEmojiPicker(triggerBtn) {
         try { _epCustom = await api('/emojis'); } catch(e) { _epCustom = []; }
     }
     const picker = document.getElementById('emoji-picker');
-    const rect = triggerBtn.getBoundingClientRect();
+    if(!triggerBtn.isConnected||!triggerBtn.closest('.mod-page.active'))return;
     picker.style.display = 'flex';
-    // Position below trigger, scroll-aware
-    picker.style.top = (window.scrollY + rect.bottom + 6) + 'px';
-    picker.style.left = (window.scrollX + rect.left) + 'px';
+    positionEmojiPicker();
     document.getElementById('ep-search').value = '';
     renderEmojiGrid('');
     // Close on outside click
     setTimeout(() => document.addEventListener('click', closeEmojiPickerOnOutside), 0);
 }
 
+function positionEmojiPicker(){
+    const picker=document.getElementById('emoji-picker');
+    if(!picker||picker.style.display==='none'||!_epTarget)return;
+    const rect=_epTarget.getBoundingClientRect(),width=picker.offsetWidth,height=picker.offsetHeight;
+    picker.style.left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12))+'px';
+    picker.style.top=Math.max(12,Math.min(rect.bottom+6,window.innerHeight-height-12))+'px';
+}
+function closeEmojiPicker(restoreFocus=false){
+    const picker=document.getElementById('emoji-picker');if(!picker)return;
+    picker.style.display='none';document.removeEventListener('click',closeEmojiPickerOnOutside);
+    if(restoreFocus)_epTarget?.focus();
+}
 function closeEmojiPickerOnOutside(e) {
     const picker = document.getElementById('emoji-picker');
     if (picker.contains(e.target) || (_epTarget && _epTarget.contains(e.target))) return;
-    picker.style.display = 'none';
-    document.removeEventListener('click', closeEmojiPickerOnOutside);
+    closeEmojiPicker();
 }
 
 function switchEmojiTab(tab) {
@@ -619,6 +582,7 @@ function renderEmojiGrid(q) {
         }).join('');
     }
     grid.innerHTML = html;
+    positionEmojiPicker();
 }
 
 function pickEmoji(code, imgUrl) {
@@ -637,7 +601,7 @@ function pickEmoji(code, imgUrl) {
 async function sendRRPanel() {
     const ch = document.getElementById('rr-ch').value;
     const title = document.getElementById('rr-title').value || '🏷 身份组选择';
-    const content = document.getElementById('rr-content').value || '点击下方的按钮来领取身分组';
+    const content = document.getElementById('rr-content').value || '点击下方的按钮来领取身份组';
     const exclusive = document.getElementById('rr-exclusive').checked;
     if (ch === '0') { showToast('请选择发送频道'); return; }
     const rows = document.querySelectorAll('.rr-row');
@@ -660,7 +624,7 @@ async function sendRRPanel() {
             _rrLoaded = false; await loadRolesPage();
         } else { showToast('❌ ' + (r.error || '发送失败')); }
     } catch(e) { showToast('❌ 网络错误'); }
-    btn.disabled = false; btn.textContent = '送出';
+    btn.disabled = false; btn.textContent = '发送面板';
 }
 
 /* ── Giveaway creation ── */
@@ -789,7 +753,7 @@ async function savePersonalizer() {
         });
         btn.textContent = '✅ 已保存!'; showToast('✅ 状态配置已保存,30 秒内生效!');
     } catch(e) { showToast('❌ 保存失败: ' + e.message); }
-    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+    setTimeout(() => { btn.disabled = false; btn.textContent = '保存设置'; }, 1500);
 }
 
 /* ── Toast ── */
@@ -813,6 +777,21 @@ function showToast(msg, type) {
 
 // Initialize Lucide icons
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelector('.main-content').addEventListener('scroll',positionEmojiPicker,{passive:true});
+    window.addEventListener('resize',positionEmojiPicker);
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('emoji-picker').style.display!=='none'){e.preventDefault();closeEmojiPicker(true);}});
+    const ids=[...document.querySelectorAll('.mod-page')].map(p=>p.id.slice(3)).filter(id=>id!=='personalizer');
+    moduleRouter=DashboardExtras.createHashRouter({ids,fallback:'overview',show:showModule,canLeave:id=>{
+        if(id==='utility'&&_cmdSaving){showToast('指令开关正在保存，稍等一下哦。');return false;}
+        return DashboardUI.confirmSwitch('pg-'+id);
+    }});
+    document.addEventListener('click',e=>{
+        const link=e.target.closest('a[data-mod]');
+        if(!link || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey)return;
+        e.preventDefault();go(link.dataset.mod);
+    });
+    document.getElementById('command-search').addEventListener('input',renderUtility);
+    document.getElementById('command-filter').addEventListener('change',renderUtility);
     if (window.lucide) lucide.createIcons();
     loadOverviewStats();
     loadModules();
@@ -878,7 +857,7 @@ async function saveBotLog() {
         });
         btn.textContent = '✅ 已保存!'; showToast('✅ 日志配置已保存!'); markClean('bl-savebar');
     } catch(e) { showToast('❌ 保存失败: ' + e.message); }
-    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+    setTimeout(() => { btn.disabled = false; btn.textContent = '保存设置'; }, 1500);
 }
 
 async function testBotLog() {
@@ -919,7 +898,7 @@ async function saveServerLog() {
         });
         btn.textContent = '✅ 已保存!'; showToast('✅ 审计日志配置已保存!'); markClean('sl-savebar');
     } catch(e) { showToast('❌ 保存失败: ' + e.message); }
-    setTimeout(() => { btn.disabled = false; btn.textContent = '储存设定'; }, 1500);
+    setTimeout(() => { btn.disabled = false; btn.textContent = '保存设置'; }, 1500);
 }
 
 async function testServerLog() {
@@ -942,6 +921,7 @@ async function loadModules() {
         if(signature!==_modulesSignature){
             renderSidebar(mods);
             renderOverviewCards(mods);
+            renderSetupChecklist(mods);
             _modulesSignature=signature;
         }
         const note=document.getElementById('runtime-note');
@@ -953,6 +933,7 @@ async function loadModules() {
         document.querySelectorAll('.nav-status').forEach(el=>{el.className='nav-status pending';el.title='运行状态未知';el.setAttribute('aria-label','运行状态未知');});
         console.error('loadModules', e);
         document.getElementById('ov-modules').innerHTML = '<div class="error-state">模块状态读取失败 <button type="button" class="tag-add-btn" onclick="loadModules()">重试</button></div>';
+        document.getElementById('setup-checklist').textContent='暂时没读到配置，可以用下面的重试按钮再试一次。';
         showToast('❌ 模块列表加载失败: ' + e.message);
     }
 }
@@ -977,19 +958,35 @@ function moduleStatusClass(m){
 
 function renderSidebar(mods) {
     const sb = document.getElementById('side-modules');
+    const focused=sb.contains(document.activeElement)?document.activeElement.dataset.mod:null;
     const overviewLi = sb.querySelector('li');
     sb.innerHTML = '';
     sb.appendChild(overviewLi);
-    for (const m of mods) {
+    const groups=[['社区互动',['welcome','roles','leveling','giveaway']],['管理与安全',['automod','moderation','botlog','serverlog']],['音乐与工具',['music','utility','general']]];
+    for (const [group,slugs] of groups) {
+        const heading=document.createElement('li');heading.className='nav-group-label';heading.textContent=group;sb.append(heading);
+        for (const slug of slugs) {
+        const m=mods.find(item=>item.slug===slug);if(!m)continue;
         const li = document.createElement('li');
-        li.innerHTML = `<a class="nav-link" data-mod="${m.slug}" role="button" tabindex="0" onclick="go('${m.slug}')">
+        li.innerHTML = `<a class="nav-link" href="#${m.slug}" data-mod="${m.slug}">
             <i data-lucide="${m.icon}" style="width:16px;height:16px;"></i> ${escapeHtml(m.name)}
             <span class="nav-status ${moduleStatusClass(m)}" title="${moduleLabel(m)}" aria-label="${moduleLabel(m)}"></span>
         </a>`;
         sb.appendChild(li);
+        }
     }
     const active=document.querySelector('.mod-page.active')?.id.replace('pg-','');
-    sb.querySelectorAll('[data-mod]').forEach(el=>el.classList.toggle('active',el.dataset.mod===active));
+    sb.querySelectorAll('[data-mod]').forEach(el=>{const selected=el.dataset.mod===active;el.classList.toggle('active',selected);if(selected)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
+    if(focused)sb.querySelector(`[data-mod="${focused}"]`)?.focus({preventScroll:true});
+}
+
+function renderSetupChecklist(mods){
+    const items=[['welcome','欢迎新朋友','选个欢迎频道'],['music','一起听歌','按需选择 DJ 身份组'],['serverlog','留下管理记录','选择审计日志频道']];
+    const labels={enabled:'已开启',configured:'已配置',disabled:'暂未开启',unconfigured:'还没配置',default:'使用默认设置',unknown:'暂时读不到配置'};
+    document.getElementById('setup-checklist').innerHTML=items.map(([slug,title,hint])=>{
+        const m=mods.find(m=>m.slug===slug);
+        return `<a href="#${slug}" data-mod="${slug}" class="setup-item"><span><strong>${title}</strong><small>${hint}</small></span><span>${labels[m?.config_state]||'查看设置'} <span aria-hidden="true">›</span></span></a>`;
+    }).join('');
 }
 
 function renderOverviewCards(mods) {
@@ -1016,6 +1013,7 @@ function guardedLoader(mod, original, loaded){
         pending=DashboardUI.loading('pg-'+mod, async()=>{
             await original();
             if(!loaded())throw new Error('load failed');
+            window.DashboardPreview?.refresh();
         },wrapped).finally(()=>{pending=null;});
         return pending;
     };

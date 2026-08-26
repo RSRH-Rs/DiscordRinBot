@@ -95,6 +95,13 @@ test('cancel/accept navigation leaves unsaved input intact', () => {
     assert.equal(ui.dirty(a), true);
 });
 
+test('a settings group asks only once for multiple drafts',()=>{
+    const {ui,a,b,ctx}=fixture();let prompts=0;
+    a.fields[0].value='one';b.fields[0].value='two';
+    ctx.confirm=()=>{prompts++;return false;};
+    assert.equal(ui.confirmLeave([a,b]),false);assert.equal(prompts,1);
+});
+
 test('saving prevents duplicate submissions and departure even on a clean form', async () => {
     const {ui, a, unload} = fixture();
     let finish, calls = 0;
