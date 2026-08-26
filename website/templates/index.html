@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title id="pg-title">小凛 Rin | Discord 服务器管理与互动 Bot</title>
+    <title id="pg-title">小凛 RinBot · 在你的服务器里见</title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,400;0,600;0,800;0,900;1,800&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -106,7 +106,10 @@
         margin-bottom:22px;
     }
     .hero h1 em { font-style:normal; color:var(--pinkd); }
-    .hero-sub { font-size:1.05rem; color:var(--mid); line-height:1.75; max-width:460px; margin-bottom:38px; }
+    .hero-sub { font-size:1.05rem; color:var(--mid); line-height:1.75; max-width:460px; margin-bottom:18px; }
+    .brand-motto { font-size:.9rem; font-weight:800; color:var(--pinkd); letter-spacing:.3px; line-height:1.5; }
+    .hero-motto { margin-bottom:30px; }
+    .footer-motto { font-size:.8rem; margin-top:12px; }
     .hero-btns { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
     .btn-hero {
         display:inline-flex; align-items:center; gap:8px;
@@ -603,7 +606,7 @@
         <div class="snav-r">
             <a href="/dashboard" class="btn-ghost" id="sn-dash"></a>
             <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
-               target="_blank" class="btn-pill" id="sn-invite">邀请入驻 +</a>
+               target="_blank" class="btn-pill" id="sn-invite">邀请小凛</a>
         </div>
     </div>
 </nav>
@@ -618,7 +621,7 @@
                 <button class="btn-ghost" id="btn-lang" onclick="toggleLanguage()">English</button>
                 <a href="/dashboard" class="btn-ghost" id="btn-dashboard"></a>
                 <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" class="btn-pill" id="btn-invite">邀请入驻 +</a>
+                   target="_blank" class="btn-pill" id="btn-invite">邀请小凛</a>
             </div>
         </div>
     </div>
@@ -626,13 +629,14 @@
     <!-- HERO -->
     <section class="hero">
         <div class="hero-text rv">
-            <div class="hero-badge"><span class="pip"></span><span id="hero-tag">在线中</span></div>
-            <h1 id="hero-title">让服务器管理<br>少一点重复，<br><em>多一点互动。</em></h1>
-            <p class="hero-sub" id="hero-desc">音乐、审核、迎新、身份组与抽奖，集中在一个 Bot 和网页控制台。常用操作交给斜杠命令，复杂配置在浏览器里完成。</p>
+            <div class="hero-badge"><span class="pip"></span><span id="hero-tag">小凛在这里</span></div>
+            <h1 id="hero-title">你的服务器里，<br><em>给小凛留个位置吧。</em></h1>
+            <p class="hero-sub" id="hero-desc">想听歌的时候叫我，新朋友来了我去打招呼。聊天、抽奖，还有那些零零碎碎的管理工作，小凛也能帮上忙。</p>
+            <p class="brand-motto hero-motto" lang="en">All in one, one for all.</p>
             <div class="hero-btns">
                 <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" class="btn-hero"><i data-lucide="plus" aria-hidden="true"></i><span id="btn-hero">添加到服务器</span></a>
-                <a href="/dashboard" class="btn-hero-ghost" id="btn-dash-hero">控制台 →</a>
+                   target="_blank" class="btn-hero"><i data-lucide="plus" aria-hidden="true"></i><span id="btn-hero">邀请小凛</span></a>
+                <a href="/dashboard" class="btn-hero-ghost" id="btn-dash-hero">帮小凛安排工作 →</a>
             </div>
         </div>
         <div class="hero-img-wrap rv d1">
@@ -640,7 +644,7 @@
             <div class="hero-img-box">
                 <img src="{{ url_for('static', filename='rinbot_bg.jpg') }}" alt="小凛 Rin">
             </div>
-            <div class="fc fc-online"><span class="gd"></span><span id="badge-on">服务在线</span></div>
+            <div class="fc fc-online"><span class="gd"></span><span id="badge-on">今天也请多关照</span></div>
             <div class="fc fc-xp">
                 <div class="lv">Lv.5</div>
                 <div class="lb" id="badge-xp">XP 进度</div>
@@ -655,10 +659,10 @@
 <div class="stats-band">
     <div class="wrap">
         <div class="stats-i">
-            <div class="stat rv"><div class="stat-n"><span id="stat-servers">12</span><em>+</em></div><div class="stat-l" id="st1">活跃服务器</div></div>
-            <div class="stat rv d1"><div class="stat-n"><span id="stat-modules">10</span><em>+</em></div><div class="stat-l" id="st2">功能模块</div></div>
-            <div class="stat rv d2"><div class="stat-n"><span id="stat-commands">60</span><em>+</em></div><div class="stat-l" id="st3">可用指令</div></div>
-            <div class="stat rv d3"><div class="stat-n">24<em>/7</em></div><div class="stat-l" id="st4">服务运行</div></div>
+            <div class="stat rv"><div class="stat-n"><span id="stat-servers">12</span><em>+</em></div><div class="stat-l" id="st1">已加入的服务器</div></div>
+            <div class="stat rv d1"><div class="stat-n"><span id="stat-modules">10</span><em>+</em></div><div class="stat-l" id="st2">会做的事情</div></div>
+            <div class="stat rv d2"><div class="stat-n"><span id="stat-commands">60</span><em>+</em></div><div class="stat-l" id="st3">可以用的指令</div></div>
+            <div class="stat rv d3"><div class="stat-n">24<em>/7</em></div><div class="stat-l" id="st4">随时来找我</div></div>
         </div>
     </div>
 </div>
@@ -668,19 +672,19 @@
 <section class="fg-sec" id="features">
     <div class="sh rv">
         <span class="eye" id="fg-eye" style="color:var(--pinkd)">核心功能</span>
-        <h2 id="fg-title">按场景找到需要的功能</h2>
-        <p class="c" id="fg-sub" style="color:var(--mid)">从社区互动到日常管理，每个模块都可以单独配置。</p>
+        <h2 id="fg-title">小凛能帮上什么忙？</h2>
+        <p class="c" id="fg-sub" style="color:var(--mid)">想先听歌，还是先布置一下服务器？从你需要的开始就好。</p>
     </div>
     <div class="fg">
-        <div class="fgc primary rv"><div class="fi"><i data-lucide="music"></i></div><h3 id="fg1n">音乐与队列</h3><p id="fg1d">搜索、直链、歌单、循环和存档队列集中管理。</p></div>
-        <div class="fgc primary rv d1"><div class="fi"><i data-lucide="shield-check"></i></div><h3 id="fg2n">自动管理</h3><p id="fg2d">审核规则、警告处罚和管理记录形成完整流程。</p></div>
-        <div class="fgc primary rv d2"><div class="fi"><i data-lucide="sliders-horizontal"></i></div><h3 id="fg3n">网页配置</h3><p id="fg3d">频道、身份组和功能开关都能在控制台中完成。</p></div>
-        <div class="fgc rv"><div class="fi"><i data-lucide="trophy"></i></div><h3 id="fg4n">等级系统</h3><p id="fg4d">聊天积累经验，通过等级卡和排行榜反馈活跃度。</p></div>
-        <div class="fgc rv d1"><div class="fi"><i data-lucide="user-plus"></i></div><h3 id="fg5n">欢迎与身份组</h3><p id="fg5d">欢迎消息、自动身份组和成员自助领取面板。</p></div>
-        <div class="fgc rv d2"><div class="fi"><i data-lucide="gift"></i></div><h3 id="fg6n">抽奖活动</h3><p id="fg6d">设置参与条件、结束时间、获奖人数和重新抽取。</p></div>
-        <div class="fgc rv"><div class="fi"><i data-lucide="gavel"></i></div><h3 id="fg7n">管理工具</h3><p id="fg7d">封禁、禁言、警告、清理消息和频道控制。</p></div>
-        <div class="fgc rv d1"><div class="fi"><i data-lucide="history"></i></div><h3 id="fg8n">审计日志</h3><p id="fg8d">记录消息、成员、频道、身份组和封禁变动。</p></div>
-        <div class="fgc rv d2"><div class="fi"><i data-lucide="toggle-right"></i></div><h3 id="fg9n">指令开关</h3><p id="fg9d">按服务器启用或禁用指令，保留需要的功能。</p></div>
+        <div class="fgc primary rv"><div class="fi"><i data-lucide="music"></i></div><h3 id="fg1n">今天想听什么？</h3><p id="fg1d">搜歌、贴链接，再把喜欢的歌排进队列。想单曲循环一整晚也可以。</p></div>
+        <div class="fgc primary rv d1"><div class="fi"><i data-lucide="shield-check"></i></div><h3 id="fg2n">我来帮忙看着点</h3><p id="fg2d">刷屏、违禁词和不想看到的链接，先把规则告诉我，我会照着处理。</p></div>
+        <div class="fgc primary rv d2"><div class="fi"><i data-lucide="sliders-horizontal"></i></div><h3 id="fg3n">设置不用全靠背指令</h3><p id="fg3d">欢迎消息发去哪、哪个身份组可以领取，打开网页慢慢选就好。</p></div>
+        <div class="fgc rv"><div class="fi"><i data-lucide="trophy"></i></div><h3 id="fg4n">每次聊天，都算数</h3><p id="fg4d">聊天会积累经验。偶尔看看等级卡和排行榜，说不定又往前了一名。</p></div>
+        <div class="fgc rv d1"><div class="fi"><i data-lucide="user-plus"></i></div><h3 id="fg5n">新朋友来啦</h3><p id="fg5d">打个招呼，安排好身份组，让刚加入的人也能找到自己的位置。</p></div>
+        <div class="fgc rv d2"><div class="fi"><i data-lucide="gift"></i></div><h3 id="fg6n">给大家准备点惊喜</h3><p id="fg6d">你来挑奖品和时间，小凛负责记住什么时候开奖。</p></div>
+        <div class="fgc rv"><div class="fi"><i data-lucide="gavel"></i></div><h3 id="fg7n">该认真时也会认真</h3><p id="fg7d">清理消息、禁言、警告……需要管理员出面的时候，我也能搭把手。</p></div>
+        <div class="fgc rv d1"><div class="fi"><i data-lucide="history"></i></div><h3 id="fg8n">刚刚发生了什么？</h3><p id="fg8d">消息改了、频道动了、成员进出了，需要回头查看时，日志里有记录。</p></div>
+        <div class="fgc rv d2"><div class="fi"><i data-lucide="toggle-right"></i></div><h3 id="fg9n">用不上的，就先关掉</h3><p id="fg9d">不用把每个功能都打开。留下适合你们服务器的就好。</p></div>
     </div>
 </section>
 </div><!-- /wrap -->
@@ -691,8 +695,8 @@
     <div class="dash rv">
         <div>
             <span class="dash-eye" id="dash-eye">网页控制台</span>
-            <h2 id="dash-title">复杂配置，<br>放到网页里完成</h2>
-            <p id="dash-desc">选择服务器后即可设置频道、身份组、审核规则与日志。保存结果和错误原因都会直接显示，不需要反复查指令参数。</p>
+            <h2 id="dash-title">小凛的工作，<br>你来安排</h2>
+            <p id="dash-desc">欢迎频道、身份组、审核规则，都可以在这里设置。改完记得保存，有哪里没填好，页面也会提醒你。</p>
             <a href="/dashboard" class="btn-hero" id="dash-btn">打开控制台 →</a>
         </div>
         <div class="dash-shot">
@@ -720,13 +724,13 @@
 <section class="prot-sec" id="protection">
     <div class="sh rv">
         <span class="eye" id="prot-eye" style="color:var(--pinkd)">社区保护</span>
-        <h2 id="prot-title">自动处理重复的管理工作</h2>
-        <p class="c" id="prot-sub" style="color:var(--mid)">规则可以调整，处理结果有记录，需要时也能人工介入。</p>
+        <h2 id="prot-title">我帮忙看着，你也能随时接手</h2>
+        <p class="c" id="prot-sub" style="color:var(--mid)">哪些内容要拦、警告几次要处理，由你决定。小凛按规则做事，需要调整时再改就好。</p>
     </div>
     <div class="prot">
-        <div class="protc rv"><div class="pi"><i data-lucide="scan-text"></i></div><h3 id="p1n">内容审核</h3><p id="p1d">识别刷屏、违禁词、链接与重复内容，并按规则处理。</p></div>
-        <div class="protc rv d1"><div class="pi"><i data-lucide="history"></i></div><h3 id="p2n">操作记录</h3><p id="p2d">消息删改、成员进出和管理操作都能集中查看。</p></div>
-        <div class="protc rv d2"><div class="pi"><i data-lucide="list-checks"></i></div><h3 id="p3n">分级处罚</h3><p id="p3d">根据警告次数自动禁言、踢出或封禁，阈值由管理员设置。</p></div>
+        <div class="protc rv"><div class="pi"><i data-lucide="scan-text"></i></div><h3 id="p1n">内容审核</h3><p id="p1d">刷屏和不合适的内容，让小凛按你设好的规则处理。</p></div>
+        <div class="protc rv d1"><div class="pi"><i data-lucide="history"></i></div><h3 id="p2n">操作记录</h3><p id="p2d">想回头看看发生了什么？消息变动、成员进出和管理操作都可以记下来。</p></div>
+        <div class="protc rv d2"><div class="pi"><i data-lucide="list-checks"></i></div><h3 id="p3n">分级处罚</h3><p id="p3d">先警告还是直接处理，由你来定。小凛会按设好的警告次数执行禁言、踢出或封禁。</p></div>
     </div>
 </section>
 </div><!-- /wrap -->
@@ -735,14 +739,14 @@
 <div class="wrap">
 <section class="trust-sec" id="trust">
     <div class="sh rv">
-        <span class="eye" id="trust-eye" style="color:var(--pinkd)">清晰可控</span>
-        <h2 id="trust-title">知道 Bot 正在做什么</h2>
-        <p class="c" id="trust-sub" style="color:var(--mid)">配置状态、权限要求和数据范围都应该清楚说明。</p>
+        <span class="eye" id="trust-eye" style="color:var(--pinkd)">先说清楚</span>
+        <h2 id="trust-title">有几件事，先跟你说清楚。</h2>
+        <p class="c" id="trust-sub" style="color:var(--mid)">设置、权限，还有聊天记录，都在这里说明白。</p>
     </div>
     <div class="trust">
-        <div class="trust-card rv"><div class="trust-icon"><i data-lucide="activity"></i></div><h3 id="tr1n">配置状态可见</h3><p id="tr1d">功能是否开启、频道是否设置、保存是否成功，都能在控制台确认。</p></div>
-        <div class="trust-card rv d1"><div class="trust-icon"><i data-lucide="key-round"></i></div><h3 id="tr2n">权限问题直接提示</h3><p id="tr2d">缺少管理频道、身份组或消息权限时，Bot 会说明原因，而不是静默失败。</p></div>
-        <div class="trust-card rv d2"><div class="trust-icon"><i data-lucide="database"></i></div><h3 id="tr3n">数据用途说清楚</h3><p id="tr3d">Bot 不建立完整聊天归档；启用消息审计后，删除或编辑事件会发送到管理员指定的日志频道。</p></div>
+        <div class="trust-card rv"><div class="trust-icon"><i data-lucide="activity"></i></div><h3 id="tr1n">保存好了，会告诉你</h3><p id="tr1d">设置有没有生效，不用靠猜。保存成功或者哪里出了问题，页面都会给你提示。</p></div>
+        <div class="trust-card rv d1"><div class="trust-icon"><i data-lucide="key-round"></i></div><h3 id="tr2n">做不到的，也会说明白</h3><p id="tr2d">有些操作需要频道权限或合适的角色位置。遇到权限问题，先看看提示，再帮小凛调整一下。</p></div>
+        <div class="trust-card rv d2"><div class="trust-icon"><i data-lucide="database"></i></div><h3 id="tr3n">聊天记录这件事</h3><p id="tr3d">小凛不建立完整聊天归档。不过，如果你打开了消息审计，删除或编辑的内容会发到你指定的日志频道。</p></div>
     </div>
 </section>
 </div><!-- /wrap -->
@@ -753,10 +757,10 @@
         <div class="feat-inner rv">
             <div class="feat-text">
                 <span class="feat-eye" id="fm-eye">音乐系统</span>
-                <h2 class="feat-title" id="fm-title">搜索、排队与控制<br>都在一个播放器里</h2>
-                <p class="feat-desc" id="fm-desc">通过 <span class="code">/play</span> 搜索歌曲或粘贴链接，支持队列、循环、音量、歌单和 Spotify 导入。播放控制遵循语音频道与 DJ 权限设置。</p>
+                <h2 class="feat-title" id="fm-title">歌单准备好了，<br>就差你点播放</h2>
+                <p class="feat-desc" id="fm-desc">输入 <span class="code">/play</span> 点一首喜欢的歌，再把下一首排进去。切歌、循环、调音量，在播放器里就能操作。</p>
                 <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" class="feat-link" id="fm-link">添加到服务器 →</a>
+                   target="_blank" class="feat-link" id="fm-link">邀请小凛 →</a>
             </div>
             <div>
                 <div class="music-card">
@@ -790,10 +794,10 @@
         <div class="feat-inner rev rv">
             <div class="feat-text">
                 <span class="feat-eye" id="fl-eye">等级系统</span>
-                <h2 class="feat-title" id="fl-title">让社区活跃度<br>有清晰反馈</h2>
-                <p class="feat-desc" id="fl-desc">成员聊天时积累经验，通过 <span class="code">/rank</span> 查看等级卡片，通过排行榜了解长期活跃情况。</p>
+                <h2 class="feat-title" id="fl-title">原来你已经<br>聊了这么多</h2>
+                <p class="feat-desc" id="fl-desc">用 <span class="code">/rank</span> 看看自己的等级卡，也看看排行榜上的熟面孔。谁是这里的常驻选手，一眼就知道。</p>
                 <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" class="feat-link" id="fl-link">添加到服务器 →</a>
+                   target="_blank" class="feat-link" id="fl-link">邀请小凛 →</a>
             </div>
             <div>
                 <div class="level-card">
@@ -819,23 +823,23 @@
 <section class="how-sec">
     <div class="sh rv">
         <span class="eye" id="hw-eye" style="color:var(--pinkd)">开始使用</span>
-        <h2 id="hw-title">从邀请到可用，只需三步</h2>
+        <h2 id="hw-title">好啦，怎么把小凛带过来？</h2>
     </div>
     <div class="steps">
         <div class="step rv">
             <div class="step-num">1</div>
-            <h4 id="s1h">添加到服务器</h4>
-            <p id="s1d">选择你有管理权限的服务器，确认小凛需要的权限。</p>
+            <h4 id="s1h">邀请小凛</h4>
+            <p id="s1d">选好服务器，看看需要的权限，确认后小凛就加入啦。</p>
         </div>
         <div class="step rv d1">
             <div class="step-num">2</div>
-            <h4 id="s2h">完成基础配置</h4>
-            <p id="s2d">进入控制台设置欢迎频道、日志频道和需要启用的模块。</p>
+            <h4 id="s2h">安排一下工作</h4>
+            <p id="s2d">打开控制台，先选欢迎频道和日志频道，再看看想用哪些功能。</p>
         </div>
         <div class="step rv d2">
             <div class="step-num">3</div>
-            <h4 id="s3h">开始使用</h4>
-            <p id="s3d">在 Discord 输入 <span class="code-d">/help</span>，查看当前服务器可以使用的指令。</p>
+            <h4 id="s3h">打个招呼吧</h4>
+            <p id="s3d">在 Discord 输入 <span class="code-d">/help</span>，看看小凛都能做什么。想听歌的话，就从 <span class="code-d">/play</span> 开始。</p>
         </div>
     </div>
 </section>
@@ -844,13 +848,13 @@
 <section class="faq-sec">
     <div class="sh rv">
         <span class="eye" id="faq-eye" style="color:var(--pinkd)">常见问题</span>
-        <h2 id="faq-title">使用前可能想了解</h2>
+        <h2 id="faq-title">还有什么想问的吗？</h2>
     </div>
     <div class="faq">
-        <details class="rv"><summary id="q1">小凛是免费的吗？</summary><div id="a1">目前所有功能都可以免费使用，没有付费等级或隐藏模块。</div></details>
-        <details class="rv"><summary id="q2">怎么邀请到我的服务器？</summary><div id="a2">点击页面上的「邀请小凛」按钮，选择服务器并授权即可。</div></details>
-        <details class="rv"><summary id="q3">需要给哪些权限？</summary><div id="a3">邀请链接只请求音乐、管理、审核、日志和身份组功能实际使用的权限，不包含管理员权限。Bot 的角色仍需位于被管理身份组和成员之上。</div></details>
-        <details class="rv"><summary id="q4">小凛会保存哪些数据？</summary><div id="a4">小凛会保存等级、功能配置和必要的管理记录，不会建立完整聊天归档。若服务器启用了消息审计，删除或编辑事件的内容会发送到管理员指定的 Discord 日志频道。</div></details>
+        <details class="rv"><summary id="q1">请小凛来要花钱吗？</summary><div id="a1">不用，目前的功能都可以免费使用。挑你需要的用就好。</div></details>
+        <details class="rv"><summary id="q2">怎么邀请小凛？</summary><div id="a2">点“邀请小凛”，选择你能管理的服务器，再确认权限就可以了。</div></details>
+        <details class="rv"><summary id="q3">为什么需要这些权限？</summary><div id="a3">放音乐要能进语音频道，发身份组要能管理角色。邀请时会列出需要的权限，不要求管理员权限。别忘了把小凛的角色放到需要管理的角色和成员上方。</div></details>
+        <details class="rv"><summary id="q4">小凛会记住哪些东西？</summary><div id="a4">等级、功能设置和必要的管理记录会保存。开启消息审计后，删改消息的内容也会发到你指定的日志频道；小凛不会建立完整聊天归档。</div></details>
     </div>
 </section>
 
@@ -859,12 +863,12 @@
     <div class="cta rv">
         <div class="cta-in">
             <span class="cta-em"><i data-lucide="sparkles"></i></span>
-            <h2 id="cta-title">先从一台服务器开始</h2>
-            <p id="cta-desc">邀请完成后进入控制台，按你的社区需求逐项开启功能。</p>
+            <h2 id="cta-title">那么，在你的服务器里见？</h2>
+            <p id="cta-desc">先邀请小凛过来吧。想听歌、办活动，或者慢慢把服务器布置好，我们从一件小事开始。</p>
             <div class="cta-btns">
                 <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" class="btn-cta"><i data-lucide="plus" aria-hidden="true"></i><span id="cta-invite">添加到服务器</span></a>
-                <a href="/dashboard" class="btn-cta-ghost" id="cta-dash">进入控制台 →</a>
+                   target="_blank" class="btn-cta"><i data-lucide="plus" aria-hidden="true"></i><span id="cta-invite">邀请小凛</span></a>
+                <a href="/dashboard" class="btn-cta-ghost" id="cta-dash">已经邀请了？去控制台 →</a>
             </div>
         </div>
     </div>
@@ -875,7 +879,8 @@
     <div class="footer-g">
         <div>
             <div class="f-logo"><span class="d" style="width:9px;height:9px;background:var(--pink);border-radius:50%;display:inline-block"></span>小凛 RinBot</div>
-            <p class="f-tag" id="footer-tagline">把服务器管理、自动化与社区互动放在同一个控制台里。</p>
+            <p class="f-tag" id="footer-tagline">会放歌，会帮忙，也想认识你们。</p>
+            <p class="brand-motto footer-motto" lang="en">All in one, one for all.</p>
         </div>
         <div class="fc2"><h4 id="fc1-head">功能</h4><ul>
             <li><a href="#music" id="fc1-l1">音乐播放</a></li>
@@ -905,114 +910,114 @@ const userIsLoggedIn = {{ 'true' if is_logged_in else 'false' }};
 
 const i18n = {
     zh:{
-        lang:'English', title:'小凛 Rin | Discord 服务器管理与互动 Bot',
-        invite:'添加到服务器',
+        lang:'English', title:'小凛 RinBot · 在你的服务器里见',
+        invite:'邀请小凛',
         dash: userIsLoggedIn ? '进入控制台' : '登录控制台',
-        heroTag:'服务在线',
-        heroTitle:'让服务器管理<br>少一点重复，<br><em>多一点互动。</em>',
-        heroDesc:'音乐、审核、迎新、身份组与抽奖，集中在一个 Bot 和网页控制台。常用操作交给斜杠命令，复杂配置在浏览器里完成。',
-        heroBtn:'添加到服务器', heroDash:'查看控制台 →',
-        badgeOn:'服务在线', badgeXp:'XP 进度',
-        st1:'活跃服务器', st2:'功能模块', st3:'可用指令', st4:'服务运行',
+        heroTag:'小凛在这里',
+        heroTitle:'你的服务器里，<br><em>给小凛留个位置吧。</em>',
+        heroDesc:'想听歌的时候叫我，新朋友来了我去打招呼。聊天、抽奖，还有那些零零碎碎的管理工作，小凛也能帮上忙。',
+        heroBtn:'邀请小凛', heroDash:'帮小凛安排工作 →',
+        badgeOn:'今天也请多关照', badgeXp:'XP 进度',
+        st1:'已加入的服务器', st2:'会做的事情', st3:'可以用的指令', st4:'随时来找我',
         tickerLbl:'RinBot 运行状态',
-        bentoEye:'核心功能', bentoTitle:'按场景找到需要的功能', bentoSub:'每个模块都可以单独配置。',
+        bentoEye:'核心功能', bentoTitle:'小凛能帮上什么忙？', bentoSub:'每个模块都可以单独配置。',
         bc1t:'音乐', bc1h:'语音派对<br>立刻开始', bc1d:'支持 YouTube 搜索和直链，高音质低延迟。', bc1hint:'搜索或粘贴链接',
         bc2t:'等级', bc2h:'聊天得经验<br>爬上排行榜', bc2d:'<span class="code-d">/rank</span> 查看等级卡片。',
         bc3t:'工具', bc3h:'日常管理<br>全搞定', bc3d:'头像、骰子、状态监控，Owner 专属。',
         bc4t:'指令', bc4h:'简单好用<br>一句话搞定', bc4d:'支持 <span class="code-d">/</span> 斜杠与 <span class="code-d">r!</span> 前缀，任意场合好用。',
-        fmEye:'音乐系统', fmTitle:'搜索、排队与控制<br>都在一个播放器里', fmDesc:'通过 <span class="code">/play</span> 搜索歌曲或粘贴链接，支持队列、循环、音量、歌单和 Spotify 导入。播放控制遵循语音频道与 DJ 权限设置。', fmLink:'添加到服务器 →',
-        flEye:'等级系统', flTitle:'让社区活跃度<br>有清晰反馈', flDesc:'成员聊天时积累经验，通过 <span class="code">/rank</span> 查看等级卡片，通过排行榜了解长期活跃情况。', flLink:'添加到服务器 →',
-        hwEye:'开始使用', hwTitle:'从邀请到可用，只需三步',
-        s1h:'添加到服务器', s1d:'选择你有管理权限的服务器，确认小凛需要的权限。',
-        s2h:'完成基础配置', s2d:'进入控制台设置欢迎频道、日志频道和需要启用的模块。',
-        s3h:'开始使用', s3d:'在 Discord 输入 <span class="code-d">/help</span>，查看当前服务器可以使用的指令。',
-        ctaTitle:'先从一台服务器开始', ctaDesc:'邀请完成后进入控制台，按你的社区需求逐项开启功能。',
-        ctaInvite:'添加到服务器', ctaDash:'进入控制台 →',
-        footerTagline:'把服务器管理、自动化与社区互动放在同一个控制台里。',
+        fmEye:'音乐系统', fmTitle:'歌单准备好了，<br>就差你点播放', fmDesc:'输入 <span class="code">/play</span> 点一首喜欢的歌，再把下一首排进去。切歌、循环、调音量，在播放器里就能操作。', fmLink:'邀请小凛 →',
+        flEye:'等级系统', flTitle:'原来你已经<br>聊了这么多', flDesc:'用 <span class="code">/rank</span> 看看自己的等级卡，也看看排行榜上的熟面孔。谁是这里的常驻选手，一眼就知道。', flLink:'邀请小凛 →',
+        hwEye:'开始使用', hwTitle:'好啦，怎么把小凛带过来？',
+        s1h:'邀请小凛', s1d:'选好服务器，看看需要的权限，确认后小凛就加入啦。',
+        s2h:'安排一下工作', s2d:'打开控制台，先选欢迎频道和日志频道，再看看想用哪些功能。',
+        s3h:'打个招呼吧', s3d:'在 Discord 输入 <span class="code-d">/help</span>，看看小凛都能做什么。想听歌的话，就从 <span class="code-d">/play</span> 开始。',
+        ctaTitle:'那么，在你的服务器里见？', ctaDesc:'先邀请小凛过来吧。想听歌、办活动，或者慢慢把服务器布置好，我们从一件小事开始。',
+        ctaInvite:'邀请小凛', ctaDash:'已经邀请了？去控制台 →',
+        footerTagline:'会放歌，会帮忙，也想认识你们。',
         fc1h:'功能',fc1l1:'音乐播放',fc1l2:'等级系统',fc1l3:'管理与审核',fc1l4:'网页控制台',
         fc2h:'链接',fc2l1:'控制台',fc2l2:'邀请小凛',
         fc3h:'项目',fc3l1:'GitHub',fc3l2:'反馈问题',
-        fgEye:'核心功能', fgTitle:'按场景找到需要的功能', fgSub:'从社区互动到日常管理，每个模块都可以单独配置。',
-        fg1n:'音乐与队列', fg1d:'搜索、直链、歌单、循环和存档队列集中管理。',
-        fg2n:'自动管理', fg2d:'审核规则、警告处罚和管理记录形成完整流程。',
-        fg3n:'网页配置', fg3d:'频道、身份组和功能开关都能在控制台中完成。',
-        fg4n:'等级系统', fg4d:'聊天积累经验，通过等级卡和排行榜反馈活跃度。',
-        fg5n:'欢迎与身份组', fg5d:'欢迎消息、自动身份组和成员自助领取面板。',
-        fg6n:'抽奖活动', fg6d:'设置参与条件、结束时间、获奖人数和重新抽取。',
-        fg7n:'管理工具', fg7d:'封禁、禁言、警告、清理消息和频道控制。',
-        fg8n:'审计日志', fg8d:'记录消息、成员、频道、身份组和封禁变动。',
-        fg9n:'指令开关', fg9d:'按服务器启用或禁用指令，保留需要的功能。',
-        dashEye:'网页控制台', dashTitle:'复杂配置，<br>放到网页里完成', dashDesc:'选择服务器后即可设置频道、身份组、审核规则与日志。保存结果和错误原因都会直接显示，不需要反复查指令参数。', dashBtn:'打开控制台 →',
+        fgEye:'核心功能', fgTitle:'小凛能帮上什么忙？', fgSub:'想先听歌，还是先布置一下服务器？从你需要的开始就好。',
+        fg1n:'今天想听什么？', fg1d:'搜歌、贴链接，再把喜欢的歌排进队列。想单曲循环一整晚也可以。',
+        fg2n:'我来帮忙看着点', fg2d:'刷屏、违禁词和不想看到的链接，先把规则告诉我，我会照着处理。',
+        fg3n:'设置不用全靠背指令', fg3d:'欢迎消息发去哪、哪个身份组可以领取，打开网页慢慢选就好。',
+        fg4n:'每次聊天，都算数', fg4d:'聊天会积累经验。偶尔看看等级卡和排行榜，说不定又往前了一名。',
+        fg5n:'新朋友来啦', fg5d:'打个招呼，安排好身份组，让刚加入的人也能找到自己的位置。',
+        fg6n:'给大家准备点惊喜', fg6d:'你来挑奖品和时间，小凛负责记住什么时候开奖。',
+        fg7n:'该认真时也会认真', fg7d:'清理消息、禁言、警告……需要管理员出面的时候，我也能搭把手。',
+        fg8n:'刚刚发生了什么？', fg8d:'消息改了、频道动了、成员进出了，需要回头查看时，日志里有记录。',
+        fg9n:'用不上的，就先关掉', fg9d:'不用把每个功能都打开。留下适合你们服务器的就好。',
+        dashEye:'网页控制台', dashTitle:'小凛的工作，<br>你来安排', dashDesc:'欢迎频道、身份组、审核规则，都可以在这里设置。改完记得保存，有哪里没填好，页面也会提醒你。', dashBtn:'打开控制台 →',
         dsNav1:'概览',dsNav2:'欢迎设置',dsNav3:'自动审核',dsNav4:'审计日志',dsTitle:'服务器配置',dsStatus:'已连接',
         dsRow1:'欢迎新成员',dsMeta1:'#welcome',dsRow2:'自动审核',dsMeta2:'反刷屏与链接过滤',dsRow3:'等级系统',dsMeta3:'聊天经验与排行榜',dsRow4:'管理日志',dsMeta4:'#moderation-log',
-        protEye:'社区保护', protTitle:'自动处理重复的管理工作', protSub:'规则可以调整，处理结果有记录，需要时也能人工介入。',
-        p1n:'内容审核', p1d:'识别刷屏、违禁词、链接与重复内容，并按规则处理。',
-        p2n:'操作记录', p2d:'消息删改、成员进出和管理操作都能集中查看。',
-        p3n:'分级处罚', p3d:'根据警告次数自动禁言、踢出或封禁，阈值由管理员设置。',
-        trustEye:'清晰可控',trustTitle:'知道 Bot 正在做什么',trustSub:'配置状态、权限要求和数据范围都应该清楚说明。',
-        tr1n:'配置状态可见',tr1d:'功能是否开启、频道是否设置、保存是否成功，都能在控制台确认。',
-        tr2n:'权限问题直接提示',tr2d:'缺少管理频道、身份组或消息权限时，Bot 会说明原因，而不是静默失败。',
-        tr3n:'数据用途说清楚',tr3d:'Bot 不建立完整聊天归档；启用消息审计后，删除或编辑事件会发送到管理员指定的日志频道。',
-        faqEye:'常见问题', faqTitle:'使用前可能想了解',
-        q1:'小凛是免费的吗？', a1:'目前所有功能都可以免费使用，没有付费等级或隐藏模块。',
-        q2:'怎么邀请到我的服务器？', a2:'点击页面上的「邀请小凛」按钮，选择服务器并授权即可。',
-        q3:'需要给哪些权限？', a3:'邀请链接只请求音乐、管理、审核、日志和身份组功能实际使用的权限，不包含管理员权限。Bot 的角色仍需位于被管理身份组和成员之上。',
-        q4:'小凛会保存哪些数据？', a4:'小凛会保存等级、功能配置和必要的管理记录，不会建立完整聊天归档。若服务器启用了消息审计，删除或编辑事件的内容会发送到管理员指定的 Discord 日志频道。',
+        protEye:'社区保护', protTitle:'我帮忙看着，你也能随时接手', protSub:'哪些内容要拦、警告几次要处理，由你决定。小凛按规则做事，需要调整时再改就好。',
+        p1n:'内容审核', p1d:'刷屏和不合适的内容，让小凛按你设好的规则处理。',
+        p2n:'操作记录', p2d:'想回头看看发生了什么？消息变动、成员进出和管理操作都可以记下来。',
+        p3n:'分级处罚', p3d:'先警告还是直接处理，由你来定。小凛会按设好的警告次数执行禁言、踢出或封禁。',
+        trustEye:'先说清楚',trustTitle:'有几件事，先跟你说清楚。',trustSub:'设置、权限，还有聊天记录，都在这里说明白。',
+        tr1n:'保存好了，会告诉你',tr1d:'设置有没有生效，不用靠猜。保存成功或者哪里出了问题，页面都会给你提示。',
+        tr2n:'做不到的，也会说明白',tr2d:'有些操作需要频道权限或合适的角色位置。遇到权限问题，先看看提示，再帮小凛调整一下。',
+        tr3n:'聊天记录这件事',tr3d:'小凛不建立完整聊天归档。不过，如果你打开了消息审计，删除或编辑的内容会发到你指定的日志频道。',
+        faqEye:'常见问题', faqTitle:'还有什么想问的吗？',
+        q1:'请小凛来要花钱吗？', a1:'不用，目前的功能都可以免费使用。挑你需要的用就好。',
+        q2:'怎么邀请小凛？', a2:'点“邀请小凛”，选择你能管理的服务器，再确认权限就可以了。',
+        q3:'为什么需要这些权限？', a3:'放音乐要能进语音频道，发身份组要能管理角色。邀请时会列出需要的权限，不要求管理员权限。别忘了把小凛的角色放到需要管理的角色和成员上方。',
+        q4:'小凛会记住哪些东西？', a4:'等级、功能设置和必要的管理记录会保存。开启消息审计后，删改消息的内容也会发到你指定的日志频道；小凛不会建立完整聊天归档。',
     },
     en:{
-        lang:'中文', title:'RinBot | Discord Management and Community Bot',
-        invite:'Add to Server',
+        lang:'中文', title:'RinBot · See You in Your Server',
+        invite:'Invite Rin',
         dash: userIsLoggedIn ? 'Open Dashboard' : 'Dashboard Login',
-        heroTag:'Service Online',
-        heroTitle:'Less repetitive work.<br>More time for<br><em>your community.</em>',
-        heroDesc:'Music, moderation, welcome messages, roles and giveaways in one bot and one web dashboard. Use slash commands for quick actions and the browser for detailed setup.',
-        heroBtn:'Add to Server', heroDash:'View Dashboard →',
-        badgeOn:'Service Online', badgeXp:'XP Progress',
-        st1:'Active Servers', st2:'Feature Modules', st3:'Available Commands', st4:'Service Coverage',
+        heroTag:'Rin is here',
+        heroTitle:'Got a little room<br><em>for Rin?</em>',
+        heroDesc:'Call me when you want some music, and I’ll say hello when new friends arrive. Chat, giveaways, and those little server chores — I can help with those too.',
+        heroBtn:'Invite Rin', heroDash:'Give Rin a job →',
+        badgeOn:'Nice to meet you!', badgeXp:'XP Progress',
+        st1:'Servers Joined', st2:'Things I Can Do', st3:'Commands to Try', st4:'Come Say Hello',
         tickerLbl:'RinBot service status',
-        bentoEye:'Features', bentoTitle:'Find features by use case', bentoSub:'Enable and configure each module separately.',
+        bentoEye:'Features', bentoTitle:'What can Rin help with?', bentoSub:'Enable and configure each module separately.',
         bc1t:'Music', bc1h:'Party Time<br>Starts Now', bc1d:'YouTube search and direct links. High quality, low latency.', bc1hint:'Search or paste a link',
         bc2t:'Leveling', bc2h:'Chat to Earn XP<br>Top the Leaderboard', bc2d:' Use <span class="code-d">/rank</span> for your rank card.',
         bc3t:'Utility', bc3h:'Daily Management<br>All Covered', bc3d:'Avatar, dice, server stats and owner-only commands.',
         bc4t:'Commands', bc4h:'Simple & Powerful<br>One Line Away', bc4d:'Supports both <span class="code-d">/</span> slash commands and <span class="code-d">r!</span> prefix.',
-        fmEye:'Music', fmTitle:'Search, queue and control<br>in one player', fmDesc:'Use <span class="code">/play</span> to search or paste a link. Queues, loops, volume, playlists and Spotify imports are supported, with voice-channel and DJ permission checks.', fmLink:'Add to Server →',
-        flEye:'Leveling', flTitle:'Make community activity<br>easy to understand', flDesc:'Members earn XP through conversation, view rank cards with <span class="code">/rank</span>, and track long-term activity on the leaderboard.', flLink:'Add to Server →',
-        hwEye:'Getting Started', hwTitle:'From invite to ready in three steps',
-        s1h:'Add to Server', s1d:'Choose a server you manage and review the permissions Rin requests.',
-        s2h:'Complete Basic Setup', s2d:'Use the dashboard to select welcome and log channels, then enable the modules you need.',
-        s3h:'Start Using Rin', s3d:'Type <span class="code-d">/help</span> in Discord to see the commands available in that server.',
-        ctaTitle:'Start with one server', ctaDesc:'After inviting Rin, open the dashboard and enable features as your community needs them.',
-        ctaInvite:'Add to Server', ctaDash:'Open Dashboard →',
-        footerTagline:'Server management, automation and community tools in one dashboard.',
+        fmEye:'Music', fmTitle:'Got your songs ready?<br>Let’s press play.', fmDesc:'Use <span class="code">/play</span> for a favorite song, then queue up the next one. Skip, loop, or adjust the volume right from the player.', fmLink:'Invite Rin →',
+        flEye:'Leveling', flTitle:'Look how much<br>you’ve been chatting.', flDesc:'Check your card with <span class="code">/rank</span>, then look for familiar names on the leaderboard. You’ll soon spot the regulars.', flLink:'Invite Rin →',
+        hwEye:'Getting Started', hwTitle:'So, how do you bring Rin over?',
+        s1h:'Invite Rin', s1d:'Pick your server, check the permissions, and confirm. I’ll be right over.',
+        s2h:'Give Rin a Few Jobs', s2d:'Open the dashboard, choose welcome and log channels, then see which features you want to use.',
+        s3h:'Say Hello', s3d:'Type <span class="code-d">/help</span> in Discord to see what I can do. In the mood for music? Start with <span class="code-d">/play</span>.',
+        ctaTitle:'See you in your server?', ctaDesc:'Invite me over. Music, a giveaway, or making the server feel more like home — let’s start with one little thing.',
+        ctaInvite:'Invite Rin', ctaDash:'Already invited Rin? Dashboard →',
+        footerTagline:'Here to play some songs, lend a hand, and get to know you.',
         fc1h:'Features',fc1l1:'Music',fc1l2:'Leveling',fc1l3:'Moderation & Safety',fc1l4:'Web Dashboard',
         fc2h:'Links',fc2l1:'Dashboard',fc2l2:'Invite Rin',
         fc3h:'Project',fc3l1:'GitHub',fc3l2:'Report an Issue',
-        fgEye:'Features', fgTitle:'Find features by use case', fgSub:'From community activity to daily moderation, each module can be configured separately.',
-        fg1n:'Music & Queues', fg1d:'Manage search, direct links, playlists, loops and saved queues.',
-        fg2n:'Automated Moderation', fg2d:'Connect moderation rules, warning thresholds and action records.',
-        fg3n:'Web Configuration', fg3d:'Set channels, roles and feature switches from the dashboard.',
-        fg4n:'Leveling', fg4d:'Turn conversation activity into XP, rank cards and leaderboards.',
-        fg5n:'Welcome & Roles', fg5d:'Welcome messages, automatic roles and self-service role panels.',
-        fg6n:'Giveaways', fg6d:'Set entry requirements, end times, winner counts and rerolls.',
-        fg7n:'Moderation Tools', fg7d:'Ban, timeout, warn, purge messages and control channels.',
-        fg8n:'Audit Log', fg8d:'Track message, member, channel, role and ban changes.',
-        fg9n:'Command Controls', fg9d:'Enable or disable commands per server and keep only what you need.',
-        dashEye:'Web Dashboard', dashTitle:'Handle detailed setup<br>in the browser', dashDesc:'Choose a server, then configure channels, roles, moderation rules and logs. Save results and errors are shown directly, without looking up command parameters.', dashBtn:'Open Dashboard →',
+        fgEye:'Features', fgTitle:'What can Rin help with?', fgSub:'A little music, or a little setting up? Start with whatever you need.',
+        fg1n:'What shall we listen to?', fg1d:'Search for a song, paste a link, and queue up your favorites. Yes, you can leave that one song on repeat all night.',
+        fg2n:'I’ll keep an eye out', fg2d:'Spam, unwanted words, or links you would rather keep out? Tell me the rules and I’ll follow them.',
+        fg3n:'No need to memorize commands', fg3d:'Pick where welcome messages go and which roles people can choose. Take your time in the dashboard.',
+        fg4n:'Every chat counts', fg4d:'Earn XP as you chat. Check your rank card now and then — you might have climbed another spot.',
+        fg5n:'A new friend is here!', fg5d:'Say hello, sort out their roles, and help newcomers find their place.',
+        fg6n:'A little surprise for everyone', fg6d:'You pick the prize and the time. I’ll remember when to draw the winners.',
+        fg7n:'Serious when it matters', fg7d:'Cleaning up messages, timeouts, warnings… when moderators need a hand, I can lend one.',
+        fg8n:'What just happened?', fg8d:'Messages changed, channels moved, someone joined or left — check the logs when you need to look back.',
+        fg9n:'Don’t need it? Switch it off', fg9d:'You don’t have to turn everything on. Keep the commands that suit your server.',
+        dashEye:'Web Dashboard', dashTitle:'You pick the jobs.<br>I’ll help out.', dashDesc:'Welcome channels, roles, moderation rules — set them up here. Remember to save, and the page will let you know if something needs fixing.', dashBtn:'Open Dashboard →',
         dsNav1:'Overview',dsNav2:'Welcome',dsNav3:'AutoMod',dsNav4:'Audit Log',dsTitle:'Server Settings',dsStatus:'Connected',
         dsRow1:'Welcome Members',dsMeta1:'#welcome',dsRow2:'AutoMod',dsMeta2:'Spam and link filters',dsRow3:'Leveling',dsMeta3:'Chat XP and leaderboard',dsRow4:'Moderation Log',dsMeta4:'#moderation-log',
-        protEye:'Community Safety', protTitle:'Automate repetitive moderation work', protSub:'Rules stay configurable, actions stay visible, and moderators can step in when needed.',
-        p1n:'Content Filters', p1d:'Detect spam, banned words, links and repeated content, then apply configured actions.',
-        p2n:'Action History', p2d:'Review message changes, member events and moderation actions in one place.',
-        p3n:'Escalating Actions', p3d:'Apply timeout, kick or ban based on warning counts set by administrators.',
-        trustEye:'Clear and Controllable',trustTitle:'Know what the bot is doing',trustSub:'Configuration status, permission requirements and data boundaries should be explicit.',
-        tr1n:'Visible Configuration State',tr1d:'Confirm whether a feature is enabled, which channel it uses and whether a save succeeded.',
-        tr2n:'Actionable Permission Errors',tr2d:'If channel, role or message permissions are missing, Rin explains the problem instead of failing silently.',
-        tr3n:'Clear Data Use',tr3d:'Rin does not build a complete chat archive. If message auditing is enabled, deleted or edited message events are sent to the administrator-selected log channel.',
-        faqEye:'FAQ', faqTitle:'What to know before you start',
-        q1:'Is Rin free?', a1:'All current features are free to use, with no paid tier or hidden modules.',
-        q2:'How do I add it to my server?', a2:'Click the "Invite Rin" button, pick your server and authorize.',
-        q3:'What permissions are needed?', a3:'The invite requests only the permissions used by music, moderation, safety, logging and role features; it does not request Administrator. The bot role must still sit above roles and members it needs to manage.',
-        q4:'What data does Rin keep?', a4:'Rin stores levels, feature settings and necessary moderation records, but does not build a complete chat archive. If message auditing is enabled, deleted or edited message events are sent to the Discord log channel selected by administrators.',
+        protEye:'Community Safety', protTitle:'I’ll watch over things. You can step in.', protSub:'You decide what to filter and when warnings need action. I’ll follow your rules, and you can change them whenever you need.',
+        p1n:'Content Filters', p1d:'Let me handle spam and unwanted content with the rules you set.',
+        p2n:'Action History', p2d:'Need to look back? Message changes, arrivals, departures, and moderator actions can all be logged.',
+        p3n:'Escalating Actions', p3d:'You choose the warning thresholds. I’ll apply the timeout, kick, or ban when a member reaches them.',
+        trustEye:'A Few Things First',trustTitle:'A few things I should tell you.',trustSub:'Settings, permissions, and chat records — here is how they work.',
+        tr1n:'I’ll let you know it saved',tr1d:'No guessing whether a setting stuck. The page tells you when it saved or what went wrong.',
+        tr2n:'Sometimes I need a little help',tr2d:'Some jobs need channel permissions or a higher role. If there is a permission problem, check the message and help me get set up.',
+        tr3n:'About your chat records',tr3d:'I don’t build a complete chat archive. If you turn on message auditing, deleted or edited content is sent to the log channel you choose.',
+        faqEye:'FAQ', faqTitle:'Anything else on your mind?',
+        q1:'Does inviting Rin cost anything?', a1:'Nope. All current features are free, so just use what you need.',
+        q2:'How do I invite Rin?', a2:'Click “Invite Rin”, choose a server you manage, and confirm the permissions.',
+        q3:'Why does Rin need these permissions?', a3:'Music needs access to voice channels, and assigning roles needs role permissions. The invite lists what I need without requesting Administrator. Remember to put my role above the roles and members I need to manage.',
+        q4:'What does Rin remember?', a4:'Levels, settings, and necessary moderation records are saved. If you enable message auditing, deleted or edited content is also sent to your chosen log channel. I don’t build a complete chat archive.',
     }
 };
 
