@@ -30,6 +30,7 @@ function go(mod) {
 }
 function showModule(mod, initial=false) {
     closeEmojiPicker();
+    window.DashboardExtras?.closeSelects();
     closeSidebar();
     document.querySelectorAll('.mod-page').forEach(p => p.classList.remove('active'));
     document.querySelectorAll('#side-modules .nav-link').forEach(l => {l.classList.remove('active');l.removeAttribute('aria-current');});
@@ -37,7 +38,7 @@ function showModule(mod, initial=false) {
     const nl = document.querySelector(`[data-mod="${mod}"]`);
     if (pg) pg.classList.add('active');
     document.querySelectorAll('[data-for-module]').forEach(el=>{el.hidden=el.dataset.forModule!=='pg-'+mod;});
-    if (nl) {nl.classList.add('active');nl.setAttribute('aria-current','page');}
+    if (nl) {nl.classList.add('active');nl.setAttribute('aria-current','page');const group=nl.closest('details');if(group)group.open=true;}
     const title=pg?.querySelector('h2');
     const name=mod==='overview'?'概览':title?.textContent || '设置';
     document.getElementById('page-sub').textContent=mod==='overview'?'':' / '+name;
@@ -925,7 +926,7 @@ async function loadModules() {
             _modulesSignature=signature;
         }
         const note=document.getElementById('runtime-note');
-        note.textContent='开关状态来自本服务器已保存的配置；模块是否加载来自运行报告。配置变更可能稍后生效。';
+        note.textContent='配置保存后，状态可能稍后更新。';
         if (window.lucide) lucide.createIcons();
     } catch(e) {
         _modulesSignature=null;
@@ -933,7 +934,8 @@ async function loadModules() {
         document.querySelectorAll('.nav-status').forEach(el=>{el.className='nav-status pending';el.title='运行状态未知';el.setAttribute('aria-label','运行状态未知');});
         console.error('loadModules', e);
         document.getElementById('ov-modules').innerHTML = '<div class="error-state">模块状态读取失败 <button type="button" class="tag-add-btn" onclick="loadModules()">重试</button></div>';
-        document.getElementById('setup-checklist').textContent='暂时没读到配置，可以用下面的重试按钮再试一次。';
+        document.getElementById('ov-more-modules').replaceChildren();
+        document.getElementById('setup-checklist').textContent='暂时没读到配置，可以用常用功能区的重试按钮再试一次。';
         showToast('❌ 模块列表加载失败: ' + e.message);
     }
 }
@@ -959,29 +961,38 @@ function moduleStatusClass(m){
 function renderSidebar(mods) {
     const sb = document.getElementById('side-modules');
     const focused=sb.contains(document.activeElement)?document.activeElement.dataset.mod:null;
+    const focusedGroup=sb.contains(document.activeElement)?document.activeElement.dataset.navSummary:null;
+    const openGroups=new Map([...sb.querySelectorAll('details')].map(group=>[group.dataset.remember,group.open]));
     const overviewLi = sb.querySelector('li');
     sb.innerHTML = '';
     sb.appendChild(overviewLi);
     const groups=[['社区互动',['welcome','roles','leveling','giveaway']],['管理与安全',['automod','moderation','botlog','serverlog']],['音乐与工具',['music','utility','general']]];
     for (const [group,slugs] of groups) {
-        const heading=document.createElement('li');heading.className='nav-group-label';heading.textContent=group;sb.append(heading);
+        const container=document.createElement('li'),details=document.createElement('details'),heading=document.createElement('summary'),list=document.createElement('ul');
+        const key='nav-'+slugs[0];details.className='nav-group';details.dataset.remember=key;details.open=slugs[0]==='welcome';
+        heading.dataset.navSummary=key;heading.textContent=group;details.append(heading,list);container.append(details);sb.append(container);
         for (const slug of slugs) {
         const m=mods.find(item=>item.slug===slug);if(!m)continue;
         const li = document.createElement('li');
         li.innerHTML = `<a class="nav-link" href="#${m.slug}" data-mod="${m.slug}">
-            <i data-lucide="${m.icon}" style="width:16px;height:16px;"></i> ${escapeHtml(m.name)}
+            <i data-lucide="${m.icon}" style="width:16px;height:16px;"></i> ${escapeHtml(moduleDisplayName(m))}
             <span class="nav-status ${moduleStatusClass(m)}" title="${moduleLabel(m)}" aria-label="${moduleLabel(m)}"></span>
         </a>`;
-        sb.appendChild(li);
+        list.appendChild(li);
         }
+        DashboardExtras.rememberDetails(container);
+        if(openGroups.has(key))details.open=openGroups.get(key);
     }
     const active=document.querySelector('.mod-page.active')?.id.replace('pg-','');
     sb.querySelectorAll('[data-mod]').forEach(el=>{const selected=el.dataset.mod===active;el.classList.toggle('active',selected);if(selected)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
+    const activeGroup=sb.querySelector('[aria-current="page"]')?.closest('details');
+    if(activeGroup&&!openGroups.has(activeGroup.dataset.remember))activeGroup.open=true;
     if(focused)sb.querySelector(`[data-mod="${focused}"]`)?.focus({preventScroll:true});
+    if(focusedGroup)sb.querySelector(`[data-nav-summary="${focusedGroup}"]`)?.focus({preventScroll:true});
 }
 
 function renderSetupChecklist(mods){
-    const items=[['welcome','欢迎新朋友','选个欢迎频道'],['music','一起听歌','按需选择 DJ 身份组'],['serverlog','留下管理记录','选择审计日志频道']];
+    const items=[['welcome','欢迎新朋友','选个欢迎频道'],['music','一起听歌','按需选择 DJ 身份组'],['serverlog','留下管理记录','选择服务器事件频道']];
     const labels={enabled:'已开启',configured:'已配置',disabled:'暂未开启',unconfigured:'还没配置',default:'使用默认设置',unknown:'暂时读不到配置'};
     document.getElementById('setup-checklist').innerHTML=items.map(([slug,title,hint])=>{
         const m=mods.find(m=>m.slug===slug);
@@ -989,19 +1000,28 @@ function renderSetupChecklist(mods){
     }).join('');
 }
 
+function moduleDisplayName(m){
+    return ({botlog:'机器人运行日志',serverlog:'服务器事件日志'})[m.slug]||m.name;
+}
+function overviewGroups(mods){
+    const common=['welcome','roles','music','automod'];
+    return [common.map(slug=>mods.find(m=>m.slug===slug)).filter(Boolean),mods.filter(m=>!common.includes(m.slug))];
+}
 function renderOverviewCards(mods) {
-    const grid = document.getElementById('ov-modules');
-    grid.innerHTML = mods.map(m => `
+    const groups=overviewGroups(mods);
+    ['ov-modules','ov-more-modules'].forEach((id,index)=>{
+    document.getElementById(id).innerHTML = groups[index].map(m => `
         <button type="button" class="mod-card ${m.loaded===true ? '' : 'mod-card--off'}" onclick="go('${m.slug}')">
             <div class="mod-card-head">
                 <div class="mod-card-icon"><i data-lucide="${m.icon}" style="width:22px;height:22px;"></i></div>
-                <div class="mod-card-name">${escapeHtml(m.name)}</div>
+                <div class="mod-card-name">${escapeHtml(moduleDisplayName(m))}</div>
                 <span class="mod-status-badge ${m.loaded===true && !['disabled','unconfigured','unknown'].includes(m.config_state) ? '' : 'mod-status-badge--off'}">${moduleLabel(m)}</span>
             </div>
             <div class="mod-card-desc">${escapeHtml(m.desc)}</div>
             <div class="mod-card-btn">查看设置</div>
         </button>
     `).join('');
+    });
 }
 
 // Loaded defaults must not overwrite drafts; failed loads are explicitly retryable.
@@ -1013,6 +1033,7 @@ function guardedLoader(mod, original, loaded){
         pending=DashboardUI.loading('pg-'+mod, async()=>{
             await original();
             if(!loaded())throw new Error('load failed');
+            window.DashboardExtras?.refreshSelects();
             window.DashboardPreview?.refresh();
         },wrapped).finally(()=>{pending=null;});
         return pending;

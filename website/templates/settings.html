@@ -8,8 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826b">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260826b">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826c">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260826c">
     <style>
         .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:4px 0 16px}
         .htile{background:var(--card,#fff);border:1px solid var(--border,#ece8e2);border-radius:14px;padding:16px}
@@ -98,7 +98,7 @@
 
             <section data-settings-panel="profile" aria-labelledby="settings-profile-title">
             <h2 class="group-title" id="settings-profile-title" tabindex="-1">给小凛换个心情吧</h2>
-            <p class="group-intro">头像、名字和活动状态都在这里。每一项改好后分别保存就好啦。</p>
+            <p class="group-intro">换个头像，或告诉大家小凛在做什么。各项分别保存哦。</p>
             <!-- Bot 形象：状态 -->
             <div class="cfg-section" id="draft-profile" data-draft>
                 <div class="cfg-section-title">活动状态</div>
@@ -121,14 +121,14 @@
                     </select>
                 </div>
                 <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">活动文案</div><div class="cfg-row-hint">例如「正在偷看你的聊天记录」</div></div>
+                    <div class="cfg-row-info"><div class="cfg-row-label">活动文案</div><div class="cfg-row-hint">例如「陪大家听歌」</div></div>
                     <input class="cfg-input" id="bp-act-text" maxlength="128" placeholder="活动状态文字" style="max-width:280px;">
                 </div>
                 <div class="sec-btns"><button class="btn-save" onclick="saveProfile(this)">保存设置</button></div>
             </div>
 
             <!-- 用户名 -->
-            <div class="cfg-section" id="draft-username" data-draft data-draft-hint="填好名字后，记得点「更新用户名」哦。">
+            <div class="cfg-section" id="draft-username" data-draft>
                 <div class="cfg-section-title">小凛的名字</div>
                 <div class="cfg-row">
                     <div class="cfg-row-info"><div class="cfg-row-label">机器人用户名</div><div class="cfg-row-hint">2–32 个字符。Discord 限制每小时最多修改 2 次</div></div>
@@ -138,10 +138,10 @@
             </div>
 
             <!-- 头像 -->
-            <div class="cfg-section" id="draft-avatar" data-draft data-draft-hint="选好图片后，点「上传头像」才会更换哦。">
-                <div class="cfg-section-title">小凛的头像</div>
+            <div class="cfg-section" id="draft-avatar" data-draft>
+                <label class="cfg-section-title field-label" for="bp-avatar-file">小凛的头像</label>
                 <div class="cfg-row">
-                    <div class="cfg-row-info"><label class="cfg-row-label" for="bp-avatar-file">小凛的头像</label><div class="cfg-row-hint" id="bp-avatar-hint">默认显示当前头像。支持 PNG / JPG / GIF / WebP，最大 5 MB；选好后点「上传头像」才会更换。</div></div>
+                    <div class="cfg-row-info"><div class="cfg-row-hint" id="bp-avatar-hint">PNG / JPG / GIF / WebP，最大 5 MB</div></div>
                     <div class="avatar-row">
                         <img id="bp-avatar-preview" class="avatar-prev" src="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" data-fallback="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" alt="小凛的头像" width="72" height="72" onerror="avatarImageError()">
                         <label class="file-picker-label" for="bp-avatar-file">选一张新头像</label>
@@ -202,8 +202,8 @@
 
     <div id="toast" class="toast toast--info" role="status" aria-live="polite" aria-atomic="true"></div>
 
-    <script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826b"></script>
-    <script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826b"></script>
+    <script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826c"></script>
+    <script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826c"></script>
     <script>
     let _tt;
     const AVATAR_MAX_BYTES=5*1024*1024;

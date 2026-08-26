@@ -36,7 +36,27 @@ window.DashboardExtras = (() => {
         }
         return count;
     }
-    let searchId = 0;
+    // UI-only preferences. Storage may be blocked; that must never block editing.
+    function preference(key, fallback=false) {
+        try { const saved=localStorage.getItem('rin:ui:v1:'+key);return saved===null?fallback:saved==='open'; }
+        catch { return fallback; }
+    }
+    function rememberDetails(root=document) {
+        root.querySelectorAll('details[data-remember]').forEach(details=>{
+            if(details.dataset.rememberReady)return;
+            details.open=preference(details.dataset.remember,details.open);
+            details.dataset.rememberReady='true';
+            details.addEventListener('toggle',()=>{
+                try {localStorage.setItem('rin:ui:v1:'+details.dataset.remember,details.open?'open':'closed');} catch {}
+            });
+        });
+    }
+    function selectMatches(select,query) {
+        return [...select.options].filter(option=>!option.disabled&&!option.parentElement?.disabled&&(option.value==='0'||matches(option.textContent,query)));
+    }
+    let searchId = 0, activeSelect=null;
+    const selectControllers=new WeakMap();
+    function closeSelects(){activeSelect?.close();}
     function enhanceSelects(root=document) {
         root.querySelectorAll('select[data-search],select.rr-role').forEach(select => {
             if (select.dataset.searchReady) return;
@@ -46,24 +66,91 @@ window.DashboardExtras = (() => {
             if (select.style.maxWidth && select.style.maxWidth !== 'none') wrapper.style.maxWidth=select.style.maxWidth;
             select.before(wrapper);
             const input = document.createElement('input');
-            input.type='search'; input.className='cfg-input select-search'; input.placeholder='搜索'+name+'…';
+            input.type='search'; input.className='cfg-input select-search'; input.placeholder='输入名称搜索…';
             input.setAttribute('aria-label','搜索'+name); input.setAttribute('data-draft-ignore','');
             if (!select.id) select.id='searchable-select-'+(++searchId);
-            input.setAttribute('aria-controls',select.id);
             if (!select.getAttribute('aria-label')) select.setAttribute('aria-label',name);
-            const hint = document.createElement('span'); hint.className='search-feedback';
-            hint.setAttribute('role','status'); hint.id=select.id+'-search-status'; hint.hidden=true;
+            const trigger=document.createElement('button');trigger.type='button';trigger.className='select-trigger cfg-select';
+            trigger.id=select.id+'-trigger';trigger.setAttribute('aria-haspopup','listbox');trigger.setAttribute('aria-expanded','false');
+            const popup=document.createElement('div');popup.className='select-popup';popup.hidden=true;
+            const list=document.createElement('div');list.className='select-options';list.id=select.id+'-options';list.setAttribute('role','listbox');list.setAttribute('aria-label',name);
+            input.setAttribute('role','combobox');input.setAttribute('aria-autocomplete','list');input.setAttribute('aria-expanded','false');
+            input.setAttribute('aria-controls',list.id);trigger.setAttribute('aria-controls',list.id);
+            const hint = document.createElement('span'); hint.className='search-feedback';hint.setAttribute('role','status');hint.id=select.id+'-search-status';
             input.setAttribute('aria-describedby',hint.id);
-            wrapper.append(input,select,hint);
-            const apply = () => {
-                const count=filterOptions(select,input.value);
-                hint.hidden=!input.value.trim();
-                hint.textContent=count ? `找到 ${count} 项，当前选择会保留` : '没找到匹配项，当前选择不会改变';
+            popup.append(input,list,hint);wrapper.append(select,trigger,popup);
+            let available=[],cursor=-1;
+            const position=()=>{
+                if(popup.hidden)return;
+                if(!select.isConnected){close();return;}
+                const rect=trigger.getBoundingClientRect(),width=Math.min(Math.max(rect.width,220),window.innerWidth-24);
+                popup.style.width=width+'px';popup.style.left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12))+'px';
+                const height=popup.offsetHeight,bottom=window.innerHeight-rect.bottom-12,top=rect.top-12;
+                popup.style.top=Math.max(12,bottom>=height||bottom>=top?Math.min(rect.bottom+5,window.innerHeight-height-12):rect.top-height-5)+'px';
             };
-            input.addEventListener('input',apply); select.addEventListener('change',apply);
-            new MutationObserver(apply).observe(select,{childList:true,subtree:true});
+            const highlight=()=>{
+                [...list.children].forEach((item,i)=>item.classList.toggle('is-highlighted',i===cursor));
+                if(cursor>=0&&list.children[cursor]){
+                    input.setAttribute('aria-activedescendant',list.children[cursor].id);
+                    list.children[cursor].scrollIntoView({block:'nearest'});
+                }else input.removeAttribute('aria-activedescendant');
+            };
+            const close=(focus=false)=>{
+                popup.hidden=true;trigger.setAttribute('aria-expanded','false');input.setAttribute('aria-expanded','false');
+                input.removeAttribute('aria-activedescendant');input.value='';
+                if(activeSelect?.select===select)activeSelect=null;
+                if(focus)trigger.focus({preventScroll:true});
+            };
+            const choose=option=>{
+                if(select.disabled||select.closest('[inert]')||!option||option.disabled)return;
+                select.value=option.value;
+                select.dispatchEvent(new Event('input',{bubbles:true}));select.dispatchEvent(new Event('change',{bubbles:true}));
+                close(true);
+            };
+            const render=()=>{
+                available=selectMatches(select,input.value);list.replaceChildren();
+                available.forEach((option,i)=>{
+                    const item=document.createElement('button');item.type='button';item.tabIndex=-1;item.className='select-option';item.id=list.id+'-'+i;
+                    item.setAttribute('role','option');item.setAttribute('aria-selected',String(option.selected));item.textContent=option.textContent;
+                    item.addEventListener('mousedown',e=>e.preventDefault());item.onclick=()=>choose(option);list.append(item);
+                });
+                const count=available.filter(option=>option.value!=='0').length;
+                hint.textContent=count?`${count} 个可选项`:'没有匹配项，当前选择不变';
+                cursor=available.findIndex(option=>option.selected);
+                if(cursor<0&&input.value.trim())cursor=available.findIndex(option=>option.value!=='0');
+                position();highlight();
+            };
+            const refresh=()=>{
+                const text=select.selectedOptions[0]?.textContent||'请选择';
+                trigger.textContent=text;trigger.setAttribute('aria-label',name+'：'+text);trigger.disabled=select.disabled;
+                if(select.disabled)close();else if(!popup.hidden)render();
+            };
+            const open=()=>{
+                if(select.disabled||select.closest('[inert]'))return;
+                closeSelects();popup.hidden=false;input.value='';activeSelect={select,close,position};
+                trigger.setAttribute('aria-expanded','true');input.setAttribute('aria-expanded','true');render();input.focus({preventScroll:true});
+            };
+            trigger.onclick=()=>popup.hidden?open():close();
+            trigger.addEventListener('keydown',e=>{if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();open();}});
+            input.addEventListener('input',render);
+            input.addEventListener('keydown',e=>{
+                if(e.isComposing)return;
+                if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close(true);}
+                else if(e.key==='ArrowDown'||e.key==='ArrowUp'){
+                    e.preventDefault();
+                    cursor=available.length?(cursor<0?(e.key==='ArrowDown'?0:available.length-1):(cursor+(e.key==='ArrowDown'?1:-1)+available.length)%available.length):-1;
+                    highlight();
+                }else if(e.key==='Enter'){e.preventDefault();choose(available[cursor]);}
+            });
+            wrapper.addEventListener('focusout',e=>{if(!wrapper.contains(e.relatedTarget))close();});
+            select.addEventListener('change',refresh);
+            new MutationObserver(refresh).observe(select,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['disabled','selected','label']});
+            document.querySelectorAll(`label[for="${select.id}"]`).forEach(label=>label.addEventListener('click',e=>{e.preventDefault();trigger.focus();}));
+            select.hidden=true;select.tabIndex=-1;select.setAttribute('aria-hidden','true');
+            selectControllers.set(select,{refresh});refresh();
         });
     }
+    function refreshSelects(root=document){root.querySelectorAll('select').forEach(select=>selectControllers.get(select)?.refresh());}
     function setupSettings() {
         const panels=[...document.querySelectorAll('[data-settings-panel]')];
         if (!panels.length) return;
@@ -97,9 +184,17 @@ window.DashboardExtras = (() => {
         update();
     }
     document.addEventListener('DOMContentLoaded',()=>{
-        const names={'mu-dj':'DJ 身份组','mu-ch':'音乐通知频道','w-ch':'欢迎频道','w-fch':'道别频道','am-log':'审核日志频道','mod-log':'管理日志频道','rr-ch':'面板发送频道','gw-ch':'抽奖频道','gw-role':'参与身份组','bl-ch':'系统日志频道','sl-ch':'审计日志频道'};
+        const names={'mu-dj':'DJ 身份组','mu-ch':'音乐通知频道','w-ch':'欢迎频道','w-fch':'道别频道','am-log':'审核日志频道','mod-log':'管理日志频道','rr-ch':'面板发送频道','gw-ch':'抽奖频道','gw-role':'参与身份组','bl-ch':'机器人日志频道','sl-ch':'服务器事件频道'};
         Object.entries(names).forEach(([id,name])=>{const el=document.getElementById(id);if(el)el.dataset.search=name;});
-        enhanceSelects(); setupSettings();
+        enhanceSelects(); setupSettings();rememberDetails();
+        document.addEventListener('pointerdown',e=>{if(activeSelect&&!e.target.closest('.search-select'))closeSelects();});
+        document.addEventListener('scroll',()=>activeSelect?.position(),true);
+        window.addEventListener('resize',()=>activeSelect?.position());
+        document.addEventListener('keydown',e=>{if(!e.isComposing&&e.key==='Escape'&&activeSelect){e.stopPropagation();activeSelect.close(true);}});
+        const topbar=document.querySelector('.topbar');
+        if(topbar&&typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{
+            document.documentElement.style.setProperty('--dashboard-header-height',topbar.getBoundingClientRect().height+'px');
+        }).observe(topbar);
         const roles=document.getElementById('w-roles');
         if(roles){
             const input=document.createElement('input');input.type='search';input.className='cfg-input';
@@ -112,5 +207,5 @@ window.DashboardExtras = (() => {
         const dynamic=document.getElementById('rr-roles-list');
         if(dynamic)new MutationObserver(()=>enhanceSelects(dynamic)).observe(dynamic,{childList:true});
     });
-    return {matches,filterOptions,createHashRouter,enhanceSelects};
+    return {matches,filterOptions,selectMatches,preference,rememberDetails,createHashRouter,enhanceSelects,refreshSelects,closeSelects};
 })();

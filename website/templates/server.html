@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826b">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260826b">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826c">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260826c">
 </head>
 <body>
     <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="打开菜单" aria-controls="sideNav" aria-expanded="false">
@@ -57,10 +57,20 @@
 
 <!-- ═══════ 概览 ═══════ -->
 <div class="mod-page active" id="pg-overview">
-    <a href="/dashboard" class="breadcrumb" style="display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:800;color:var(--text-muted);margin-bottom:18px;">
-        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-        返回服务器列表
-    </a>
+    <h2 class="overview-title">今天想让小凛帮什么忙？</h2>
+    <p class="overview-intro">常用的都在这里，其他功能在菜单里哦。</p>
+    <div class="mod-grid quick-modules" id="ov-modules"><div class="skel skel-block"></div></div>
+    <details class="overview-fold" data-remember="more-modules">
+        <summary>其他功能 <span class="fold-hint">等级、抽奖、日志与工具</span></summary>
+        <div class="mod-grid" id="ov-more-modules"></div>
+    </details>
+    <details class="setup-guide overview-fold" data-remember="setup-guide" aria-label="配置起步清单">
+        <summary>第一次设置？看看起步清单</summary>
+        <p>按需选择，不用一口气配完哦。</p><div id="setup-checklist">正在读取配置…</div>
+        <p class="setup-note">身份组位置和权限需在 Discord 中检查。</p>
+    </details>
+    <details class="overview-fold" data-remember="server-stats">
+    <summary>服务器资料与统计</summary>
     <!-- Server header -->
     <div class="server-summary" style="display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--border-light);border-radius:20px;padding:20px 24px;margin-bottom:24px;">
         {% if guild.icon_url %}
@@ -75,9 +85,7 @@
                 <span style="display:flex;align-items:center;gap:5px;"><i data-lucide="hash" style="width:12px;height:12px;"></i> ID: {{ guild.id }}</span>
             </div>
         </div>
-        <div class="bot-online-badge" data-bot-status data-state="unknown"><span class="pip"></span><span class="status-label">正在读取状态…</span></div>
     </div>
-    <section class="setup-guide" aria-label="配置起步清单"><h2>第一次见面？从这里开始吧</h2><p>这些都是按需设置，不用一口气填完哦。</p><div id="setup-checklist">正在读取配置…</div><p class="setup-note">身份组相关功能：请在 Discord 检查小凛的身份组位置和权限，这里不会把它们当作已验证。</p></section>
     <div class="ov-grid">
         <div class="ov-card"><div class="ov-label">成员数</div><div class="ov-val" id="ov-members">—</div></div>
         <div class="ov-card"><div class="ov-label">在线成员</div><div class="ov-val" id="ov-online" style="color:var(--green);">—</div></div>
@@ -86,15 +94,7 @@
         <div class="ov-card"><div class="ov-label">小凛已驻守</div><div class="ov-val" id="ov-joined" style="font-size:1rem;">—</div></div>
         <div class="ov-card"><div class="ov-label">已启用指令</div><div class="ov-val" id="ov-enabled">— <span class="accent">/ —</span></div></div>
     </div>
-    <div style="font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:14px;">功能模块</div>
-    <div class="mod-grid" id="ov-modules">
-        <div class="skel skel-block"></div>
-        <div class="skel skel-block"></div>
-        <div class="skel skel-block"></div>
-        <div class="skel skel-block"></div>
-        <div class="skel skel-block"></div>
-        <div class="skel skel-block"></div>
-    </div>
+    </details>
     <p class="runtime-note" id="runtime-note">模块状态以最近一次运行报告为准；配置保存后可能需要稍等片刻生效。</p>
 </div>
 
@@ -117,110 +117,102 @@
 
 <!-- ═══════ 欢迎新成员 ═══════ -->
 <div class="mod-page" id="pg-welcome">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="smile-plus" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>欢迎新成员</h2><p>编辑加入时的欢迎讯息</p></div>
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="smile-plus" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>欢迎新成员</h2><p>选个频道，写一句欢迎吧</p></div>
 
     <div class="cfg-section">
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">启用欢迎讯息</div><div class="cfg-row-hint">是否在成员加入时发送欢迎讯息</div></div>
+        <div class="cfg-row compact-toggle">
+            <div class="cfg-row-info"><label class="cfg-row-label" for="w-enabled">发送欢迎消息</label></div>
             <label class="cfg-tog"><input type="checkbox" id="w-enabled"><span class="track"></span><span class="thumb"></span></label>
         </div>
         <div style="margin-top:14px;">
-            <div class="cfg-row-label">欢迎讯息发送频道 <span style="color:#e8899a;">*</span></div>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">欢迎讯息会发送到的频道</div>
+            <label class="cfg-row-label field-label" for="w-ch">欢迎频道</label>
             <select class="cfg-select" id="w-ch" style="max-width:100%;"><option value="0">#</option></select>
         </div>
-        <div class="warn-box" style="margin-top:12px;">💡 可用变量：<code>%member%</code> = @用户、<code>%server%</code> = 服务器名；图片处可填 <code>%avatar%</code> = 用户头像、<code>%server_avatar%</code> = 服务器头像，或直接粘贴图片链接。</div>
-    </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="mail" style="width:15px;height:15px;" aria-hidden="true"></i> 欢迎讯息</div>
-        <div style="margin-bottom:14px;">
-            <div class="cfg-row-label">标题</div>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">留空则显示「欢迎来到 服务器名」</div>
-            <input class="cfg-input" id="w-title" maxlength="200" placeholder="欢迎来到 服务器名" style="max-width:100%;">
-        </div>
-        <div style="margin-bottom:14px;">
-            <div class="cfg-row-label">内文</div>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">卡片正文，可用 %member% / %server%</div>
+        <div class="welcome-body-field">
+            <div class="field-heading"><label class="cfg-row-label" for="w-msg">欢迎内文</label><span data-sample-slot="welcome"></span></div>
             <textarea class="cfg-textarea" id="w-msg" placeholder="欢迎 %member% 加入 %server%！🎉"></textarea>
         </div>
+    </div>
+
+    <details class="cfg-section optional-section" id="welcome-appearance">
+        <summary>标题和图片 <span class="fold-hint">可选</span><span class="optional-state" data-optional-status="appearance"></span></summary>
+        <div class="optional-body">
+        <label class="cfg-row-label field-label" for="w-title">标题</label>
+        <input class="cfg-input" id="w-title" maxlength="200" placeholder="欢迎来到 服务器名（默认）" style="max-width:100%;margin-bottom:14px;">
         <div style="margin-bottom:14px;">
-            <div class="cfg-row-label">缩图</div>
+            <label class="cfg-row-label" for="w-thumb">缩图</label>
             <div class="cfg-row-hint" style="margin-bottom:8px;">右侧小图。填 %avatar% 用用户头像，或图片链接</div>
             <input class="cfg-input" id="w-thumb" placeholder="%avatar%" style="max-width:100%;">
         </div>
         <div>
-            <div class="cfg-row-label">大图</div>
+            <label class="cfg-row-label" for="w-image">大图</label>
             <div class="cfg-row-hint" style="margin-bottom:8px;">底部大图，留空则不显示。填图片链接或 %avatar% / %server_avatar%</div>
             <input class="cfg-input" id="w-image" placeholder="https://…（留空关闭）" style="max-width:100%;">
         </div>
-    </div>
+        <div class="cfg-row compact-toggle">
+            <div class="cfg-row-info"><label class="cfg-row-label" for="w-card">附带欢迎横幅</label><div class="cfg-row-hint">成员加入时自动生成</div></div>
+            <label class="cfg-tog"><input type="checkbox" id="w-card"><span class="track"></span><span class="thumb"></span></label>
+        </div>
+        </div>
+    </details>
 
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="log-out" style="width:15px;height:15px;" aria-hidden="true"></i> 道别讯息</div>
+    <details class="cfg-section optional-section" id="welcome-farewell">
+        <summary>离开时的道别 <span class="fold-hint">可选</span><span class="optional-state" data-optional-status="farewell"></span></summary>
+        <div class="optional-body">
         <div style="margin-bottom:14px;">
-            <div class="cfg-row-label">道别频道</div>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">成员离开时发送的频道</div>
+            <label class="cfg-row-label field-label" for="w-fch">道别频道 · 不选就不发送</label>
             <select class="cfg-select" id="w-fch" style="max-width:100%;"><option value="0">#</option></select>
         </div>
         <div>
-            <div class="cfg-row-label">道别消息</div>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">成员离开时发送的消息</div>
+            <label class="cfg-row-label field-label" for="w-fmsg">道别内文</label>
             <textarea class="cfg-textarea" id="w-fmsg" placeholder="%member% 离开了我们... 👋"></textarea>
         </div>
-    </div>
+        </div>
+    </details>
 
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="tags" style="width:15px;height:15px;" aria-hidden="true"></i> 新成员身份组</div>
+    <details class="cfg-section optional-section" id="welcome-autoroles">
+        <summary>自动给予身份组 <span class="fold-hint">可选</span><span class="optional-state" data-optional-status="autoroles"></span></summary>
+        <div class="optional-body">
         <div class="cfg-row-hint" style="margin-bottom:10px;">新加入的成员将自动获得这些身份组</div>
         <div class="role-select-list" id="w-roles"></div>
         <div class="warn-box">⚠️ 请确保身份组位置在机器人下方，且机器人有「管理身份组」权限</div>
-    </div>
-
-    <div class="cfg-section">
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">附带图片横幅</div><div class="cfg-row-hint">额外发送一张自动生成的横幅大图</div></div>
-            <label class="cfg-tog"><input type="checkbox" id="w-card"><span class="track"></span><span class="thumb"></span></label>
         </div>
-    </div>
+    </details>
 
     <div class="save-bar" id="w-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="w-save" onclick="saveWelcome()">保存设置</button></div>
 </div>
 
 <!-- ═══════ 领取身份组 ═══════ -->
-<div class="mod-page" id="pg-roles" data-draft-hint="编辑好面板后，点「发送面板」才会发到频道哦。">
+<div class="mod-page" id="pg-roles" data-draft-hint="检查好后，再发到频道哦。">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="tags" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>领取身份组讯息</h2><p>点一下按钮，找到和自己合拍的身份组吧</p></div>
 
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="send" style="width:14px;height:14px;"></i> 发送频道</div>
-        <div class="cfg-row-label">在该频道发送领取讯息</div>
-        <select class="cfg-select" id="rr-ch" style="margin-top:6px;max-width:280px;"><option value="0"># 选择频道</option></select>
-    </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="list" style="width:14px;height:14px;"></i> 身份组清单</div>
-        <div class="cfg-row-hint" style="margin-bottom:10px;">每个身份组会对应一个消息下方的按钮</div>
-        <div id="rr-roles-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-        <button class="tag-add-btn" style="margin-top:12px;" onclick="addRoleRow()">+ 新增身份组</button>
-        <div class="warn-box">⚠️ 最多可选 20 个身份组。请确保身份组位置在机器人下方</div>
-    </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="file-text" style="width:14px;height:14px;"></i> 内文</div>
-        <div class="cfg-row-hint" style="margin-bottom:8px;">领取讯息的标题和描述</div>
-        <input class="cfg-input" id="rr-title" placeholder="🏷 身份组选择" style="margin-bottom:10px;">
+    <div class="cfg-section" id="rr-message-section">
+        <div class="field-heading"><h3 class="cfg-section-title">1. 面板内文</h3><span data-sample-slot="roles"></span></div>
+        <label class="cfg-row-label field-label" for="rr-title">标题</label>
+        <input class="cfg-input" id="rr-title" placeholder="🏷 身份组选择" style="margin-bottom:12px;max-width:100%;">
+        <label class="cfg-row-label field-label" for="rr-content">内文</label>
         <textarea class="cfg-textarea" id="rr-content" placeholder="点击下方的按钮来领取身份组"></textarea>
     </div>
 
     <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="check-circle-2" style="width:14px;height:14px;"></i> 选项模式</div>
-        <div class="cfg-row">
+        <h3 class="cfg-section-title">2. 身份组清单</h3>
+        <div class="cfg-row-hint" style="margin-bottom:10px;">每个身份组会对应一个消息下方的按钮</div>
+        <div id="rr-roles-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        <button class="tag-add-btn" style="margin-top:12px;" onclick="addRoleRow()">+ 新增身份组</button>
+        <div class="warn-box">⚠️ 最多可选 20 个身份组。请确保身份组位置在机器人下方</div>
+        <div class="cfg-row compact-toggle">
             <div class="cfg-row-info">
                 <div class="cfg-row-label">单选模式</div>
-                <div class="cfg-row-hint">开启后,成员只能拥有面板内一个身份组(如选区:美服/欧服/国服)。选其他会自动替换。</div>
+                <div class="cfg-row-hint">只能领取一个；改选时自动替换。</div>
             </div>
             <label class="cfg-tog"><input type="checkbox" id="rr-exclusive"><span class="track"></span><span class="thumb"></span></label>
         </div>
+    </div>
+
+    <div class="cfg-section">
+        <h3 class="cfg-section-title">3. 发到哪里？</h3>
+        <label class="cfg-row-label field-label" for="rr-ch">发送频道</label>
+        <select class="cfg-select" id="rr-ch" style="max-width:100%;"><option value="0"># 选择频道</option></select>
     </div>
 
     <div class="save-bar">
@@ -228,10 +220,10 @@
         <button class="btn-save" id="rr-send" onclick="sendRRPanel()">发送面板</button>
     </div>
 
-    <div class="cfg-section" style="margin-top:52px;">
-        <div class="cfg-section-title"><i data-lucide="archive" style="width:14px;height:14px;"></i> 已建立的面板</div>
-        <div id="rr-existing"><div class="empty-state-sm">加载中…</div></div>
-    </div>
+    <details class="cfg-section optional-section sent-panels">
+        <summary>已发送的面板</summary>
+        <div class="optional-body" id="rr-existing"><div class="empty-state-sm">加载中…</div></div>
+    </details>
 </div>
 
 <!-- ═══════ 自动审核 ═══════ -->
@@ -527,16 +519,16 @@
 
 <!-- ═══════ Bot Log (系统日志) ═══════ -->
 <div class="mod-page" id="pg-botlog">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="scroll-text" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>系统日志</h2><p>将 bot 内部活动转发到指定频道，出问题时一眼定位</p></div>
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="scroll-text" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>机器人运行日志</h2><p>查看小凛的运行、报错和配置记录</p></div>
 
     <div class="cfg-section">
         <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 基本设定</div>
         <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">所有系统日志会发送到这个频道，建议选一个只有管理员能看的频道</div></div>
+            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">建议选一个只有管理员能看的频道</div></div>
             <select class="cfg-select" id="bl-ch" style="max-width:220px;"><option value="0">— 未启用 —</option></select>
         </div>
         <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">启用系统日志</div><div class="cfg-row-hint">关闭后，所有日志将被静默丢弃</div></div>
+            <div class="cfg-row-info"><div class="cfg-row-label">发送运行日志</div><div class="cfg-row-hint">关闭后不再发送到频道</div></div>
             <label class="cfg-tog"><input type="checkbox" id="bl-enabled" checked><span class="track"></span><span class="thumb"></span></label>
         </div>
     </div>
@@ -567,7 +559,7 @@
 
 <!-- ═══════ Server Log (审计日志) ═══════ -->
 <div class="mod-page" id="pg-serverlog">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="history" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>审计日志</h2><p>记录消息、成员、频道、身份组、封禁等服务器事件</p></div>
+    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="history" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>服务器事件日志</h2><p>记录消息、成员、频道和身份组的变化</p></div>
 
     <div class="cfg-section">
         <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 基本设定</div>
@@ -576,7 +568,7 @@
             <select class="cfg-select" id="sl-ch" style="max-width:220px;"><option value="0">— 未启用 —</option></select>
         </div>
         <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">启用审计日志</div><div class="cfg-row-hint">关闭后，所有事件将被静默丢弃</div></div>
+            <div class="cfg-row-info"><div class="cfg-row-label">发送事件日志</div><div class="cfg-row-hint">关闭后不再发送到频道</div></div>
             <label class="cfg-tog"><input type="checkbox" id="sl-enabled" checked><span class="track"></span><span class="thumb"></span></label>
         </div>
     </div>
@@ -628,9 +620,9 @@
     </div>
 
 <script>window.GID = "{{ guild.id }}";</script>
-<script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826b"></script>
-<script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826b"></script>
-<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20260826b"></script>
-<script src="{{ url_for('static', filename='js/server.js') }}?v=20260826b"></script>
+<script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826c"></script>
+<script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826c"></script>
+<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20260826c"></script>
+<script src="{{ url_for('static', filename='js/server.js') }}?v=20260826c"></script>
 </body>
 </html>

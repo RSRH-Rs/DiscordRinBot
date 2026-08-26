@@ -52,6 +52,46 @@ test('filtering preserves selected/default options without changing value',()=>{
     assert.equal(ui.filterOptions(select,'LOG'),1);assert.equal(select.options[2].hidden,false);
     ui.filterOptions(select,'');assert.ok(select.options.every(o=>!o.hidden));
 });
+
+test('searchable picker matches literal names, excludes disabled choices and does not change selection',()=>{
+    const {ui}=extras();
+    const select={value:'1',options:[{textContent:'未设置',value:'0'},{textContent:'新朋友',value:'1',selected:true},{textContent:'DJ',value:'2'},{textContent:'DJ locked',value:'3',disabled:true},{textContent:'DJ group',value:'4',parentElement:{disabled:true}}]};
+    assert.deepEqual(Array.from(ui.selectMatches(select,'dj'),o=>o.value),['0','2']);
+    assert.deepEqual(Array.from(ui.selectMatches(select,'<img>'),o=>o.value),['0']);
+    assert.equal(select.value,'1');assert.ok(select.options[1].selected);
+});
+
+test('navigation preferences are UI-only and tolerate unavailable storage',()=>{
+    const {ui,ctx}=extras();
+    assert.equal(ui.preference('menu',true),true);
+    ctx.localStorage={getItem(){throw new Error('blocked');}};
+    assert.equal(ui.preference('menu',false),false);
+    const values=new Map();ctx.localStorage={getItem:key=>values.get(key)??null};
+    values.set('rin:ui:v1:nav-welcome','closed');assert.equal(ui.preference('nav-welcome',true),false);
+    values.set('rin:ui:v1:nav-music','open');assert.equal(ui.preference('nav-music'),true);
+});
+
+test('overview keeps all modules exactly once and surfaces four common tasks',()=>{
+    const source=read('server.js'),ctx=vm.createContext({});
+    vm.runInContext(source.slice(source.indexOf('function moduleDisplayName('),source.indexOf('function renderOverviewCards(')),ctx);
+    const mods=['music','welcome','roles','automod','moderation','giveaway','leveling','utility','botlog','serverlog','general'].map(slug=>({slug,name:slug}));
+    const groups=ctx.overviewGroups(mods);
+    assert.deepEqual(Array.from(groups[0],m=>m.slug),['welcome','roles','music','automod']);
+    assert.equal(groups.flat().length,11);assert.equal(new Set(groups.flat().map(m=>m.slug)).size,11);
+    assert.equal(ctx.moduleDisplayName(mods[8]),'机器人运行日志');assert.equal(ctx.moduleDisplayName(mods[9]),'服务器事件日志');
+});
+
+test('saving welcome retains optional fields even when their sections are collapsed',async()=>{
+    const values={'w-ch':'111','w-fch':'222','w-msg':'欢迎','w-fmsg':'再见','w-title':'标题','w-thumb':'%avatar%','w-image':'https://example.com/a.png'};
+    const elements=Object.fromEntries(Object.entries(values).map(([id,value])=>[id,{value}]));
+    elements['w-card']={checked:true};elements['w-enabled']={checked:true};elements['w-save']={};
+    const requests=[],ctx=vm.createContext({document:{getElementById:id=>elements[id],querySelectorAll:()=>[{value:'333'}]},api:async(...args)=>{requests.push(args);},showToast(){},markClean(){}});
+    const source=read('server.js');vm.runInContext(source.slice(source.indexOf('async function saveWelcome()'),source.indexOf('/* ── AutoMod')),ctx);
+    await ctx.saveWelcome();const payload=requests[0][2];
+    assert.equal(payload.farewell_channel,'222');assert.equal(payload.thumbnail_url,'%avatar%');assert.equal(payload.image_url,values['w-image']);
+    assert.equal(payload.auto_roles,'333');assert.equal(payload.show_card,true);assert.equal(payload.welcome_title,'标题');
+    assert.equal(Object.keys(payload).length,10);
+});
 test('welcome preview follows current and legacy text variables without evaluating markup',()=>{
     const {preview}=extras();
     assert.equal(preview.formatWelcome('%member% / {server}','茶话室'),'@新朋友 / 茶话室');

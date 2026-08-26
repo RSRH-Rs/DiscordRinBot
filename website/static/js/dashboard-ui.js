@@ -98,14 +98,14 @@ window.DashboardUI = (() => {
         side.classList.add('open');
         document.getElementById('sidebarBackdrop')?.classList.add('show');
         menuOpener?.setAttribute('aria-expanded','true');
-        side.querySelector('a[href],button,[tabindex="0"]')?.focus();
+        side.querySelector('a[href],button,summary,[tabindex="0"]')?.focus();
     }
     document.addEventListener('keydown', e => {
         const side=document.querySelector('.sidebar.open');
         if(!side)return;
         if(e.key==='Escape'){e.preventDefault();closeSidebar();}
         if(e.key==='Tab'){
-            const focusable=[...side.querySelectorAll('a[href],button,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length);
+            const focusable=[...side.querySelectorAll('a[href],button,summary,[tabindex="0"]')].filter(el=>!el.disabled&&el.getClientRects().length);
             const first=focusable[0],last=focusable.at(-1);
             if(e.shiftKey&&document.activeElement===first){e.preventDefault();last?.focus();}
             else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first?.focus();}

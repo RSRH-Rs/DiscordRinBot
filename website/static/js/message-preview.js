@@ -21,10 +21,16 @@ window.DashboardPreview = (() => {
         [...root.children].forEach(child=>{if(child.classList.contains('cfg-section')&&child!==history)form.append(child);});
         const details=document.createElement('details');details.className='message-preview';details.id=kind+'-preview';
         details.open=window.matchMedia('(min-width:1100px)').matches;
-        details.append(textNode('summary','','消息预览 · 点这里展开 / 收起'));
+        details.append(textNode('summary','','看看消息预览'));
         const content=document.createElement('div');content.className='preview-content';content.id=kind+'-preview-content';
-        details.append(content,textNode('p','preview-disclaimer','只是本地示意，不会发送消息。Markdown、外链图片和 Discord 实际样式可能不同。'));
+        details.append(content,textNode('p','preview-disclaimer','本地示意，不会发送。图片与 Markdown 以 Discord 实际显示为准。'));
         layout.append(form,details);root.querySelector('.save-bar').before(layout);
+        const media=window.matchMedia('(min-width:1100px)');
+        const placePreview=()=>{
+            if(media.matches)layout.append(details);
+            else form.querySelector('.cfg-section').after(details);
+        };
+        media.addEventListener('change',placePreview);placePreview();
     }
     function bubble(content){
         const card=document.createElement('div');card.className='discord-preview';
@@ -83,7 +89,9 @@ window.DashboardPreview = (() => {
     function tools(input,tokens){
         const bar=document.createElement('div');bar.className='variable-tools';
         tokens.forEach(token=>{
-            const button=document.createElement('button');button.type='button';button.textContent=token;
+            const button=document.createElement('button');button.type='button';
+            button.textContent=({'%member%':'@新成员','%server%':'服务器名','%avatar%':'成员头像','%server_avatar%':'服务器头像'})[token]||token;
+            button.title='插入 '+token;
             button.setAttribute('aria-label','插入 '+token);button.onclick=()=>insertToken(input,token);bar.append(button);
         });input.after(bar);
     }
@@ -97,14 +105,21 @@ window.DashboardPreview = (() => {
         }
         DashboardUI.changed('pg-'+kind);refresh();
     }
-    function refresh(){refreshWelcome();refreshRoles();}
+    function refresh(){
+        refreshWelcome();refreshRoles();
+        const statuses={
+            appearance:[value('w-title')||value('w-thumb')||value('w-image')?'自定义外观':'',el('w-card')?.checked?'附带横幅':''].filter(Boolean).join(' · ')||'默认外观',
+            farewell:value('w-fch')&&value('w-fch')!=='0'?'已选频道':'不发送',
+            autoroles:'已选 '+document.querySelectorAll('#w-roles input:checked').length+' 个'
+        };
+        document.querySelectorAll('[data-optional-status]').forEach(node=>{node.textContent=statuses[node.dataset.optionalStatus];});
+    }
     document.addEventListener('DOMContentLoaded',()=>{
         for(const kind of ['welcome','roles']){
             const root=el('pg-'+kind);if(!root)continue;
             previewShell(root,kind);
-            const bar=document.createElement('div');bar.className='preview-tools';
-            const button=document.createElement('button');button.type='button';button.className='tag-add-btn';button.textContent='试试小凛的示例文案';button.onclick=()=>sample(kind);
-            bar.append(button);root.querySelector('.editor-form').prepend(bar);
+            const button=document.createElement('button');button.type='button';button.className='sample-link';button.textContent='用小凛的示例';button.onclick=()=>sample(kind);
+            root.querySelector('[data-sample-slot]').append(button);
             root.addEventListener('input',refresh);root.addEventListener('change',refresh);
         }
         ['w-msg','w-fmsg'].forEach(id=>tools(el(id),['%member%','%server%']));
