@@ -19,8 +19,12 @@
         .hpill .d{width:8px;height:8px;border-radius:50%;background:currentColor}
         .cog-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
         .cog-chip{font-size:.72rem;background:var(--warm,#f6f1ec);border:1px solid var(--border,#ece8e2);border-radius:999px;padding:3px 11px;color:var(--mid,#776);font-weight:600}
-        .avatar-row{display:flex;align-items:center;gap:16px}
-        .avatar-prev{width:72px;height:72px;border-radius:50%;object-fit:cover;border:1px solid var(--border,#ece8e2);background:var(--warm,#f6f1ec)}
+        .avatar-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0;max-width:100%}
+        .avatar-row input{min-width:0;max-width:100%}
+        .avatar-prev{width:72px;height:72px;flex-shrink:0;border-radius:50%;object-fit:cover;border:1px solid var(--border,#ece8e2);background:var(--warm,#f6f1ec)}
+        .avatar-feedback{margin-top:10px}
+        .avatar-actions{display:flex;gap:12px;flex-wrap:wrap}
+        .avatar-actions [hidden]{display:none}
         .sec-btns{margin-top:14px}
     </style>
 </head>
@@ -123,13 +127,14 @@
             <div class="cfg-section">
                 <div class="cfg-section-title">🖼️ 头像</div>
                 <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">上传新头像</div><div class="cfg-row-hint">建议正方形 PNG / JPG / GIF</div></div>
+                    <div class="cfg-row-info"><label class="cfg-row-label" for="bp-avatar-file">小凛的头像</label><div class="cfg-row-hint" id="bp-avatar-hint">默认显示当前头像。支持 PNG / JPG / GIF / WebP，最大 5 MB；选好后点「上传头像」才会更换。</div></div>
                     <div class="avatar-row">
-                        <img id="bp-avatar-preview" class="avatar-prev" src="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" alt="预览">
-                        <input type="file" id="bp-avatar-file" accept="image/png,image/jpeg,image/gif,image/webp" onchange="previewAvatar(this)">
+                        <img id="bp-avatar-preview" class="avatar-prev" src="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" data-fallback="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" alt="小凛的头像" width="72" height="72" onerror="avatarImageError()">
+                        <input type="file" id="bp-avatar-file" accept="image/png,image/jpeg,image/gif,image/webp" aria-describedby="bp-avatar-hint bp-avatar-state" onchange="previewAvatar(this)">
                     </div>
                 </div>
-                <div class="sec-btns"><button class="btn-save" onclick="saveAvatar(this)">上传头像</button></div>
+                <p id="bp-avatar-state" class="cfg-row-hint avatar-feedback" role="status" aria-live="polite">正在读取小凛的当前头像…</p>
+                <div class="sec-btns avatar-actions"><button class="btn-save" onclick="saveAvatar(this)">上传头像</button><button class="tag-add-btn" id="bp-avatar-reset" onclick="resetAvatarSelection()" hidden>取消选择</button></div>
             </div>
 
             <!-- 全局公告 -->
@@ -237,11 +242,61 @@
         catch(e){showToast('❌ '+e.message);}
         btn.disabled=false;
     }
+    let currentAvatarUrl=document.getElementById('bp-avatar-preview').dataset.fallback;
+    let currentAvatarState='正在读取小凛的当前头像…';
+    let avatarPreviewVersion=0;
+    let avatarIdentityVersion=0;
+    function resetAvatarSelection(){
+        avatarPreviewVersion++;
+        document.getElementById('bp-avatar-file').value='';
+        const img=document.getElementById('bp-avatar-preview');
+        img.src=currentAvatarUrl;
+        img.alt='小凛的当前头像';
+        document.getElementById('bp-avatar-state').textContent=currentAvatarState;
+        document.getElementById('bp-avatar-reset').hidden=true;
+    }
+    function avatarImageError(){
+        const img=document.getElementById('bp-avatar-preview');
+        if(img.getAttribute('src')===img.dataset.fallback)return;
+        img.src=img.dataset.fallback;
+        img.alt='小凛的备用头像';
+        document.getElementById('bp-avatar-state').textContent='图片暂时没能显示，先用小凛的备用头像。';
+    }
+    async function loadAvatar(){
+        const version=++avatarIdentityVersion;
+        try{
+            const r=await fetch('/api/bot/avatar');
+            if(!r.ok)throw new Error('avatar unavailable');
+            const d=await r.json();
+            if(!d.avatar_url)throw new Error('avatar unavailable');
+            if(version!==avatarIdentityVersion)return;
+            currentAvatarUrl=d.avatar_url;
+            currentAvatarState=d.is_fallback?'小凛还没有设置自定义头像，先显示备用图。':'这是小凛现在使用的头像。';
+        }catch(e){
+            if(version!==avatarIdentityVersion)return;
+            currentAvatarUrl=document.getElementById('bp-avatar-preview').dataset.fallback;
+            currentAvatarState='暂时没能读取当前头像，先显示小凛的备用头像。刷新页面可重试。';
+        }
+        // A late identity response must never replace an unsaved local preview.
+        if(!document.getElementById('bp-avatar-file').files.length)resetAvatarSelection();
+    }
     function previewAvatar(inp){
-        const f=inp.files&&inp.files[0]; if(!f)return;
+        const f=inp.files&&inp.files[0];
+        if(!f){resetAvatarSelection();return;}
         const err=avatarFileError(f);
-        if(err){inp.value='';showToast('❌ '+err);return;}
-        const r=new FileReader(); r.onload=()=>{document.getElementById('bp-avatar-preview').src=r.result;}; r.readAsDataURL(f);
+        if(err){resetAvatarSelection();showToast('❌ '+err);return;}
+        const version=++avatarPreviewVersion;
+        const r=new FileReader();
+        r.onload=()=>{
+            if(version!==avatarPreviewVersion)return;
+            const img=document.getElementById('bp-avatar-preview');
+            img.src=r.result;
+            img.alt='新头像预览（尚未上传）';
+            document.getElementById('bp-avatar-state').textContent='新头像预览，还没上传哦。';
+            document.getElementById('bp-avatar-reset').hidden=false;
+        };
+        r.onerror=()=>{if(version===avatarPreviewVersion){resetAvatarSelection();showToast('❌ 图片读取失败，请重新选择');}};
+        r.readAsDataURL(f);
     }
     async function saveAvatar(btn){
         const f=document.getElementById('bp-avatar-file').files[0];
@@ -249,12 +304,20 @@
         const err=avatarFileError(f);
         if(err){showToast('❌ '+err);return;}
         btn.disabled=true;
+        const fileInput=document.getElementById('bp-avatar-file');
+        const resetButton=document.getElementById('bp-avatar-reset');
+        fileInput.disabled=true;
+        resetButton.disabled=true;
         try{
             const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});
-            await jpost('/api/bot/avatar',{avatar:b64});
+            const d=await jpost('/api/bot/avatar',{avatar:b64});
+            avatarIdentityVersion++;
+            currentAvatarUrl=d.avatar_url||b64;
+            currentAvatarState='头像已更新，这是小凛现在使用的头像。';
+            resetAvatarSelection();
             showToast('✅ 头像已更新!');
         }catch(e){showToast('❌ '+e.message);}
-        btn.disabled=false;
+        finally{btn.disabled=false;fileInput.disabled=false;resetButton.disabled=false;}
     }
 
     /* ── 健康状态 ── */
@@ -361,6 +424,7 @@
     }
 
     loadProfile();
+    loadAvatar();
     loadHealth();
     loadMaint();
     loadBlacklist();

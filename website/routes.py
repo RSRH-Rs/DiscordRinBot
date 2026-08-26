@@ -67,6 +67,18 @@ def _normalize_image_url(value, *, allow_placeholders=True) -> str:
     return value
 
 
+def _bot_avatar_url(bot_user) -> str:
+    """Only build a Discord CDN URL from the bot's public identity fields."""
+    uid = str(bot_user.get("id", ""))
+    avatar = bot_user.get("avatar")
+    if uid.isascii() and uid.isdigit() and isinstance(avatar, str):
+        digest = avatar.removeprefix("a_")
+        if len(digest) == 32 and all(c in "0123456789abcdef" for c in digest):
+            extension = "gif" if avatar.startswith("a_") else "png"
+            return f"https://cdn.discordapp.com/avatars/{uid}/{avatar}.{extension}?size=256"
+    return url_for("static", filename="images/rin/bot-avatar.png")
+
+
 def _validate_avatar_data_uri(value) -> Optional[str]:
     """Validate an avatar data URI; return an error message when invalid."""
     if not isinstance(value, str):
@@ -1865,12 +1877,18 @@ def setup_routes(app, discord):
             print(f"[api_bot_username] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
 
-    @app.route("/api/bot/avatar", methods=["POST"])
+    @app.route("/api/bot/avatar", methods=["GET", "POST"])
     async def api_bot_avatar():
-        """Change bot avatar via Discord REST API"""
+        """Read the current bot avatar or explicitly upload a replacement."""
         try:
             if not await is_owner(discord):
                 return jsonify({"error": "unauthorized"}), 401
+            if request.method == "GET":
+                bot_user = await discord_api_get("/users/@me")
+                if not isinstance(bot_user, dict) or not bot_user.get("id"):
+                    return jsonify({"error": "暂时没能读取小凛的头像，请稍后重试"}), 503
+                avatar_url = _bot_avatar_url(bot_user)
+                return jsonify({"avatar_url": avatar_url, "is_fallback": avatar_url.startswith("/")})
             d = await request.get_json()
             if not isinstance(d, dict):
                 return jsonify({"error": "请求内容必须是 JSON 对象"}), 400
@@ -1882,7 +1900,7 @@ def setup_routes(app, discord):
                 return jsonify({"error": avatar_error}), 400
             status, body = await discord_api_patch("/users/@me", {"avatar": avatar_b64})
             if status == 200:
-                return jsonify({"ok": True})
+                return jsonify({"ok": True, "avatar_url": _bot_avatar_url(body)})
             return (
                 jsonify({"error": body.get("message", f"Discord API {status}")}),
                 status,
