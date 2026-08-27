@@ -7,7 +7,12 @@ COG_META = {
     "Music": {
         "emoji": "🎵",
         "label": "音乐系统",
-        "desc": "队列、歌单/Spotify、循环、存读队列",
+        "desc": "先进入语音频道，再用 /play 点歌；常用 /queue、/skip、/stop",
+    },
+    "Netease": {
+        "emoji": "🎧",
+        "label": "网易云音乐",
+        "desc": "网易云搜索、单曲/歌单链接和个人主页公开歌单",
     },
     "Leveling": {
         "emoji": "🏆",

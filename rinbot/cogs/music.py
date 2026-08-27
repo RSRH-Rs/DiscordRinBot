@@ -76,8 +76,8 @@ class Song:
 
     @staticmethod
     def format_duration(seconds):
-        if not seconds:
-            return "直播"
+        if seconds is None:
+            return "未知"
         m, s = divmod(int(seconds), 60)
         h, m = divmod(m, 60)
         return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
@@ -112,6 +112,8 @@ class GuildMusicState:
         self.fail_count = 0
         self.idle_task: Optional[asyncio.Task] = None
         self.notify_channel_id: Optional[int] = None
+        self.player_message_id: Optional[int] = None
+        self.player_view: Optional[View] = None
 
     def cancel_idle(self):
         if self.idle_task and not self.idle_task.done():
@@ -126,14 +128,18 @@ class GuildMusicState:
         self.is_playing = False
         self.fail_count = 0
         self.notify_channel_id = None
+        if self.player_view:
+            self.player_view.stop()
+        self.player_message_id = None
+        self.player_view = None
         self.cancel_idle()
 
 
 class NowPlayingView(View):
-    """正在播放的控制面板 — 单排 5 按钮"""
+    """正在播放的控制面板。"""
 
     def __init__(self, music_cog, ctx, state=None):
-        super().__init__(timeout=600)
+        super().__init__(timeout=21600)
         self.music_cog = music_cog
         self.ctx = ctx
         self.state = state
@@ -188,14 +194,10 @@ class NowPlayingView(View):
     async def skip_btn(self, interaction: discord.Interaction, button: Button):
         if not await self._can_control(interaction):
             return
-        vc = interaction.guild.voice_client
-        if vc and (vc.is_playing() or vc.is_paused()):
-            vc.stop()
-            await interaction.response.send_message("⏭ 已跳过!", ephemeral=True)
-        else:
-            await interaction.response.send_message(
-                "❌ 当前没有在播放。", ephemeral=True
-            )
+        message = await self.music_cog._request_skip(
+            interaction.guild, interaction.user
+        )
+        await interaction.response.send_message(message, ephemeral=True)
 
     @discord.ui.button(
         label="循环: 关", emoji="🔁", style=discord.ButtonStyle.secondary
@@ -211,7 +213,8 @@ class NowPlayingView(View):
         state.loop_mode = modes[idx]
         button.label = labels[state.loop_mode]
         button.emoji = emojis[state.loop_mode]
-        await interaction.response.edit_message(view=self)
+        embed = self.music_cog._now_playing_embed(state.current, state)
+        await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary)
     async def shuffle_btn(self, interaction: discord.Interaction, button: Button):
@@ -226,8 +229,10 @@ class NowPlayingView(View):
         temp = list(state.queue)
         random.shuffle(temp)
         state.queue = deque(temp)
-        await interaction.response.send_message(
-            f"🔀 已随机打乱 {len(state.queue)} 首歌!", ephemeral=True
+        embed = self.music_cog._now_playing_embed(state.current, state)
+        await interaction.response.edit_message(embed=embed, view=self)
+        await interaction.followup.send(
+            f"🔀 已随机打乱 {len(state.queue)} 首歌！", ephemeral=True
         )
 
     @discord.ui.button(emoji="⏹️", style=discord.ButtonStyle.secondary)
@@ -235,15 +240,61 @@ class NowPlayingView(View):
         if not await self._can_control(interaction):
             return
         state = self.music_cog._get_state(interaction.guild.id)
-        state.clear()
         vc = interaction.guild.voice_client
-        if vc:
-            vc.stop()
-            await vc.disconnect()
         await interaction.response.send_message(
             "⏹ 已停止播放并清空队列。", ephemeral=True
         )
+        await self.music_cog._retire_player(
+            state, status="播放已停止", song=state.current
+        )
+        state.clear()
+        if vc:
+            vc.stop()
+            await vc.disconnect()
         self.stop()
+
+    @discord.ui.button(
+        label="音量 -10", emoji="🔉", style=discord.ButtonStyle.secondary, row=1
+    )
+    async def volume_down_btn(self, interaction: discord.Interaction, button: Button):
+        if not await self._can_control(interaction):
+            return
+        state = self.music_cog._get_state(interaction.guild.id)
+        self.music_cog._set_volume(interaction.guild, state, max(0, round(state.volume * 100) - 10))
+        embed = self.music_cog._now_playing_embed(state.current, state)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(
+        label="音量 +10", emoji="🔊", style=discord.ButtonStyle.secondary, row=1
+    )
+    async def volume_up_btn(self, interaction: discord.Interaction, button: Button):
+        if not await self._can_control(interaction):
+            return
+        state = self.music_cog._get_state(interaction.guild.id)
+        self.music_cog._set_volume(interaction.guild, state, min(100, round(state.volume * 100) + 10))
+        embed = self.music_cog._now_playing_embed(state.current, state)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(
+        label="查看队列", emoji="📋", style=discord.ButtonStyle.secondary, row=1
+    )
+    async def queue_btn(self, interaction: discord.Interaction, button: Button):
+        state = self.music_cog._get_state(interaction.guild.id)
+        embed = self.music_cog._queue_embed(state)
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+    async def on_timeout(self):
+        for child in self.children:
+            child.disabled = True
+        if not self.state or self.state.player_view is not self:
+            return
+        channel = self.music_cog._player_channel(self.state)
+        if channel and self.state.player_message_id:
+            try:
+                message = channel.get_partial_message(self.state.player_message_id)
+                await message.edit(view=self)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                pass
 
 
 class SearchView(View):
@@ -427,6 +478,108 @@ class Music(commands.Cog):
         source = discord.FFmpegPCMAudio(song.stream_url, **FFMPEG_OPTIONS)
         return discord.PCMVolumeTransformer(source, volume=volume)
 
+    def _set_volume(self, guild, state: GuildMusicState, level: int) -> None:
+        state.volume = level / 100
+        vc = guild.voice_client if guild else None
+        if vc and vc.source and isinstance(vc.source, discord.PCMVolumeTransformer):
+            vc.source.volume = state.volume
+
+    def _player_channel(self, state: GuildMusicState):
+        if not state.notify_channel_id:
+            return None
+        return self.bot.get_channel(state.notify_channel_id)
+
+    async def _retire_player(
+        self,
+        state: GuildMusicState,
+        *,
+        status: Optional[str] = None,
+        song: Optional[Song] = None,
+    ) -> None:
+        """Remove controls from the current player card and forget it."""
+        if state.player_view:
+            state.player_view.stop()
+        channel = self._player_channel(state)
+        if channel and state.player_message_id:
+            try:
+                message = channel.get_partial_message(state.player_message_id)
+                kwargs = {"view": None}
+                if status and song:
+                    embed = self._now_playing_embed(song, state)
+                    embed.set_author(name=status, icon_url=self.bot.user.display_avatar.url)
+                    for index in reversed(range(len(embed.fields))):
+                        if embed.fields[index].name == "⏭ 接下来":
+                            embed.remove_field(index)
+                    kwargs["embed"] = embed
+                await message.edit(**kwargs)
+            except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+                pass
+        state.player_message_id = None
+        state.player_view = None
+
+    async def _send_music_notice(self, state: GuildMusicState, content: str) -> None:
+        channel = self._player_channel(state)
+        if not channel:
+            return
+        try:
+            await channel.send(content)
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+    async def _finish_queue(self, guild_id: int, last_song: Optional[Song] = None) -> None:
+        state = self._get_state(guild_id)
+        await self._retire_player(state, status="队列播放完毕", song=last_song)
+        await self._send_music_notice(
+            state, "✅ 队列已播放完毕，3 分钟内没有新歌曲我会自动离开语音频道。"
+        )
+        state.notify_channel_id = None
+
+    async def _handle_terminal_failure(self, guild_id: int, error: Exception) -> None:
+        state = self._get_state(guild_id)
+        failed_song = state.current
+        failed_title = failed_song.title if failed_song else "当前歌曲"
+        state.queue.clear()
+        state.current = None
+        state.is_playing = False
+        await self._send_music_notice(
+            state,
+            f"❌ **{failed_title}** 播放失败，连续错误达到 3 次，队列已停止。请稍后重新 `/play`。",
+        )
+        await self._retire_player(state, status="播放失败", song=failed_song)
+        state.notify_channel_id = None
+        state.idle_task = asyncio.create_task(self._idle_disconnect(guild_id))
+
+    def _is_privileged_member(self, guild, member) -> bool:
+        if member.guild_permissions.manage_guild:
+            return True
+        mc = self.bot.get_cog("MusicConfig")
+        dj_role_id = mc.get_config(guild.id).get("dj_role", 0) if mc else 0
+        return bool(dj_role_id and any(role.id == dj_role_id for role in member.roles))
+
+    async def _request_skip(self, guild, member) -> str:
+        """Use one skip policy for slash commands and player buttons."""
+        vc = guild.voice_client if guild else None
+        if not vc or not (vc.is_playing() or vc.is_paused()):
+            return "❌ 当前没有在播放。"
+
+        state = self._get_state(guild.id)
+        if (
+            (state.current and member == state.current.requester)
+            or self._is_privileged_member(guild, member)
+        ):
+            vc.stop()
+            return "⏭ 已跳过！"
+
+        listeners = len([user for user in vc.channel.members if not user.bot])
+        needed = 1 if listeners <= 1 else max(2, (listeners + 1) // 2)
+        if member.id in state.skip_votes:
+            return f"🗳 你已经投过票了：{len(state.skip_votes)}/{needed}"
+        state.skip_votes.add(member.id)
+        if len(state.skip_votes) >= needed:
+            vc.stop()
+            return "⏭ 投票通过，已跳过！"
+        return f"🗳 跳过投票：{len(state.skip_votes)}/{needed}"
+
     def _make_after(self, guild_id: int):
         """生成 vc.play 的 after 回调：处理连续失败并续播下一首"""
         state = self._get_state(guild_id)
@@ -437,6 +590,9 @@ class Music(commands.Cog):
                 state.fail_count += 1
                 if state.fail_count >= GuildMusicState.MAX_CONSECUTIVE_FAILURES:
                     state.is_playing = False
+                    asyncio.run_coroutine_threadsafe(
+                        self._handle_terminal_failure(guild_id, error), self.bot.loop
+                    )
                     botlog = self.bot.get_cog("BotLog")
                     if botlog:
                         asyncio.run_coroutine_threadsafe(
@@ -626,6 +782,7 @@ class Music(commands.Cog):
             return
 
         vc = guild.voice_client
+        previous_song = state.current
         state.skip_votes.clear()
         state.cancel_idle()
 
@@ -640,6 +797,7 @@ class Music(commands.Cog):
 
         if not state.current:
             state.is_playing = False
+            await self._finish_queue(guild_id, previous_song)
             state.idle_task = asyncio.create_task(self._idle_disconnect(guild_id))
             return
 
@@ -655,18 +813,24 @@ class Music(commands.Cog):
         if not state.current.stream_url:
             failed_title = state.current.title
             print(f"[music] 无法解析音频流，跳过：{failed_title}")
+            await self._send_music_notice(
+                state, f"⚠️ **{failed_title}** 暂时无法播放，已自动尝试下一首。"
+            )
             state.current = None
             state.is_playing = False
             if state.queue:
                 await self._play_next(guild_id)
             else:
+                await self._finish_queue(guild_id, previous_song)
                 state.idle_task = asyncio.create_task(self._idle_disconnect(guild_id))
             return
 
         state.is_playing = True
         source = self._make_source(state.current, state.volume)
         vc.play(source, after=self._make_after(guild_id))
-        await self._announce_queued_song(guild, state)
+        await self._announce_queued_song(
+            guild, state, announce_change=state.current is not previous_song
+        )
 
     async def _idle_disconnect(self, guild_id: int):
         """空闲 3 分钟自动断开,可被新的 /play 取消"""
@@ -686,6 +850,7 @@ class Music(commands.Cog):
         aliases=["p"],
         description="播放音乐（歌名/链接/歌单/Spotify），支持队列",
     )
+    @discord.app_commands.describe(query="歌名、歌曲链接或歌单链接")
     async def play(self, ctx, *, query: str):
         await ctx.defer()
         # 关键词走选择菜单（避免选错），链接/歌单直接播
@@ -763,6 +928,7 @@ class Music(commands.Cog):
             await ctx.send(f"📋 已将歌单中 **{len(songs)}** 首歌加入播放！")
 
     @commands.hybrid_command(name="search", aliases=["sc"], description="搜索歌曲并从结果中选择播放")
+    @discord.app_commands.describe(query="要搜索的歌曲名或歌手")
     async def search(self, ctx, *, query: str):
         await ctx.defer()
         await self._show_picker(ctx, query)
@@ -772,21 +938,25 @@ class Music(commands.Cog):
         if not results:
             await ctx.send("❌ 没找到相关歌曲，换个关键词试试。")
             return
-        embeds = []
+        lines = []
         for i, r in enumerate(results, 1):
             dur = Song.format_duration(r["duration"])
-            desc = f"👤 {r['uploader']}　⏱ {dur}" if r["uploader"] else f"⏱ {dur}"
-            e = discord.Embed(title=f"{i}. {r['title'][:250]}", url=r["url"], description=desc, color=0xFFB6C1)
-            if r.get("thumbnail"):
-                e.set_thumbnail(url=r["thumbnail"])
-            embeds.append(e)
-        embeds[0].set_author(name=f"🔍 “{query}” 的搜索结果")
-        embeds[-1].set_footer(text="60 秒内从下方菜单选择要播放的歌曲")
+            uploader = f" · {r['uploader']}" if r["uploader"] else ""
+            title = discord.utils.escape_markdown(r["title"][:100])
+            lines.append(f"**{i}.** [{title}]({r['url']})\n`{dur}`{uploader}")
+        embed = discord.Embed(
+            title=f"🔍 “{query[:100]}” 的搜索结果",
+            description="\n\n".join(lines),
+            color=0xFFB6C1,
+        )
+        if results[0].get("thumbnail"):
+            embed.set_thumbnail(url=results[0]["thumbnail"])
+        embed.set_footer(text="60 秒内从下方菜单选择要播放的歌曲")
         view = SearchView(self, ctx, results)
-        view.message = await ctx.send(embeds=embeds, view=view)
+        view.message = await ctx.send(embed=embed, view=view)
 
-    def _now_playing_payload(self, song: Song, state: GuildMusicState):
-        """Build the shared now-playing embed/view for first and queued tracks."""
+    def _now_playing_embed(self, song: Song, state: GuildMusicState):
+        """Build the compact player card shared by commands and buttons."""
         embed = discord.Embed(color=0xFFB6C1)
         embed.set_author(
             name="正在播放 ♪",
@@ -797,7 +967,7 @@ class Music(commands.Cog):
         embed.url = song.url
 
         if song.thumbnail:
-            embed.set_image(url=song.thumbnail)
+            embed.set_thumbnail(url=song.thumbnail)
 
         loop_labels = {"off": "❌ 关闭", "single": "🔂 单曲", "queue": "🔁 队列"}
         embed.add_field(
@@ -825,33 +995,61 @@ class Music(commands.Cog):
             text=f"🌸 由 {song.requester.display_name} 点歌 · 小凛音乐 ♪",
             icon_url=song.requester.display_avatar.url,
         )
+        return embed
 
+    def _now_playing_payload(self, song: Song, state: GuildMusicState):
+        embed = self._now_playing_embed(song, state)
         view = NowPlayingView(self, None, state)
         return embed, view
 
     async def _send_now_playing(self, ctx, song: Song, state: GuildMusicState):
-        """Send the first track while completing a deferred slash interaction."""
+        """Create the single player card and complete a deferred interaction."""
+        await self._retire_player(state, status="播放已停止", song=state.current)
         embed, view = self._now_playing_payload(song, state)
         notify_ch = self._get_notify_channel(ctx)
         state.notify_channel_id = notify_ch.id
         if notify_ch.id == ctx.channel.id:
-            # ctx.send completes the /play deferred response; channel.send would
-            # leave Discord's "Bot is thinking..." placeholder behind.
-            await ctx.send(embed=embed, view=view)
+            message = await ctx.send(embed=embed, view=view)
         else:
-            await notify_ch.send(embed=embed, view=view)
+            message = await notify_ch.send(embed=embed, view=view)
             await ctx.send(f"🎵 已开始播放 **{song.title}** → {notify_ch.mention}")
+        state.player_message_id = message.id
+        state.player_view = view
 
-    async def _announce_queued_song(self, guild, state: GuildMusicState):
-        """Announce tracks started automatically by the after-play callback."""
+    async def _announce_queued_song(
+        self, guild, state: GuildMusicState, *, announce_change: bool = True
+    ):
+        """Update the single player card and post a compact track-change notice."""
         if not state.current or not state.notify_channel_id:
             return
-        channel = guild.get_channel(state.notify_channel_id)
+        channel = self._player_channel(state)
         if not channel:
             return
         embed, view = self._now_playing_payload(state.current, state)
+        updated_existing = False
         try:
-            await channel.send(embed=embed, view=view)
+            if state.player_message_id:
+                if state.player_view:
+                    state.player_view.stop()
+                message = channel.get_partial_message(state.player_message_id)
+                try:
+                    await message.edit(embed=embed, view=view)
+                    updated_existing = True
+                except discord.NotFound:
+                    state.player_message_id = None
+            if not state.player_message_id:
+                message = await channel.send(embed=embed, view=view)
+                state.player_message_id = message.id
+            state.player_view = view
+
+            if updated_existing and announce_change:
+                player_url = (
+                    f"https://discord.com/channels/{guild.id}/{channel.id}/"
+                    f"{state.player_message_id}"
+                )
+                await channel.send(
+                    f"▶️ 正在播放：**{state.current.title}** · [打开播放器]({player_url})"
+                )
         except (discord.Forbidden, discord.HTTPException) as error:
             print(
                 f"[music] 无法发送下一首通知 (guild {guild.id}, "
@@ -866,32 +1064,7 @@ class Music(commands.Cog):
     async def skip(self, ctx):
         if not await self._require_voice_control(ctx):
             return
-        vc = ctx.voice_client
-        if not vc or not (vc.is_playing() or vc.is_paused()):
-            await ctx.send("❌ 当前没有在播放。")
-            return
-
-        state = self._get_state(ctx.guild.id)
-
-        # 如果是点歌者或管理员，直接跳
-        if state.current and (
-            ctx.author == state.current.requester
-            or ctx.author.guild_permissions.manage_guild
-        ):
-            vc.stop()
-            await ctx.send("⏭ 已跳过！")
-            return
-
-        # 否则需要投票
-        state.skip_votes.add(ctx.author.id)
-        listeners = len([m for m in vc.channel.members if not m.bot])
-        needed = max(2, listeners // 2)
-
-        if len(state.skip_votes) >= needed:
-            vc.stop()
-            await ctx.send("⏭ 投票通过，已跳过！")
-        else:
-            await ctx.send(f"🗳 跳过投票: {len(state.skip_votes)}/{needed}")
+        await ctx.send(await self._request_skip(ctx.guild, ctx.author))
 
     # ─── 指令：pause / resume ───
 
@@ -928,6 +1101,7 @@ class Music(commands.Cog):
         if not await self._require_voice_control(ctx):
             return
         state = self._get_state(ctx.guild.id)
+        await self._retire_player(state)
         state.clear()
         if ctx.voice_client:
             ctx.voice_client.stop()
@@ -946,19 +1120,31 @@ class Music(commands.Cog):
         if not state.current:
             await ctx.send("❌ 当前没有在播放。")
             return
-        await self._send_now_playing(ctx, state.current, state)
+        embed = self._now_playing_embed(state.current, state)
+        if state.player_message_id and state.notify_channel_id:
+            embed.description = (
+                f"[打开当前播放器](https://discord.com/channels/{ctx.guild.id}/"
+                f"{state.notify_channel_id}/{state.player_message_id})"
+            )
+        await ctx.send(embed=embed)
 
     # ─── 指令：queue ───
 
     @commands.hybrid_command(
         name="queue", aliases=["q", "list"], description="查看播放队列"
     )
+    @discord.app_commands.describe(page="队列页码，默认第 1 页")
     async def queue(self, ctx, page: int = 1):
         state = self._get_state(ctx.guild.id)
 
         if not state.current and not state.queue:
             await ctx.send("📭 队列是空的，用 `/play` 来点歌吧！")
             return
+
+        await ctx.send(embed=self._queue_embed(state, page))
+
+    def _queue_embed(self, state: GuildMusicState, page: int = 1):
+        """Build a queue page for both /queue and the player button."""
 
         items_per_page = 10
         pages = max(1, (len(state.queue) + items_per_page - 1) // items_per_page)
@@ -994,8 +1180,7 @@ class Music(commands.Cog):
         embed.set_footer(
             text=f"共 {len(state.queue)} 首待播放 | 总时长: {Song.format_duration(total_dur)} | 循环: {loop_labels[state.loop_mode]}"
         )
-
-        await ctx.send(embed=embed)
+        return embed
 
     # ─── 指令：remove ───
 
@@ -1062,8 +1247,9 @@ class Music(commands.Cog):
     # ─── 指令：volume ───
 
     @commands.hybrid_command(
-        name="volume", aliases=["vol"], description="调整音量 (0-200)"
+        name="volume", aliases=["vol"], description="调整音量 (0-100，最高可放大到 150)"
     )
+    @discord.app_commands.describe(level="音量百分比，建议 30–100")
     async def volume(self, ctx, level: int = None):
         state = self._get_state(ctx.guild.id)
         if level is None:
@@ -1071,14 +1257,12 @@ class Music(commands.Cog):
             return
         if not await self._require_voice_control(ctx):
             return
-        if level < 0 or level > 200:
-            await ctx.send("❌ 音量范围: 0-200")
+        if level < 0 or level > 150:
+            await ctx.send("❌ 音量范围是 0–150；建议日常使用 30–100。")
             return
-        state.volume = level / 100
-        vc = ctx.voice_client
-        if vc and vc.source and isinstance(vc.source, discord.PCMVolumeTransformer):
-            vc.source.volume = state.volume
-        await ctx.send(f"🔊 音量已调至: **{level}%**")
+        self._set_volume(ctx.guild, state, level)
+        warning = "（超过 100% 可能产生失真）" if level > 100 else ""
+        await ctx.send(f"🔊 音量已调至：**{level}%**{warning}")
 
     # ─── 指令：move ───
 
@@ -1254,6 +1438,9 @@ class Music(commands.Cog):
             real_members = [m for m in vc.channel.members if not m.bot]
             if len(real_members) == 0:
                 state = self._get_state(member.guild.id)
+                await self._retire_player(
+                    state, status="语音频道已空，播放已停止", song=state.current
+                )
                 state.clear()
                 vc.stop()
                 await vc.disconnect()
