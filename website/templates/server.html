@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826c">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826d">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260826c">
 </head>
 <body>
@@ -57,20 +57,8 @@
 
 <!-- ═══════ 概览 ═══════ -->
 <div class="mod-page active" id="pg-overview">
-    <h2 class="overview-title">今天想让小凛帮什么忙？</h2>
-    <p class="overview-intro">常用的都在这里，其他功能在菜单里哦。</p>
-    <div class="mod-grid quick-modules" id="ov-modules"><div class="skel skel-block"></div></div>
-    <details class="overview-fold" data-remember="more-modules">
-        <summary>其他功能 <span class="fold-hint">等级、抽奖、日志与工具</span></summary>
-        <div class="mod-grid" id="ov-more-modules"></div>
-    </details>
-    <details class="setup-guide overview-fold" data-remember="setup-guide" aria-label="配置起步清单">
-        <summary>第一次设置？看看起步清单</summary>
-        <p>按需选择，不用一口气配完哦。</p><div id="setup-checklist">正在读取配置…</div>
-        <p class="setup-note">身份组位置和权限需在 Discord 中检查。</p>
-    </details>
-    <details class="overview-fold" data-remember="server-stats">
-    <summary>服务器资料与统计</summary>
+    <section class="overview-stats" aria-labelledby="server-stats-title">
+    <h2 class="overview-title" id="server-stats-title">服务器资料与统计</h2>
     <!-- Server header -->
     <div class="server-summary" style="display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--border-light);border-radius:20px;padding:20px 24px;margin-bottom:24px;">
         {% if guild.icon_url %}
@@ -94,6 +82,18 @@
         <div class="ov-card"><div class="ov-label">小凛已驻守</div><div class="ov-val" id="ov-joined" style="font-size:1rem;">—</div></div>
         <div class="ov-card"><div class="ov-label">已启用指令</div><div class="ov-val" id="ov-enabled">— <span class="accent">/ —</span></div></div>
     </div>
+    </section>
+    <h2 class="overview-title">今天想让小凛帮什么忙？</h2>
+    <p class="overview-intro">常用的都在这里，其他功能在菜单里哦。</p>
+    <div class="mod-grid quick-modules" id="ov-modules"><div class="skel skel-block"></div></div>
+    <details class="overview-fold" data-remember="more-modules">
+        <summary>其他功能 <span class="fold-hint">等级、抽奖、日志与工具</span></summary>
+        <div class="mod-grid" id="ov-more-modules"></div>
+    </details>
+    <details class="setup-guide overview-fold" data-remember="setup-guide" aria-label="配置起步清单">
+        <summary>第一次设置？看看起步清单</summary>
+        <p>按需选择，不用一口气配完哦。</p><div id="setup-checklist">正在读取配置…</div>
+        <p class="setup-note">身份组位置和权限需在 Discord 中检查。</p>
     </details>
     <p class="runtime-note" id="runtime-note">模块状态以最近一次运行报告为准；配置保存后可能需要稍等片刻生效。</p>
 </div>
