@@ -78,9 +78,13 @@ class Dev(commands.Cog):
         # ── 2. 同步（可选）──
         try:
             if sync == "guild":
-                self.bot.tree.copy_global_to(guild=ctx.guild)
-                synced = await self.bot.tree.sync(guild=ctx.guild)
-                log.append(f"⚡ 指令已同步到本服务器（{len(synced)} 个，即时生效）")
+                # 不再把全局指令复制成 guild 指令；两套同名命令会在客户端重复显示。
+                self.bot.tree.clear_commands(guild=ctx.guild)
+                await self.bot.tree.sync(guild=ctx.guild)
+                synced = await self.bot.tree.sync()
+                log.append(
+                    f"⚡ 已清理本服务器重复指令，并同步 {len(synced)} 个全局指令"
+                )
             elif sync == "global":
                 synced = await self.bot.tree.sync()
                 log.append(f"🌎 指令已全球推送（{len(synced)} 个，最长 1 小时生效）")
@@ -168,10 +172,12 @@ class Dev(commands.Cog):
 
         try:
             if scope == "guild":
-                self.bot.tree.copy_global_to(guild=ctx.guild)
-                synced = await self.bot.tree.sync(guild=ctx.guild)
+                # 清除旧的 guild 覆盖后同步全局树，避免与全局命令重复显示。
+                self.bot.tree.clear_commands(guild=ctx.guild)
+                await self.bot.tree.sync(guild=ctx.guild)
+                synced = await self.bot.tree.sync()
                 await ctx.send(
-                    f"⚡ 已同步 **{len(synced)}** 个指令到本服务器（即时生效）",
+                    f"⚡ 已清理本服务器重复指令，并同步 **{len(synced)}** 个全局指令。",
                     ephemeral=True,
                 )
 

@@ -12,3 +12,6 @@ rinbot-*.zip
 .codex-server-known-hosts
 /.claude/
 /output/
+
+# Local-only NetEase music integration (do not upload to GitHub)
+/rinbot/cogs/netease.py

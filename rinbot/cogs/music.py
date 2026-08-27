@@ -111,6 +111,7 @@ class GuildMusicState:
         self._task: Optional[asyncio.Task] = None
         self.fail_count = 0
         self.idle_task: Optional[asyncio.Task] = None
+        self.notify_channel_id: Optional[int] = None
 
     def cancel_idle(self):
         if self.idle_task and not self.idle_task.done():
@@ -124,6 +125,7 @@ class GuildMusicState:
         self.skip_votes.clear()
         self.is_playing = False
         self.fail_count = 0
+        self.notify_channel_id = None
         self.cancel_idle()
 
 
@@ -664,6 +666,7 @@ class Music(commands.Cog):
         state.is_playing = True
         source = self._make_source(state.current, state.volume)
         vc.play(source, after=self._make_after(guild_id))
+        await self._announce_queued_song(guild, state)
 
     async def _idle_disconnect(self, guild_id: int):
         """空闲 3 分钟自动断开,可被新的 /play 取消"""
@@ -707,6 +710,8 @@ class Music(commands.Cog):
         state = self._get_state(ctx.guild.id)
         is_list = len(songs) > 1
         playing = state.is_playing or vc.is_playing() or vc.is_paused()
+        if not state.notify_channel_id:
+            state.notify_channel_id = self._get_notify_channel(ctx).id
 
         if playing:
             state.queue.extend(songs)
@@ -780,7 +785,8 @@ class Music(commands.Cog):
         view = SearchView(self, ctx, results)
         view.message = await ctx.send(embeds=embeds, view=view)
 
-    async def _send_now_playing(self, ctx, song: Song, state: GuildMusicState):
+    def _now_playing_payload(self, song: Song, state: GuildMusicState):
+        """Build the shared now-playing embed/view for first and queued tracks."""
         embed = discord.Embed(color=0xFFB6C1)
         embed.set_author(
             name="正在播放 ♪",
@@ -820,11 +826,37 @@ class Music(commands.Cog):
             icon_url=song.requester.display_avatar.url,
         )
 
-        view = NowPlayingView(self, ctx, state)
+        view = NowPlayingView(self, None, state)
+        return embed, view
+
+    async def _send_now_playing(self, ctx, song: Song, state: GuildMusicState):
+        """Send the first track while completing a deferred slash interaction."""
+        embed, view = self._now_playing_payload(song, state)
         notify_ch = self._get_notify_channel(ctx)
-        await notify_ch.send(embed=embed, view=view)
-        if notify_ch.id != ctx.channel.id:
+        state.notify_channel_id = notify_ch.id
+        if notify_ch.id == ctx.channel.id:
+            # ctx.send completes the /play deferred response; channel.send would
+            # leave Discord's "Bot is thinking..." placeholder behind.
+            await ctx.send(embed=embed, view=view)
+        else:
+            await notify_ch.send(embed=embed, view=view)
             await ctx.send(f"🎵 已开始播放 **{song.title}** → {notify_ch.mention}")
+
+    async def _announce_queued_song(self, guild, state: GuildMusicState):
+        """Announce tracks started automatically by the after-play callback."""
+        if not state.current or not state.notify_channel_id:
+            return
+        channel = guild.get_channel(state.notify_channel_id)
+        if not channel:
+            return
+        embed, view = self._now_playing_payload(state.current, state)
+        try:
+            await channel.send(embed=embed, view=view)
+        except (discord.Forbidden, discord.HTTPException) as error:
+            print(
+                f"[music] 无法发送下一首通知 (guild {guild.id}, "
+                f"channel {state.notify_channel_id}): {error}"
+            )
 
     # ─── 指令：skip ───
 
@@ -1139,6 +1171,7 @@ class Music(commands.Cog):
 
         state.queue.extend(songs)
         state.cancel_idle()
+        state.notify_channel_id = self._get_notify_channel(ctx).id
         await ctx.send(f"💿 正在载入存档 **{name}**（{len(songs)} 首）…")
         await self._play_next(ctx.guild.id)
 
