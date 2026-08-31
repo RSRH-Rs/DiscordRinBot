@@ -35,6 +35,7 @@ class DashboardTemplateTests(unittest.TestCase):
             html,p=self.render(name)
             self.assertEqual(len(p.ids),len(set(p.ids)),name)
             self.assertIn('dashboard-extras.js?v=20260826c',html)
+            self.assertIn('dashboard-extras.css?v=20260831a',html)
             self.assertIn('dashboard-ui.js?v=20260826c',html)
             self.assertIn('dashboard-ui.css?v=20260826d',html)
             self.assertNotIn('储存设定',html)
