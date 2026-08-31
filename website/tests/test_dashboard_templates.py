@@ -35,7 +35,7 @@ class DashboardTemplateTests(unittest.TestCase):
             html,p=self.render(name)
             self.assertEqual(len(p.ids),len(set(p.ids)),name)
             self.assertIn('dashboard-extras.js?v=20260826c',html)
-            self.assertIn('dashboard-extras.css?v=20260831a',html)
+            self.assertIn('dashboard-extras.css?v=20260831d',html)
             self.assertIn('dashboard-ui.js?v=20260826c',html)
             self.assertIn('dashboard-ui.css?v=20260826d',html)
             self.assertNotIn('储存设定',html)
@@ -84,5 +84,13 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn("lang:'English', title:'小凛Rinbot'",html)
         self.assertIn("lang:'中文', title:'小凛Rinbot'",html)
         self.assertIn('document.title=t.title;',html)
+
+    def test_disclosure_arrow_uses_centered_lucide_svg(self):
+        css=(ROOT/'static/css/dashboard-extras.css').read_text(encoding='utf-8')
+        self.assertIn("background-image:url(\"data:image/svg+xml",css)
+        self.assertIn("%3Cpath d='m9 18 6-6-6-6'",css)
+        self.assertNotIn("content:'›'",css)
+        self.assertIn("details[open]>summary::before { transform:rotate(90deg);background-color:",css)
+        self.assertIn(".nav-group[open]>summary::before { background-color:",css)
 
 if __name__=='__main__':unittest.main()
