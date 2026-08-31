@@ -2,10 +2,49 @@ const GID = window.GID || "";
 let _ch = null, _roles = null, _chPromise = null, _rolesPromise = null;
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 const AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+const WELCOME_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
+const WELCOME_IMAGE_MAX_DIMENSION = 4096;
+const WELCOME_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+const welcomeImages = {
+    welcome: {uploaded:false, objectUrl:''},
+    farewell: {uploaded:false, objectUrl:''},
+};
+window.WelcomeImageUploads = {has: kind => !!welcomeImages[kind]?.uploaded};
 
 function avatarFileError(file) {
     if (!AVATAR_TYPES.has(file.type)) return '仅支持 PNG、JPEG、GIF 或 WebP 图片';
     if (file.size > AVATAR_MAX_BYTES) return '头像文件不能超过 5 MB';
+    return '';
+}
+
+function welcomeImageFileError(file) {
+    if (!file) return '请先选择一张图片';
+    if (!WELCOME_IMAGE_TYPES.has(file.type)) return '仅支持 PNG、JPG、GIF 或 WebP 图片';
+    if (file.size > WELCOME_IMAGE_MAX_BYTES) return '图片不能超过 5 MB';
+    return '';
+}
+
+function welcomeImageDimensions(file) {
+    return new Promise(resolve => {
+        const url = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+            const result = {width:image.naturalWidth, height:image.naturalHeight};
+            URL.revokeObjectURL(url); resolve(result);
+        };
+        image.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+        image.src = url;
+    });
+}
+
+async function validateWelcomeImageFile(file) {
+    const basicError = welcomeImageFileError(file);
+    if (basicError) return basicError;
+    const dimensions = await welcomeImageDimensions(file);
+    if (!dimensions) return '图片文件损坏或无法读取';
+    if (dimensions.width > WELCOME_IMAGE_MAX_DIMENSION || dimensions.height > WELCOME_IMAGE_MAX_DIMENSION) {
+        return '图片尺寸不能超过 4096×4096';
+    }
     return '';
 }
 
@@ -136,6 +175,77 @@ function chOpts(sel, channels, selected) {
 
 /* ── Welcome ── */
 let _wLoaded = false;
+function setWelcomeImageState(kind, uploaded, previewUrl='', statusText='') {
+    const state = welcomeImages[kind];
+    if (!state) return;
+    if (state.objectUrl && state.objectUrl !== previewUrl) URL.revokeObjectURL(state.objectUrl);
+    state.objectUrl = previewUrl.startsWith('blob:') ? previewUrl : '';
+    state.uploaded = !!uploaded;
+    const image = document.getElementById(`w-${kind}-image-preview`);
+    const clear = document.getElementById(`w-${kind}-clear`);
+    const status = document.getElementById(`w-${kind}-image-state`);
+    if (image) {
+        image.hidden = !previewUrl;
+        if (previewUrl) image.src = previewUrl;
+        else image.removeAttribute('src');
+    }
+    if (clear) clear.hidden = !uploaded;
+    if (status) status.textContent = statusText || (uploaded ? '已上传，发送时会优先使用' : '尚未上传');
+    window.DashboardPreview?.refresh();
+}
+
+async function previewWelcomeImage(kind, input) {
+    const file = input.files?.[0];
+    const error = await validateWelcomeImageFile(file);
+    if (error) {
+        input.value = '';
+        showToast('❌ ' + error);
+        const current = welcomeImages[kind]?.uploaded;
+        setWelcomeImageState(kind, current, current ? `/api/guild/${GID}/welcome/image/${kind}?v=${Date.now()}` : '', current ? '' : '尚未上传');
+        return;
+    }
+    const previewUrl = URL.createObjectURL(file);
+    setWelcomeImageState(kind, welcomeImages[kind].uploaded, previewUrl, '已选择，点「上传图片」才会生效');
+}
+
+async function uploadWelcomeImage(kind) {
+    const input = document.getElementById(`w-${kind}-file`);
+    const button = document.getElementById(`w-${kind}-upload`);
+    const file = input?.files?.[0];
+    const error = await validateWelcomeImageFile(file);
+    if (error) { showToast('❌ ' + error); return; }
+    button.disabled = true; button.textContent = '上传中…';
+    try {
+        const form = new FormData(); form.append('image', file);
+        const response = await fetch(`/api/guild/${GID}/welcome/image/${kind}`, {method:'POST', body:form});
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || `上传失败 (${response.status})`);
+        input.value = '';
+        setWelcomeImageState(kind, true, `${result.image_url}?v=${Date.now()}`);
+        showToast(`✅ ${kind === 'welcome' ? '迎新' : '道别'}图片已上传`);
+    } catch (e) {
+        showToast('❌ 上传失败，已选择的图片仍保留：' + e.message);
+    } finally {
+        button.disabled = false; button.textContent = '上传图片';
+    }
+}
+
+async function clearWelcomeImage(kind) {
+    if (!window.confirm(`要清除${kind === 'welcome' ? '迎新' : '道别'}自定义图片吗？`)) return;
+    const button = document.getElementById(`w-${kind}-clear`);
+    button.disabled = true;
+    try {
+        const response = await fetch(`/api/guild/${GID}/welcome/image/${kind}`, {method:'DELETE'});
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(result.error || `清除失败 (${response.status})`);
+        document.getElementById(`w-${kind}-file`).value = '';
+        setWelcomeImageState(kind, false);
+        showToast(`✅ ${kind === 'welcome' ? '迎新' : '道别'}图片已清除`);
+    } catch (e) {
+        showToast('❌ 清除失败：' + e.message);
+    } finally { button.disabled = false; }
+}
+
 async function loadWelcome() {
     if (_wLoaded) return; _wLoaded = true;
     try {
@@ -149,6 +259,10 @@ async function loadWelcome() {
         document.getElementById('w-image').value = cfg.image_url || '';
         document.getElementById('w-card').checked = !!cfg.show_card;
         document.getElementById('w-enabled').checked = cfg.enabled !== 0;
+        for (const kind of ['welcome', 'farewell']) {
+            const uploaded = !!cfg[`has_${kind}_image`];
+            setWelcomeImageState(kind, uploaded, uploaded ? `/api/guild/${GID}/welcome/image/${kind}?v=${Date.now()}` : '');
+        }
         const autoRoles = cfg.auto_roles ? cfg.auto_roles.split(',').filter(Boolean) : [];
         document.getElementById('w-roles').innerHTML = roles.map(r =>
             `<label class="role-opt"><input type="checkbox" value="${r.id}" ${autoRoles.includes(String(r.id))?'checked':''} onchange="markDirty('w-savebar')"> ${escapeHtml(r.name)}</label>`

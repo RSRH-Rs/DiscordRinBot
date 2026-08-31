@@ -1,9 +1,11 @@
-from quart import redirect, url_for, render_template, session, jsonify, request
+from quart import redirect, url_for, render_template, session, jsonify, request, send_file
 import asyncio
 import base64
 import binascii
+import hashlib
 import time
 import math
+import re
 import traceback
 import aiohttp
 import aiosqlite
@@ -44,6 +46,29 @@ _ALLOWED_AVATAR_MIMES = {
     "image/webp": "WEBP",
 }
 _IMAGE_PLACEHOLDERS = {"%avatar%", "%server_avatar%"}
+_MAX_WELCOME_IMAGE_BYTES = 5 * 1024 * 1024
+_MAX_WELCOME_IMAGE_DIMENSION = 4096
+_MAX_WELCOME_IMAGE_FRAMES = 200
+_MAX_WELCOME_ANIMATED_PIXELS = 100_000_000
+_WELCOME_IMAGE_FORMATS = {
+    "PNG": (".png", "image/png"),
+    "JPEG": (".jpg", "image/jpeg"),
+    "GIF": (".gif", "image/gif"),
+    "WEBP": (".webp", "image/webp"),
+}
+_WELCOME_IMAGE_COLUMNS = {
+    "welcome": "welcome_image_file",
+    "farewell": "farewell_image_file",
+}
+_WELCOME_IMAGE_NAME = re.compile(
+    r"^(?P<gid>[1-9][0-9]*)-(?P<kind>welcome|farewell)-(?P<digest>[0-9a-f]{16})"
+    r"(?P<suffix>\.png|\.jpg|\.gif|\.webp)$"
+)
+_welcome_upload_locks: dict[tuple[int, str], asyncio.Lock] = {}
+
+
+class _WelcomeImageValidationError(ValueError):
+    pass
 
 
 def _normalize_image_url(value, *, allow_placeholders=True) -> str:
@@ -140,6 +165,11 @@ async def _fetch_username(uid: str) -> str:
 # ── 关键：数据库在 rinbot 目录，网站在 website 目录 ──
 # 相对路径: website/ → ../rinbot/
 BOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rinbot")
+WELCOME_UPLOAD_DIR = os.path.abspath(
+    os.environ.get(
+        "RINBOT_WELCOME_UPLOAD_DIR", os.path.join(BOT_DIR, "uploads", "welcome")
+    )
+)
 
 DB_WELCOME = os.path.join(BOT_DIR, "welcome.db")
 DB_AUTOMOD = os.path.join(BOT_DIR, "automod.db")
@@ -153,6 +183,91 @@ DB_MUSIC = os.path.join(BOT_DIR, "musicconfig.db")
 DB_BOTLOG = os.path.join(BOT_DIR, "botlog.db")
 DB_SERVERLOG = os.path.join(BOT_DIR, "serverlog.db")
 DB_GLOBAL = os.path.join(BOT_DIR, "globalsettings.db")
+
+
+def _validate_welcome_image(raw: bytes, claimed_mime: str = "") -> tuple[str, str]:
+    """Validate uploaded image bytes and return (suffix, canonical MIME)."""
+    if not raw:
+        raise _WelcomeImageValidationError("请选择一张图片")
+    if len(raw) > _MAX_WELCOME_IMAGE_BYTES:
+        raise _WelcomeImageValidationError("图片不能超过 5 MB")
+    try:
+        with Image.open(BytesIO(raw)) as image:
+            actual_format = (image.format or "").upper()
+            image_spec = _WELCOME_IMAGE_FORMATS.get(actual_format)
+            if image_spec is None:
+                raise _WelcomeImageValidationError(
+                    "仅支持 PNG、JPG、GIF 或 WebP 图片"
+                )
+            width, height = image.size
+            if width < 1 or height < 1:
+                raise _WelcomeImageValidationError("图片尺寸无效")
+            if (
+                width > _MAX_WELCOME_IMAGE_DIMENSION
+                or height > _MAX_WELCOME_IMAGE_DIMENSION
+            ):
+                raise _WelcomeImageValidationError("图片尺寸不能超过 4096×4096")
+            frames = int(getattr(image, "n_frames", 1))
+            if frames > _MAX_WELCOME_IMAGE_FRAMES:
+                raise _WelcomeImageValidationError("动图不能超过 200 帧")
+            if width * height * frames > _MAX_WELCOME_ANIMATED_PIXELS:
+                raise _WelcomeImageValidationError(
+                    "动图总尺寸过大，请缩小尺寸或减少帧数"
+                )
+            image.verify()
+    except _WelcomeImageValidationError:
+        raise
+    except (
+        UnidentifiedImageError,
+        OSError,
+        ValueError,
+        Image.DecompressionBombError,
+    ) as exc:
+        raise ValueError("图片文件损坏或不是有效图片") from exc
+
+    suffix, expected_mime = image_spec
+    normalized_mime = (claimed_mime or "").split(";", 1)[0].strip().lower()
+    if normalized_mime and normalized_mime != expected_mime:
+        raise ValueError("图片声明的类型与实际文件不一致")
+    return suffix, expected_mime
+
+
+def _welcome_image_path(filename: str, gid: int, kind: str) -> Optional[str]:
+    """Resolve a DB filename only when it is a safe file for this guild and slot."""
+    if not isinstance(filename, str) or not filename or os.path.basename(filename) != filename:
+        return None
+    match = _WELCOME_IMAGE_NAME.fullmatch(filename)
+    if not match or int(match.group("gid")) != gid or match.group("kind") != kind:
+        return None
+    root = os.path.realpath(WELCOME_UPLOAD_DIR)
+    path = os.path.realpath(os.path.join(root, filename))
+    try:
+        if os.path.commonpath((root, path)) != root:
+            return None
+    except ValueError:
+        return None
+    return path
+
+
+async def _welcome_image_filename(gid: int, kind: str) -> str:
+    column = _WELCOME_IMAGE_COLUMNS[kind]
+    async with aiosqlite.connect(DB_WELCOME) as db:
+        cur = await db.execute(
+            f"SELECT {column} FROM welcome_config WHERE guild_id=?", (gid,)
+        )
+        row = await cur.fetchone()
+    return str(row[0] or "") if row else ""
+
+
+def _remove_welcome_image(filename: str, gid: int, kind: str) -> None:
+    path = _welcome_image_path(filename, gid, kind)
+    if not path:
+        return
+    try:
+        if os.path.isfile(path) and not os.path.islink(path):
+            os.remove(path)
+    except OSError as exc:
+        print(f"[_remove_welcome_image] {exc}")
 
 _MODULE_COGS = {
     "music": "Music", "welcome": "Welcome", "roles": "ReactionRoles",
@@ -232,7 +347,9 @@ async def ensure_tables():
                 farewell_msg TEXT DEFAULT '%member% 离开了我们... 👋',
                 show_card INTEGER DEFAULT 0, welcome_title TEXT DEFAULT '',
                 author_icon TEXT DEFAULT '', thumbnail_url TEXT DEFAULT '',
-                enabled INTEGER DEFAULT 1, image_url TEXT DEFAULT '')""")
+                enabled INTEGER DEFAULT 1, image_url TEXT DEFAULT '',
+                welcome_image_file TEXT DEFAULT '',
+                farewell_image_file TEXT DEFAULT '')""")
             for ddl in (
                 "show_card INTEGER DEFAULT 0",
                 "welcome_title TEXT DEFAULT ''",
@@ -240,6 +357,8 @@ async def ensure_tables():
                 "thumbnail_url TEXT DEFAULT ''",
                 "enabled INTEGER DEFAULT 1",
                 "image_url TEXT DEFAULT ''",
+                "welcome_image_file TEXT DEFAULT ''",
+                "farewell_image_file TEXT DEFAULT ''",
             ):
                 try:
                     await db.execute(f"ALTER TABLE welcome_config ADD COLUMN {ddl}")
@@ -1007,7 +1126,14 @@ def setup_routes(app, discord):
                 )
                 row = await cur.fetchone()
             if row:
-                return jsonify(dict(row))
+                result = dict(row)
+                result["has_welcome_image"] = bool(
+                    result.pop("welcome_image_file", "")
+                )
+                result["has_farewell_image"] = bool(
+                    result.pop("farewell_image_file", "")
+                )
+                return jsonify(result)
             return jsonify(
                 {
                     "guild_id": g,
@@ -1022,6 +1148,8 @@ def setup_routes(app, discord):
                     "thumbnail_url": "",
                     "enabled": 1,
                     "image_url": "",
+                    "has_welcome_image": False,
+                    "has_farewell_image": False,
                 }
             )
         except Exception as e:
@@ -1087,6 +1215,132 @@ def setup_routes(app, discord):
         except Exception as e:
             print(f"[api_welcome_post] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
+
+    @app.route(
+        "/api/guild/<string:gid>/welcome/image/<string:kind>",
+        methods=["GET", "POST", "DELETE"],
+    )
+    async def api_welcome_image(gid, kind):
+        if kind not in _WELCOME_IMAGE_COLUMNS:
+            return jsonify({"error": "图片类型无效"}), 404
+        if not await check_guild_access(discord, gid):
+            return jsonify({"error": "unauthorized"}), 401
+        try:
+            g = int(gid)
+        except ValueError:
+            return jsonify({"error": "服务器 ID 无效"}), 400
+
+        column = _WELCOME_IMAGE_COLUMNS[kind]
+        lock = _welcome_upload_locks.setdefault((g, kind), asyncio.Lock())
+        async with lock:
+            try:
+                old_filename = await _welcome_image_filename(g, kind)
+
+                if request.method == "GET":
+                    path = _welcome_image_path(old_filename, g, kind)
+                    if not path or not os.path.isfile(path) or os.path.islink(path):
+                        return jsonify({"error": "尚未上传图片"}), 404
+                    suffix = os.path.splitext(path)[1].lower()
+                    mime = next(
+                        value[1]
+                        for value in _WELCOME_IMAGE_FORMATS.values()
+                        if value[0] == suffix
+                    )
+                    response = await send_file(path, mimetype=mime)
+                    response.headers["Cache-Control"] = "private, no-store"
+                    response.headers["X-Content-Type-Options"] = "nosniff"
+                    return response
+
+                if request.method == "DELETE":
+                    async with aiosqlite.connect(DB_WELCOME) as db:
+                        await db.execute(
+                            "INSERT OR IGNORE INTO welcome_config (guild_id) VALUES (?)",
+                            (g,),
+                        )
+                        await db.execute(
+                            f"UPDATE welcome_config SET {column}='' WHERE guild_id=?",
+                            (g,),
+                        )
+                        await db.commit()
+                    _remove_welcome_image(old_filename, g, kind)
+                    actor = await _resolve_actor(discord)
+                    audit(
+                        g,
+                        f"{'迎新' if kind == 'welcome' else '道别'}自定义图片已清除",
+                        **{"操作者": actor},
+                    )
+                    return jsonify({"ok": True, "has_image": False})
+
+                files = await request.files
+                uploaded = files.get("image")
+                if uploaded is None:
+                    return jsonify({"error": "请选择一张图片"}), 400
+                raw = uploaded.stream.read(_MAX_WELCOME_IMAGE_BYTES + 1)
+                try:
+                    suffix, mime = _validate_welcome_image(raw, uploaded.mimetype)
+                except ValueError as exc:
+                    return jsonify({"error": str(exc)}), 400
+
+                digest = hashlib.sha256(raw).hexdigest()[:16]
+                filename = f"{g}-{kind}-{digest}{suffix}"
+                path = _welcome_image_path(filename, g, kind)
+                if path is None:
+                    raise RuntimeError("无法建立安全的图片路径")
+                os.makedirs(WELCOME_UPLOAD_DIR, mode=0o750, exist_ok=True)
+                temp_path = os.path.join(
+                    WELCOME_UPLOAD_DIR,
+                    f".{filename}.{os.getpid()}.{time.time_ns()}.tmp",
+                )
+                try:
+                    with open(temp_path, "xb") as handle:
+                        handle.write(raw)
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                    os.replace(temp_path, path)
+                    try:
+                        os.chmod(path, 0o640)
+                    except OSError:
+                        pass
+                    async with aiosqlite.connect(DB_WELCOME) as db:
+                        await db.execute(
+                            "INSERT OR IGNORE INTO welcome_config (guild_id) VALUES (?)",
+                            (g,),
+                        )
+                        await db.execute(
+                            f"UPDATE welcome_config SET {column}=? WHERE guild_id=?",
+                            (filename, g),
+                        )
+                        await db.commit()
+                except Exception:
+                    try:
+                        if os.path.isfile(temp_path):
+                            os.remove(temp_path)
+                        if filename != old_filename and os.path.isfile(path):
+                            os.remove(path)
+                    except OSError:
+                        pass
+                    raise
+
+                if old_filename != filename:
+                    _remove_welcome_image(old_filename, g, kind)
+                actor = await _resolve_actor(discord)
+                audit(
+                    g,
+                    f"{'迎新' if kind == 'welcome' else '道别'}自定义图片已更新",
+                    **{"操作者": actor, "大小": f"{len(raw) / 1024:.1f} KB"},
+                )
+                return jsonify(
+                    {
+                        "ok": True,
+                        "has_image": True,
+                        "image_url": f"/api/guild/{g}/welcome/image/{kind}",
+                        "size": len(raw),
+                        "mime": mime,
+                    }
+                )
+            except Exception:
+                print(f"[api_welcome_image] {traceback.format_exc()}")
+                return jsonify({"error": "服务器暂时无法处理图片，请稍后重试"}), 500
 
     # ── AutoMod ──
 

@@ -59,11 +59,14 @@ class DashboardTemplateTests(unittest.TestCase):
 
     def test_optional_welcome_sections_keep_all_fields_in_the_page(self):
         html,p=self.render('server.html')
-        for field in ['w-enabled','w-ch','w-msg','w-title','w-thumb','w-image','w-card','w-fch','w-fmsg','w-roles']:
+        for field in ['w-enabled','w-ch','w-msg','w-title','w-thumb','w-image','w-card','w-fch','w-fmsg','w-roles','w-welcome-file','w-farewell-file','w-welcome-image-preview','w-farewell-image-preview']:
             self.assertEqual(p.ids.count(field),1)
         self.assertLess(p.ids.index('w-msg'),p.ids.index('welcome-appearance'))
         for name in ['welcome-appearance','welcome-farewell','welcome-autoroles']:
             self.assertIn(f'<details class="cfg-section optional-section" id="{name}">',html)
+        self.assertIn('最大 5 MB、4096×4096',html)
+        self.assertIn('message-preview.js?v=20260830a',html)
+        self.assertIn('server.js?v=20260830a',html)
 
     def test_overview_shows_server_stats_first_then_common_actions(self):
         html,p=self.render('server.html')

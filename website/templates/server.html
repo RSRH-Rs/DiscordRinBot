@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826d">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260826c">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260830a">
 </head>
 <body>
     <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="打开菜单" aria-controls="sideNav" aria-expanded="false">
@@ -144,13 +144,24 @@
             <div class="cfg-row-hint" style="margin-bottom:8px;">右侧小图。填 %avatar% 用用户头像，或图片链接</div>
             <input class="cfg-input" id="w-thumb" placeholder="%avatar%" style="max-width:100%;">
         </div>
-        <div>
-            <label class="cfg-row-label" for="w-image">大图</label>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">底部大图，留空则不显示。填图片链接或 %avatar% / %server_avatar%</div>
+        <div class="welcome-image-upload">
+            <label class="cfg-row-label" for="w-welcome-file">迎新自定义大图</label>
+            <div class="cfg-row-hint">支持 PNG / JPG / GIF / WebP，最大 5 MB、4096×4096。上传后会优先使用这张图片。</div>
+            <input type="file" id="w-welcome-file" accept="image/png,image/jpeg,image/gif,image/webp" data-draft-ignore onchange="previewWelcomeImage('welcome',this)">
+            <div class="welcome-upload-actions">
+                <button type="button" class="tag-add-btn" id="w-welcome-upload" onclick="uploadWelcomeImage('welcome')">上传图片</button>
+                <button type="button" class="welcome-image-clear" id="w-welcome-clear" onclick="clearWelcomeImage('welcome')" hidden>清除图片</button>
+                <span class="welcome-image-state" id="w-welcome-image-state" role="status">尚未上传</span>
+            </div>
+            <img class="welcome-image-preview" id="w-welcome-image-preview" alt="迎新自定义图片预览" hidden>
+        </div>
+        <div class="welcome-image-fallback">
+            <label class="cfg-row-label" for="w-image">或使用图片链接</label>
+            <div class="cfg-row-hint" style="margin-bottom:8px;">没有上传图片时才会使用。可填图片链接或 %avatar% / %server_avatar%</div>
             <input class="cfg-input" id="w-image" placeholder="https://…（留空关闭）" style="max-width:100%;">
         </div>
         <div class="cfg-row compact-toggle">
-            <div class="cfg-row-info"><label class="cfg-row-label" for="w-card">附带欢迎横幅</label><div class="cfg-row-hint">成员加入时自动生成</div></div>
+            <div class="cfg-row-info"><label class="cfg-row-label" for="w-card">附带欢迎横幅</label><div class="cfg-row-hint">没有上传自定义图片时，成员加入会自动生成</div></div>
             <label class="cfg-tog"><input type="checkbox" id="w-card"><span class="track"></span><span class="thumb"></span></label>
         </div>
         </div>
@@ -166,6 +177,17 @@
         <div>
             <label class="cfg-row-label field-label" for="w-fmsg">道别内文</label>
             <textarea class="cfg-textarea" id="w-fmsg" placeholder="%member% 离开了我们... 👋"></textarea>
+        </div>
+        <div class="welcome-image-upload">
+            <label class="cfg-row-label" for="w-farewell-file">道别自定义大图</label>
+            <div class="cfg-row-hint">支持 PNG / JPG / GIF / WebP，最大 5 MB、4096×4096。</div>
+            <input type="file" id="w-farewell-file" accept="image/png,image/jpeg,image/gif,image/webp" data-draft-ignore onchange="previewWelcomeImage('farewell',this)">
+            <div class="welcome-upload-actions">
+                <button type="button" class="tag-add-btn" id="w-farewell-upload" onclick="uploadWelcomeImage('farewell')">上传图片</button>
+                <button type="button" class="welcome-image-clear" id="w-farewell-clear" onclick="clearWelcomeImage('farewell')" hidden>清除图片</button>
+                <span class="welcome-image-state" id="w-farewell-image-state" role="status">尚未上传</span>
+            </div>
+            <img class="welcome-image-preview" id="w-farewell-image-preview" alt="道别自定义图片预览" hidden>
         </div>
         </div>
     </details>
@@ -622,7 +644,7 @@
 <script>window.GID = "{{ guild.id }}";</script>
 <script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826c"></script>
 <script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826c"></script>
-<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20260826c"></script>
-<script src="{{ url_for('static', filename='js/server.js') }}?v=20260826c"></script>
+<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20260830a"></script>
+<script src="{{ url_for('static', filename='js/server.js') }}?v=20260830a"></script>
 </body>
 </html>

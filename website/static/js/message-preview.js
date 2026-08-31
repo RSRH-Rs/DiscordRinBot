@@ -53,15 +53,21 @@ window.DashboardPreview = (() => {
         const embed=document.createElement('div');embed.className='preview-embed';
         embed.append(textNode('strong','preview-title',value('w-title').trim()||'欢迎来到 '+guild));
         embed.append(textNode('p','preview-body',formatWelcome(value('w-msg'),guild)));
-        const thumb=imageKind(value('w-thumb'),true),big=imageKind(value('w-image'));
+        const uploadedWelcome=window.WelcomeImageUploads?.has('welcome');
+        const uploadedFarewell=window.WelcomeImageUploads?.has('farewell');
+        const thumb=imageKind(value('w-thumb'),true),big=uploadedWelcome?'none':imageKind(value('w-image'));
         if(thumb!=='none')embed.append(imagePlaceholder(thumb));
+        if(uploadedWelcome)embed.append(textNode('div','preview-image-large','已上传的迎新图片'));
         if(big!=='none')embed.append(imagePlaceholder(big,true));
         target.replaceChildren();
         if(!el('w-enabled').checked)target.append(textNode('p','preview-notice','欢迎消息未开启。下面先看看文案，不会发送哦。'));
         target.append(bubble(embed));
-        if(el('w-card').checked)target.append(textNode('p','preview-notice','还会附带自动生成的欢迎横幅，实际图片在成员加入时生成。'));
+        if(el('w-card').checked&&!uploadedWelcome)target.append(textNode('p','preview-notice','还会附带自动生成的欢迎横幅，实际图片在成员加入时生成。'));
         const farewell=textNode('p','preview-body','道别：'+formatWelcome(value('w-fmsg'),guild));
-        if(value('w-fch')!=='0')target.append(farewell);
+        if(value('w-fch')!=='0'){
+            target.append(farewell);
+            if(uploadedFarewell)target.append(textNode('div','preview-image-large','已上传的道别图片'));
+        }
     }
     function refreshRoles(){
         const target=el('roles-preview-content');if(!target)return;
@@ -108,8 +114,8 @@ window.DashboardPreview = (() => {
     function refresh(){
         refreshWelcome();refreshRoles();
         const statuses={
-            appearance:[value('w-title')||value('w-thumb')||value('w-image')?'自定义外观':'',el('w-card')?.checked?'附带横幅':''].filter(Boolean).join(' · ')||'默认外观',
-            farewell:value('w-fch')&&value('w-fch')!=='0'?'已选频道':'不发送',
+            appearance:[value('w-title')||value('w-thumb')||value('w-image')||window.WelcomeImageUploads?.has('welcome')?'自定义外观':'',el('w-card')?.checked&&!window.WelcomeImageUploads?.has('welcome')?'附带横幅':''].filter(Boolean).join(' · ')||'默认外观',
+            farewell:value('w-fch')&&value('w-fch')!=='0'?(window.WelcomeImageUploads?.has('farewell')?'已选频道 · 有图片':'已选频道'):'不发送',
             autoroles:'已选 '+document.querySelectorAll('#w-roles input:checked').length+' 个'
         };
         document.querySelectorAll('[data-optional-status]').forEach(node=>{node.textContent=statuses[node.dataset.optionalStatus];});

@@ -12,11 +12,23 @@ from discord.ui import View, Select, ChannelSelect, RoleSelect
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 import io
 import os
+import re
 import aiosqlite
 from _botlog_helper import audit
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "welcome.db"
+)
+WELCOME_UPLOAD_DIR = os.path.abspath(
+    os.environ.get(
+        "RINBOT_WELCOME_UPLOAD_DIR",
+        os.path.join(os.path.dirname(DB_PATH), "uploads", "welcome"),
+    )
+)
+_MAX_CUSTOM_IMAGE_BYTES = 5 * 1024 * 1024
+_CUSTOM_IMAGE_NAME = re.compile(
+    r"^(?P<gid>[1-9][0-9]*)-(?P<kind>welcome|farewell)-[0-9a-f]{16}"
+    r"(?P<suffix>\.png|\.jpg|\.gif|\.webp)$"
 )
 
 
@@ -151,7 +163,9 @@ class Welcome(commands.Cog):
                     author_icon TEXT DEFAULT '',
                     thumbnail_url TEXT DEFAULT '',
                     enabled INTEGER DEFAULT 1,
-                    image_url TEXT DEFAULT ''
+                    image_url TEXT DEFAULT '',
+                    welcome_image_file TEXT DEFAULT '',
+                    farewell_image_file TEXT DEFAULT ''
                 )
             """)
             # 旧库补列
@@ -162,6 +176,8 @@ class Welcome(commands.Cog):
                 "thumbnail_url TEXT DEFAULT ''",
                 "enabled INTEGER DEFAULT 1",
                 "image_url TEXT DEFAULT ''",
+                "welcome_image_file TEXT DEFAULT ''",
+                "farewell_image_file TEXT DEFAULT ''",
             ):
                 try:
                     await db.execute(f"ALTER TABLE welcome_config ADD COLUMN {ddl}")
@@ -344,6 +360,50 @@ class Welcome(commands.Cog):
         )
         return discord.File(fp=buf, filename="welcome.png")
 
+    @staticmethod
+    def _custom_image_path(config, kind):
+        if kind not in ("welcome", "farewell"):
+            return None
+        filename = config.get(f"{kind}_image_file") or ""
+        if not isinstance(filename, str) or os.path.basename(filename) != filename:
+            return None
+        match = _CUSTOM_IMAGE_NAME.fullmatch(filename)
+        if (
+            not match
+            or int(match.group("gid")) != int(config.get("guild_id", 0))
+            or match.group("kind") != kind
+        ):
+            return None
+        root = os.path.realpath(WELCOME_UPLOAD_DIR)
+        path = os.path.realpath(os.path.join(root, filename))
+        try:
+            if os.path.commonpath((root, path)) != root:
+                return None
+        except ValueError:
+            return None
+        try:
+            if (
+                os.path.islink(path)
+                or not os.path.isfile(path)
+                or os.path.getsize(path) < 1
+                or os.path.getsize(path) > _MAX_CUSTOM_IMAGE_BYTES
+            ):
+                return None
+        except OSError:
+            return None
+        return path
+
+    def _custom_image_file(self, config, kind):
+        path = self._custom_image_path(config, kind)
+        if not path:
+            return None
+        suffix = os.path.splitext(path)[1].lower()
+        filename = f"{kind}_custom{suffix}"
+        try:
+            return discord.File(path, filename=filename), filename
+        except OSError:
+            return None
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         if member.bot:
@@ -378,7 +438,12 @@ class Welcome(commands.Cog):
         if embed is None:
             return
         files = []
-        if config.get("show_card", 0):
+        custom_image = self._custom_image_file(config, "welcome")
+        if custom_image:
+            custom_file, custom_filename = custom_image
+            files.append(custom_file)
+            embed.set_image(url=f"attachment://{custom_filename}")
+        elif config.get("show_card", 0):
             card = await self._render_card_file(member)
             files.append(card)
             embed.set_image(url="attachment://welcome.png")
@@ -412,7 +477,13 @@ class Welcome(commands.Cog):
         )
         embed.set_thumbnail(url=member.display_avatar.url)
         embed.set_footer(text=f"当前成员数: {member.guild.member_count}")
-        await channel.send(embed=embed)
+        files = []
+        custom_image = self._custom_image_file(config, "farewell")
+        if custom_image:
+            custom_file, custom_filename = custom_image
+            files.append(custom_file)
+            embed.set_image(url=f"attachment://{custom_filename}")
+        await channel.send(embed=embed, files=files)
 
     # ─── 配置指令 ───
 
@@ -468,7 +539,12 @@ class Welcome(commands.Cog):
             await ctx.send("ℹ️ 欢迎讯息当前已停用。", ephemeral=True)
             return
         files = []
-        if config.get("show_card", 0):
+        custom_image = self._custom_image_file(config, "welcome")
+        if custom_image:
+            custom_file, custom_filename = custom_image
+            files.append(custom_file)
+            embed.set_image(url=f"attachment://{custom_filename}")
+        elif config.get("show_card", 0):
             card = await self._render_card_file(ctx.author)
             files.append(card)
             embed.set_image(url="attachment://welcome.png")
