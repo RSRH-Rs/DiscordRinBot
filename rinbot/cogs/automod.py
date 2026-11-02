@@ -4,12 +4,13 @@ import aiosqlite
 import json
 import os
 import time
-import re
-from urllib.parse import urlparse
 from collections import defaultdict
 from typing import Literal
 
+from discord.ext import tasks
+
 from _botlog_helper import audit
+from rincore.textmatch import find_badword, find_links, host_of, is_whitelisted
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "automod.db"
@@ -24,8 +25,8 @@ class AutoMod(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        # 刷屏检测缓存: {guild_id: {user_id: [timestamp, ...]}}
-        self._msg_cache: dict[int, dict[int, list[float]]] = defaultdict(
+        # 刷屏检测缓存: {guild_id: {user_id: [(timestamp, channel_id, message_id), ...]}}
+        self._msg_cache: dict[int, dict[int, list[tuple[float, int, int]]]] = defaultdict(
             lambda: defaultdict(list)
         )
         # 重复消息缓存: {guild_id: {user_id: [(content, timestamp), ...]}}
@@ -65,9 +66,12 @@ class AutoMod(commands.Cog):
         watcher = getattr(self.bot, "change_watcher", None)
         if watcher is not None:
             watcher.register("automod", self.reload_guild)
+        if not self._prune_caches.is_running():
+            self._prune_caches.start()
         print("✅ 自动审核系统已准备就绪！")
 
     def cog_unload(self):
+        self._prune_caches.cancel()
         watcher = getattr(self.bot, "change_watcher", None)
         if watcher is not None:
             watcher.unregister("automod", self.reload_guild)
@@ -90,6 +94,52 @@ class AutoMod(commands.Cog):
                     f"log_channel={c.get('log_channel')} "
                     f"anti_spam={c.get('anti_spam')} anti_repeat={c.get('anti_repeat')}"
                 )
+
+    @staticmethod
+    def _prune_cache(cache: dict, ts_index: int, cutoff: float):
+        """删除最近一条记录早于 cutoff 的用户条目，以及清空后的服务器条目。"""
+        for guild_id in list(cache):
+            users = cache[guild_id]
+            for user_id in list(users):
+                entries = users[user_id]
+                if not entries or entries[-1][ts_index] < cutoff:
+                    del users[user_id]
+            if not users:
+                del cache[guild_id]
+
+    @tasks.loop(minutes=10)
+    async def _prune_caches(self):
+        cutoff = time.time() - 60
+        self._prune_cache(self._msg_cache, 0, cutoff)
+        self._prune_cache(self._repeat_cache, 1, cutoff)
+
+    async def _delete_spam_messages(self, guild: discord.Guild, entries, current_channel):
+        """按频道批量删除刷屏窗口内的消息；批量失败则逐条尽力删除。"""
+        by_channel = defaultdict(list)
+        for _, channel_id, message_id in entries:
+            by_channel[channel_id].append(message_id)
+        for channel_id, message_ids in by_channel.items():
+            if current_channel.id == channel_id:
+                channel = current_channel
+            else:
+                channel = guild.get_channel_or_thread(channel_id)
+            if channel is None:
+                continue
+            if len(message_ids) >= 2:
+                try:
+                    await channel.delete_messages(
+                        [discord.Object(id=mid) for mid in message_ids]
+                    )
+                    continue
+                except discord.HTTPException:
+                    pass  # 含 Forbidden；回退为逐条删除
+            for mid in message_ids:
+                try:
+                    await channel.get_partial_message(mid).delete()
+                except discord.Forbidden:
+                    break
+                except discord.HTTPException:
+                    pass
 
     # 网页仪表盘保存后由变更日志回调：只重读该服务器的一行配置
     async def reload_guild(self, guild_id: int):
@@ -226,14 +276,20 @@ class AutoMod(commands.Cog):
             threshold = cfg.get("spam_threshold", 5)
             interval = cfg.get("spam_interval", 5)
 
-            self._msg_cache[guild_id][user_id].append(now)
+            self._msg_cache[guild_id][user_id].append(
+                (now, message.channel.id, message.id)
+            )
             # 清理过期记录
             self._msg_cache[guild_id][user_id] = [
-                t for t in self._msg_cache[guild_id][user_id] if now - t < interval
+                e for e in self._msg_cache[guild_id][user_id] if now - e[0] < interval
             ]
 
             if len(self._msg_cache[guild_id][user_id]) >= threshold:
-                self._msg_cache[guild_id][user_id].clear()
+                spam_entries = self._msg_cache[guild_id][user_id]
+                self._msg_cache[guild_id][user_id] = []
+                await self._delete_spam_messages(
+                    message.guild, spam_entries, message.channel
+                )
                 mute_dur = cfg.get("mute_duration", 300)
                 await self._mute_user(message.author, "刷屏", mute_dur)
                 try:
@@ -297,30 +353,28 @@ class AutoMod(commands.Cog):
             except json.JSONDecodeError:
                 badwords = []
 
-            msg_lower = message.content.lower()
-            for word in badwords:
-                if word.lower() in msg_lower:
-                    try:
-                        await message.delete()
-                        await message.channel.send(
-                            f"⚠️ {message.author.mention} 你的消息包含违禁内容，已被小凛删除。",
-                            delete_after=8,
-                        )
-                    except discord.Forbidden:
-                        pass
-                    embed = discord.Embed(
-                        title="🚫 违禁词",
-                        description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**触发词:** ||{word}||",
-                        color=discord.Color.red(),
-                        timestamp=discord.utils.utcnow(),
+            word = find_badword(message.content, badwords)
+            if word is not None:
+                try:
+                    await message.delete()
+                    await message.channel.send(
+                        f"⚠️ {message.author.mention} 你的消息包含违禁内容，已被小凛删除。",
+                        delete_after=8,
                     )
-                    await self._log_action(message.guild, embed)
-                    return
+                except discord.Forbidden:
+                    pass
+                embed = discord.Embed(
+                    title="🚫 违禁词",
+                    description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**触发词:** ||{word}||",
+                    color=discord.Color.red(),
+                    timestamp=discord.utils.utcnow(),
+                )
+                await self._log_action(message.guild, embed)
+                return
 
         # ── 4. 链接过滤 ──
         if cfg.get("anti_link"):
-            url_pattern = re.compile(r"https?://\S+", re.IGNORECASE)
-            urls = url_pattern.findall(message.content)
+            urls = find_links(message.content)
 
             if urls:
                 try:
@@ -329,16 +383,7 @@ class AutoMod(commands.Cog):
                     whitelist = []
 
                 for url in urls:
-                    host = (urlparse(url).hostname or "").lower().rstrip(".")
-                    is_whitelisted = any(
-                        host == str(domain).lower().strip().lstrip("*.").rstrip(".")
-                        or host.endswith(
-                            "." + str(domain).lower().strip().lstrip("*.").rstrip(".")
-                        )
-                        for domain in whitelist
-                        if str(domain).strip()
-                    )
-                    if not is_whitelisted:
+                    if not is_whitelisted(host_of(url), whitelist):
                         try:
                             await message.delete()
                             await message.channel.send(
@@ -375,6 +420,13 @@ class AutoMod(commands.Cog):
                         )
                     except discord.Forbidden:
                         pass
+                    embed = discord.Embed(
+                        title="📢 大写轰炸",
+                        description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**内容:** {text[:100]}",
+                        color=discord.Color.orange(),
+                        timestamp=discord.utils.utcnow(),
+                    )
+                    await self._log_action(message.guild, embed)
                     return
 
     # ─── 配置指令 ───
