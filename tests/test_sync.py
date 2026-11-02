@@ -1,5 +1,5 @@
 import asyncio
-import os
+import sqlite3
 import time
 
 import pytest
@@ -173,15 +173,30 @@ async def test_loop_survives_raising_iteration(tmp_path):
 
 
 async def test_failed_init_retries_and_does_not_replay(tmp_path):
-    path = tmp_path / "sync.db"
-    path.mkdir()
-    watcher = sync.ChangeWatcher(path=str(path), interval=0.01)
+    path = str(tmp_path / "sync.db")
+    # 初始化前已存在的记录 (guild 1)：游标必须定位到 MAX(id)，不得回放
+    await sync.notify("automod", 1, path=path)
+    watcher = sync.ChangeWatcher(path=path, interval=0.01)
     seen = []
 
     async def cb(guild_id):
         seen.append(guild_id)
 
     watcher.register("automod", cb)
+
+    # 用事件控制 _init 何时能成功，不再靠文件系统替换制造失败（避免与 aiosqlite 工作线程竞争）
+    real_init = watcher._init
+    allow_init = asyncio.Event()
+    init_attempts = 0
+
+    async def gated_init():
+        nonlocal init_attempts
+        init_attempts += 1
+        if not allow_init.is_set():
+            raise sqlite3.OperationalError("unable to open database file")
+        await real_init()
+
+    watcher._init = gated_init
 
     # 收到回调后再多轮询几次确认没有回放，然后把循环停在纯 await 上，
     # 让 stop() 的取消不落在 aiosqlite 调用中间
@@ -201,16 +216,17 @@ async def test_failed_init_retries_and_does_not_replay(tmp_path):
         return n
 
     watcher.poll_once = parking
-    await watcher.start()  # 初始化失败
+    await watcher.start()  # 初始化失败：不抛出
     try:
-        # 在别处准备一个已有记录的库，再原子地换到目标路径
-        staged = str(tmp_path / "staged.db")
-        await sync.notify("automod", 1, path=staged)
-        path.rmdir()
-        os.replace(staged, str(path))
+        assert not watcher._ready
+        # 后台循环多次重试 _init 且都失败：期间不轮询、不分发
+        assert await _wait_for(lambda: init_attempts >= 4)
+        assert not watcher._ready
+        assert seen == []
 
+        allow_init.set()
         assert await _wait_for(lambda: watcher._ready)
-        await sync.notify("automod", 2, path=str(path))
+        await sync.notify("automod", 2, path=path)
         await asyncio.wait_for(parked.wait(), 5)
         assert seen == [2]  # 初始化前已存在的记录 (guild 1) 没有被回放
     finally:
