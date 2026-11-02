@@ -235,6 +235,7 @@ class Leveling(commands.Cog):
 
     # --- 🖼️ Rank 指令 ---
     @commands.hybrid_command(name="rank", description="查看你的等级卡片")
+    @commands.guild_only()
     async def rank(self, ctx, member: discord.Member = None):
         member = member or ctx.author
         await ctx.defer()  # 告诉 Discord 机器人正在思考，防止超时
@@ -295,6 +296,7 @@ class Leveling(commands.Cog):
     @commands.hybrid_command(
         name="leaderboard", aliases=["top", "lb"], description="查看服务器等级排行榜"
     )
+    @commands.guild_only()
     async def leaderboard(self, ctx, page: int = 1):
         if page < 1:
             page = 1

@@ -16,7 +16,7 @@ import aiohttp
 import json
 import os
 from typing import Optional
-from _botlog_helper import audit
+from _botlog_helper import audit, check_component
 from rincore import roles
 
 DB_PATH = os.path.join(
@@ -213,6 +213,7 @@ class ReactionRoles(commands.Cog):
     @commands.hybrid_command(
         name="rr_create", description="[管理] 创建一个反应身份组面板"
     )
+    @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def rr_create(
         self,
@@ -274,6 +275,7 @@ class ReactionRoles(commands.Cog):
     @commands.hybrid_command(
         name="rr_add", description="[管理] 向面板添加 emoji → 身份组 映射"
     )
+    @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def rr_add(self, ctx, message_id: str, emoji: str, role: discord.Role):
         """
@@ -334,6 +336,7 @@ class ReactionRoles(commands.Cog):
     @commands.hybrid_command(
         name="rr_remove", description="[管理] 从面板移除一个 emoji 映射"
     )
+    @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def rr_remove(self, ctx, message_id: str, emoji: str):
         await ctx.defer(ephemeral=True)
@@ -380,6 +383,7 @@ class ReactionRoles(commands.Cog):
     @commands.hybrid_command(
         name="rr_list", description="[管理] 列出所有反应身份组面板"
     )
+    @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def rr_list(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
@@ -413,6 +417,7 @@ class ReactionRoles(commands.Cog):
     @commands.hybrid_command(
         name="rr_exclusive", description="[管理] 切换面板的单选/多选模式"
     )
+    @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def rr_exclusive(self, ctx, message_id: str, enabled: bool):
         """
@@ -445,6 +450,7 @@ class ReactionRoles(commands.Cog):
     @commands.hybrid_command(
         name="rr_delete", description="[管理] 删除一个反应身份组面板"
     )
+    @commands.guild_only()
     @commands.has_permissions(manage_roles=True)
     async def rr_delete(self, ctx, message_id: str):
         await ctx.defer(ephemeral=True)
@@ -578,6 +584,8 @@ class ReactionRoles(commands.Cog):
             return
         custom_id = interaction.data.get("custom_id", "")
         if not custom_id.startswith("rr:"):
+            return
+        if not await check_component(self.bot, interaction):
             return
         if not interaction.guild:
             return

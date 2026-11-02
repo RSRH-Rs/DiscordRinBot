@@ -535,6 +535,7 @@ class ServerLog(commands.Cog):
             )
 
     @serverlog.command(name="channel", description="[管理] 设置日志频道并开启记录")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def sl_channel(self, ctx, channel: discord.TextChannel):
         cfg = self._ensure(ctx.guild.id)
@@ -550,6 +551,7 @@ class ServerLog(commands.Cog):
         await ctx.send(f"✅ 审计日志已开启，记录到 {channel.mention}", ephemeral=True)
 
     @serverlog.command(name="toggle", description="[管理] 开关某个事件分类")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def sl_toggle(
         self,
@@ -579,6 +581,7 @@ class ServerLog(commands.Cog):
         )
 
     @serverlog.command(name="enable", description="[管理] 启用审计日志")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def sl_enable(self, ctx):
         cfg = self._ensure(ctx.guild.id)
@@ -592,6 +595,7 @@ class ServerLog(commands.Cog):
         await ctx.send("✅ 审计日志已启用。", ephemeral=True)
 
     @serverlog.command(name="disable", description="[管理] 停用审计日志")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def sl_disable(self, ctx):
         cfg = self._ensure(ctx.guild.id)
@@ -600,6 +604,7 @@ class ServerLog(commands.Cog):
         await ctx.send("🛑 审计日志已停用（配置保留）。", ephemeral=True)
 
     @serverlog.command(name="ignore", description="[管理] 忽略某个频道的日志")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def sl_ignore(self, ctx, channel: discord.TextChannel):
         cfg = self._ensure(ctx.guild.id)
@@ -608,6 +613,7 @@ class ServerLog(commands.Cog):
         await ctx.send(f"🙈 已忽略 {channel.mention} 的消息日志。", ephemeral=True)
 
     @serverlog.command(name="unignore", description="[管理] 取消忽略某个频道")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def sl_unignore(self, ctx, channel: discord.TextChannel):
         cfg = self._ensure(ctx.guild.id)
@@ -616,6 +622,7 @@ class ServerLog(commands.Cog):
         await ctx.send(f"👀 已恢复 {channel.mention} 的消息日志。", ephemeral=True)
 
     @serverlog.command(name="status", description="查看当前审计日志配置")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def sl_status(self, ctx):
         cfg = self.get_config(ctx.guild.id)

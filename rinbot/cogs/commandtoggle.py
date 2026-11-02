@@ -140,6 +140,7 @@ class CommandToggle(commands.Cog):
     # ── Discord 指令 ──
 
     @commands.hybrid_command(name="toggle", description="[管理] 启用/禁用指定指令")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def toggle_cmd(self, ctx, command_name: str):
         """command_name: 要切换的指令名 (如 play, kick, roll)"""
@@ -173,6 +174,7 @@ class CommandToggle(commands.Cog):
     @commands.hybrid_command(
         name="togglelist", description="[管理] 查看所有已禁用的指令"
     )
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def toggle_list(self, ctx):
         disabled = self._disabled.get(ctx.guild.id, set())

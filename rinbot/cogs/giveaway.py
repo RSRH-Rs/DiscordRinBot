@@ -16,7 +16,7 @@ import time
 import asyncio
 import os
 from typing import Optional
-from _botlog_helper import audit
+from _botlog_helper import audit, check_component
 from rincore import durations
 from rincore.throttle import Debouncer
 
@@ -33,6 +33,9 @@ class GiveawayEntryButton(View):
 
     def __init__(self):
         super().__init__(timeout=None)  # 持久化
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return await check_component(interaction.client, interaction)
 
     @discord.ui.button(
         label="🎉 参加抽奖!",
@@ -356,6 +359,7 @@ class Giveaway(commands.Cog):
             )
 
     @giveaway_group.command(name="start", description="发起一个抽奖活动")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def gw_start(self, ctx, duration: str, winners: int = 1, *, prize: str):
         """
@@ -424,6 +428,7 @@ class Giveaway(commands.Cog):
         )
 
     @giveaway_group.command(name="end", description="[管理] 提前结束一个抽奖")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def gw_end(self, ctx, giveaway_id: int):
         async with aiosqlite.connect(DB_PATH) as db:
@@ -449,6 +454,7 @@ class Giveaway(commands.Cog):
         )
 
     @giveaway_group.command(name="reroll", description="[管理] 重新抽取获奖者")
+    @commands.guild_only()
     @commands.has_permissions(manage_guild=True)
     async def gw_reroll(self, ctx, giveaway_id: int, count: int = 1):
         if count < 1 or count > 20:
@@ -486,6 +492,7 @@ class Giveaway(commands.Cog):
             await ctx.send("❌ 没有新的合格参与者可以 Reroll。")
 
     @giveaway_group.command(name="list", description="查看当前活跃的抽奖活动")
+    @commands.guild_only()
     async def gw_list(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(

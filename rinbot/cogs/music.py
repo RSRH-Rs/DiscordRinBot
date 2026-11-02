@@ -23,6 +23,7 @@ def _ytdl_run(query: str, opts: dict):
         return ydl.extract_info(query, download=False)
 
 from config import YTDL_OPTIONS, FFMPEG_OPTIONS
+from _botlog_helper import check_component
 
 try:
     from config import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
@@ -143,6 +144,9 @@ class NowPlayingView(View):
         self.music_cog = music_cog
         self.ctx = ctx
         self.state = state
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return await check_component(interaction.client, interaction)
 
     async def _can_control(self, interaction: discord.Interaction) -> bool:
         """按钮控制必须遵守 DJ 配置，并且用户要在 Bot 所在语音频道。"""
@@ -320,6 +324,9 @@ class SearchView(View):
         select = discord.ui.Select(placeholder="选择要播放的歌曲…", options=options)
         select.callback = self._on_select
         self.add_item(select)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return await check_component(interaction.client, interaction)
 
     async def _on_select(self, interaction: discord.Interaction):
         if interaction.user.id != self.ctx.author.id:
@@ -596,11 +603,10 @@ class Music(commands.Cog):
                     botlog = self.bot.get_cog("BotLog")
                     if botlog:
                         asyncio.run_coroutine_threadsafe(
-                            botlog.log(
+                            botlog.report_exception(
                                 guild_id,
-                                "error",
                                 "音乐播放连续失败,已停止队列",
-                                f"```{str(error)[:500]}```",
+                                error,
                                 **{"失败次数": str(state.fail_count)},
                             ),
                             self.bot.loop,
@@ -1061,6 +1067,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="skip", aliases=["s", "next"], description="跳过当前歌曲（或投票跳过）"
     )
+    @commands.guild_only()
     async def skip(self, ctx):
         if not await self._require_voice_control(ctx):
             return
@@ -1097,6 +1104,7 @@ class Music(commands.Cog):
         aliases=["dc", "disconnect", "leave"],
         description="停止播放、清空队列并离开",
     )
+    @commands.guild_only()
     async def stop(self, ctx):
         if not await self._require_voice_control(ctx):
             return
@@ -1115,6 +1123,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="nowplaying", aliases=["np"], description="查看正在播放的歌曲"
     )
+    @commands.guild_only()
     async def nowplaying(self, ctx):
         state = self._get_state(ctx.guild.id)
         if not state.current:
@@ -1133,6 +1142,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="queue", aliases=["q", "list"], description="查看播放队列"
     )
+    @commands.guild_only()
     @discord.app_commands.describe(page="队列页码，默认第 1 页")
     async def queue(self, ctx, page: int = 1):
         state = self._get_state(ctx.guild.id)
@@ -1187,6 +1197,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="remove", aliases=["rm"], description="从队列中移除指定位置的歌曲"
     )
+    @commands.guild_only()
     async def remove(self, ctx, position: int):
         if not await self._require_voice_control(ctx):
             return
@@ -1203,6 +1214,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="clear", aliases=["cls"], description="清空播放队列（不影响当前播放）"
     )
+    @commands.guild_only()
     async def clear_queue(self, ctx):
         if not await self._require_voice_control(ctx):
             return
@@ -1214,6 +1226,7 @@ class Music(commands.Cog):
     # ─── 指令：shuffle ───
 
     @commands.hybrid_command(name="shuffle", description="随机打乱队列顺序")
+    @commands.guild_only()
     async def shuffle(self, ctx):
         if not await self._require_voice_control(ctx):
             return
@@ -1231,6 +1244,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="loop", aliases=["repeat"], description="设置循环模式"
     )
+    @commands.guild_only()
     async def loop(self, ctx, mode: Literal["off", "single", "queue"] = None):
         if not await self._require_voice_control(ctx):
             return
@@ -1249,6 +1263,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="volume", aliases=["vol"], description="调整音量 (0-100，最高可放大到 150)"
     )
+    @commands.guild_only()
     @discord.app_commands.describe(level="音量百分比，建议 30–100")
     async def volume(self, ctx, level: int = None):
         state = self._get_state(ctx.guild.id)
@@ -1267,6 +1282,7 @@ class Music(commands.Cog):
     # ─── 指令：move ───
 
     @commands.hybrid_command(name="move", description="移动队列中的歌曲位置")
+    @commands.guild_only()
     async def move(self, ctx, from_pos: int, to_pos: int):
         if not await self._require_voice_control(ctx):
             return
@@ -1286,6 +1302,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="saveq", aliases=["savequeue"], description="保存当前队列为存档（可命名）"
     )
+    @commands.guild_only()
     async def saveq(self, ctx, *, name: str = "default"):
         state = self._get_state(ctx.guild.id)
         songs = ([state.current] if state.current else []) + list(state.queue)
@@ -1319,6 +1336,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="loadq", aliases=["loadqueue"], description="载入已保存的队列存档"
     )
+    @commands.guild_only()
     async def loadq(self, ctx, *, name: str = "default"):
         if not await self._require_dj(ctx):
             return
@@ -1362,6 +1380,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="queues", aliases=["savedqueues", "qlist"], description="查看已保存的队列存档"
     )
+    @commands.guild_only()
     async def queues(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
             cur = await db.execute(
@@ -1382,6 +1401,7 @@ class Music(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.hybrid_command(name="delqueue", aliases=["delq"], description="删除一个队列存档")
+    @commands.guild_only()
     async def delqueue(self, ctx, *, name: str):
         if not await self._require_dj(ctx):
             return

@@ -7,8 +7,14 @@ from discord.ext import commands
 import aiosqlite
 import traceback
 import os
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
+
+try:
+    from config import DEV_GUILD_ID
+except ImportError:
+    DEV_GUILD_ID = 0
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "botlog.db"
@@ -20,6 +26,11 @@ LEVEL_META = {
     "info": {"emoji": "ℹ️", "color": 0x85B7EB, "label": "信息"},
     "config": {"emoji": "⚙️", "color": 0x5A9E6F, "label": "配置变更"},
 }
+
+
+def new_error_id() -> str:
+    """8 位大写十六进制错误编号，用户与日志据此对应"""
+    return uuid.uuid4().hex[:8].upper()
 
 
 class BotLog(commands.Cog):
@@ -148,6 +159,56 @@ class BotLog(commands.Cog):
         except (discord.Forbidden, discord.HTTPException):
             pass
 
+    async def report_exception(
+        self, guild_id: Optional[int], title: str, exc: BaseException, **fields
+    ) -> str:
+        """上报未预期的异常，返回错误编号。永远不会抛出异常（供错误处理器调用）。
+
+        完整 traceback 只发到开发服务器(DEV_GUILD_ID)的 bot 日志并打印到 journal；
+        来源服务器的日志只收到不含 traceback 的“出错了（错误编号）”条目。
+        同一个异常对象只上报一次，重复调用返回同一个编号。
+        """
+        existing = getattr(exc, "_rinbot_error_id", None)
+        if existing:
+            return existing
+        error_id = new_error_id()
+        try:
+            exc._rinbot_error_id = error_id
+        except Exception:
+            pass
+        try:
+            tb = "".join(
+                traceback.format_exception(type(exc), exc, exc.__traceback__)
+            )
+        except Exception:
+            tb = repr(exc)
+        print(f"[error {error_id}] {title} (guild {guild_id})\n{tb}")
+
+        if DEV_GUILD_ID:
+            try:
+                await self.log(
+                    DEV_GUILD_ID,
+                    "error",
+                    f"{title}（错误编号 {error_id}）",
+                    f"```py\n{tb[-1500:]}\n```",
+                    **{"来源服务器": guild_id if guild_id is not None else "私信"},
+                    **fields,
+                )
+            except Exception:
+                pass
+        if guild_id is not None and guild_id != DEV_GUILD_ID:
+            try:
+                await self.log(
+                    guild_id,
+                    "error",
+                    f"出错了（错误编号 {error_id}）",
+                    title,
+                    **fields,
+                )
+            except Exception:
+                pass
+        return error_id
+
     # ─── 全局命令错误监听 ───
 
     @commands.Cog.listener()
@@ -161,22 +222,25 @@ class BotLog(commands.Cog):
                 commands.MissingPermissions,
                 commands.MissingRequiredArgument,
                 commands.BadArgument,
+                commands.UserInputError,
+                commands.CommandOnCooldown,
             ),
         ):
             return
-        if not ctx.guild:
-            return
         cmd = ctx.command.qualified_name if ctx.command else "未知指令"
-        tb = "".join(
-            traceback.format_exception(type(error), error, error.__traceback__)
-        )
-        await self.log(
-            ctx.guild.id,
-            "error",
+        original = error
+        while getattr(original, "original", None) is not None:
+            original = original.original
+        await self.report_exception(
+            ctx.guild.id if ctx.guild else None,
             f"指令执行失败: /{cmd}",
-            f"```py\n{tb[-1500:]}\n```",
-            **{"用户": ctx.author.mention, "频道": ctx.channel.mention},
+            original,
+            **{
+                "用户": ctx.author.mention,
+                "频道": getattr(ctx.channel, "mention", "私信"),
+            },
         )
+
 
 async def setup(bot):
     await bot.add_cog(BotLog(bot))

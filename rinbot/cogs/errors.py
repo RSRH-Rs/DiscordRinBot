@@ -5,6 +5,14 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import traceback
+import uuid
+
+
+def _root_exception(error) -> BaseException:
+    """剥掉 CommandInvokeError / HybridCommandError 等包装，取最里层的真实异常"""
+    while getattr(error, "original", None) is not None:
+        error = error.original
+    return error
 
 
 def _friendly(error) -> str | None:
@@ -53,6 +61,22 @@ class ErrorHandler(commands.Cog):
         if self._old_tree_error:
             self.bot.tree.on_error = self._old_tree_error
 
+    async def _report(self, guild_id, title, exc, **fields) -> str:
+        """未知错误统一上报，返回错误编号；上报本身绝不抛出异常"""
+        botlog = self.bot.get_cog("BotLog")
+        if botlog:
+            try:
+                return await botlog.report_exception(guild_id, title, exc, **fields)
+            except Exception:
+                pass
+        error_id = uuid.uuid4().hex[:8].upper()
+        try:
+            tb = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+        except Exception:
+            tb = repr(exc)
+        print(f"[error {error_id}] {title} (guild {guild_id})\n{tb}")
+        return error_id
+
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         if (ctx.command and ctx.command.has_error_handler()) or (
@@ -63,8 +87,16 @@ class ErrorHandler(commands.Cog):
         if msg is None:
             return
         if msg == "__UNEXPECTED__":
-            print(f"[error] {ctx.command}: {getattr(error, 'original', error)!r}")
-            msg = "😵 出了点问题，已记录，请稍后再试。"
+            error_id = await self._report(
+                ctx.guild.id if ctx.guild else None,
+                f"指令执行失败: /{ctx.command.qualified_name if ctx.command else '未知指令'}",
+                _root_exception(error),
+                **{
+                    "用户": ctx.author.mention,
+                    "频道": getattr(ctx.channel, "mention", "私信"),
+                },
+            )
+            msg = f"😵 出了点问题（错误编号 {error_id}），请稍后再试。"
         try:
             await ctx.send(msg, ephemeral=True)
         except Exception:
@@ -75,34 +107,16 @@ class ErrorHandler(commands.Cog):
         if msg is None:
             return
         if msg == "__UNEXPECTED__":
-            original = getattr(error, "original", error)
-            if interaction.guild:
-                botlog = self.bot.get_cog("BotLog")
-                if botlog:
-                    tb = "".join(
-                        traceback.format_exception(
-                            type(original), original, original.__traceback__
-                        )
-                    )
-                    try:
-                        await botlog.log(
-                            interaction.guild.id,
-                            "error",
-                            f"Slash 指令执行失败: /{getattr(interaction.command, 'qualified_name', '未知指令')}",
-                            f"```py\n{tb[-1500:]}\n```",
-                            **{
-                                "用户": interaction.user.mention,
-                                "频道": interaction.channel.mention
-                                if interaction.channel
-                                else "私信",
-                            },
-                        )
-                    except Exception:
-                        pass
-            print(
-                f"[app error] {getattr(interaction.command, 'name', None)}: {getattr(error, 'original', error)!r}"
+            error_id = await self._report(
+                interaction.guild.id if interaction.guild else None,
+                f"Slash 指令执行失败: /{getattr(interaction.command, 'qualified_name', '未知指令')}",
+                _root_exception(error),
+                **{
+                    "用户": interaction.user.mention,
+                    "频道": getattr(interaction.channel, "mention", "私信"),
+                },
             )
-            msg = "😵 出了点问题，已记录，请稍后再试。"
+            msg = f"😵 出了点问题（错误编号 {error_id}），请稍后再试。"
         try:
             if interaction.response.is_done():
                 await interaction.followup.send(msg, ephemeral=True)
