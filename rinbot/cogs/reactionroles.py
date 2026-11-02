@@ -410,14 +410,12 @@ class ReactionRoles(commands.Cog):
         msg_id = int(message_id)
 
         if msg_id not in self._cache:
-            async with aiosqlite.connect(DB_PATH) as db:
-                cur = await db.execute(
-                    "SELECT 1 FROM rr_panels WHERE message_id = ? AND guild_id = ?",
-                    (msg_id, ctx.guild.id),
-                )
-                if not await cur.fetchone():
-                    await ctx.send("❌ 找不到该面板。", ephemeral=True)
-                    return
+            # 缓存未命中：可能是网页刚建的面板（同步回调还没到），先重载该服务器再判断
+            await self.reload_guild(ctx.guild.id)
+        entry = self._cache.get(msg_id)
+        if entry is None or entry.get("guild_id") != ctx.guild.id:
+            await ctx.send("❌ 找不到该面板。", ephemeral=True)
+            return
 
         await self._set_exclusive(msg_id, enabled)
         mode = "🔘 单选" if enabled else "☑️ 多选"

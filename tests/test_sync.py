@@ -10,7 +10,7 @@ from rincore import sync
 async def test_notify_then_poll_dispatches_once(tmp_path):
     path = str(tmp_path / "sync.db")
     watcher = sync.ChangeWatcher(path=path)
-    await watcher.start()
+    await watcher._init()  # 不启动后台循环，避免与手动 poll_once/prune 竞争
     try:
         seen = []
 
@@ -34,7 +34,7 @@ async def test_watcher_starts_after_existing_rows(tmp_path):
     path = str(tmp_path / "sync.db")
     await sync.notify("automod", 1, path=path)
     watcher = sync.ChangeWatcher(path=path)
-    await watcher.start()
+    await watcher._init()  # 不启动后台循环，避免与手动 poll_once/prune 竞争
     try:
         assert await watcher.poll_once() == 0
     finally:
@@ -44,7 +44,7 @@ async def test_watcher_starts_after_existing_rows(tmp_path):
 async def test_failing_callback_does_not_block_others(tmp_path):
     path = str(tmp_path / "sync.db")
     watcher = sync.ChangeWatcher(path=path)
-    await watcher.start()
+    await watcher._init()  # 不启动后台循环，避免与手动 poll_once/prune 竞争
     try:
         called = []
 
@@ -69,7 +69,7 @@ async def test_failing_callback_does_not_block_others(tmp_path):
 async def test_unregister_stops_dispatch(tmp_path):
     path = str(tmp_path / "sync.db")
     watcher = sync.ChangeWatcher(path=path)
-    await watcher.start()
+    await watcher._init()  # 不启动后台循环，避免与手动 poll_once/prune 竞争
     try:
         called = []
 
@@ -88,7 +88,7 @@ async def test_unregister_stops_dispatch(tmp_path):
 async def test_prune_removes_old_rows(tmp_path):
     path = str(tmp_path / "sync.db")
     watcher = sync.ChangeWatcher(path=path)
-    await watcher.start()
+    await watcher._init()  # 不启动后台循环，避免与手动 poll_once/prune 竞争
     try:
         await sync.notify("global", 0, path=path)
         assert await watcher.prune(now=time.time() + 86401) == 1
@@ -100,7 +100,7 @@ async def test_prune_removes_old_rows(tmp_path):
 async def test_prune_keeps_recent_rows(tmp_path):
     path = str(tmp_path / "sync.db")
     watcher = sync.ChangeWatcher(path=path)
-    await watcher.start()
+    await watcher._init()  # 不启动后台循环，避免与手动 poll_once/prune 竞争
     try:
         await sync.notify("global", 0, path=path)
         assert await watcher.prune() == 0
@@ -149,11 +149,24 @@ async def test_loop_survives_raising_iteration(tmp_path):
             raise RuntimeError("boom")
         return await real_poll()
 
-    watcher.poll_once = flaky
+    # 回调收到后把轮询循环停在纯 await 上，stop() 的取消才不会落在 aiosqlite 调用中间
+    # （否则遗留的 aiosqlite 工作线程会向已关闭的事件循环投递结果）
+    parked = asyncio.Event()
+    gate = asyncio.Event()
+
+    async def parking():
+        n = await flaky()
+        if seen == [0]:
+            parked.set()
+            await gate.wait()
+        return n
+
+    watcher.poll_once = parking
     await watcher.start()
     try:
         await sync.notify("global", 0, path=path)
-        assert await _wait_for(lambda: seen == [0])
+        await asyncio.wait_for(parked.wait(), 5)
+        assert seen == [0]
         assert calls >= 2
     finally:
         await watcher.stop()
@@ -169,6 +182,25 @@ async def test_failed_init_retries_and_does_not_replay(tmp_path):
         seen.append(guild_id)
 
     watcher.register("automod", cb)
+
+    # 收到回调后再多轮询几次确认没有回放，然后把循环停在纯 await 上，
+    # 让 stop() 的取消不落在 aiosqlite 调用中间
+    real_poll = watcher.poll_once
+    parked = asyncio.Event()
+    gate = asyncio.Event()
+    polls_after = 0
+
+    async def parking():
+        nonlocal polls_after
+        n = await real_poll()
+        if seen == [2]:
+            polls_after += 1
+            if polls_after >= 3:
+                parked.set()
+                await gate.wait()
+        return n
+
+    watcher.poll_once = parking
     await watcher.start()  # 初始化失败
     try:
         # 在别处准备一个已有记录的库，再原子地换到目标路径
@@ -179,8 +211,7 @@ async def test_failed_init_retries_and_does_not_replay(tmp_path):
 
         assert await _wait_for(lambda: watcher._ready)
         await sync.notify("automod", 2, path=str(path))
-        assert await _wait_for(lambda: seen == [2])
-        await asyncio.sleep(0.05)
+        await asyncio.wait_for(parked.wait(), 5)
         assert seen == [2]  # 初始化前已存在的记录 (guild 1) 没有被回放
     finally:
         await watcher.stop()
