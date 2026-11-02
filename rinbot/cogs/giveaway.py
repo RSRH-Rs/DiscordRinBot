@@ -11,13 +11,13 @@ import discord
 from discord.ext import commands, tasks
 from discord.ui import View, Button
 import aiosqlite
-import re
 import secrets
 import time
 import asyncio
 import os
 from typing import Optional
 from _botlog_helper import audit
+from rincore import durations
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "giveaway.db"
@@ -185,19 +185,8 @@ class Giveaway(commands.Cog):
         return " ".join(parts) if parts else "即将结束"
 
     def _parse_duration(self, duration_str: str) -> Optional[int]:
-        """解析时长字符串，如 1h, 30m, 2d, 1d12h"""
-        duration_str = duration_str.strip().lower()
-        if not re.fullmatch(r"(?:\d+[dhms])+", duration_str):
-            return None
-        total = 0
-        seen_units = set()
-        multipliers = {"d": 86400, "h": 3600, "m": 60, "s": 1}
-        for number, unit in re.findall(r"(\d+)([dhms])", duration_str):
-            if unit in seen_units:
-                return None
-            seen_units.add(unit)
-            total += int(number) * multipliers[unit]
-        return total if 0 < total <= 365 * 86400 else None
+        """解析时长字符串，如 1h, 30m, 2d, 1d12h（共享实现见 rincore.durations）"""
+        return durations.parse_duration(duration_str)
 
     async def _pick_winners(self, giveaway_id: int, count: int) -> list[int]:
         async with aiosqlite.connect(DB_PATH) as db:

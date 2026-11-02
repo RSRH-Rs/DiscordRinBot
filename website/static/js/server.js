@@ -358,7 +358,7 @@ async function loadModeration() {
     if(cases?.length) el.innerHTML = cases.map(c => {
         const d = new Date(c.created_at * 1000);
         const ts = d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-        return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${colors[c.action]||'var(--text)'}">#${c.id} ${c.action}</span><span class="case-time">${ts}</span></div><div class="case-body">${escapeHtml(c.user_name || c.user_id)} · 管理员: ${escapeHtml(c.mod_name || c.mod_id)} · 原因: ${escapeHtml(c.reason)}${c.duration?' · 时长: '+c.duration:''}</div></div>`;
+        return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${colors[c.action]||'var(--text)'}">#${c.case_no ?? c.id} ${c.action}</span><span class="case-time">${ts}</span></div><div class="case-body">${escapeHtml(c.user_name || c.user_id)} · 管理员: ${escapeHtml(c.mod_name || c.mod_id)} · 原因: ${escapeHtml(c.reason)}${c.duration?' · 时长: '+c.duration:''}</div></div>`;
     }).join('');
     // Dirty listeners
     document.querySelectorAll('#mod-log,#mod-mt,#mod-md,#mod-kt,#mod-bt').forEach(el => el.addEventListener('change', () => markDirty('mod-savebar')));

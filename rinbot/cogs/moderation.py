@@ -24,9 +24,10 @@ from discord.ext import commands, tasks
 import aiosqlite
 import datetime
 import os
-import re
 import time
 from typing import Literal, Optional
+
+from rincore import cases, durations
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "moderation.db"
@@ -86,6 +87,8 @@ class Moderation(commands.Cog):
                 )
             """)
             await db.commit()
+            # 每服务器案件编号迁移（幂等；网站面板启动时也会执行同一迁移）
+            await cases.migrate(db)
 
         if not self.check_tempbans.is_running():
             self.check_tempbans.start()
@@ -124,12 +127,10 @@ class Moderation(commands.Cog):
         """记录管理操作到数据库 + 发送到日志频道"""
         now = time.time()
         async with aiosqlite.connect(DB_PATH) as db:
-            cursor = await db.execute(
-                "INSERT INTO mod_cases (guild_id, action, user_id, mod_id, reason, duration, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (guild.id, action, user.id, mod.id, reason, duration, now),
+            # case_id 为本服务器内的案件号 (case_no)，而非全局主键
+            case_id = await cases.next_case(
+                db, guild.id, action, user.id, mod.id, reason, duration, now
             )
-            case_id = cursor.lastrowid
-            await db.commit()
 
         # 发送到日志频道
         config = await self._get_config(guild.id)
@@ -251,34 +252,11 @@ class Moderation(commands.Cog):
         return None
 
     def _parse_duration(self, s: str) -> Optional[int]:
-        """解析时长字符串 → 秒数"""
-        s = s.strip().lower()
-        if not re.fullmatch(r"(?:\d+[dhms])+", s):
-            return None
-        total = 0
-        seen_units = set()
-        multipliers = {"d": 86400, "h": 3600, "m": 60, "s": 1}
-        for number, unit in re.findall(r"(\d+)([dhms])", s):
-            if unit in seen_units:
-                return None
-            seen_units.add(unit)
-            total += int(number) * multipliers[unit]
-        return total if 0 < total <= 10 * 365 * 86400 else None
+        """解析时长字符串 → 秒数（共享实现见 rincore.durations）"""
+        return durations.parse_duration(s)
 
     def _format_duration(self, seconds: int) -> str:
-        parts = []
-        d, rem = divmod(seconds, 86400)
-        h, rem = divmod(rem, 3600)
-        m, s = divmod(rem, 60)
-        if d:
-            parts.append(f"{d}天")
-        if h:
-            parts.append(f"{h}小时")
-        if m:
-            parts.append(f"{m}分钟")
-        if s and not d:
-            parts.append(f"{s}秒")
-        return " ".join(parts) or "0秒"
+        return durations.format_duration(seconds)
 
     def _hierarchy_check(self, ctx, target: discord.Member) -> Optional[str]:
         """权限层级检查，返回错误信息或 None"""
@@ -344,7 +322,7 @@ class Moderation(commands.Cog):
                 color=discord.Color.orange(),
             )
             await member.send(embed=embed)
-        except discord.Forbidden:
+        except (discord.Forbidden, discord.HTTPException):
             pass
 
         await member.kick(reason=f"{ctx.author}: {reason}")
@@ -361,27 +339,42 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(name="ban", description="永久封禁成员")
     @commands.has_permissions(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
-    async def ban(self, ctx, member: discord.Member, *, reason: str = "未提供原因"):
-        err = self._hierarchy_check(ctx, member)
-        if err:
-            await ctx.send(err, ephemeral=True)
-            return
+    async def ban(
+        self,
+        ctx,
+        user: discord.User,
+        delete_days: commands.Range[int, 0, 7] = 0,
+        *,
+        reason: str = "未提供原因",
+    ):
+        """user: 成员、提及或用户 ID | delete_days: 同时删除其最近几天的消息 (0-7)"""
+        # 目标在服务器内才做层级检查与私信；不在服务器的用户（按 ID 封禁）直接封禁
+        member = user if isinstance(user, discord.Member) else ctx.guild.get_member(user.id)
+        if member is not None:
+            err = self._hierarchy_check(ctx, member)
+            if err:
+                await ctx.send(err, ephemeral=True)
+                return
 
-        try:
-            embed = discord.Embed(
-                title=f"🔨 你已被永久封禁于 {ctx.guild.name}",
-                description=f"**原因:** {reason}\n**管理员:** {ctx.author}",
-                color=discord.Color.red(),
-            )
-            await member.send(embed=embed)
-        except discord.Forbidden:
-            pass
+            try:
+                embed = discord.Embed(
+                    title=f"🔨 你已被永久封禁于 {ctx.guild.name}",
+                    description=f"**原因:** {reason}\n**管理员:** {ctx.author}",
+                    color=discord.Color.red(),
+                )
+                await member.send(embed=embed)
+            except (discord.Forbidden, discord.HTTPException):
+                pass
 
-        await member.ban(reason=f"{ctx.author}: {reason}", delete_message_days=0)
-        case_id = await self._log_case(ctx.guild, "ban", member, ctx.author, reason)
+        await ctx.guild.ban(
+            user,
+            reason=f"{ctx.author}: {reason}",
+            delete_message_seconds=delete_days * 86400,
+        )
+        case_id = await self._log_case(ctx.guild, "ban", user, ctx.author, reason)
 
         await ctx.send(
-            f"🔨 **{member}** 已被永久封禁。(案件 #{case_id})\n📝 原因: {reason}"
+            f"🔨 **{user}** 已被永久封禁。(案件 #{case_id})\n📝 原因: {reason}"
         )
 
     # ═══════════════════════════════════════
@@ -416,12 +409,12 @@ class Moderation(commands.Cog):
                 color=discord.Color.red(),
             )
             await member.send(embed=embed)
-        except discord.Forbidden:
+        except (discord.Forbidden, discord.HTTPException):
             pass
 
         await member.ban(
             reason=f"临时封禁 {dur_text} | {ctx.author}: {reason}",
-            delete_message_days=0,
+            delete_message_seconds=0,
         )
 
         unban_at = time.time() + seconds
@@ -565,7 +558,7 @@ class Moderation(commands.Cog):
                 color=discord.Color.yellow(),
             )
             await member.send(embed=embed)
-        except discord.Forbidden:
+        except (discord.Forbidden, discord.HTTPException):
             pass
 
         msg = f"⚠️ **{member}** 已被警告。(第 {total} 次 | 案件 #{case_id})\n📝 原因: {reason}"
@@ -779,12 +772,12 @@ class Moderation(commands.Cog):
         async with aiosqlite.connect(DB_PATH) as db:
             if member:
                 cursor = await db.execute(
-                    "SELECT id, action, user_id, mod_id, reason, duration, created_at FROM mod_cases WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC",
+                    "SELECT case_no, action, user_id, mod_id, reason, duration, created_at FROM mod_cases WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC",
                     (ctx.guild.id, member.id),
                 )
             else:
                 cursor = await db.execute(
-                    "SELECT id, action, user_id, mod_id, reason, duration, created_at FROM mod_cases WHERE guild_id = ? ORDER BY created_at DESC",
+                    "SELECT case_no, action, user_id, mod_id, reason, duration, created_at FROM mod_cases WHERE guild_id = ? ORDER BY created_at DESC",
                     (ctx.guild.id,),
                 )
             rows = await cursor.fetchall()

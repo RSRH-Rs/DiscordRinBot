@@ -169,7 +169,7 @@ BOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rinbot
 _BOT_DIR_ABS = os.path.abspath(BOT_DIR)
 if _BOT_DIR_ABS not in sys.path:
     sys.path.insert(0, _BOT_DIR_ABS)
-from rincore import storage, sync  # noqa: E402
+from rincore import cases, storage, sync  # noqa: E402
 from guild_ids import collect_guild_ids  # noqa: E402
 WELCOME_UPLOAD_DIR = os.path.abspath(
     os.environ.get(
@@ -404,6 +404,11 @@ async def ensure_tables():
                 guild_id INTEGER NOT NULL, user_id INTEGER NOT NULL,
                 unban_at REAL NOT NULL, PRIMARY KEY (guild_id, user_id))""")
             await db.commit()
+            # 每服务器案件编号迁移（幂等；bot 启动时也会执行，可并发）
+            try:
+                await cases.migrate(db)
+            except Exception as e:
+                print(f"❌ mod_cases 迁移失败: {e}")
         async with aiosqlite.connect(DB_GIVEAWAY) as db:
             await db.execute("""CREATE TABLE IF NOT EXISTS giveaways (
                 id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL,
@@ -1569,7 +1574,7 @@ def setup_routes(app, discord):
             g = int(gid)
             async with aiosqlite.connect(DB_MODERATION) as db:
                 cur = await db.execute(
-                    "SELECT id,action,user_id,mod_id,reason,duration,created_at "
+                    "SELECT id,action,user_id,mod_id,reason,duration,created_at,case_no "
                     "FROM mod_cases WHERE guild_id=? ORDER BY created_at DESC LIMIT 20",
                     (g,),
                 )
@@ -1589,6 +1594,7 @@ def setup_routes(app, discord):
                 [
                     {
                         "id": r[0],
+                        "case_no": r[7],
                         "action": r[1],
                         "user_id": str(r[2]),
                         "user_name": name_cache.get(str(r[2]), str(r[2])),
