@@ -33,6 +33,18 @@ DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "moderation.db"
 )
 
+DEFAULT_REASON = "未提供原因"
+
+
+def resolve_ban_args(is_slash: bool, delete_days: int, reason: str) -> tuple[int, str]:
+    """前缀命令里 reason 的首个 0-7 数字会被解析成 delete_days；
+    为避免误删消息（不可逆），删除消息仅限斜杠命令，前缀模式把数字还给 reason。"""
+    if is_slash or not delete_days:
+        return delete_days, reason
+    if reason == DEFAULT_REASON:
+        return 0, str(delete_days)
+    return 0, f"{delete_days} {reason}"
+
 
 class Moderation(commands.Cog):
     """管理模块 — kick / ban / mute / warn / purge / slowmode / lock"""
@@ -345,9 +357,15 @@ class Moderation(commands.Cog):
         user: discord.User,
         delete_days: commands.Range[int, 0, 7] = 0,
         *,
-        reason: str = "未提供原因",
+        reason: str = DEFAULT_REASON,
     ):
-        """user: 成员、提及或用户 ID | delete_days: 同时删除其最近几天的消息 (0-7)"""
+        """
+        user: 成员、提及或用户 ID
+        delete_days: 同时删除其最近几天的消息 (0-7，仅斜杠命令生效)
+        """
+        delete_days, reason = resolve_ban_args(
+            ctx.interaction is not None, delete_days, reason
+        )
         # 目标在服务器内才做层级检查与私信；不在服务器的用户（按 ID 封禁）直接封禁
         member = user if isinstance(user, discord.Member) else ctx.guild.get_member(user.id)
         if member is not None:
