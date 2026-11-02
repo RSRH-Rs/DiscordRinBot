@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# RinBot push-to-deploy hook. Installed at /root/rinbot.git/hooks/post-receive.
+set -euo pipefail
+
+SRC=/root/rinbot-src
+GIT_DIR_PATH=/root/rinbot.git
+STEP="init"
+
+abort() {
+    echo "DEPLOY ABORTED: $STEP"
+    exit 1
+}
+
+cleanup() {
+    rm -f "$SRC/rinbot/config.py" "$SRC/website/config.py"
+}
+trap cleanup EXIT
+trap abort ERR
+
+# 1. read ref updates; only deploy master
+STEP="read ref"
+deploy=0
+oldrev=""
+newrev=""
+while read -r o n ref; do
+    if [ "$ref" = "refs/heads/master" ]; then
+        deploy=1
+        oldrev="$o"
+        newrev="$n"
+    fi
+done
+if [ "$deploy" -ne 1 ]; then
+    echo "post-receive: not master, skipping deploy"
+    exit 0
+fi
+
+# 2. checkout into staging dir
+STEP="checkout"
+rm -rf "$SRC"
+mkdir -p "$SRC"
+git --git-dir="$GIT_DIR_PATH" --work-tree="$SRC" checkout -f master
+
+# 3. syntax check
+STEP="compileall"
+python3 -m compileall -q "$SRC/rinbot" "$SRC/website"
+
+# 4. real configs for tests / smoke import (removed by trap on exit)
+STEP="copy config"
+cp /root/rinbot/config.py "$SRC/rinbot/config.py"
+cp /root/website/config.py "$SRC/website/config.py"
+
+# 5. tests
+if [ -d "$SRC/tests" ]; then
+    STEP="pytest"
+    (cd "$SRC" && python3 -m pytest -q -p no:cacheprovider)
+fi
+
+# 6. cog import smoke test
+STEP="import smoke"
+(cd "$SRC/rinbot" && python3 -c "import importlib,os,sys; sys.path.insert(0,'cogs'); [importlib.import_module('cogs.'+f[:-3]) for f in sorted(os.listdir('cogs')) if f.endswith('.py') and not f.startswith('_')]")
+
+# 7. sync to live dirs
+EXCLUDES=(
+    --exclude='*.db' --exclude='*.db-wal' --exclude='*.db-shm' --exclude='*.db-journal'
+    --exclude='config.py' --exclude='uploads/' --exclude='health.json'
+    --exclude='*.log' --exclude='__pycache__/' --exclude='*.bak*' --exclude='.env'
+)
+STEP="rsync rinbot"
+rsync -a --delete "${EXCLUDES[@]}" "$SRC/rinbot/" /root/rinbot/
+STEP="rsync website"
+rsync -a --delete "${EXCLUDES[@]}" "$SRC/website/" /root/website/
+
+# 8. dependencies, only if requirements changed
+STEP="pip install"
+zero="0000000000000000000000000000000000000000"
+need_pip=0
+if [ "$oldrev" = "$zero" ]; then
+    need_pip=1
+elif git --git-dir="$GIT_DIR_PATH" diff --name-only "$oldrev" "$newrev" | grep -x 'rinbot/requirements.txt' >/dev/null; then
+    need_pip=1
+fi
+if [ "$need_pip" -eq 1 ]; then
+    pip3 install --break-system-packages -r /root/rinbot/requirements.txt
+fi
+
+# 9. restart and verify
+STEP="restart"
+trap - ERR
+systemctl restart discordbot mysite
+sleep 5
+ok=1
+for svc in discordbot mysite; do
+    state=$(systemctl is-active "$svc" || true)
+    echo "== $svc: $state"
+    journalctl -u "$svc" -n 20 --no-pager -o cat || true
+    [ "$state" = "active" ] || ok=0
+done
+if [ "$ok" -eq 1 ]; then
+    echo "DEPLOY OK"
+else
+    echo "DEPLOY FAILED: service not active"
+    exit 1
+fi
