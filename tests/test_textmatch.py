@@ -109,3 +109,19 @@ def test_whitelist_wildcard():
 def test_whitelist_ignores_blank_and_empty_host():
     assert not is_whitelisted("example.com", ["", "  "])
     assert not is_whitelisted("", ["example.com"])
+
+
+def test_file_names_and_sentence_gaps_are_not_links():
+    assert find_links("open main.py now") == []
+    assert find_links("see README.md") == []
+    assert find_links("end.Next sentence") == []
+
+
+def test_common_tld_bare_domains_are_links():
+    assert find_links("go to example.net") == ["example.net"]
+    assert find_links("evil.tk/x") == ["evil.tk/x"]
+
+
+def test_www_and_scheme_always_count_even_with_rare_tld():
+    assert len(find_links("www.example.museum")) == 1
+    assert len(find_links("https://example.museum/x")) == 1

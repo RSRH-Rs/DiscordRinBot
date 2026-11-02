@@ -20,6 +20,16 @@ _LINK_RE = re.compile(
     r"(?::\d+)?(?:/[^\s<>]*)?",
     re.IGNORECASE,
 )
+# 有意收窄设计文档 2.1：无协议、无 www. 前缀的 name.tld 只有顶级域在此白名单内才算链接，
+# 避免把 main.py、README.md 这类文件名当作链接删除（带协议、www. 开头、Discord 邀请不受限）。
+_COMMON_TLDS = frozenset(
+    "com net org io gg me xyz top cn tv co app dev cc info biz ru jp uk de fr us "
+    "ca au in link site online store club live fun icu shop vip tk ml ga cf gq pw "
+    "ws su to ly be nl eu kr tw hk sg".split()
+)
+_INVITE_RE = re.compile(
+    r"^(?:discord\.gg/|discord(?:app)?\.com/invite/)", re.IGNORECASE
+)
 _SCHEME_RE = re.compile(r"^[a-z][a-z0-9+.\-]*://", re.IGNORECASE)
 _TRAILING_PUNCT = ".,;:!?)]}'\"，。！？、）"
 
@@ -64,12 +74,19 @@ def find_badword(text: str, words: Iterable[str]) -> Optional[str]:
     return None
 
 
+def _is_link_candidate(link: str) -> bool:
+    if _SCHEME_RE.match(link) or link.startswith("www.") or _INVITE_RE.match(link):
+        return True
+    host = re.split(r"[/:]", link, maxsplit=1)[0]
+    return host.rsplit(".", 1)[-1] in _COMMON_TLDS
+
+
 def find_links(text: str) -> list[str]:
     """识别带协议链接、无协议域名与 Discord 邀请；排除邮箱、版本号、纯数字。"""
     links = []
     for match in _LINK_RE.finditer(normalize(text)):
         link = match.group().rstrip(_TRAILING_PUNCT)
-        if link:
+        if link and _is_link_candidate(link):
             links.append(link)
     return links
 
