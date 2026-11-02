@@ -1,3 +1,4 @@
+import asyncio
 import discord
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
@@ -24,6 +25,14 @@ def format_xp_number(num):
         return f"{num / 1_000:.1f}K".replace(".0K", "K")
     else:
         return str(num)
+
+
+def prune_cooldowns(cooldowns, now, ttl, max_size=5000):
+    """冷却字典超过 max_size 时，就地清除早于 ttl 的过期条目，避免无限增长"""
+    if len(cooldowns) <= max_size:
+        return
+    for key in [k for k, t in cooldowns.items() if now - t >= ttl]:
+        del cooldowns[key]
 
 
 class Leveling(commands.Cog):
@@ -183,6 +192,7 @@ class Leveling(commands.Cog):
                 return
 
         self.cooldowns[cooldown_key] = now
+        prune_cooldowns(self.cooldowns, now, self.cooldown_sec)
         xp_gain = random.randint(self.xp_min, self.xp_max)
 
         async with aiosqlite.connect(DB_PATH) as db:
@@ -211,9 +221,15 @@ class Leveling(commands.Cog):
                         "UPDATE users SET level = ? WHERE guild_id = ? AND user_id = ?",
                         (new_level, message.guild.id, user_id),
                     )
-                    await message.channel.send(
-                        f"🎉 恭喜 **{message.author.mention}**！你升级到了 **Level {new_level}**！✨"
-                    )
+                    # 先提交经验与等级，再发升级提示（发送失败不能丢经验）
+                    await db.commit()
+                    try:
+                        await message.channel.send(
+                            f"🎉 恭喜 **{message.author.mention}**！你升级到了 **Level {new_level}**！✨"
+                        )
+                    except (discord.Forbidden, discord.HTTPException) as e:
+                        print(f"升级提示发送失败 (guild {message.guild.id}): {e}")
+                    return
 
             await db.commit()
 
@@ -262,7 +278,8 @@ class Leveling(commands.Cog):
             avatar_img = Image.new("RGBA", (160, 160), color=(200, 200, 200, 255))
 
         # 调用画图函数生成图片 buffer
-        image_buffer = self.generate_cute_rank_card_bytes(
+        image_buffer = await asyncio.to_thread(
+            self.generate_cute_rank_card_bytes,
             username=member.display_name,
             avatar_img=avatar_img,
             level=current_level,

@@ -6,6 +6,7 @@
 #   • /welcome_setup — 配置欢迎频道、身分组、道别频道
 #   • /welcome_test — 测试欢迎图卡效果
 
+import asyncio
 import discord
 from discord.ext import commands
 from discord.ui import View, Select, ChannelSelect, RoleSelect
@@ -352,7 +353,8 @@ class Welcome(commands.Cog):
             avatar_img = Image.open(io.BytesIO(avatar_data))
         except Exception:
             avatar_img = Image.new("RGBA", (256, 256), (200, 200, 200, 255))
-        buf = self._generate_welcome_card(
+        buf = await asyncio.to_thread(
+            self._generate_welcome_card,
             member_name=member.display_name,
             guild_name=member.guild.name,
             member_count=member.guild.member_count,
@@ -404,6 +406,24 @@ class Welcome(commands.Cog):
         except OSError:
             return None
 
+    async def _assign_auto_roles(self, member: discord.Member, config):
+        """一次性发放自动身份组；跳过不存在或不低于 bot 最高身份组的身份组"""
+        if not config.get("auto_roles"):
+            return
+        role_ids = [int(r) for r in config["auto_roles"].split(",") if r]
+        top_role = member.guild.me.top_role
+        roles = []
+        for role_id in role_ids:
+            role = member.guild.get_role(role_id)
+            if role and not role.managed and role < top_role:
+                roles.append(role)
+        if not roles:
+            return
+        try:
+            await member.add_roles(*roles, reason="小凛自动分配")
+        except (discord.Forbidden, discord.HTTPException) as e:
+            print(f"自动分配身份组失败 (guild {member.guild.id}): {e}")
+
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
         if member.bot:
@@ -415,16 +435,9 @@ class Welcome(commands.Cog):
         if not config.get("enabled", 1):
             return
 
-        # 1. 自动分配身份组
-        if config["auto_roles"]:
-            role_ids = [int(r) for r in config["auto_roles"].split(",") if r]
-            for role_id in role_ids:
-                role = member.guild.get_role(role_id)
-                if role:
-                    try:
-                        await member.add_roles(role, reason="小凛自动分配")
-                    except discord.Forbidden:
-                        pass
+        # 1. 自动分配身份组（开启成员审核且尚未通过的新人，等通过后再发）
+        if not member.pending:
+            await self._assign_auto_roles(member, config)
 
         # 2. 发送欢迎卡
         channel_id = config.get("welcome_channel", 0)
@@ -448,7 +461,24 @@ class Welcome(commands.Cog):
             files.append(card)
             embed.set_image(url="attachment://welcome.png")
 
-        await channel.send(embed=embed, files=files)
+        try:
+            await channel.send(embed=embed, files=files)
+        except (discord.Forbidden, discord.HTTPException) as e:
+            print(f"欢迎消息发送失败 (guild {member.guild.id}): {e}")
+
+    @commands.Cog.listener()
+    async def on_member_update(self, before: discord.Member, after: discord.Member):
+        # 通过成员审核（Membership Screening）后再分配自动身份组
+        if not (before.pending and not after.pending):
+            return
+        if after.bot:
+            return
+        config = await self._get_config(after.guild.id)
+        if not config:
+            return
+        if not config.get("enabled", 1):
+            return
+        await self._assign_auto_roles(after, config)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
@@ -483,7 +513,10 @@ class Welcome(commands.Cog):
             custom_file, custom_filename = custom_image
             files.append(custom_file)
             embed.set_image(url=f"attachment://{custom_filename}")
-        await channel.send(embed=embed, files=files)
+        try:
+            await channel.send(embed=embed, files=files)
+        except (discord.Forbidden, discord.HTTPException) as e:
+            print(f"道别消息发送失败 (guild {member.guild.id}): {e}")
 
     # ─── 配置指令 ───
 
