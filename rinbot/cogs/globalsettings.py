@@ -18,6 +18,23 @@ DB_PATH = os.path.join(
 )
 
 
+DEFAULT_MAINT_MSG = "🔧 机器人维护中，请稍后再试 (｡•́︿•̀｡)"
+DISABLED_MSG = "⛔ 该指令已被全局停用。"
+
+
+def decide_block(user_id, owner_id, blacklist, maintenance, maint_msg, disabled, command_name):
+    """纯判定：None 放行；"" 静默拒绝（黑名单）；其他字符串为需要提示的拒绝原因。"""
+    if user_id == owner_id:
+        return None
+    if user_id in blacklist:
+        return ""
+    if maintenance:
+        return maint_msg or DEFAULT_MAINT_MSG
+    if command_name and command_name in disabled:
+        return DISABLED_MSG
+    return None
+
+
 class GlobalSettings(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -25,16 +42,23 @@ class GlobalSettings(commands.Cog):
         self._maintenance = False
         self._maint_msg = ""
         self._blacklist = set()
+        self._disabled_cmds = set()
 
     async def cog_load(self):
         await self._ensure_tables()
         await self._reload()
         self.bot.add_check(self._global_check)
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.register("global", self.reload_guild)
         if not self._tick.is_running():
             self._tick.start()
 
     def cog_unload(self):
         self.bot.remove_check(self._global_check)
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.unregister("global", self.reload_guild)
         self._tick.cancel()
 
     async def _ensure_tables(self):
@@ -51,6 +75,9 @@ class GlobalSettings(commands.Cog):
                 status TEXT DEFAULT 'pending', sent_count INTEGER DEFAULT 0,
                 total_count INTEGER DEFAULT 0, created_at REAL DEFAULT 0, done_at REAL DEFAULT 0)"""
             )
+            await db.execute(
+                "CREATE TABLE IF NOT EXISTS global_disabled_cmds (name TEXT PRIMARY KEY)"
+            )
             await db.commit()
 
     async def _reload(self):
@@ -59,28 +86,46 @@ class GlobalSettings(commands.Cog):
                 "SELECT key, value FROM global_flags WHERE key IN ('maintenance','maintenance_msg')"
             )
             flags = dict(await cur.fetchall())
-            self._maintenance = flags.get("maintenance") == "1"
-            self._maint_msg = flags.get("maintenance_msg", "")
             cur = await db.execute("SELECT user_id FROM blacklist")
-            self._blacklist = {r[0] for r in await cur.fetchall()}
+            blacklist = {r[0] for r in await cur.fetchall()}
+            cur = await db.execute("SELECT name FROM global_disabled_cmds")
+            disabled = {r[0] for r in await cur.fetchall()}
+        # 全部读完再赋值，避免缓存只更新一半
+        self._maintenance = flags.get("maintenance") == "1"
+        self._maint_msg = flags.get("maintenance_msg", "")
+        self._blacklist = blacklist
+        self._disabled_cmds = disabled
 
-    # 全局拦截：黑名单静默拒绝；维护模式对非主人拒绝并提示
+    async def reload_guild(self, guild_id: int = 0):
+        # 全局设置：忽略参数，全量重载（只有几个标志与两张小表）
+        await self._reload()
+
+    def blocked_reason(self, user_id: int, command_name: str | None = None) -> str | None:
+        """None 放行；"" 静默拒绝；其他字符串为拒绝提示。"""
+        return decide_block(
+            user_id,
+            self.owner_id,
+            self._blacklist,
+            self._maintenance,
+            self._maint_msg,
+            self._disabled_cmds,
+            command_name,
+        )
+
+    # 全局拦截：黑名单静默拒绝；维护模式/全局禁用指令对非主人拒绝并提示
     async def _global_check(self, ctx):
-        uid = ctx.author.id
-        if uid == self.owner_id:
+        command_name = None
+        if ctx.command is not None:
+            command_name = ctx.command.qualified_name.split()[0]
+        reason = self.blocked_reason(ctx.author.id, command_name)
+        if reason is None:
             return True
-        if uid in self._blacklist:
-            return False
-        if self._maintenance:
+        if reason:
             try:
-                await ctx.send(
-                    self._maint_msg or "🔧 机器人维护中，请稍后再试 (｡•́︿•̀｡)",
-                    ephemeral=True,
-                )
+                await ctx.send(reason, ephemeral=True)
             except Exception:
                 pass
-            return False
-        return True
+        return False
 
     def _pick_channel(self, guild):
         me = guild.me
@@ -96,12 +141,7 @@ class GlobalSettings(commands.Cog):
 
     @tasks.loop(seconds=10)
     async def _tick(self):
-        # 1) 刷新维护/黑名单缓存（让网页改动生效）
-        try:
-            await self._reload()
-        except Exception as e:
-            print(f"[globalsettings] reload 失败: {e}")
-        # 2) 处理待发送的公告
+        # 处理待发送的公告（维护/黑名单缓存由 global 同步回调刷新）
         try:
             await self._process_broadcasts()
         except Exception as e:

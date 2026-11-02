@@ -1,12 +1,12 @@
 # cogs/botconfig.py
 # RinBot — Bot 个性化模块
-# 由网页仪表盘写入配置，Bot 定时读取并应用
+# 由网页仪表盘写入配置，经变更日志（global）通知后 Bot 读取并应用
 # 功能：
 #   • 自动应用状态 (online/idle/dnd)、活动类型、活动文字
 #   • 头像和用户名通过 REST API 直接修改
 
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 import aiosqlite
 import os
 
@@ -33,15 +33,28 @@ class BotConfig(commands.Cog):
                 "INSERT OR IGNORE INTO bot_personalizer (id) VALUES (1)")
             await db.commit()
         print("✅ Bot 个性化模块已准备就绪！")
-        if not self.check_presence.is_running():
-            self.check_presence.start()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.register("global", self.reload_guild)
+        # bot 已就绪（热加载）则立即应用；否则由 on_ready 监听器应用
+        if self.bot.is_ready():
+            await self.apply_presence()
 
     def cog_unload(self):
-        self.check_presence.cancel()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.unregister("global", self.reload_guild)
 
-    @tasks.loop(seconds=30)
-    async def check_presence(self):
-        """每 30 秒检查一次是否有新的配置"""
+    @commands.Cog.listener()
+    async def on_ready(self):
+        await self.apply_presence()
+
+    async def reload_guild(self, guild_id: int = 0):
+        # 全局设置：忽略参数，重读 bot_personalizer 一行（hash 比对避免重复调用 API）
+        await self.apply_presence()
+
+    async def apply_presence(self):
+        """读取 bot_personalizer 并应用在线状态/活动"""
         try:
             async with aiosqlite.connect(DB_PATH) as db:
                 db.row_factory = aiosqlite.Row
@@ -87,11 +100,7 @@ class BotConfig(commands.Cog):
             await self.bot.change_presence(status=status, activity=activity)
 
         except Exception as e:
-            print(f"[BotConfig] check_presence error: {e}")
-
-    @check_presence.before_loop
-    async def before_check(self):
-        await self.bot.wait_until_ready()
+            print(f"[BotConfig] apply_presence error: {e}")
 
 
 async def setup(bot):

@@ -3,7 +3,7 @@
 # 监听 Discord 服务器事件并转发到日志频道（区别于 botlog 的 bot 内部日志）
 
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 import aiosqlite
 import os
 from datetime import datetime, timezone
@@ -54,12 +54,15 @@ class ServerLog(commands.Cog):
             )""")
             await db.commit()
         await self._load_cache()
-        if not self._refresh.is_running():
-            self._refresh.start()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.register("serverlog", self.reload_guild)
         print("✅ 服务器审计日志模块已准备就绪!")
 
     def cog_unload(self):
-        self._refresh.cancel()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.unregister("serverlog", self.reload_guild)
 
     async def _load_cache(self):
         cache = {}
@@ -68,25 +71,31 @@ class ServerLog(commands.Cog):
                 "SELECT guild_id, channel_id, enabled, categories, ignored_channels FROM serverlog_config"
             )
             for gid, ch, en, cats, ign in await cursor.fetchall():
-                cache[gid] = {
-                    "channel_id": ch,
-                    "enabled": bool(en),
-                    "categories": set(cats.split(",")) if cats else set(),
-                    "ignored": {int(x) for x in ign.split(",") if x} if ign else set(),
-                }
+                cache[gid] = self._build_entry(ch, en, cats, ign)
         self._cache = cache
 
-    # 每 20 秒重读 DB，让网页仪表盘的修改即时生效
-    @tasks.loop(seconds=20)
-    async def _refresh(self):
-        try:
-            await self._load_cache()
-        except Exception as e:
-            print(f"[serverlog] 缓存刷新失败: {e}")
+    @staticmethod
+    def _build_entry(ch, en, cats, ign) -> dict:
+        return {
+            "channel_id": ch,
+            "enabled": bool(en),
+            "categories": set(cats.split(",")) if cats else set(),
+            "ignored": {int(x) for x in ign.split(",") if x} if ign else set(),
+        }
 
-    @_refresh.before_loop
-    async def _before_refresh(self):
-        await self.bot.wait_until_ready()
+    # 网页仪表盘保存后由变更日志回调：只重读该服务器的一行配置
+    async def reload_guild(self, guild_id: int):
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                "SELECT channel_id, enabled, categories, ignored_channels "
+                "FROM serverlog_config WHERE guild_id = ?",
+                (guild_id,),
+            )
+            row = await cursor.fetchone()
+        if row:
+            self._cache[guild_id] = self._build_entry(*row)
+        else:
+            self._cache.pop(guild_id, None)
 
     # ─── 配置读写 ───
 

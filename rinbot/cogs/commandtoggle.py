@@ -4,10 +4,10 @@
 #   • 管理员可按服务器禁用/启用任意指令
 #   • Web 仪表盘和 /toggle 指令都能操作
 #   • 全局 before_invoke 钩子自动拦截被禁用的指令
-#   • 每 15 秒自动从 DB 刷新缓存，Web 修改即时生效
+#   • Web 修改后经变更日志回调重载该服务器缓存，即时生效
 
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 import aiosqlite
 import os
 
@@ -53,13 +53,16 @@ class CommandToggle(commands.Cog):
 
         await self._refresh_cache()
 
-        if not self.refresh_loop.is_running():
-            self.refresh_loop.start()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.register("commands", self.reload_guild)
 
         print("✅ 指令管理模块已准备就绪！")
 
     def cog_unload(self):
-        self.refresh_loop.cancel()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.unregister("commands", self.reload_guild)
         self.bot._before_invoke = None
 
     # ── 缓存刷新 ──
@@ -82,14 +85,18 @@ class CommandToggle(commands.Cog):
             return
         self._disabled = new_cache
 
-    @tasks.loop(seconds=15)
-    async def refresh_loop(self):
-        """每 15 秒刷新一次缓存，让 Web 修改即时生效"""
-        await self._refresh_cache()
-
-    @refresh_loop.before_loop
-    async def before_refresh(self):
-        await self.bot.wait_until_ready()
+    async def reload_guild(self, guild_id: int):
+        """Web 修改后由变更日志回调：只重载该服务器的禁用指令集合"""
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                "SELECT command_name FROM disabled_commands WHERE guild_id = ?",
+                (guild_id,),
+            )
+            names = {r[0] for r in await cursor.fetchall()}
+        if names:
+            self._disabled[guild_id] = names
+        else:
+            self._disabled.pop(guild_id, None)
 
     # ── 拦截钩子 ──
 

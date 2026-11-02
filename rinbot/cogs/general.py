@@ -122,11 +122,11 @@ class General(commands.Cog):
             )
             await db.commit()
 
-        # 立刻触发 botconfig 重新读取(不用等 30 秒轮询)
+        # 立刻触发 botconfig 重新读取(不用等同步回调)
         botcfg = self.bot.get_cog("BotConfig")
         if botcfg:
             botcfg._last_hash = None
-            await botcfg.check_presence()
+            await botcfg.apply_presence()
 
         await ctx.send(f"✅ 状态已更新为: **{type} {text}**")
 
@@ -144,7 +144,7 @@ class General(commands.Cog):
         botcfg = self.bot.get_cog("BotConfig")
         if botcfg:
             botcfg._last_hash = None
-            await botcfg.check_presence()
+            await botcfg.apply_presence()
 
         await ctx.send("✅ 状态已重置")
 

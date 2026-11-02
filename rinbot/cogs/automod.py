@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands, tasks
+from discord.ext import commands
 import aiosqlite
 import json
 import os
@@ -62,12 +62,15 @@ class AutoMod(commands.Cog):
             await db.commit()
 
         await self._load_all_config()
-        if not self._refresh.is_running():
-            self._refresh.start()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.register("automod", self.reload_guild)
         print("✅ 自动审核系统已准备就绪！")
 
     def cog_unload(self):
-        self._refresh.cancel()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.unregister("automod", self.reload_guild)
 
     async def _load_all_config(self):
         cache = {}
@@ -88,17 +91,18 @@ class AutoMod(commands.Cog):
                     f"anti_spam={c.get('anti_spam')} anti_repeat={c.get('anti_repeat')}"
                 )
 
-    # 每 15 秒重读配置，让网页仪表盘的修改即时生效（无需重启）
-    @tasks.loop(seconds=15)
-    async def _refresh(self):
-        try:
-            await self._load_all_config()
-        except Exception as e:
-            print(f"[automod] 配置刷新失败: {e}")
-
-    @_refresh.before_loop
-    async def _before_refresh(self):
-        await self.bot.wait_until_ready()
+    # 网页仪表盘保存后由变更日志回调：只重读该服务器的一行配置
+    async def reload_guild(self, guild_id: int):
+        async with aiosqlite.connect(DB_PATH) as db:
+            db.row_factory = aiosqlite.Row
+            cursor = await db.execute(
+                "SELECT * FROM automod_config WHERE guild_id = ?", (guild_id,)
+            )
+            row = await cursor.fetchone()
+        if row:
+            self._config_cache[guild_id] = dict(row)
+        else:
+            self._config_cache.pop(guild_id, None)
 
     async def _get_config(self, guild_id: int) -> dict:
         if guild_id in self._config_cache:

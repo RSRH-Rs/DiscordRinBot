@@ -3,7 +3,7 @@
 
 import discord
 from discord import app_commands
-from discord.ext import commands, tasks
+from discord.ext import commands
 import aiosqlite
 import traceback
 import os
@@ -40,12 +40,15 @@ class BotLog(commands.Cog):
             )""")
             await db.commit()
         await self._reload()
-        if not self._refresh.is_running():
-            self._refresh.start()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.register("botlog", self.reload_guild)
         print("✅ 系统日志模块已准备就绪!")
 
     def cog_unload(self):
-        self._refresh.cancel()
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.unregister("botlog", self.reload_guild)
 
     async def _reload(self):
         """从 DB 重新载入配置缓存（让网页改动无需重启即可生效）"""
@@ -62,16 +65,22 @@ class BotLog(commands.Cog):
                 }
         self._cache = cache
 
-    @tasks.loop(seconds=30)
-    async def _refresh(self):
-        try:
-            await self._reload()
-        except Exception as e:
-            print(f"[botlog] 配置刷新失败: {e}")
-
-    @_refresh.before_loop
-    async def _before_refresh(self):
-        await self.bot.wait_until_ready()
+    async def reload_guild(self, guild_id: int):
+        """网页保存后由变更日志回调：只重读该服务器的一行配置"""
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                "SELECT channel_id, enabled, levels FROM botlog_config WHERE guild_id = ?",
+                (guild_id,),
+            )
+            row = await cursor.fetchone()
+        if row:
+            self._cache[guild_id] = {
+                "channel_id": row[0],
+                "enabled": bool(row[1]),
+                "levels": set(row[2].split(",")) if row[2] else set(),
+            }
+        else:
+            self._cache.pop(guild_id, None)
 
     # ─── 配置 ───
 

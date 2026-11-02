@@ -28,7 +28,7 @@ class ReactionRoles(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        # 内存缓存: {message_id: {"mappings": {emoji: role_id}, "exclusive": bool}}
+        # 内存缓存(权威): {message_id: {"mappings": {emoji: role_id}, "exclusive": bool, "guild_id": int}}
         self._cache: dict[int, dict] = {}
 
     async def cog_load(self):
@@ -54,19 +54,49 @@ class ReactionRoles(commands.Cog):
 
             # 加载缓存
             cursor = await db.execute(
-                "SELECT message_id, mappings, exclusive FROM rr_panels"
+                "SELECT message_id, guild_id, mappings, exclusive FROM rr_panels"
             )
             rows = await cursor.fetchall()
-            for msg_id, mappings_json, exclusive in rows:
-                try:
-                    self._cache[msg_id] = {
-                        "mappings": json.loads(mappings_json),
-                        "exclusive": bool(exclusive),
-                    }
-                except json.JSONDecodeError:
-                    self._cache[msg_id] = {"mappings": {}, "exclusive": False}
+            for row in rows:
+                self._cache[row[0]] = self._build_entry(*row[1:])
 
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.register("reactionroles", self.reload_guild)
         print("✅ 反应身份组系统已准备就绪！")
+
+    def cog_unload(self):
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.unregister("reactionroles", self.reload_guild)
+
+    @staticmethod
+    def _build_entry(guild_id, mappings_json, exclusive) -> dict:
+        try:
+            mappings = json.loads(mappings_json)
+        except (json.JSONDecodeError, TypeError):
+            return {"mappings": {}, "exclusive": False, "guild_id": guild_id}
+        return {"mappings": mappings, "exclusive": bool(exclusive), "guild_id": guild_id}
+
+    async def reload_guild(self, guild_id: int):
+        """网页创建/删除面板后由变更日志回调：用数据库重建该服务器的全部缓存条目"""
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                "SELECT message_id, mappings, exclusive FROM rr_panels WHERE guild_id = ?",
+                (guild_id,),
+            )
+            rows = await cursor.fetchall()
+        fresh = {
+            msg_id: self._build_entry(guild_id, mappings_json, exclusive)
+            for msg_id, mappings_json, exclusive in rows
+        }
+        # 先建好新条目再替换：丢弃该服务器已不存在的面板，保留其他服务器的缓存
+        for msg_id in [
+            m for m, e in self._cache.items() if e.get("guild_id") == guild_id
+        ]:
+            if msg_id not in fresh:
+                self._cache.pop(msg_id, None)
+        self._cache.update(fresh)
 
     async def _save_mappings(self, message_id: int, mappings: dict):
         entry = self._cache.get(message_id, {"mappings": {}, "exclusive": False})
@@ -206,7 +236,11 @@ class ReactionRoles(commands.Cog):
             )
             await db.commit()
 
-        self._cache[msg.id] = {"mappings": {}, "exclusive": exclusive}
+        self._cache[msg.id] = {
+            "mappings": {},
+            "exclusive": exclusive,
+            "guild_id": ctx.guild.id,
+        }
         await audit(
             self.bot,
             ctx.guild.id,
@@ -450,23 +484,7 @@ class ReactionRoles(commands.Cog):
 
         entry = self._cache.get(payload.message_id)
         if not entry:
-            try:
-                async with aiosqlite.connect(DB_PATH) as db:
-                    cur = await db.execute(
-                        "SELECT mappings, exclusive FROM rr_panels WHERE message_id=?",
-                        (payload.message_id,),
-                    )
-                    row = await cur.fetchone()
-                    if row:
-                        entry = {
-                            "mappings": json.loads(row[0]),
-                            "exclusive": bool(row[1]),
-                        }
-                        self._cache[payload.message_id] = entry
-                    else:
-                        return
-            except Exception:
-                return
+            return
 
         mappings = entry["mappings"]
         emoji_str = str(payload.emoji)
@@ -490,23 +508,7 @@ class ReactionRoles(commands.Cog):
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent):
         entry = self._cache.get(payload.message_id)
         if not entry:
-            try:
-                async with aiosqlite.connect(DB_PATH) as db:
-                    cur = await db.execute(
-                        "SELECT mappings, exclusive FROM rr_panels WHERE message_id=?",
-                        (payload.message_id,),
-                    )
-                    row = await cur.fetchone()
-                    if row:
-                        entry = {
-                            "mappings": json.loads(row[0]),
-                            "exclusive": bool(row[1]),
-                        }
-                        self._cache[payload.message_id] = entry
-                    else:
-                        return
-            except Exception:
-                return
+            return
 
         mappings = entry["mappings"]
 
@@ -557,25 +559,9 @@ class ReactionRoles(commands.Cog):
             )
             return
 
-        # 单选模式检测:从 cache / DB 拿当前面板的 exclusive 状态
+        # 单选模式检测:从缓存拿当前面板的 exclusive 状态(缓存未命中视为无条目)
         message_id = interaction.message.id if interaction.message else 0
         entry = self._cache.get(message_id)
-        if not entry:
-            try:
-                async with aiosqlite.connect(DB_PATH) as db:
-                    cur = await db.execute(
-                        "SELECT mappings, exclusive FROM rr_panels WHERE message_id=?",
-                        (message_id,),
-                    )
-                    row = await cur.fetchone()
-                    if row:
-                        entry = {
-                            "mappings": json.loads(row[0]),
-                            "exclusive": bool(row[1]),
-                        }
-                        self._cache[message_id] = entry
-            except Exception:
-                pass
         exclusive = entry.get("exclusive", False) if entry else False
         panel_role_ids = set(entry["mappings"].values()) if entry else set()
 
