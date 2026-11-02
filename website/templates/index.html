@@ -42,7 +42,7 @@
         --surface: #FFFFFF;
         --ink: #2A2440;
         --muted: #5E5873;
-        --rin: #D9577A;
+        --rin: #BF4469;
         --rin-strong: #B83D62;
         --apricot: #F2A66B;
         --leaf: #6DB57A;
@@ -307,7 +307,7 @@
     .footer-links { display: flex; gap: 8px 24px; flex-wrap: wrap; align-items: flex-start; }
     .footer-links a { font-weight: 600; color: var(--muted); text-decoration: none; }
     .footer-links a:hover { color: var(--ink); }
-    .footer-bot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: #8A86A0; font-size: 14px; }
+    .footer-bot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 14px; }
 
     @media (max-width: 960px) {
         .hero { grid-template-columns: 1fr; gap: 40px; padding: 32px 0 64px; }
@@ -484,6 +484,8 @@
                 <div class="chat-body">
                     <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span>
                         <div class="embed leaf"><div class="embed-title">{{ t('🔗 链接过滤', '🔗 Link filter') }}</div><div class="field">{{ t('<b>用户:</b> @spam_bot_9<br><b>频道:</b> #大厅<br><b>链接:</b> discord-gift.xyz/…', '<b>User:</b> @spam_bot_9<br><b>Channel:</b> #lobby<br><b>Link:</b> discord-gift.xyz/…') }}</div></div>
+                        <div class="embed"><div class="embed-title">{{ t('✏️ 消息被编辑', '✏️ Message edited') }}</div><div class="dim">{{ t('Milk 在 #大厅 编辑了一条消息', 'Milk edited a message in #lobby') }}</div></div>
+                        <div class="embed leaf"><div class="embed-title">{{ t('🚪 成员加入', '🚪 Member joined') }}</div><div class="dim">{{ t('Starlight 加入了服务器', 'Starlight joined the server') }}</div></div>
                     </div></div>
                 </div>
             </div>
@@ -594,13 +596,6 @@ function rinSetLang(lang) {
 }
 applyLangAttrs(document.documentElement.getAttribute('data-lang'));
 
-/* 服务器数：只接受正数，失败就保留默认值 */
-fetch('/api/stats').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
-    if (d && typeof d.servers === 'number' && d.servers > 0) {
-        document.querySelectorAll('[data-stat="servers"]').forEach(function (el) { el.textContent = d.servers; });
-    }
-}).catch(function () {});
-
 /* 场景进入视口时让最后一条消息出现；贴纸离开视口时暂停动画 */
 if ('IntersectionObserver' in window) {
     var seenIO = new IntersectionObserver(function (entries) {
@@ -616,6 +611,13 @@ if ('IntersectionObserver' in window) {
 } else {
     document.querySelectorAll('.stage').forEach(function (el) { el.classList.add('seen'); });
 }
+
+/* 服务器数：只接受正数，失败就保留默认值 */
+if (window.fetch) fetch('/api/stats').then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+    if (d && typeof d.servers === 'number' && d.servers > 0) {
+        document.querySelectorAll('[data-stat="servers"]').forEach(function (el) { el.textContent = d.servers; });
+    }
+}).catch(function () {});
 
 /* 导航滚动后加一条底线 */
 var nav = document.getElementById('nav');

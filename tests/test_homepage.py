@@ -145,3 +145,35 @@ def test_reduced_motion_block_present(page):
     assert m, "missing prefers-reduced-motion block"
     for cls in (".stk-blink", ".stk-bob", ".stk-sway"):
         assert cls in m.group(1), cls
+
+
+def test_reveal_setup_runs_before_fetch(page):
+    # 揭示场景消息的观察器必须先于 fetch 建好，fetch 出错也不会让消息一直隐藏
+    script = re.findall(r"<script>(.*?)</script>", page, re.S)[-1]
+    assert script.index("IntersectionObserver") < script.index("fetch(")
+    assert "window.fetch" in script
+
+
+def _luminance(hex_color):
+    rgb = [int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in rgb]
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+
+def _contrast(a, b):
+    hi, lo = sorted((_luminance(a), _luminance(b)), reverse=True)
+    return (hi + 0.05) / (lo + 0.05)
+
+
+def test_text_colors_meet_contrast(page):
+    tokens = dict(re.findall(r"--([\w-]+):\s*(#[0-9A-Fa-f]{6})", page))
+    assert _contrast(tokens["rin"], tokens["surface"]) >= 4.5
+    assert _contrast(tokens["muted"], tokens["channel"]) >= 4.5
+    footer_bot = re.search(r"\.footer-bot \{[^}]*color:\s*([^;]+);", page).group(1).strip()
+    assert footer_bot == "var(--muted)"
+
+
+def test_modlog_shows_edit_and_join_records(page):
+    section = re.search(r'<section[^>]*id="moderation".*?</section>', page, re.S).group(0)
+    for needle in ("✏️ 消息被编辑", "🚪 成员加入", "Message edited", "Member joined"):
+        assert needle in section, needle
