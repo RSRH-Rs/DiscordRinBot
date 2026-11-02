@@ -100,8 +100,9 @@ bot 与网页共用。网页已用 `BOT_DIR` 指向 `rinbot/`，在 `website/rou
 | reactionroles | 反应模式不支持单选（exclusive） | 加反应时若面板 exclusive：用 `rincore.roles` 计算需移除的同面板身份组并移除；尽力移除该用户在此消息上的其他映射反应（需要“管理消息”权限，失败忽略） |
 | musicconfig | 同步 `sqlite3` 读库，锁等待最长阻塞事件循环 2 秒 | 启动时全量加载到内存字典；`get_config` 读内存；注册 `music` 同步回调按服务器重载；`set_config` 写库后更新内存 |
 | globalsettings | 黑名单/维护模式不拦截组件交互（音乐控制、抽奖、身份组按钮） | `GlobalSettings` 暴露 `blocked_reason(user_id) -> str | None`；`NowPlayingView`、`SearchView`、`GiveawayEntryButton`、`netease` 的 `_OwnerView` 的 `interaction_check`，以及 `reactionroles.on_interaction`，调用它并以 ephemeral 回复拒绝 |
+| globalsettings | 网页“全局禁用指令”写入 `global_disabled_cmds` 表，但 bot 从不读取，开关无效 | `_reload` 一并加载该表为集合；`_global_check` 对非主人拒绝被全局禁用的指令（按 `ctx.command.qualified_name.split()[0]` 判断），ephemeral 提示“该指令已被全局停用” |
 | errors | 完整 traceback 发到各服务器日志频道（泄露服务器路径） | 生成 8 位错误编号；完整 traceback 只发到开发服务器（`DEV_GUILD_ID`）的 bot 日志，并打印到 journal；用户与所在服务器日志只看到“出错了（错误编号 XXXX）” |
-| 全局 | 依赖服务器的指令在私信中调用报错 | 为所有使用 `ctx.guild` 的指令加 `@commands.guild_only()`；`errors._friendly` 对 `NoPrivateMessage` 给出友好提示 |
+| 全局 | 依赖服务器的指令在私信中调用报错 | 为所有使用 `ctx.guild` 的指令加 `@commands.guild_only()`（`errors._friendly` 已对 `NoPrivateMessage` 给出友好提示，无需改动） |
 | 清理 | 根目录 `rinbot/serverlog.py`、`rinbot/help.py` 与 `cogs/` 下重复 | 确认无 import 引用后删除 |
 | 清理 | `diag_automod.py` 调试脚本混在主目录 | 移到 `rinbot/tools/` |
 
