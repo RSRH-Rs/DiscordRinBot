@@ -130,12 +130,17 @@ INDIRECT_GUILD_COMMANDS = {
         "ne_play", "ne_search", "ne_profile",
     },
 }
+# 不进 git 的本地模块：部署检出目录里没有这个文件时跳过
+LOCAL_ONLY_COGS = {"netease.py"}
 
 
 def test_indirect_guild_commands_carry_guild_only():
     missing = []
     for fname, wanted in INDIRECT_GUILD_COMMANDS.items():
-        with open(os.path.join(COGS_DIR, fname), encoding="utf-8") as f:
+        path = os.path.join(COGS_DIR, fname)
+        if fname in LOCAL_ONLY_COGS and not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as f:
             tree = ast.parse(f.read(), fname)
         found = set()
         for fn in ast.walk(tree):

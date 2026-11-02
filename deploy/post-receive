@@ -76,6 +76,8 @@ EXCLUDES=(
     --exclude='*.db' --exclude='*.db-wal' --exclude='*.db-shm' --exclude='*.db-journal'
     --exclude='config.py' --exclude='uploads/' --exclude='health.json'
     --exclude='*.log' --exclude='__pycache__/' --exclude='*.bak*' --exclude='.env'
+    # 网易云模块只在本地和服务器上，不进 git；排除后 --delete 不会删掉服务器上的那份
+    --exclude='/cogs/netease.py'
 )
 STEP="rsync rinbot"
 rsync -a --delete "${EXCLUDES[@]}" "$SRC/rinbot/" /root/rinbot/
