@@ -124,7 +124,8 @@ def test_scenes_present(page):
     assert len(sections) == 4
     for sid in ("music", "welcome", "moderation", "dashboard"):
         body = re.search(rf'<section[^>]*id="{sid}".*?</section>', page, re.S).group(0)
-        assert 'class="scene-channel' in body, sid
+        assert f'class="band band-{sid if sid != "dashboard" else "finale"}"' in body, sid
+        assert 'class="wm"' in body, sid
     assert page.count("manage-blink-") >= 1
     assert page.count("confused-blink-") >= 1
 
@@ -165,12 +166,33 @@ def _contrast(a, b):
     return (hi + 0.05) / (lo + 0.05)
 
 
-def test_text_colors_meet_contrast(page):
+# (文字色, 底色)：每条色带和 Discord 对话框里实际出现的组合
+TEXT_PAIRS = [
+    ("cream", "violet"), ("lilac", "violet"),
+    ("cream", "night"), ("lilac", "night"),
+    ("ink-soft", "sakura"), ("ink-soft", "mint"), ("ink", "apricot"),
+    ("dc-text", "dc-bg"), ("dc-muted", "dc-bg"), ("dc-muted", "dc-deep"), ("rin-name", "dc-bg"),
+    ("footer-muted", "ink"), ("apricot", "ink"),
+]
+
+
+@pytest.mark.parametrize("fg,bg", TEXT_PAIRS)
+def test_text_colors_meet_contrast(page, fg, bg):
     tokens = dict(re.findall(r"--([\w-]+):\s*(#[0-9A-Fa-f]{6})", page))
-    assert _contrast(tokens["rin"], tokens["surface"]) >= 4.5
-    assert _contrast(tokens["muted"], tokens["channel"]) >= 4.5
-    footer_bot = re.search(r"\.footer-bot \{[^}]*color:\s*([^;]+);", page).group(1).strip()
-    assert footer_bot == "var(--muted)"
+    assert _contrast(tokens[fg], tokens[bg]) >= 4.5, (fg, bg)
+
+
+def test_display_font_subset_covers_headings(page):
+    # 站酷快乐体只按 text= 下载子集；标题里缺字会退回系统字体，混排很难看
+    from urllib.parse import parse_qs, urlparse
+    from html import unescape
+    href = next(a["href"] for t, a in tags(page) if t == "link" and "ZCOOL" in a.get("href", ""))
+    subset = parse_qs(urlparse(unescape(href)).query)["text"][0]
+    headings = re.findall(r'<h[12][^>]*><span data-l="zh">(.*?)</span>', page)
+    assert len(headings) == 5
+    for h in headings:
+        for ch in re.sub(r"<[^>]+>", "", h):
+            assert ch in subset, ch
 
 
 def test_modlog_shows_edit_and_join_records(page):
