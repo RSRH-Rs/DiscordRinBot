@@ -5,7 +5,7 @@ import os
 import sys
 import time
 from config import TOKEN
-from rincore import storage
+from rincore import storage, sync
 
 # cogs/ 里的辅助模块（如 _botlog_helper）用绝对导入，需把 cogs 目录加进 sys.path
 COGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cogs")
@@ -21,9 +21,11 @@ class HybridBot(commands.Bot):
 
         super().__init__(command_prefix="r!", intents=intents, help_command=None)
         self.start_time = time.time()
+        self.change_watcher = sync.ChangeWatcher()
 
     async def setup_hook(self):
         await storage.enable_wal()
+        await self.change_watcher.start()  # 必须在加载 cog 之前（cog 在 cog_load 里注册回调）
         print("--- 开始加载插件 ---")
         for filename in os.listdir(COGS_DIR):
             if filename.endswith(".py") and not filename.startswith("_"):
