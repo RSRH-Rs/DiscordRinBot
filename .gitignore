@@ -1,0 +1,24 @@
+# Secrets — copy the *.example.py next to them and fill in real values
+rinbot/config.py
+website/config.py
+.env
+
+# Runtime data
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
+rinbot/health.json
+rinbot/uploads/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Editor / manual backups
+*.bak
+*.bak-*
+.vscode/
+.idea/

@@ -1,0 +1,76 @@
+/* Shared responsive shell for the list, guild settings, and global settings. */
+body { height:100dvh; }
+.sidebar-inner { min-height:0; padding-bottom:max(18px,env(safe-area-inset-bottom)); }
+.side-nav { flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; margin-bottom:16px; }
+.brand,.user-card { flex-shrink:0; }
+.main-content { min-height:0; overscroll-behavior:contain; }
+.topbar>div:first-child { min-width:0; }
+.page-title { overflow-wrap:anywhere; }
+.mobile-menu-btn,.sidebar-backdrop { display:none; }
+.draft-hint { margin-top:12px; font-size:.8rem; color:var(--text-mid); }
+.has-unsaved .draft-hint,.save-bar.dirty .save-hint { color:#9B3F57; }
+.draft-notice {
+    position:fixed;
+    top:calc(var(--dashboard-header-height,94px) + 12px);
+    left:calc(var(--sidebar-w) + 32px);
+    right:32px;
+    z-index:60;
+    padding:10px 16px;
+    border:1px solid #E8B4BF;
+    border-radius:10px;
+    background:rgba(245,232,236,.96);
+    box-shadow:0 8px 24px rgba(90,58,68,.14);
+    backdrop-filter:blur(12px);
+    color:#81364A;
+    font-size:.82rem;
+    text-align:center;
+    pointer-events:none;
+}
+.draft-notice[hidden] { display:none; }
+.load-feedback { font-size:.85rem; padding:12px 16px; background:#FFF3DD; color:#714A10; border-radius:10px; margin-bottom:12px; }
+.load-feedback button { margin-left:12px; padding:6px 12px; cursor:pointer; }
+.cfg-section[aria-busy=true],.mod-page[aria-busy=true] { opacity:.75; }
+.save-bar { gap:12px; padding-bottom:max(14px,env(safe-area-inset-bottom)); }
+.save-bar .btn-save { flex-shrink:0; }
+.save-hint { min-width:0; }
+.bot-online-badge[data-state]:not([data-state=online]) { background:var(--panel); border-color:var(--border); color:var(--text-mid); }
+.bot-online-badge[data-state]:not([data-state=online]) .pip { background:currentColor; animation:none; }
+.runtime-note { font-size:.78rem; color:var(--text-mid); margin:0 0 16px; }
+.mod-card { text-align:left; color:inherit; font:inherit; width:100%; }
+.mod-card-name { min-width:0; }
+.mod-status-badge { flex-shrink:0; }
+.mod-card--off { opacity:.75; cursor:pointer; }
+.mod-card:focus-visible,.cfg-tog:focus-within { outline:2px solid #9B3F57; outline-offset:3px; }
+.nav-status.pending { background:#C6902E; }
+.server-summary { flex-wrap:wrap; }
+.server-summary-info { min-width:0; flex:1 1 170px; }
+.warn-box { display:block; overflow-wrap:anywhere; }
+.tag-rm { border:0; padding:0; background:none; font-family:inherit; }
+.tag-add input { min-width:0; }
+.tag-chip { max-width:100%; overflow-wrap:anywhere; }
+.toast { width:max-content; overflow-wrap:anywhere; }
+.toast>span:last-child { min-width:0; }
+@media(max-width:860px) {
+    .mobile-menu-btn { display:flex; align-items:center; justify-content:center; position:fixed; top:12px; left:12px; z-index:70; width:42px; height:42px; padding:0; border:0; border-radius:12px; background:var(--sidebar-bg); color:#F0EDE8; cursor:pointer; }
+    .sidebar { position:fixed; inset:0 auto 0 0; z-index:80; max-width:calc(100vw - 48px); transform:translateX(-100%); visibility:hidden; transition:transform .2s; }
+    .sidebar.open { transform:translateX(0); visibility:visible; }
+    .sidebar-backdrop.show { display:block; position:fixed; inset:0; z-index:75; background:rgba(0,0,0,.45); }
+    .topbar { padding:18px 16px 18px 64px; flex-wrap:wrap; gap:10px; }
+    .topbar>div:first-child { flex:1 1 180px; }
+    .topbar .btn-add { white-space:normal; }
+    .content-area { padding:18px 16px 36px; }
+    .draft-notice { left:16px; right:16px; top:calc(var(--dashboard-header-height,94px) + 10px); }
+    .server-grid,.mod-grid { grid-template-columns:minmax(0,1fr); }
+    .ov-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .save-bar { margin:18px -16px -36px; padding:12px 16px max(12px,env(safe-area-inset-bottom)); flex-wrap:wrap; }
+    .save-bar .btn-save { margin-left:auto; }
+    .cfg-row { flex-direction:column; align-items:stretch; }
+    .cfg-row .cfg-select,.cfg-row .cfg-input,.cfg-row .cfg-textarea { width:100%; max-width:100% !important; }
+    .cfg-section { padding:18px 16px; }
+    .mod-banner { padding:22px 20px; }
+    .util-tip { flex-wrap:wrap; overflow-wrap:anywhere; }
+    .rr-row { flex-wrap:wrap; }
+    .rr-row select { min-width:0; }
+    .toast { max-width:calc(100vw - 32px); border-radius:14px; bottom:calc(80px + env(safe-area-inset-bottom)); }
+}
+@media(prefers-reduced-motion:reduce) { .sidebar { transition:none; } }
