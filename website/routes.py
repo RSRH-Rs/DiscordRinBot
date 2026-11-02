@@ -11,6 +11,7 @@ import aiohttp
 import aiosqlite
 import json
 import os
+import sys
 from io import BytesIO
 from pathlib import Path
 from typing import Optional
@@ -165,24 +166,28 @@ async def _fetch_username(uid: str) -> str:
 # ── 关键：数据库在 rinbot 目录，网站在 website 目录 ──
 # 相对路径: website/ → ../rinbot/
 BOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rinbot")
+_BOT_DIR_ABS = os.path.abspath(BOT_DIR)
+if _BOT_DIR_ABS not in sys.path:
+    sys.path.insert(0, _BOT_DIR_ABS)
+from rincore import storage  # noqa: E402
 WELCOME_UPLOAD_DIR = os.path.abspath(
     os.environ.get(
         "RINBOT_WELCOME_UPLOAD_DIR", os.path.join(BOT_DIR, "uploads", "welcome")
     )
 )
 
-DB_WELCOME = os.path.join(BOT_DIR, "welcome.db")
-DB_AUTOMOD = os.path.join(BOT_DIR, "automod.db")
-DB_MODERATION = os.path.join(BOT_DIR, "moderation.db")
-DB_GIVEAWAY = os.path.join(BOT_DIR, "giveaway.db")
-DB_LEVELING = os.path.join(BOT_DIR, "leveling.db")
-DB_BOTCONFIG = os.path.join(BOT_DIR, "botconfig.db")
-DB_RR = os.path.join(BOT_DIR, "reactionroles.db")
-DB_CMDTOGGLE = os.path.join(BOT_DIR, "commandtoggle.db")
-DB_MUSIC = os.path.join(BOT_DIR, "musicconfig.db")
-DB_BOTLOG = os.path.join(BOT_DIR, "botlog.db")
-DB_SERVERLOG = os.path.join(BOT_DIR, "serverlog.db")
-DB_GLOBAL = os.path.join(BOT_DIR, "globalsettings.db")
+DB_WELCOME = storage.db_path("welcome")
+DB_AUTOMOD = storage.db_path("automod")
+DB_MODERATION = storage.db_path("moderation")
+DB_GIVEAWAY = storage.db_path("giveaway")
+DB_LEVELING = storage.db_path("leveling")
+DB_BOTCONFIG = storage.db_path("botconfig")
+DB_RR = storage.db_path("reactionroles")
+DB_CMDTOGGLE = storage.db_path("commandtoggle")
+DB_MUSIC = storage.db_path("musicconfig")
+DB_BOTLOG = storage.db_path("botlog")
+DB_SERVERLOG = storage.db_path("serverlog")
+DB_GLOBAL = storage.db_path("globalsettings")
 
 
 def _validate_welcome_image(raw: bytes, claimed_mime: str = "") -> tuple[str, str]:
@@ -338,6 +343,7 @@ async def _guild_module_config(slug: str, gid: int) -> str:
 
 async def ensure_tables():
     """Bot 可能还没跑过，先建好所有表"""
+    await storage.enable_wal()
     try:
         async with aiosqlite.connect(DB_WELCOME) as db:
             await db.execute("""CREATE TABLE IF NOT EXISTS welcome_config (
