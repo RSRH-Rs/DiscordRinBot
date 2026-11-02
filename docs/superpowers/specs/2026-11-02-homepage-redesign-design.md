@@ -92,8 +92,8 @@
 
 做法：双语都写进 HTML，渲染前就选好语言，不改后端。
 
-- 可翻译的文字写成成对的 `<span lang="zh-CN">…</span><span lang="en">…</span>`。CSS 规则：`html[data-lang="zh"] [lang="en"]{display:none}`，反过来同理。属性值（`alt`、`aria-label`、`<title>`、`<meta name="description">`）由 JS 字典设置，数量很少。
-- `<head>` 顶部放内联脚本，在页面绘制前确定语言：先读 `localStorage.rinbot_lang`（沿用现有键）；没有记录就看 `navigator.languages`，第一个以 `zh` 开头的就选 `zh`，否则选 `en`；最后设置 `<html data-lang>` 和 `lang`。localStorage 不可用时用 try/catch 兜底。
+- 可翻译的文字写成成对的 `<span data-l="zh">…</span><span data-l="en">…</span>`。CSS 规则：`html[data-lang="zh"] [data-l="en"]{display:none}`，反过来同理。不用 `lang` 属性做开关，因为口号 "All in one, one for all." 这类在两种模式下都显示的英文，本身就该标 `lang="en"`。属性值（`alt`、`aria-label`、`<title>`、`<meta name="description">`）由 JS 字典设置，数量很少。
+- `<head>` 顶部放内联脚本，在页面绘制前确定语言：先读 `localStorage.rinbot_lang`（沿用现有键）；没有记录就看首选语言 `navigator.languages[0]`（没有时用 `navigator.language`），以 `zh` 开头就选 `zh`，否则选 `en`；最后设置 `<html data-lang>` 和 `lang`。localStorage 不可用时用 try/catch 兜底。
 - 没有 JS 时，模板默认 `data-lang="zh"`，中文正常显示。
 - 切换按钮是 `<button>`：点击后切换 `data-lang`、写入 localStorage、更新 `lang`、`<title>` 和属性文字。按钮标签显示目标语言（中文模式显示「EN」，英文模式显示「中文」），并带上 `aria-label`。
 - 登录状态：继续由 Jinja 变量 `is_logged_in` 输出「登录控制台 / 进入控制台」和「Dashboard login / Open dashboard」。
@@ -115,7 +115,7 @@
 ## 6. 资源与性能
 
 - 贴纸：welcome / music / manage / confused 四张由 1254px PNG（约 800KB）生成 WebP 两档，`-480.webp` 和 `-960.webp`，用 `srcset` 按需加载。闭眼帧 `manage-blink`、`confused-blink` 同样生成两档。
-- 生成方法：一次性的 Pillow 脚本，放在 `tools/` 下并提交，方便以后重新生成。闭眼帧用左右肤色插值抹掉眼睛，再画上眼睑弧线，人工检查效果。
+- 生成方法：一次性的 Pillow 脚本 `website/tools/make_rin_assets.py`，提交进仓库，方便以后重新生成。闭眼帧用左右肤色插值抹掉眼睛，再画上眼睑弧线，人工检查效果。
 - 除首屏外，图片都加 `loading="lazy"` 和 `decoding="async"`，并写明宽高，避免布局跳动。
 - 移除 `unpkg.com/lucide@latest`（没锁版本，且阻塞渲染），图标改为少量内联 SVG。
 - Google Fonts 只加载 Fredoka，使用 `display=swap`。
