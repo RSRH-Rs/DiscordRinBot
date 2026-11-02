@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# 放进 rinbot/ 目录运行：python diag_automod.py
+# 在仓库根目录运行（任意目录均可）：python rinbot/tools/diag_automod.py
 # 用来确认 bot 和网站读写的是不是同一个 automod.db，以及里面到底存了什么
 
 import os
@@ -9,8 +9,8 @@ import time
 here = os.path.dirname(os.path.abspath(__file__))
 
 # cog 用的路径：DB_PATH = dirname(dirname(cogs/automod.py)) + automod.db
-# 如果脚本就放在 rinbot/ 根目录，cog 的 db 就是 here/automod.db
-cog_db = os.path.join(here, "automod.db")
+# 脚本位于 rinbot/tools/，所以 cog 的 db 是 rinbot/automod.db（与 CWD 无关）
+cog_db = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "automod.db")
 print(f"📁 脚本所在目录: {here}")
 print(f"🤖 cog 期望的 automod.db: {os.path.realpath(cog_db)}")
 print(f"   存在吗: {os.path.exists(cog_db)}\n")
