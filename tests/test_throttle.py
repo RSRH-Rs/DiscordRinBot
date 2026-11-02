@@ -93,3 +93,25 @@ async def test_debounce_swallows_factory_errors():
     d.schedule("k", ok)
     await asyncio.sleep(0.08)
     assert calls == [1]
+
+
+async def test_debounce_cancel_single_key_never_runs():
+    d = throttle.Debouncer(0.05)
+    calls = []
+
+    def make(name):
+        async def run():
+            calls.append(name)
+
+        return run
+
+    d.schedule("a", make("a"))
+    d.schedule("b", make("b"))
+    d.cancel("a")
+    d.cancel("missing")  # 不存在的 key 直接忽略
+    await asyncio.sleep(0.1)
+    assert calls == ["b"]
+    # 取消后同一个 key 可以重新调度
+    d.schedule("a", make("a2"))
+    await asyncio.sleep(0.1)
+    assert calls == ["b", "a2"]

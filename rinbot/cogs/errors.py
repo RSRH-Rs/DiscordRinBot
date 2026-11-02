@@ -40,7 +40,9 @@ def _friendly(error) -> str | None:
         return "找不到该身份组。"
     if isinstance(error, commands.ChannelNotFound):
         return "找不到该频道。"
-    if isinstance(error, commands.BadArgument):
+    if isinstance(error, (commands.BadArgument, commands.UserInputError)):
+        # 其余 UserInputError（BadLiteralArgument/BadUnionArgument/TooManyArguments 等）；
+        # 更具体的子类已在上面处理
         return "参数有误，请检查后重试。"
     # 全局 check（黑名单/维护）会自行提示，这里静默避免重复
     if isinstance(error, (commands.CheckFailure, app_commands.CheckFailure)):

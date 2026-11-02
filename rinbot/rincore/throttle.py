@@ -31,6 +31,13 @@ class Debouncer:
         except Exception as e:
             print(f"[Debouncer] {key!r}: {e}")
 
+    def cancel(self, key: Hashable) -> None:
+        """取消某个 key 尚未执行的调度（没有则忽略）。"""
+        self._factories.pop(key, None)
+        task = self._tasks.pop(key, None)
+        if task is not None:
+            task.cancel()
+
     def cancel_all(self) -> None:
         """取消所有尚未执行的调度（cog 卸载时调用）。"""
         for task in self._tasks.values():

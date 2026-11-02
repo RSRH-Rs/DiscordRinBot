@@ -47,6 +47,8 @@ class BotConfig(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
+        # main.py 的 on_ready 每次(重)连都会写入默认状态，需强制重新应用面板配置
+        self._last_hash = None
         await self.apply_presence()
 
     async def reload_guild(self, guild_id: int = 0):

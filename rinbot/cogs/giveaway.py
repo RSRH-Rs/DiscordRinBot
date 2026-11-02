@@ -289,6 +289,9 @@ class Giveaway(commands.Cog):
             if cursor.rowcount != 1:
                 return
 
+        # 取消待执行的按钮人数刷新，避免它在下面移除按钮之后又把按钮挂回去
+        self.label_debouncer.cancel(message_id)
+
         guild = self.bot.get_guild(guild_id)
         if not guild:
             return

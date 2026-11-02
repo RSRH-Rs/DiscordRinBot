@@ -356,22 +356,22 @@ class Moderation(commands.Cog):
     async def ban(
         self,
         ctx,
-        user: discord.User,
+        member: discord.User,
         delete_days: commands.Range[int, 0, 7] = 0,
         *,
         reason: str = DEFAULT_REASON,
     ):
         """
-        user: 成员、提及或用户 ID
+        member: 成员、提及或用户 ID
         delete_days: 同时删除其最近几天的消息 (0-7，仅斜杠命令生效)
         """
         delete_days, reason = resolve_ban_args(
             ctx.interaction is not None, delete_days, reason
         )
         # 目标在服务器内才做层级检查与私信；不在服务器的用户（按 ID 封禁）直接封禁
-        member = user if isinstance(user, discord.Member) else ctx.guild.get_member(user.id)
-        if member is not None:
-            err = self._hierarchy_check(ctx, member)
+        target = member if isinstance(member, discord.Member) else ctx.guild.get_member(member.id)
+        if target is not None:
+            err = self._hierarchy_check(ctx, target)
             if err:
                 await ctx.send(err, ephemeral=True)
                 return
@@ -382,19 +382,19 @@ class Moderation(commands.Cog):
                     description=f"**原因:** {reason}\n**管理员:** {ctx.author}",
                     color=discord.Color.red(),
                 )
-                await member.send(embed=embed)
+                await target.send(embed=embed)
             except (discord.Forbidden, discord.HTTPException):
                 pass
 
         await ctx.guild.ban(
-            user,
+            member,
             reason=f"{ctx.author}: {reason}",
             delete_message_seconds=delete_days * 86400,
         )
-        case_id = await self._log_case(ctx.guild, "ban", user, ctx.author, reason)
+        case_id = await self._log_case(ctx.guild, "ban", member, ctx.author, reason)
 
         await ctx.send(
-            f"🔨 **{user}** 已被永久封禁。(案件 #{case_id})\n📝 原因: {reason}"
+            f"🔨 **{member}** 已被永久封禁。(案件 #{case_id})\n📝 原因: {reason}"
         )
 
     # ═══════════════════════════════════════

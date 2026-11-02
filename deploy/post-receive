@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # RinBot push-to-deploy hook. Installed at /root/rinbot.git/hooks/post-receive.
 set -euo pipefail
+# a client disconnect (HUP/PIPE) must not kill the hook between rsync and restart
+trap '' HUP PIPE
 
 SRC=/root/rinbot-src
 GIT_DIR_PATH=/root/rinbot.git
@@ -59,6 +61,16 @@ fi
 STEP="import smoke"
 (cd "$SRC/rinbot" && python3 -c "import importlib,os,sys; sys.path.insert(0,'cogs'); [importlib.import_module('cogs.'+f[:-3]) for f in sorted(os.listdir('cogs')) if f.endswith('.py') and not f.startswith('_')]")
 
+# 6b. dashboard import smoke test (config.py was copied in above)
+STEP="dashboard import smoke"
+(cd "$SRC/website" && python3 -c "import routes")
+
+# 6c. did requirements change? compare BEFORE rsync; a missing live file means install
+need_pip=0
+if ! cmp -s "$SRC/rinbot/requirements.txt" /root/rinbot/requirements.txt; then
+    need_pip=1
+fi
+
 # 7. sync to live dirs
 EXCLUDES=(
     --exclude='*.db' --exclude='*.db-wal' --exclude='*.db-shm' --exclude='*.db-journal'
@@ -70,15 +82,8 @@ rsync -a --delete "${EXCLUDES[@]}" "$SRC/rinbot/" /root/rinbot/
 STEP="rsync website"
 rsync -a --delete "${EXCLUDES[@]}" "$SRC/website/" /root/website/
 
-# 8. dependencies, only if requirements changed
+# 8. dependencies, only if requirements changed (decided before rsync)
 STEP="pip install"
-zero="0000000000000000000000000000000000000000"
-need_pip=0
-if [ "$oldrev" = "$zero" ]; then
-    need_pip=1
-elif git --git-dir="$GIT_DIR_PATH" diff --name-only "$oldrev" "$newrev" | grep -x 'rinbot/requirements.txt' >/dev/null; then
-    need_pip=1
-fi
 if [ "$need_pip" -eq 1 ]; then
     pip3 install --break-system-packages -r /root/rinbot/requirements.txt
 fi
@@ -86,7 +91,7 @@ fi
 # 9. restart and verify
 STEP="restart"
 trap - ERR
-systemctl restart discordbot mysite
+systemctl restart discordbot mysite || echo "restart command returned non-zero"
 sleep 5
 ok=1
 for svc in discordbot mysite; do
