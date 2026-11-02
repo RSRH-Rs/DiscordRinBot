@@ -18,11 +18,14 @@ import os
 from typing import Optional
 from _botlog_helper import audit
 from rincore import durations
+from rincore.throttle import Debouncer
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "giveaway.db"
 )
 GIVEAWAY_EMOJI = "🎉"
+# 参与人数标签的刷新窗口(秒)：每个抽奖最多每 5 秒编辑一次原消息
+LABEL_REFRESH_SECONDS = 5.0
 
 
 class GiveawayEntryButton(View):
@@ -101,9 +104,14 @@ class GiveawayEntryButton(View):
                     f"✅ 你已成功参加抽奖！当前参与人数: {count}", ephemeral=True
                 )
 
-            # 更新按钮文字显示人数
-            button.label = f"🎉 参加抽奖! ({count}人)"
-            await interaction.message.edit(view=self)
+        # 按钮文字里的人数改为节流更新（点击本身只回复 ephemeral，避免大型抽奖触发限流）
+        cog = interaction.client.get_cog("Giveaway")
+        if cog is not None:
+            message = interaction.message
+            cog.label_debouncer.schedule(
+                message.id,
+                lambda: cog._refresh_entry_label(message, giveaway_id),
+            )
 
 
 class Giveaway(commands.Cog):
@@ -111,6 +119,7 @@ class Giveaway(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
+        self.label_debouncer = Debouncer(LABEL_REFRESH_SECONDS)
 
     async def cog_load(self):
         async with aiosqlite.connect(DB_PATH) as db:
@@ -164,8 +173,30 @@ class Giveaway(commands.Cog):
 
     def cog_unload(self):
         self.check_giveaways.cancel()
+        self.label_debouncer.cancel_all()
 
     # ─── 工具 ───
+
+    async def _refresh_entry_label(self, message: discord.Message, giveaway_id: int):
+        """节流窗口结束时执行：按此刻数据库里的人数更新参与按钮标签（已结束的抽奖不再编辑）"""
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                "SELECT ended FROM giveaways WHERE id = ?", (giveaway_id,)
+            )
+            row = await cursor.fetchone()
+            if not row or row[0]:
+                return
+            cursor = await db.execute(
+                "SELECT COUNT(*) FROM giveaway_entries WHERE giveaway_id = ?",
+                (giveaway_id,),
+            )
+            count = (await cursor.fetchone())[0]
+        view = GiveawayEntryButton()
+        view.enter.label = f"🎉 参加抽奖! ({count}人)"
+        try:
+            await message.edit(view=view)
+        except (discord.NotFound, discord.Forbidden, discord.HTTPException):
+            pass
 
     def _format_time_left(self, seconds: float) -> str:
         if seconds <= 0:

@@ -17,6 +17,7 @@ import json
 import os
 from typing import Optional
 from _botlog_helper import audit
+from rincore import roles
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reactionroles.db"
@@ -97,6 +98,16 @@ class ReactionRoles(commands.Cog):
             if msg_id not in fresh:
                 self._cache.pop(msg_id, None)
         self._cache.update(fresh)
+
+    async def _panel_for(self, ctx, msg_id: int) -> Optional[dict]:
+        """按消息 ID 取本服务器的面板缓存条目；不存在或属于其他服务器时返回 None"""
+        if msg_id not in self._cache:
+            # 缓存未命中：可能是网页刚建的面板（同步回调还没到），先重载该服务器再判断
+            await self.reload_guild(ctx.guild.id)
+        entry = self._cache.get(msg_id)
+        if entry is None or entry.get("guild_id") != ctx.guild.id:
+            return None
+        return entry
 
     async def _save_mappings(self, message_id: int, mappings: dict):
         entry = self._cache.get(message_id, {"mappings": {}, "exclusive": False})
@@ -273,7 +284,8 @@ class ReactionRoles(commands.Cog):
         await ctx.defer(ephemeral=True)
         msg_id = int(message_id)
 
-        if msg_id not in self._cache:
+        entry = await self._panel_for(ctx, msg_id)
+        if entry is None:
             await ctx.send("❌ 找不到该面板，请确认消息 ID 正确。", ephemeral=True)
             return
 
@@ -284,7 +296,7 @@ class ReactionRoles(commands.Cog):
             )
             return
 
-        mappings = self._cache[msg_id]["mappings"]
+        mappings = entry["mappings"]
         mappings[emoji] = role.id
         await self._save_mappings(msg_id, mappings)
 
@@ -327,11 +339,12 @@ class ReactionRoles(commands.Cog):
         await ctx.defer(ephemeral=True)
         msg_id = int(message_id)
 
-        if msg_id not in self._cache:
+        entry = await self._panel_for(ctx, msg_id)
+        if entry is None:
             await ctx.send("❌ 找不到该面板。", ephemeral=True)
             return
 
-        mappings = self._cache[msg_id]["mappings"]
+        mappings = entry["mappings"]
         if emoji not in mappings:
             await ctx.send("❌ 该 emoji 不在面板映射中。", ephemeral=True)
             return
@@ -409,11 +422,7 @@ class ReactionRoles(commands.Cog):
         await ctx.defer(ephemeral=True)
         msg_id = int(message_id)
 
-        if msg_id not in self._cache:
-            # 缓存未命中：可能是网页刚建的面板（同步回调还没到），先重载该服务器再判断
-            await self.reload_guild(ctx.guild.id)
-        entry = self._cache.get(msg_id)
-        if entry is None or entry.get("guild_id") != ctx.guild.id:
+        if await self._panel_for(ctx, msg_id) is None:
             await ctx.send("❌ 找不到该面板。", ephemeral=True)
             return
 
@@ -497,9 +506,43 @@ class ReactionRoles(commands.Cog):
         member = payload.member or guild.get_member(payload.user_id)
 
         if role and member:
+            if entry.get("exclusive"):
+                await self._exclusive_reaction(payload, guild, member, role, entry)
+                return
             try:
                 await member.add_roles(role, reason="反应身份组")
             except discord.Forbidden:
+                pass
+
+    async def _exclusive_reaction(self, payload, guild, member, role, entry):
+        """单选面板的反应添加：换走同面板其他身份组，并尽力撤掉该用户的其他映射反应"""
+        mappings = entry["mappings"]
+        to_add, to_remove = roles.exclusive_changes(
+            {r.id for r in member.roles}, set(mappings.values()), role.id
+        )
+        old_roles = [r for r in (guild.get_role(i) for i in to_remove) if r]
+        try:
+            if old_roles:
+                await member.remove_roles(*old_roles, reason="反应身份组 - 单选互斥")
+            if to_add:
+                await member.add_roles(role, reason="反应身份组")
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+        # 撤掉其他表情上的反应（需要“管理消息”权限，失败忽略）。映射到同一身份组的表情不能撤，
+        # 否则 on_raw_reaction_remove 会把刚领到的身份组又移除
+        channel = guild.get_channel_or_thread(payload.channel_id)
+        if channel is None:
+            return
+        message = channel.get_partial_message(payload.message_id)
+        for other_emoji, other_role_id in mappings.items():
+            if other_emoji == str(payload.emoji) or other_role_id == role.id:
+                continue
+            try:
+                await message.remove_reaction(other_emoji, member)
+            except discord.Forbidden:
+                return  # 没有“管理消息”权限，后面的也不会成功
+            except discord.HTTPException:
                 pass
 
     @commands.Cog.listener()
@@ -572,11 +615,10 @@ class ReactionRoles(commands.Cog):
             else:
                 # 单选模式:移除该面板里其他已拥有的角色
                 if exclusive:
-                    to_remove = [
-                        r
-                        for r in member.roles
-                        if r.id in panel_role_ids and r.id != role.id
-                    ]
+                    _, remove_ids = roles.exclusive_changes(
+                        {r.id for r in member.roles}, panel_role_ids, role.id
+                    )
+                    to_remove = [r for r in member.roles if r.id in remove_ids]
                     if to_remove:
                         try:
                             await member.remove_roles(
