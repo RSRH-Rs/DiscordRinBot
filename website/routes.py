@@ -169,7 +169,8 @@ BOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rinbot
 _BOT_DIR_ABS = os.path.abspath(BOT_DIR)
 if _BOT_DIR_ABS not in sys.path:
     sys.path.insert(0, _BOT_DIR_ABS)
-from rincore import storage  # noqa: E402
+from rincore import storage, sync  # noqa: E402
+from guild_ids import collect_guild_ids  # noqa: E402
 WELCOME_UPLOAD_DIR = os.path.abspath(
     os.environ.get(
         "RINBOT_WELCOME_UPLOAD_DIR", os.path.join(BOT_DIR, "uploads", "welcome")
@@ -519,20 +520,47 @@ def has_manage_permission(guild) -> bool:
         return False
 
 
+_BOT_GUILDS_TTL = 60  # 秒
+_bot_guilds_cache = (0.0, set())  # (时间戳, guild id 集合)
+
+
 async def fetch_bot_guild_ids() -> set:
+    """bot 所在的全部服务器 id（分页获取，缓存 60 秒；出错时返回旧缓存，没有则空集合）。"""
+    global _bot_guilds_cache
+    ts, cached = _bot_guilds_cache
+    if cached and time.time() - ts < _BOT_GUILDS_TTL:
+        return set(cached)
     headers = {"Authorization": f"Bot {BOT_TOKEN}"}
-    try:
+
+    async def fetch_page(after):
+        url = "https://discord.com/api/v10/users/@me/guilds?limit=200"
+        if after is not None:
+            url += f"&after={after}"
         s = await _get_session()
         async with s.get(
-            "https://discord.com/api/v10/users/@me/guilds",
+            url,
             headers=headers,
             timeout=aiohttp.ClientTimeout(total=5),
         ) as resp:
-            if resp.status == 200:
-                return {int(g["id"]) for g in await resp.json()}
+            if resp.status != 200:
+                raise RuntimeError(f"HTTP {resp.status}")
+            return await resp.json()
+
+    try:
+        ids = await collect_guild_ids(fetch_page)
     except Exception as e:
         print(f"[fetch_bot_guild_ids] {e}")
-    return set()
+        return set(cached)
+    _bot_guilds_cache = (time.time(), ids)
+    return set(ids)
+
+
+async def _notify_bot(module: str, gid) -> None:
+    """配置已写库后通知 bot 重载；通知失败只记日志，不影响已成功的保存。"""
+    try:
+        await sync.notify(module, int(gid))
+    except Exception as e:
+        print(f"[sync] notify 失败 ({module}, {gid}): {e!r}")
 
 
 async def discord_api_get(path):
@@ -1215,6 +1243,7 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            await _notify_bot("welcome", g)
             actor = await _resolve_actor(discord)
             audit(g, "欢迎模块配置已更新", **{"操作者": actor})
             return jsonify({"ok": True})
@@ -1269,6 +1298,7 @@ def setup_routes(app, discord):
                         )
                         await db.commit()
                     _remove_welcome_image(old_filename, g, kind)
+                    await _notify_bot("welcome", g)
                     actor = await _resolve_actor(discord)
                     audit(
                         g,
@@ -1329,6 +1359,7 @@ def setup_routes(app, discord):
 
                 if old_filename != filename:
                     _remove_welcome_image(old_filename, g, kind)
+                await _notify_bot("welcome", g)
                 actor = await _resolve_actor(discord)
                 audit(
                     g,
@@ -1454,6 +1485,7 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            await _notify_bot("automod", g)
             actor = await _resolve_actor(discord)
             audit(g, "自动审核配置已更新", **{"操作者": actor})
             return jsonify({"ok": True})
@@ -1521,6 +1553,7 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            await _notify_bot("moderation", g)
             actor = await _resolve_actor(discord)
             audit(g, "管理模块配置已更新", **{"操作者": actor})
             return jsonify({"ok": True})
@@ -1646,6 +1679,7 @@ def setup_routes(app, discord):
                     (g, int(d.get("dj_role", 0)), int(d.get("notify_channel", 0))),
                 )
                 await db.commit()
+            await _notify_bot("music", g)
             actor = await _resolve_actor(discord)
             audit(g, "音乐模块配置已更新", **{"操作者": actor})
             return jsonify({"ok": True})
@@ -1711,6 +1745,7 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            await _notify_bot("botlog", g)
             actor = await _resolve_actor(discord)
             audit(
                 g,
@@ -1845,6 +1880,7 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            await _notify_bot("serverlog", g)
             actor = await _resolve_actor(discord)
             audit(
                 g,
@@ -1996,6 +2032,7 @@ def setup_routes(app, discord):
                 (msg,),
             )
             await db.commit()
+        await _notify_bot("global", 0)
         return jsonify({"ok": True})
 
     @app.route("/api/bot/blacklist", methods=["GET"])
@@ -2028,6 +2065,7 @@ def setup_routes(app, discord):
                 (uid, (d.get("reason") or "")[:200], time.time()),
             )
             await db.commit()
+        await _notify_bot("global", 0)
         return jsonify({"ok": True})
 
     @app.route("/api/bot/blacklist/remove", methods=["POST"])
@@ -2042,6 +2080,7 @@ def setup_routes(app, discord):
         async with aiosqlite.connect(DB_GLOBAL) as db:
             await db.execute("DELETE FROM blacklist WHERE user_id=?", (uid,))
             await db.commit()
+        await _notify_bot("global", 0)
         return jsonify({"ok": True})
 
     @app.route("/api/bot/announce", methods=["POST"])
@@ -2151,6 +2190,7 @@ def setup_routes(app, discord):
                     "DELETE FROM global_disabled_cmds WHERE name=?", (name,)
                 )
             await db.commit()
+        await _notify_bot("global", 0)
         return jsonify({"ok": True})
 
     @app.route("/api/bot/personalizer", methods=["GET"])
@@ -2197,6 +2237,7 @@ def setup_routes(app, discord):
                     ),
                 )
                 await db.commit()
+            await _notify_bot("global", 0)
             return jsonify({"ok": True})
         except Exception as e:
             print(f"[api_bot_cfg_post] {traceback.format_exc()}")
@@ -2214,6 +2255,7 @@ def setup_routes(app, discord):
                 return jsonify({"error": "用户名长度需要 2-32 字符"}), 400
             status, body = await discord_api_patch("/users/@me", {"username": name})
             if status == 200:
+                await _notify_bot("global", 0)
                 return jsonify({"ok": True})
             return (
                 jsonify({"error": body.get("message", f"Discord API {status}")}),
@@ -2246,6 +2288,7 @@ def setup_routes(app, discord):
                 return jsonify({"error": avatar_error}), 400
             status, body = await discord_api_patch("/users/@me", {"avatar": avatar_b64})
             if status == 200:
+                await _notify_bot("global", 0)
                 return jsonify({"ok": True, "avatar_url": _bot_avatar_url(body)})
             return (
                 jsonify({"error": body.get("message", f"Discord API {status}")}),
@@ -2393,6 +2436,7 @@ def setup_routes(app, discord):
                 )
                 await db.commit()
 
+            await _notify_bot("reactionroles", g)
             actor = await _resolve_actor(discord)
             audit(
                 g,
@@ -2700,6 +2744,7 @@ def setup_routes(app, discord):
                         (g, name),
                     )
                 await db.commit()
+            await _notify_bot("commands", g)
             actor = await _resolve_actor(discord)
             action = "启用" if enabled else "禁用"
             audit(g, f"{action}了指令", **{"操作者": actor, "指令": f"/{name}"})
@@ -2751,6 +2796,7 @@ def setup_routes(app, discord):
                     )
                 await db.commit()
 
+            await _notify_bot("commands", g)
             actor = await _resolve_actor(discord)
             action = "启用" if enabled else "禁用"
             audit(
