@@ -744,6 +744,7 @@ class Moderation(commands.Cog):
     @commands.hybrid_command(
         name="slowmode", aliases=["slow"], description="设置频道慢速模式"
     )
+    @commands.guild_only()
     @commands.has_permissions(manage_channels=True)
     @commands.bot_has_permissions(manage_channels=True)
     async def slowmode(self, ctx, seconds: int = 0):

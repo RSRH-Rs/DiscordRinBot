@@ -856,6 +856,7 @@ class Music(commands.Cog):
         aliases=["p"],
         description="播放音乐（歌名/链接/歌单/Spotify），支持队列",
     )
+    @commands.guild_only()
     @discord.app_commands.describe(query="歌名、歌曲链接或歌单链接")
     async def play(self, ctx, *, query: str):
         await ctx.defer()
@@ -934,6 +935,7 @@ class Music(commands.Cog):
             await ctx.send(f"📋 已将歌单中 **{len(songs)}** 首歌加入播放！")
 
     @commands.hybrid_command(name="search", aliases=["sc"], description="搜索歌曲并从结果中选择播放")
+    @commands.guild_only()
     @discord.app_commands.describe(query="要搜索的歌曲名或歌手")
     async def search(self, ctx, *, query: str):
         await ctx.defer()
@@ -1076,6 +1078,7 @@ class Music(commands.Cog):
     # ─── 指令：pause / resume ───
 
     @commands.hybrid_command(name="pause", description="暂停播放")
+    @commands.guild_only()
     async def pause(self, ctx):
         if not await self._require_voice_control(ctx):
             return
@@ -1087,6 +1090,7 @@ class Music(commands.Cog):
             await ctx.send("❌ 当前没有在播放。")
 
     @commands.hybrid_command(name="resume", aliases=["unpause"], description="恢复播放")
+    @commands.guild_only()
     async def resume(self, ctx):
         if not await self._require_voice_control(ctx):
             return
@@ -1422,6 +1426,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="join", aliases=["j", "connect"], description="让机器人加入你的语音频道"
     )
+    @commands.guild_only()
     async def join(self, ctx):
         if not ctx.author.voice:
             await ctx.send("❌ 你必须先加入一个语音频道！")

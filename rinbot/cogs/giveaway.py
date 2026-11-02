@@ -352,6 +352,7 @@ class Giveaway(commands.Cog):
     # ─── 指令：giveaway start ───
 
     @commands.hybrid_group(name="giveaway", aliases=["gw"], description="抽奖管理")
+    @commands.guild_only()
     async def giveaway_group(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send(
