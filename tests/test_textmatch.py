@@ -1,3 +1,5 @@
+import pytest
+
 from rincore import textmatch
 from rincore.textmatch import find_badword, find_links, host_of, is_whitelisted
 
@@ -125,3 +127,30 @@ def test_common_tld_bare_domains_are_links():
 def test_www_and_scheme_always_count_even_with_rare_tld():
     assert len(find_links("www.example.museum")) == 1
     assert len(find_links("https://example.museum/x")) == 1
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "看这个evil.com",
+        "evil.com看看",
+        "点击evil.com/x看",
+        "link:evil.com",
+        "foo_evil.com",
+        "visit/evil.com",
+        "。evil.com",
+        "wow...evil.com",
+    ],
+)
+def test_domain_glued_to_cjk_or_punctuation_is_detected(text):
+    links = find_links(text)
+    assert len(links) == 1
+    assert host_of(links[0]) == "evil.com"
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["10.30", "e.g. this", "U.S. army", "wait...", "me@x.example.com", "v1.2.3", "a.b.c"],
+)
+def test_noise_still_not_links(text):
+    assert find_links(text) == []

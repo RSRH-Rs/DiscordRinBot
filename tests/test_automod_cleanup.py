@@ -179,3 +179,40 @@ async def test_spam_trigger_deletes_window_messages():
     assert channel.bulk_deleted == [[1, 2, 3]]
     assert muted == ["刷屏"]
     assert cog._msg_cache[1][7] == []
+
+
+async def test_spam_chunks_more_than_100_messages():
+    a = _Channel(1)
+    guild = SimpleNamespace(get_channel_or_thread=lambda cid: None)
+    entries = [(1.0, 1, 1000 + i) for i in range(201)]
+    await _cog()._delete_spam_messages(guild, entries, a)
+    assert [len(b) for b in a.bulk_deleted] == [100, 100]
+    assert a.single_deleted == [1200]  # 末尾只剩 1 条时逐条删除
+
+
+async def test_spam_non_http_error_does_not_skip_remaining_channels():
+    a = _Channel(1, bulk_error=ConnectionError("net"))
+    b = _Channel(2)
+    guild = SimpleNamespace(get_channel_or_thread=lambda cid: {2: b}.get(cid))
+    entries = [(1.0, 1, 10), (2.0, 1, 11), (3.0, 2, 20), (4.0, 2, 21)]
+    await _cog()._delete_spam_messages(guild, entries, a)
+    assert b.bulk_deleted == [[20, 21]]
+
+
+async def test_spam_cleanup_crash_still_mutes():
+    cog, logged = _cog_with(anti_spam=1, spam_threshold=3, spam_interval=5)
+    muted = []
+
+    async def _mute(member, reason, duration):
+        muted.append(reason)
+
+    async def _boom(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    cog._mute_user = _mute
+    cog._delete_spam_messages = _boom
+    channel = _TalkChannel(5)
+    for mid in (1, 2, 3):
+        await cog.on_message(_Msg("hi", channel, mid))
+    assert muted == ["刷屏"]
+    assert [e.title for e in logged] == ["🚨 刷屏检测"]

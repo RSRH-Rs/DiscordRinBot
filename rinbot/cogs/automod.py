@@ -125,21 +125,30 @@ class AutoMod(commands.Cog):
                 channel = guild.get_channel_or_thread(channel_id)
             if channel is None:
                 continue
-            if len(message_ids) >= 2:
-                try:
-                    await channel.delete_messages(
-                        [discord.Object(id=mid) for mid in message_ids]
-                    )
-                    continue
-                except discord.HTTPException:
-                    pass  # 含 Forbidden；回退为逐条删除
-            for mid in message_ids:
-                try:
-                    await channel.get_partial_message(mid).delete()
-                except discord.Forbidden:
-                    break
-                except discord.HTTPException:
-                    pass
+            # delete_messages 单次最多 100 条；不足 2 条的批次走逐条删除
+            for start in range(0, len(message_ids), 100):
+                batch = message_ids[start : start + 100]
+                if len(batch) >= 2:
+                    try:
+                        await channel.delete_messages(
+                            [discord.Object(id=mid) for mid in batch]
+                        )
+                        continue
+                    except discord.HTTPException:
+                        pass  # 含 Forbidden；回退为逐条删除
+                    except Exception as e:
+                        print(f"[automod] 刷屏批量删除异常：{e!r}")
+                        continue
+                for mid in batch:
+                    try:
+                        await channel.get_partial_message(mid).delete()
+                    except discord.Forbidden:
+                        break
+                    except discord.HTTPException:
+                        pass
+                    except Exception as e:
+                        print(f"[automod] 刷屏逐条删除异常：{e!r}")
+                        break
 
     # 网页仪表盘保存后由变更日志回调：只重读该服务器的一行配置
     async def reload_guild(self, guild_id: int):
@@ -287,9 +296,13 @@ class AutoMod(commands.Cog):
             if len(self._msg_cache[guild_id][user_id]) >= threshold:
                 spam_entries = self._msg_cache[guild_id][user_id]
                 self._msg_cache[guild_id][user_id] = []
-                await self._delete_spam_messages(
-                    message.guild, spam_entries, message.channel
-                )
+                try:
+                    await self._delete_spam_messages(
+                        message.guild, spam_entries, message.channel
+                    )
+                except Exception as e:
+                    # 清理失败也不能跳过后面的禁言与日志
+                    print(f"[automod] 刷屏消息清理失败：{e!r}")
                 mute_dur = cfg.get("mute_duration", 300)
                 await self._mute_user(message.author, "刷屏", mute_dur)
                 try:
