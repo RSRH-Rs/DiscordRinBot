@@ -3,6 +3,7 @@
 两个进程共用 sync.db；表由任一方 CREATE TABLE IF NOT EXISTS 创建，互不依赖启动顺序。
 """
 import asyncio
+import sqlite3
 import time
 from typing import Awaitable, Callable, Dict, List, Optional
 
@@ -67,6 +68,7 @@ class ChangeWatcher:
         self.retention = retention
         self._callbacks: Dict[str, List[Callback]] = {}
         self._cursor = 0
+        self._ready = False  # 表已建好且游标已定位
         self._task: Optional[asyncio.Task] = None
 
     def register(self, module: str, callback: Callback) -> None:
@@ -77,16 +79,24 @@ class ChangeWatcher:
         if callbacks and callback in callbacks:
             callbacks.remove(callback)
 
-    async def start(self) -> None:
-        """建表、把游标定在当前最大 id（各 cog 启动时已全量加载配置，无需回放）、启动后台轮询。"""
-        if self._task is not None and not self._task.done():
-            return
+    async def _init(self) -> None:
+        """建表并把游标定在当前最大 id（各 cog 启动时已全量加载配置，无需回放）。"""
         async with aiosqlite.connect(self.path, timeout=_BUSY_TIMEOUT) as db:
             await db.execute(_CREATE_SQL)
             await db.commit()
             async with db.execute("SELECT COALESCE(MAX(id), 0) FROM changes") as cur:
                 row = await cur.fetchone()
         self._cursor = row[0] if row else 0
+        self._ready = True
+
+    async def start(self) -> None:
+        """初始化并启动后台轮询。初始化失败只记日志（不抛出，不能拖垮 bot 启动），由后台任务重试。"""
+        if self._task is not None and not self._task.done():
+            return
+        try:
+            await self._init()
+        except (aiosqlite.Error, sqlite3.Error, OSError) as e:
+            print(f"[sync] 初始化失败，稍后重试: {e!r}")
         self._task = asyncio.create_task(self._run())
 
     async def stop(self) -> None:
@@ -133,6 +143,8 @@ class ChangeWatcher:
         last_prune: Optional[float] = None
         while True:
             try:
+                if not self._ready:
+                    await self._init()  # 未初始化前不轮询，避免游标停在 0 而回放历史记录
                 await self.poll_once()
                 if last_prune is None or time.monotonic() - last_prune >= _PRUNE_INTERVAL:
                     last_prune = time.monotonic()
