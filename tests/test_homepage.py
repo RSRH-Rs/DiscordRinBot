@@ -115,3 +115,25 @@ def test_static_refs_exist(page):
     assert refs
     for ref in refs:
         assert (STATIC_DIR / ref).is_file(), ref
+
+
+def test_scenes_present(page):
+    ids = {a.get("id") for _, a in tags(page)}
+    assert {"music", "welcome", "moderation", "dashboard"} <= ids
+    sections = re.findall(r'<section[^>]*id="(music|welcome|moderation|dashboard)".*?</section>', page, re.S)
+    assert len(sections) == 4
+    for sid in ("music", "welcome", "moderation", "dashboard"):
+        body = re.search(rf'<section[^>]*id="{sid}".*?</section>', page, re.S).group(0)
+        assert 'class="scene-channel' in body, sid
+    assert page.count("manage-blink-") >= 1
+    assert page.count("confused-blink-") >= 1
+
+
+def test_hidden_states_gated_by_js(page):
+    css = "\n".join(re.findall(r"<style>(.*?)</style>", page, re.S))
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    css = re.sub(r"@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}", "", css)
+    for selector, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
+        if re.search(r"opacity\s*:\s*0(?![.\d])", body):
+            for sel in selector.split(","):
+                assert sel.strip().startswith(("html.js", ".js")), sel.strip()

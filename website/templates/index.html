@@ -1,4 +1,9 @@
 {%- macro t(zh, en) -%}<span data-l="zh">{{ zh|safe }}</span><span data-l="en" lang="en">{{ en|safe }}</span>{%- endmacro -%}
+{%- macro sticker(name, size, cls='') -%}
+<img{% if cls %} class="{{ cls }}"{% endif %} src="{{ url_for('static', filename='images/rin/' ~ name ~ '-480.webp') }}" srcset="{{ url_for('static', filename='images/rin/' ~ name ~ '-480.webp') }} 480w, {{ url_for('static', filename='images/rin/' ~ name ~ '-960.webp') }} 960w" sizes="{{ size }}px" alt="" width="{{ size }}" height="{{ size }}" loading="lazy" decoding="async">
+{%- endmacro -%}
+{%- macro rin_av() -%}<div class="av"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="40" height="40" loading="lazy" decoding="async"></div>{%- endmacro -%}
+{%- macro demo_av(file) -%}<div class="av"><img src="{{ url_for('static', filename='images/demo/' ~ file) }}" alt="" width="40" height="40" loading="lazy" decoding="async"></div>{%- endmacro -%}
 {%- set invite_url = 'https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands' -%}
 {%- set dash_zh = '进入控制台' if is_logged_in else '登录控制台' -%}
 {%- set dash_en = 'Open dashboard' if is_logged_in else 'Dashboard login' -%}
@@ -145,6 +150,111 @@
     .hero .lead { font-size: 18px; color: var(--muted); max-width: 28em; margin-bottom: 30px; }
     .actions { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 
+    /* ── 场景：文字 + 对话，左右交替 ── */
+    .scene {
+        display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+        gap: 64px; align-items: center; padding: 72px 0;
+    }
+    .scene.flip > .scene-text { order: 2; }
+    .scene-channel {
+        display: inline-block; font-weight: 600; font-size: 15px; color: var(--muted);
+        background: rgba(42, 36, 64, .06); border-radius: 6px; padding: 3px 10px; margin-bottom: 18px;
+    }
+    .scene-channel .hash { color: #9A96AD; margin-right: 4px; }
+    .scene h2 { font-size: clamp(30px, 3.6vw, 40px); line-height: 1.15; font-weight: 700; margin-bottom: 16px; }
+    .scene-text p { color: var(--muted); font-size: 17px; max-width: 26em; }
+
+    /* 贴纸从对话框上沿探出头：对话框盖住贴纸底部的平切边 */
+    .stage { --stk: 190px; position: relative; padding-top: calc(var(--stk) * .76); min-width: 0; }
+    .stage > .chat { position: relative; z-index: 1; }
+    .stage > .chat + .chat { margin-top: 14px; }
+    .stk { position: absolute; top: 0; right: 32px; width: var(--stk); z-index: 0; }
+    .stage.left .stk { right: auto; left: 32px; }
+    .stk img { width: 100%; height: auto; }
+    .stk .lid { position: absolute; inset: 0; visibility: hidden; }
+    .note { position: absolute; font-size: 24px; line-height: 1; color: #EE8FA6; pointer-events: none; }
+    .spark { position: absolute; width: 16px; height: 16px; pointer-events: none; }
+    .spark::before {
+        content: ''; position: absolute; inset: 0; background: #FFC96B;
+        clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+    }
+    .spark.pink::before { background: #F49BB0; }
+
+    /* 播放器 */
+    .player { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 12px; align-items: center; }
+    .player img { width: 64px; height: 64px; border-radius: 8px; object-fit: cover; }
+    .bar { height: 5px; background: #E4E2EE; border-radius: 5px; margin: 10px 0 4px; }
+    .bar i { display: block; height: 100%; width: 54%; border-radius: 5px; background: var(--apricot); }
+    .times { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+    .dbtns { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .dbtn {
+        font-size: 13px; font-weight: 500; line-height: 1; padding: 7px 10px; border-radius: 6px;
+        background: #E7E8EF; color: var(--ink); white-space: nowrap;
+        display: inline-flex; align-items: center; gap: 5px;
+    }
+    .dbtn svg { width: 14px; height: 14px; }
+    .dbtn.go { background: #3BA55C; color: #fff; }
+    .role { color: #3E7FD0; background: #E3EEFB; padding: 0 5px; border-radius: 4px; font-weight: 500; }
+
+    /* 等级卡 */
+    .rank { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: center; }
+    .rank img, .lb img { border-radius: 50%; object-fit: cover; }
+    .rank .bar i { width: 69%; background: var(--rin); }
+    .lb { list-style: none; margin-top: 10px; display: grid; gap: 6px; font-size: 14px; }
+    .lb li { display: grid; grid-template-columns: 22px 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+    .lb .pos { font-weight: 700; color: var(--muted); }
+    .lb .crop { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; }
+    .lb .crop img { width: 100%; height: 100%; }
+    .lb .crop .zoom { transform: scale(1.55); transform-origin: 60% 25%; }
+
+    /* 被自动删掉的消息 */
+    .gone { color: #A9A6B8; text-decoration: line-through; }
+    .field { font-size: 14px; }
+    .field b { font-weight: 600; }
+
+    /* ── 收尾：控制台 ── */
+    .finale-band { background: var(--surface); border-top: 1px solid var(--line); }
+    .finale { padding: 88px 0; }
+    .dash-mock {
+        display: flex; min-height: 280px; border-radius: 16px; overflow: hidden;
+        border: 1px solid var(--line); background: #F7F7FB;
+        box-shadow: 0 24px 48px -32px rgba(42, 36, 64, .45);
+    }
+    .dm-side { width: 150px; flex-shrink: 0; background: var(--ink); padding: 18px 12px; display: grid; align-content: start; gap: 4px; }
+    .dm-brand { color: #fff; font-weight: 600; font-size: 14px; padding: 0 8px 12px; }
+    .dm-nav { color: #B7B2CC; font-size: 13px; padding: 7px 8px; border-radius: 6px; }
+    .dm-nav.on { background: rgba(255, 255, 255, .1); color: #fff; }
+    .dm-main { flex: 1; padding: 18px; min-width: 0; }
+    .dm-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 14px; font-weight: 600; font-size: 15px; }
+    .dm-ok { font-size: 12px; font-weight: 600; color: #2F8A4A; background: #E3F4E8; padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .dm-row {
+        display: flex; justify-content: space-between; align-items: center; gap: 12px;
+        background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; margin-bottom: 8px; font-size: 14px;
+    }
+    .dm-row small { display: block; color: var(--muted); font-size: 12px; }
+    .tog { width: 34px; height: 20px; border-radius: 999px; background: var(--leaf); position: relative; flex-shrink: 0; }
+    .tog::after { content: ''; position: absolute; top: 3px; left: 17px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+    .tog.off { background: #D4D2DE; }
+    .tog.off::after { left: 3px; }
+    .facts { list-style: none; display: grid; gap: 8px; margin: 26px 0 0; color: var(--muted); font-size: 15px; }
+    .facts li { display: flex; gap: 10px; align-items: center; }
+    .facts svg { width: 18px; height: 18px; color: var(--leaf); flex-shrink: 0; }
+    .ask { display: flex; align-items: center; gap: 14px; margin-top: 30px; }
+    .ask .stk { position: relative; right: auto; top: auto; width: 92px; flex-shrink: 0; }
+
+    @media (max-width: 960px) {
+        .scene, .finale { grid-template-columns: 1fr; gap: 28px; padding: 56px 0; }
+        .scene.flip > .scene-text { order: 0; }
+        .stage { --stk: 150px; }
+    }
+    @media (max-width: 600px) {
+        .stage { --stk: 124px; }
+        .stk { right: 16px; }
+        .stage.left .stk { left: 16px; }
+        .dm-side { width: 108px; padding: 14px 8px; }
+        .dm-main { padding: 14px 12px; }
+    }
+
     /* ── 页脚 ── */
     .footer { border-top: 1px solid var(--line); padding: 40px 0 32px; font-size: 15px; }
     .footer-top { display: flex; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 28px; }
@@ -225,7 +335,159 @@
     </section>
 </div>
 
-<!-- SCENES -->
+<div class="wrap">
+    <!-- # 音乐 -->
+    <section class="scene" id="music" aria-labelledby="music-title">
+        <div class="scene-text">
+            <span class="scene-channel"><span class="hash">#</span>{{ t('音乐', 'music') }}</span>
+            <h2 id="music-title">{{ t('叫一声，就开始放歌', 'Ask, and the music starts') }}</h2>
+            <p>{{ t('输入 /play 加歌名或链接，我就开始放。切歌、循环、调音量，在播放器上点一下就行。聊天还会攒经验，用 /rank 看看自己排第几。', 'Type /play with a song name or link and I’ll start playing. Skip, loop or change the volume right from the player. Chatting earns XP too — check your spot with /rank.') }}</p>
+        </div>
+        <div class="stage">
+            <div class="stk stk-bob" aria-hidden="true">
+                {{ sticker('music', 190) }}
+                <span class="note n1">♪</span><span class="note n2">♫</span><span class="note n3">♪</span>
+            </div>
+            <div class="chat">
+                <div class="chat-head"><span><span class="hash">#</span>{{ t('音乐', 'music') }}</span></div>
+                <div class="chat-body">
+                    <div class="msg">{{ demo_av('avatar-milk.jpg') }}<div><span class="nm">Milk</span><br><span class="cmd">/play</span> 夜に駆ける</div></div>
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span>
+                        <div class="embed">
+                            <div class="player">
+                                <img src="{{ url_for('static', filename='images/demo/yoru-ni-kakeru.png') }}" alt="" data-i18n-alt="cover" width="64" height="64" loading="lazy" decoding="async">
+                                <div><div class="embed-title">夜に駆ける</div><div class="dim">YOASOBI · {{ t('队列里还有 2 首', '2 more in the queue') }}</div></div>
+                            </div>
+                            <div class="bar"><i></i></div>
+                            <div class="times"><span>2:14</span><span>4:06</span></div>
+                        </div>
+                        <div class="dbtns"><span class="dbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></span><span class="dbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 5 9 7-9 7zM18 5v14"/></svg></span><span class="dbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4"/></svg>{{ t('循环: 关', 'Loop: off') }}</span><span class="dbtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>{{ t('查看队列', 'Queue') }}</span></div>
+                    </div></div>
+                    <div class="msg">{{ demo_av('avatar-milk.jpg') }}<div><span class="nm">Milk</span><br><span class="cmd">/rank</span></div></div>
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span>
+                        <div class="embed">
+                            <div class="rank">
+                                <img src="{{ url_for('static', filename='images/demo/avatar-milk.jpg') }}" alt="" width="48" height="48" loading="lazy" decoding="async">
+                                <div><div class="embed-title">Milk Chocolate</div><div class="dim">Lv.5 · {{ t('排名 #1', 'Rank #1') }}</div></div>
+                            </div>
+                            <div class="bar"><i></i></div>
+                            <div class="times"><span>1,240 XP</span><span>1,800 XP</span></div>
+                            <ol class="lb">
+                                <li><span class="pos">1</span><span class="crop"><img src="{{ url_for('static', filename='images/demo/avatar-milk.jpg') }}" alt="" width="26" height="26" loading="lazy"></span><span>Milk Chocolate</span><span class="dim">Lv.5</span></li>
+                                <li><span class="pos">2</span><span class="crop"><img class="zoom" src="{{ url_for('static', filename='images/demo/avatar-starlight.jpg') }}" alt="" width="26" height="26" loading="lazy"></span><span>Starlight</span><span class="dim">Lv.3</span></li>
+                                <li><span class="pos">3</span><span class="crop"><img src="{{ url_for('static', filename='images/demo/avatar-gamer.jpg') }}" alt="" width="26" height="26" loading="lazy"></span><span>GamerKun</span><span class="dim">Lv.2</span></li>
+                            </ol>
+                        </div>
+                    </div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- # 欢迎 -->
+    <section class="scene flip" id="welcome" aria-labelledby="welcome-title">
+        <div class="scene-text">
+            <span class="scene-channel"><span class="hash">#</span>{{ t('欢迎', 'welcome') }}</span>
+            <h2 id="welcome-title">{{ t('新朋友来了，我去打招呼', 'New friend? I’ll say hi') }}</h2>
+            <p>{{ t('有人加入，我就发欢迎消息，顺手把身份组发好。想办活动的话，用 /giveaway 定好奖品和时间，开奖交给我。', 'When someone joins, I post a welcome and hand out their roles. Planning an event? Set the prize and time with /giveaway and I’ll draw the winners.') }}</p>
+        </div>
+        <div class="stage left">
+            <div class="stk stk-sway" aria-hidden="true">
+                {{ sticker('welcome', 190) }}
+                <span class="spark s1"></span><span class="spark pink s2"></span>
+            </div>
+            <div class="chat">
+                <div class="chat-head"><span><span class="hash">#</span>{{ t('欢迎', 'welcome') }}</span></div>
+                <div class="chat-body">
+                    <div class="msg"><div></div><div class="sys"><span class="arrow" aria-hidden="true">→</span>{{ t('Starlight 加入了服务器', 'Starlight joined the server') }}</div></div>
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span><br>{{ t('欢迎 <b>Starlight</b>！已经帮你领好 <span class="role">@新朋友</span> 身份组啦。', 'Welcome, <b>Starlight</b>! I’ve given you the <span class="role">@new-friend</span> role.') }}</div></div>
+                    <div class="msg">{{ demo_av('avatar-milk.jpg') }}<div><span class="nm">Milk</span><br><span class="cmd">/giveaway start</span></div></div>
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span>
+                        <div class="embed leaf">
+                            <div class="embed-title">{{ t('🎉 抽奖活动！', '🎉 Giveaway!') }}</div>
+                            <div class="field">{{ t('<b>奖品:</b> Nitro 一个月<br><b>中奖名额:</b> 1 人<br><b>结束时间:</b> 2 天后<br><b>发起者:</b> @Milk', '<b>Prize:</b> 1 month of Nitro<br><b>Winners:</b> 1<br><b>Ends:</b> in 2 days<br><b>Hosted by:</b> @Milk') }}</div>
+                            <div class="dim" style="margin-top:6px">{{ t('小凛抽奖系统 | 公平公正公开', 'Rin Giveaways | fair and open') }}</div>
+                        </div>
+                        <div class="dbtns"><span class="dbtn go">{{ t('🎉 参加抽奖! (23人)', '🎉 Enter! (23)') }}</span></div>
+                    </div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- # 管理日志 -->
+    <section class="scene" id="moderation" aria-labelledby="moderation-title">
+        <div class="scene-text">
+            <span class="scene-channel"><span class="hash">#</span>{{ t('管理日志', 'mod-log') }}</span>
+            <h2 id="moderation-title">{{ t('规则你定，我来执行', 'You set the rules. I follow them') }}</h2>
+            <p>{{ t('刷屏、违禁词、可疑链接，按你定的规则处理；警告到几次自动禁言，也由你决定。处理过的事都记在日志频道里。', 'Spam, banned words and sketchy links get handled the way you set. You decide how many warnings mean a timeout, and every action lands in your log channel.') }}</p>
+        </div>
+        <div class="stage">
+            <div class="stk stk-blink" aria-hidden="true">
+                {{ sticker('manage', 190) }}{{ sticker('manage-blink', 190, 'lid') }}
+            </div>
+            <div class="chat">
+                <div class="chat-head"><span><span class="hash">#</span>{{ t('大厅', 'lobby') }}</span></div>
+                <div class="chat-body">
+                    <div class="msg">{{ demo_av('avatar-gamer.jpg') }}<div><span class="nm">spam_bot_9</span><br><span class="gone">{{ t('免费 Nitro 点这里', 'Free Nitro here') }} discord-gift.xyz/…</span></div></div>
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span><br>{{ t('🔗 @spam_bot_9 不允许在此发送链接。', '🔗 @spam_bot_9, links aren’t allowed here.') }}</div></div>
+                    <div class="msg">{{ demo_av('avatar-milk.jpg') }}<div><span class="nm">Milk</span><br><span class="cmd">/warn</span> @spam_bot_9 {{ t('发可疑链接', 'sketchy links') }}</div></div>
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span><br>{{ t('⚠️ <b>spam_bot_9</b> 已被警告。(第 3 次 | 案件 #12)<br>🔇 @spam_bot_9 的警告数已达 3 次，已自动禁言 10 分钟。', '⚠️ <b>spam_bot_9</b> has been warned. (warning 3 | case #12)<br>🔇 @spam_bot_9 reached 3 warnings and was timed out for 10 minutes.') }}</div></div>
+                </div>
+            </div>
+            <div class="chat">
+                <div class="chat-head"><span><span class="hash">#</span>{{ t('管理日志', 'mod-log') }}</span></div>
+                <div class="chat-body">
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span>
+                        <div class="embed leaf"><div class="embed-title">{{ t('🔗 链接过滤', '🔗 Link filter') }}</div><div class="field">{{ t('<b>用户:</b> @spam_bot_9<br><b>频道:</b> #大厅<br><b>链接:</b> discord-gift.xyz/…', '<b>User:</b> @spam_bot_9<br><b>Channel:</b> #lobby<br><b>Link:</b> discord-gift.xyz/…') }}</div></div>
+                    </div></div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- 收尾：控制台 -->
+<div class="finale-band">
+    <div class="wrap">
+        <section class="scene finale" id="dashboard" aria-labelledby="dashboard-title">
+            <div class="dash-mock" aria-hidden="true">
+                <div class="dm-side">
+                    <div class="dm-brand">RinBot</div>
+                    <div class="dm-nav on">{{ t('概览', 'Overview') }}</div>
+                    <div class="dm-nav">{{ t('欢迎设置', 'Welcome') }}</div>
+                    <div class="dm-nav">{{ t('自动审核', 'AutoMod') }}</div>
+                    <div class="dm-nav">{{ t('审计日志', 'Audit log') }}</div>
+                </div>
+                <div class="dm-main">
+                    <div class="dm-head"><span>{{ t('服务器配置', 'Server settings') }}</span><span class="dm-ok">{{ t('已连接', 'Connected') }}</span></div>
+                    <div class="dm-row"><span>{{ t('欢迎新成员', 'Welcome members') }}<small>#welcome</small></span><span class="tog"></span></div>
+                    <div class="dm-row"><span>{{ t('自动审核', 'AutoMod') }}<small>{{ t('反刷屏与链接过滤', 'Spam and link filters') }}</small></span><span class="tog"></span></div>
+                    <div class="dm-row"><span>{{ t('等级系统', 'Leveling') }}<small>{{ t('聊天经验与排行榜', 'Chat XP and leaderboard') }}</small></span><span class="tog"></span></div>
+                    <div class="dm-row"><span>{{ t('管理日志', 'Mod log') }}<small>#mod-log</small></span><span class="tog off"></span></div>
+                </div>
+            </div>
+            <div class="scene-text">
+                <span class="scene-channel"><span class="hash">#</span>{{ t('控制台', 'dashboard') }}</span>
+                <h2 id="dashboard-title">{{ t('这些都在控制台里设', 'Set it all up in the dashboard') }}</h2>
+                <p>{{ t('欢迎频道、自动身份组、审核规则、警告几次禁言，打开网页慢慢选。改完保存，哪里没填好页面会提醒你。', 'Welcome channel, auto roles, moderation rules, warning limits — pick them at your own pace on the web. Save when you’re done; the page tells you if anything needs fixing.') }}</p>
+                <div class="actions" style="margin-top:26px">
+                    <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ t('邀请小凛', 'Invite Rin') }}</a>
+                    <a href="/dashboard" class="link">{{ t('已经邀请了？' ~ ('进入控制台' if is_logged_in else '登录控制台'), 'Already invited? ' ~ dash_en) }}</a>
+                </div>
+                <ul class="facts">
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('免费使用', 'Free to use') }}</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('不需要管理员权限', 'No Administrator permission needed') }}</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('不做完整聊天归档', 'No full chat archive') }}</li>
+                </ul>
+                <div class="ask">
+                    <div class="stk stk-blink" aria-hidden="true">{{ sticker('confused', 92) }}{{ sticker('confused-blink', 92, 'lid') }}</div>
+                    <a href="https://github.com/RSRH-Rs/DiscordRinBot/issues" target="_blank" rel="noopener" class="link">{{ t('还有问题？去 GitHub 问我', 'Still wondering? Ask me on GitHub') }}</a>
+                </div>
+            </div>
+        </section>
+    </div>
+</div>
 
 </main>
 
@@ -258,13 +520,15 @@ var ATTR_I18N = {
         title: '小凛 RinBot — 会放歌、会迎新的 Discord 机器人',
         description: '小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。',
         toggle: 'Switch to English',
-        sticker: '小凛的贴纸'
+        sticker: '小凛的贴纸',
+        cover: 'YOASOBI《夜に駆ける》封面'
     },
     en: {
         title: 'Rin (小凛) — a Discord bot for music, welcomes and moderation',
         description: 'Rin is a Discord bot that plays music, welcomes new members, runs giveaways and levels, and helps moderate by the rules you set.',
         toggle: '切换到中文',
-        sticker: 'A sticker of Rin'
+        sticker: 'A sticker of Rin',
+        cover: 'Cover of 夜に駆ける by YOASOBI'
     }
 };
 
