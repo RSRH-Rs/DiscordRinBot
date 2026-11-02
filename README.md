@@ -6,12 +6,13 @@
 
 **Full-featured Discord Bot + Web Dashboard**
 
-[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white)](https://python.org)
-[![discord.py](https://img.shields.io/badge/discord.py-2.3+-5865F2?logo=discord&logoColor=white)](https://github.com/Rapptz/discord.py)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
+[![discord.py](https://img.shields.io/badge/discord.py-2.7-5865F2?logo=discord&logoColor=white)](https://github.com/Rapptz/discord.py)
+[![Tests](https://img.shields.io/badge/tests-204_passing-3FB950)](#testing)
 [![License](https://img.shields.io/badge/License-MIT-E8899A)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-rin--bot.com-FFB7C5)](https://rin-bot.com)
 
-A Discord bot built from scratch with music, leveling, moderation, welcome cards, reaction roles, giveaways, auto-moderation, and more — paired with a full web dashboard for browser-based server management.
+A multi-server Discord bot built from scratch, with music, leveling, moderation, welcome cards, reaction roles, giveaways, auto-moderation and audit logging. It comes with a full web dashboard for managing every module from the browser, and dashboard changes reach the bot within seconds.
 
 [Invite RinBot](https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands) · [Dashboard](https://rin-bot.com/dashboard) · [Report Bug](https://github.com/RSRH-Rs/DiscordRinBot/issues)
 
@@ -23,28 +24,62 @@ A Discord bot built from scratch with music, leveling, moderation, welcome cards
 
 ### Bot
 
+Commands work both as slash commands and with the `r!` prefix.
+
 | Module | Description | Key Commands |
 |--------|-------------|--------------|
-| 🎵 **Music** | Full player — queue, loop, volume, shuffle, vote-skip, now-playing panel | `/play` `/queue` `/skip` `/loop` `/volume` |
-| 🏆 **Leveling** | XP from chatting, PIL-rendered rank cards, server leaderboard | `/rank` |
-| 🔨 **Moderation** | kick / ban / tempban / mute / warn / purge / lock, auto-punish thresholds, case log | `/kick` `/ban` `/warn` `/purge` `/modlog` |
-| 🎀 **Welcome** | Welcome card on join + auto-role, farewell message on leave | `/welcome_setup` `/welcome_test` |
-| 🏷 **Reaction Roles** | Emoji click → self-assign roles, multiple panels | `/rr_create` `/rr_add` `/rr_list` |
-| 🎉 **Giveaways** | Countdown, button entry, auto-draw, reroll | `/giveaway start` `/giveaway end` |
-| 🛡 **Auto-Mod** | Anti-spam, bad words, link filter, caps & repeat detection | `/automod` `/automod_words` |
-| 🛠 **Utility** | Server stats, avatar viewer, dice, bot status | `/status` `/avatar` `/roll` |
-| ⚙️ **Dev Tools** | Hot reload, cog management, command tree sync, eval | `/hot_update` `/sync` |
+| 🎵 **Music** | Full player with queue, loop, volume, shuffle, vote-skip, a now-playing panel and saved queues. DJ role and notification channel are configurable | `/play` `/queue` `/skip` `/loop` `/volume` `/saveq` |
+| 🏆 **Leveling** | XP from chatting, PIL-rendered rank cards (drawn off the event loop), server leaderboard | `/rank` `/leaderboard` |
+| 🔨 **Moderation** | kick / ban (members or user IDs, optional message cleanup) / tempban / mute / warn / purge / slowmode / lock. Warnings can trigger automatic punishments, and every action gets a per-server case number | `/ban` `/warn` `/purge` `/modlog` `/warn_config` |
+| 🎀 **Welcome** | Welcome card on join (custom images allowed), auto-role, farewell message. Respects Discord membership screening | `/welcome_setup` `/welcome_card` `/welcome_test` |
+| 🏷 **Reaction Roles** | Click an emoji to get a role. Supports multiple panels and an exclusive mode (one role per panel) | `/rr_create` `/rr_add` `/rr_exclusive` |
+| 🎉 **Giveaways** | Countdown, button entry, auto-draw, reroll | `/giveaway start` `/giveaway reroll` |
+| 🛡 **Auto-Mod** | Anti-spam with message cleanup, bad words (sees through zero-width characters, full-width letters and separators), link and invite filter with whitelist, caps and repeat detection | `/automod` `/automod_words` `/automod_whitelist` |
+| 📋 **Server Log** | Forwards server events (messages, members, roles, channels…) to a log channel, with ignore lists | `/serverlog channel` `/serverlog toggle` |
+| 🚦 **Command Toggle** | Turn any command on or off per server | `/toggle` `/togglelist` |
+| 🛠 **Utility** | Server stats, avatar viewer, dice, bot status and bio | `/status` `/avatar` `/roll` |
+| ⚙️ **Dev Tools** | Hot reload, cog management, command tree sync | `/hot_update` `/sync` |
+
+The bot also runs some modules in the background:
+
+- **Bot Log** reports errors and bot events to a channel.
+- **Health** publishes runtime status for the dashboard.
+- **Global Settings** handles maintenance mode, the user blacklist and announcements.
+- **Friendly errors** gives users a short private message and an error ID instead of a stack trace.
 
 ### Web Dashboard
 
 Built with Quart + Discord OAuth2. Live at [rin-bot.com](https://rin-bot.com).
 
-- **OAuth2 login** — auto-detects servers you have manage permission on
-- **Module config panels** — welcome messages, auto-mod rules, moderation thresholds
-- **Reaction role builder** — pick channel → add emoji + role pairs → send to Discord in one click
-- **Giveaway creator** — prize, winner count, channel, end time picker → sends embed + button
-- **Bot personalizer** — avatar, username, status, activity text with live Discord-style preview
-- **Mod log viewer** — recent kick / ban / warn actions at a glance
+- **OAuth2 login.** Detects the servers where you have Manage Server.
+- **Module panels.** Configure welcome (with image uploads), auto-mod, moderation thresholds, music, bot log and server log.
+- **Reaction role builder.** Pick a channel, add emoji + role pairs, and send the panel to Discord in one click.
+- **Giveaway creator.** Set the prize, winner count, channel and end time.
+- **Command manager.** Enable or disable commands per server, one at a time or in bulk.
+- **Leaderboard and mod case viewer.**
+- **Owner console:**
+  - Bot health
+  - Maintenance mode, blacklist and global announcements
+  - Server list
+  - Global command switches
+  - Bot personalizer (avatar, username, status, activity) with a live Discord-style preview
+
+---
+
+## Architecture
+
+```
+ Browser ──► website (Quart, hypercorn) ──► SQLite (one .db per module, WAL)
+                       │                           ▲
+                       └─ notify(module, guild) ──► sync.db change log
+                                                   │
+ Discord ◄──► rinbot (discord.py) ◄── ChangeWatcher polls every 3 s, reloads that module
+```
+
+- **Two processes, shared data.** The bot and the dashboard are separate processes that share SQLite files. Every database runs in WAL mode, so the dashboard writing never blocks the bot reading.
+- **Change log instead of polling every table.** When the dashboard saves a setting, it appends `(module, guild_id)` to `sync.db`. The bot watches that log and reloads only the affected module for that server. Entries are pruned after 24 hours.
+- **Shared core (`rinbot/rincore/`).** Pure, unit-tested helpers used by both sides: storage paths and WAL, the change log, text and link matching for auto-mod, duration parsing, per-server case numbers, exclusive-role logic and a debouncer for rate-limited edits.
+- **Health heartbeat.** The bot writes `health.json`, and the dashboard reads it for the live status panel.
 
 ---
 
@@ -52,39 +87,46 @@ Built with Quart + Discord OAuth2. Live at [rin-bot.com](https://rin-bot.com).
 
 | Layer | Tech |
 |-------|------|
-| Bot | Python 3.10+, discord.py 2.3+, yt-dlp, Pillow, aiosqlite |
-| Web | Quart, quart-discord, Jinja2, aiosqlite |
+| Bot | Python 3.11, discord.py 2.7, yt-dlp, Pillow, aiosqlite |
+| Web | Quart, quart-discord, hypercorn, Jinja2, aiosqlite |
 | Frontend | Vanilla HTML/CSS/JS, Lucide Icons |
-| Database | SQLite — one `.db` file per module |
+| Database | SQLite, one `.db` file per module, WAL mode |
+| Tests | pytest + pytest-asyncio, unittest, Node test runner |
 
 ---
 
 ## Project Structure
 
 ```
-├── rinbot/                 # Discord Bot
+├── rinbot/                     # Discord bot
 │   ├── main.py
-│   ├── config.py
+│   ├── config.example.py       # copy to config.py
+│   ├── requirements.txt
 │   ├── cogs/
-│   │   ├── music.py
+│   │   ├── music.py  musicconfig.py
 │   │   ├── leveling.py
 │   │   ├── moderation.py
 │   │   ├── welcome.py
 │   │   ├── reactionroles.py
 │   │   ├── giveaway.py
 │   │   ├── automod.py
-│   │   ├── general.py
-│   │   ├── dev.py
-│   │   ├── help.py
-│   │   └── botconfig.py
+│   │   ├── serverlog.py  botlog.py
+│   │   ├── commandtoggle.py  globalsettings.py
+│   │   ├── botconfig.py  health.py  errors.py
+│   │   └── general.py  help.py  dev.py
+│   ├── rincore/                # shared, unit-tested core logic
+│   ├── tools/                  # diagnostics
 │   └── assets/
 │
-├── website/                # Web Dashboard
+├── website/                    # Web dashboard
 │   ├── main.py
-│   ├── config.py
+│   ├── config.example.py       # copy to config.py
 │   ├── routes.py
-│   ├── templates/
-│   └── static/
+│   ├── templates/  static/
+│   └── tests/                  # dashboard tests (Python + Node)
+│
+├── tests/                      # bot and core logic tests
+└── deploy/post-receive         # git push-to-deploy hook
 ```
 
 ---
@@ -93,7 +135,7 @@ Built with Quart + Discord OAuth2. Live at [rin-bot.com](https://rin-bot.com).
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.11+
 - FFmpeg (for music)
 - [Discord Bot Token](https://discord.com/developers/applications)
 
@@ -107,59 +149,71 @@ pip install -r rinbot/requirements.txt
 
 ### 2. Configure
 
-Edit `rinbot/config.py`:
-
-```python
-TOKEN = "your-bot-token"
-DEV_GUILD_ID = 123456789
+```bash
+cp rinbot/config.example.py rinbot/config.py
+cp website/config.example.py website/config.py
 ```
 
-### 3. Run
+In `rinbot/config.py`, fill in `TOKEN`, `DEV_GUILD_ID` and `OWNER_ID`. In `website/config.py`, fill in the same bot token, a `SECRET_KEY`, and your OAuth2 client ID, secret and redirect URI. Both files are git-ignored.
+
+> Enable **Server Members Intent** and **Message Content Intent** in the Developer Portal.
+
+### 3. Run the bot
 
 ```bash
 cd rinbot && python main.py
 ```
 
-Use `/sync` in Discord to register slash commands after first launch.
+After the first launch, run `/sync` (or `r!sync`) in Discord to register slash commands.
 
-### 4. Web dashboard (optional)
+### 4. Run the dashboard (optional)
 
 ```bash
-cd website && python main.py
+cd website && python -m hypercorn main:app --bind 127.0.0.1:5000
 ```
 
-Set your OAuth2 credentials in `website/config.py` first.
+---
 
-> Enable **Server Members Intent** and **Message Content Intent** in the Developer Portal.
+## Testing
+
+Tests cover core logic and use temporary SQLite databases only. They never connect to Discord.
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest -q                       # bot + core: 143 tests
+cd website && python -m pytest -q tests   # dashboard: 28 tests
+node --test tests/*.cjs                   # dashboard UI: 33 tests (from website/)
+```
+
+---
+
+## Deployment
+
+Production uses push-to-deploy. `git push prod master` sends the code to a bare repository on the server, and its [`post-receive`](deploy/post-receive) hook runs these steps:
+
+1. Checks out the code into a staging directory.
+2. Compiles everything and runs the full test suite.
+3. Import-checks every cog and the dashboard.
+4. Syncs the code into the live directories (configs, databases and uploads are left alone).
+5. Installs dependencies only if `requirements.txt` changed.
+6. Restarts both systemd services and prints `DEPLOY OK`.
+
+If any step before the sync fails, the deploy stops and the running bot is untouched.
 
 ---
 
 ## API Endpoints
 
-All require OAuth2 login + `manage_guild` permission.
+Every endpoint requires OAuth2 login. `/api/guild/<id>/…` endpoints also require Manage Server on that server, and `/api/bot/…` endpoints are owner-only.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/guild/<id>/channels` | Text channel list |
-| GET | `/api/guild/<id>/roles` | Role list |
-| GET / POST | `/api/guild/<id>/welcome` | Welcome config |
-| GET / POST | `/api/guild/<id>/automod` | Auto-mod config |
-| GET / POST | `/api/guild/<id>/moderation` | Moderation config |
-| POST | `/api/guild/<id>/reactionroles/send` | Send RR panel to Discord |
-| POST | `/api/guild/<id>/giveaway/create` | Create giveaway |
-| GET / POST | `/api/bot/personalizer` | Bot presence config |
-| POST | `/api/bot/username` | Change bot username |
-| POST | `/api/bot/avatar` | Change bot avatar |
-
----
-
-## Contributing
-
-1. Fork this repo
-2. Create your branch (`git checkout -b feat/your-feature`)
-3. Commit (`git commit -m 'feat: add something'`)
-4. Push (`git push origin feat/your-feature`)
-5. Open a Pull Request
+| Group | Endpoints |
+|-------|-----------|
+| Server info | `GET /api/guild/<id>/channels` `roles` `emojis` `info` `leaderboard` |
+| Module config (GET / POST) | `/api/guild/<id>/welcome` `automod` `moderation` `music` `botlog` `serverlog` |
+| Actions | `POST /api/guild/<id>/reactionroles/send` `giveaway/create` `botlog/test` `serverlog/test` |
+| Records | `GET /api/guild/<id>/moderation/cases` `giveaways` `reactionroles` |
+| Commands | `GET /api/guild/<id>/commands`, `POST …/commands/toggle` `…/commands/bulk-toggle` |
+| Owner | `/api/bot/health` `maintenance` `blacklist` `announce` `guilds` `commands` `personalizer` `username` `avatar` |
 
 ---
 
