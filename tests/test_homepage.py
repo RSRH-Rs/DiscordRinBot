@@ -137,3 +137,11 @@ def test_hidden_states_gated_by_js(page):
         if re.search(r"opacity\s*:\s*0(?![.\d])", body):
             for sel in selector.split(","):
                 assert sel.strip().startswith(("html.js", ".js")), sel.strip()
+
+
+def test_reduced_motion_block_present(page):
+    css = "\n".join(re.findall(r"<style>(.*?)</style>", page, re.S))
+    m = re.search(r"@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{(.*?)\n    \}", css, re.S)
+    assert m, "missing prefers-reduced-motion block"
+    for cls in (".stk-blink", ".stk-bob", ".stk-sway"):
+        assert cls in m.group(1), cls

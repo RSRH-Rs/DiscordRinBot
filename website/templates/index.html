@@ -144,7 +144,7 @@
     /* ── 首屏 ── */
     .hero {
         display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
-        gap: 56px; align-items: center; padding: 48px 0 88px;
+        gap: 56px; align-items: center; padding: 48px 0 56px;
     }
     .hero h1 { font-size: clamp(38px, 5.2vw, 58px); line-height: 1.1; font-weight: 700; letter-spacing: -.01em; margin-bottom: 18px; }
     .hero .lead { font-size: 18px; color: var(--muted); max-width: 28em; margin-bottom: 30px; }
@@ -245,6 +245,7 @@
     @media (max-width: 960px) {
         .scene, .finale { grid-template-columns: 1fr; gap: 28px; padding: 56px 0; }
         .scene.flip > .scene-text { order: 0; }
+        .finale .dash-mock { order: 2; }
         .stage { --stk: 150px; }
     }
     @media (max-width: 600px) {
@@ -253,6 +254,49 @@
         .stage.left .stk { left: 16px; }
         .dm-side { width: 108px; padding: 14px 8px; }
         .dm-main { padding: 14px 12px; }
+    }
+
+    /* ── 动效 ──
+       整页只有首屏对话是编排好的入场；其余是贴纸的小表演。
+       藏起来的初始状态都挂在 html.js 下，关掉 JS 时内容照常可见。 */
+    html.js .hero-chat .msg { opacity: 0; animation: msg-in .4s ease-out forwards; }
+    html.js .hero-chat .msg:nth-child(1) { animation-delay: .2s; }
+    html.js .hero-chat .msg:nth-child(2) { animation-delay: .8s; }
+    html.js .hero-chat .msg:nth-child(3) { animation-delay: 1.4s; }
+    html.js .hero-chat .msg:nth-child(4) { animation-delay: 1.9s; }
+    html.js .hero-chat .msg:nth-child(5) { animation-delay: 2.3s; }
+    /* 场景里只有最后一条消息，在场景进入视口（提前 200px）时出现一次 */
+    html.js .stage .chat-body > .msg:last-child { animation: msg-in .3s ease-out both paused; }
+    html.js .stage.seen .chat-body > .msg:last-child { animation-play-state: running; }
+    @keyframes msg-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .stk-blink .lid { animation: blink 4.6s infinite; }
+    .ask .stk-blink .lid { animation-delay: -2.1s; }
+    @keyframes blink { 0%, 94% { visibility: hidden; } 94.5%, 97% { visibility: visible; } 97.5%, 100% { visibility: hidden; } }
+    .stk-bob img { animation: bob 1.15s ease-in-out infinite; transform-origin: 52% 92%; }
+    @keyframes bob { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg) translateY(-3px); } }
+    .stk-sway img { animation: sway 3.2s ease-in-out infinite; transform-origin: 50% 95%; }
+    @keyframes sway { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(1.5deg); } }
+    .note { animation: rise 3.4s linear infinite; }
+    .note.n1 { left: 4%; top: 40%; }
+    .note.n2 { left: 16%; top: 30%; font-size: 20px; animation-delay: -1.1s; }
+    .note.n3 { right: 6%; top: 26%; font-size: 28px; color: #F5B8C6; animation-delay: -2.3s; }
+    @keyframes rise {
+        0% { opacity: 0; transform: translate(0, 0) rotate(-10deg); }
+        15% { opacity: 1; }
+        100% { opacity: 0; transform: translate(-28px, -96px) rotate(14deg); }
+    }
+    .spark { animation: twinkle 2.4s ease-in-out infinite; }
+    .spark.s1 { right: 6%; top: 16%; }
+    .spark.s2 { right: 18%; top: 4%; animation-delay: -1.2s; }
+    @keyframes twinkle { 0%, 100% { transform: scale(.4); opacity: .3; } 50% { transform: scale(1); opacity: 1; } }
+    /* 贴纸离开视口就暂停 */
+    .stk.paused img, .stk.paused .note, .stk.paused .spark { animation-play-state: paused; }
+
+    @media (prefers-reduced-motion: reduce) {
+        html.js .hero-chat .msg, html.js .stage .chat-body > .msg:last-child { animation: none; opacity: 1; }
+        .stk-blink .lid, .stk-bob img, .stk-sway img, .spark { animation: none; }
+        .note { display: none; }
     }
 
     /* ── 页脚 ── */
@@ -556,6 +600,22 @@ fetch('/api/stats').then(function (r) { return r.ok ? r.json() : null; }).then(f
         document.querySelectorAll('[data-stat="servers"]').forEach(function (el) { el.textContent = d.servers; });
     }
 }).catch(function () {});
+
+/* 场景进入视口时让最后一条消息出现；贴纸离开视口时暂停动画 */
+if ('IntersectionObserver' in window) {
+    var seenIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+            if (e.isIntersecting) { e.target.classList.add('seen'); seenIO.unobserve(e.target); }
+        });
+    }, { rootMargin: '200px 0px' });
+    document.querySelectorAll('.stage').forEach(function (el) { seenIO.observe(el); });
+    var stkIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) { e.target.classList.toggle('paused', !e.isIntersecting); });
+    });
+    document.querySelectorAll('.stk').forEach(function (el) { stkIO.observe(el); });
+} else {
+    document.querySelectorAll('.stage').forEach(function (el) { el.classList.add('seen'); });
+}
 
 /* 导航滚动后加一条底线 */
 var nav = document.getElementById('nav');
