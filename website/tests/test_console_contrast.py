@@ -10,6 +10,8 @@ PAIRS = [
     ('ok', 'ok-soft'), ('ok', 'panel'), ('warn', 'warn-soft'), ('bad', 'bad-soft'), ('bar-text', 'bar'), ('#FFFFFF', '#4752C4'),
 ]
 NON_TEXT = [('field-line', 'field'), ('field-line', 'panel'), ('field-line', 'bg')]
+ALLOWED_SIZES = {12, 13, 14, 16, 22}
+EXEMPT = ('.preview', '.fake', '.palette-input')
 
 
 def luminance(hex_color):
@@ -80,6 +82,18 @@ class ConsoleContrastTests(unittest.TestCase):
         block_text = self.css[self.css.index('@media (prefers-reduced-motion: reduce)'):]
         for selector in ['.unsaved-bar', '.unsaved-bar.is-open', '.unsaved-bar.is-shaking', '.sidebar', '.shell.is-drawer-open .sidebar', '.skeleton']:
             self.assertIn(selector, block_text)
+
+    def test_console_uses_five_font_sizes(self):
+        css = re.sub(r'/\*.*?\*/', '', self.css, flags=re.S)
+        bad = []
+        for selector, body in re.findall(r'([^{}]+)\{([^{}]*)\}', css):
+            parts = [part.strip() for part in ' '.join(selector.split()).split(',')]
+            if all(part.startswith(EXEMPT) for part in parts):
+                continue
+            for size in re.findall(r'font(?:-size)?:[^;]*?(\d+(?:\.\d+)?)px', body):
+                if float(size) not in ALLOWED_SIZES:
+                    bad.append((' '.join(selector.split()), size))
+        self.assertEqual(bad, [])
 
     def test_no_important(self):
         self.assertNotIn('!important', self.css)
