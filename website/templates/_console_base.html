@@ -1,4 +1,7 @@
-{%- from '_console_macros.html' import icon -%}
+{%- from '_console_macros.html' import icon, invite_url -%}
+{%- set current_guild = guild if guild is defined else none -%}
+{%- set joined_guilds = (guilds or []) | selectattr('bot_joined') | list -%}
+{%- set invite_guilds = (guilds or []) | rejectattr('bot_joined') | list -%}
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -13,35 +16,64 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/console.css') }}?v=20261103a">
     {% block head %}{% endblock %}
 </head>
-<body>
+<body data-guild-name="{{ current_guild.name if current_guild else '' }}">
 <div class="shell" id="shell">
     <aside class="sidebar" id="sideNav">
-        <nav class="rail" aria-label="{{ tr('nav.servers') }}">
-            <a class="rail-item{{ ' is-current' if not active_guild_id }}" href="/dashboard" title="{{ tr('nav.home') }}" aria-label="{{ tr('nav.home') }}"{% if not active_guild_id %} aria-current="page"{% endif %}>
-                <img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="48" height="48">
-            </a>
-            <span class="rail-sep" aria-hidden="true"></span>
-            {%- for g in guilds or [] if g.bot_joined %}
-            <a class="rail-item{{ ' is-current' if g.id|string == active_guild_id|string }}" href="/dashboard/server/{{ g.id }}" data-guild="{{ g.id }}" title="{{ g.name }}" aria-label="{{ g.name }}"{% if g.id|string == active_guild_id|string %} aria-current="page"{% endif %}>
-                {%- if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="48" height="48" loading="lazy">{% else %}{{ g.name[:1] }}{% endif -%}
-            </a>
-            {%- endfor %}
-            <a class="rail-item is-add" href="/dashboard#not-joined" title="{{ tr('nav.invite') }}" aria-label="{{ tr('nav.invite') }}">{{ icon('plus', 20) }}</a>
-        </nav>
-        <div class="nav">
-            <div class="nav-head" title="{% block nav_head %}{{ tr('nav.servers') }}{% endblock %}">{{ self.nav_head() }}</div>
-            <nav class="nav-body" id="side-modules">{% block nav %}{% endblock %}</nav>
-            <div class="user-row">
-                <img src="{{ user.avatar_url }}" alt="" class="user-avatar" width="32" height="32">
-                <span class="user-name" title="{{ user.name }}">{{ user.name }}</span>
-                <span class="theme-switch" role="group" aria-label="{{ tr('theme.label') }}">
-                    {%- for value, name in [('light', 'sun'), ('', 'monitor'), ('dark', 'moon')] %}
-                    {%- set label = tr('theme.' ~ (value or 'system')) %}
-                    <button type="button" data-theme-set="{{ value }}" title="{{ label }}" aria-label="{{ label }}" aria-pressed="false">{{ icon(name) }}</button>
-                    {%- endfor %}
+        <div class="switcher" id="switcher">
+            <button type="button" class="switcher-btn" id="switcher-btn" aria-haspopup="true" aria-expanded="false" aria-controls="switcher-pop">
+                <span class="switcher-icon">
+                    {%- if current_guild and current_guild.icon_url %}<img src="{{ current_guild.icon_url }}" alt="" width="32" height="32">
+                    {%- elif current_guild %}{{ current_guild.name[:1] }}
+                    {%- else %}<img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="32" height="32">{% endif -%}
                 </span>
-                <a class="user-logout" href="/logout" title="{{ tr('nav.logout') }}" aria-label="{{ tr('nav.logout') }}">{{ icon('log-out') }}</a>
+                <span class="switcher-text">
+                    <span class="switcher-name" title="{{ current_guild.name if current_guild else tr('switcher.choose') }}">{{ current_guild.name if current_guild else tr('switcher.choose') }}</span>
+                    <span class="switcher-sub" id="switcher-sub">{{ tr('switcher.open') }}</span>
+                </span>
+                {{ icon('chevrons-up-down') }}
+            </button>
+            <div class="switcher-pop" id="switcher-pop" hidden>
+                <input type="search" class="input" id="switcher-search" placeholder="{{ tr('switcher.search') }}" aria-label="{{ tr('switcher.search') }}" autocomplete="off">
+                {%- if joined_guilds %}
+                <p class="switcher-group" data-switcher-group="joined">{{ tr('switcher.joined') }}</p>
+                {%- for g in joined_guilds %}
+                {%- set is_current = current_guild and g.id|string == current_guild.id|string %}
+                <a class="switcher-item" href="/dashboard/server/{{ g.id }}" data-switcher-item data-group="joined" data-name="{{ g.name }}" data-guild="{{ g.id }}"{% if is_current %} aria-current="page"{% endif %}>
+                    <span class="switcher-icon">{% if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="24" height="24" loading="lazy">{% else %}{{ g.name[:1] }}{% endif %}</span>
+                    <span class="switcher-name" title="{{ g.name }}">{{ g.name }}</span>
+                    {%- if is_current %}{{ icon('check') }}{% endif %}
+                </a>
+                {%- endfor %}
+                {%- endif %}
+                {%- if invite_guilds %}
+                <p class="switcher-group" data-switcher-group="invite">{{ tr('switcher.not_joined') }}</p>
+                {%- for g in invite_guilds %}
+                <a class="switcher-item" href="{{ invite_url(g.id) }}" target="_blank" rel="noopener noreferrer" data-switcher-item data-group="invite" data-name="{{ g.name }}">
+                    <span class="switcher-icon is-muted">{% if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="24" height="24" loading="lazy">{% else %}{{ g.name[:1] }}{% endif %}</span>
+                    <span class="switcher-name" title="{{ g.name }}">{{ g.name }}</span>
+                    <span class="switcher-invite">{{ tr('switcher.invite') }}</span>
+                </a>
+                {%- endfor %}
+                {%- endif %}
+                <p class="switcher-empty" id="switcher-empty" hidden>{{ tr('switcher.empty') }}</p>
+                <div class="switcher-foot">
+                    <a class="switcher-item" href="/dashboard">{{ icon('layout-grid') }}<span class="switcher-name">{{ tr('switcher.all') }}</span></a>
+                    <a class="switcher-item" href="{{ invite_url() }}" target="_blank" rel="noopener noreferrer">{{ icon('plus') }}<span class="switcher-name">{{ tr('switcher.add') }}</span></a>
+                </div>
             </div>
+        </div>
+        {% block side_search %}{% endblock %}
+        <nav class="nav-body" id="side-modules">{% block nav %}{% endblock %}</nav>
+        <div class="user-row">
+            <img src="{{ user.avatar_url }}" alt="" class="user-avatar" width="32" height="32">
+            <span class="user-name" title="{{ user.name }}">{{ user.name }}</span>
+            <span class="theme-switch" role="group" aria-label="{{ tr('theme.label') }}">
+                {%- for value, name in [('light', 'sun'), ('', 'monitor'), ('dark', 'moon')] %}
+                {%- set label = tr('theme.' ~ (value or 'system')) %}
+                <button type="button" data-theme-set="{{ value }}" title="{{ label }}" aria-label="{{ label }}" aria-pressed="false">{{ icon(name) }}</button>
+                {%- endfor %}
+            </span>
+            <a class="user-logout" href="/logout" title="{{ tr('nav.logout') }}" aria-label="{{ tr('nav.logout') }}">{{ icon('log-out') }}</a>
         </div>
     </aside>
     <div class="drawer-backdrop" id="sidebarBackdrop"></div>
@@ -67,6 +99,7 @@
 <script src="{{ url_for('static', filename='js/theme.js') }}?v=20261103a"></script>
 <script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20261103a"></script>
 <script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20261103a"></script>
+<script src="{{ url_for('static', filename='js/server-switcher.js') }}?v=20261103a"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

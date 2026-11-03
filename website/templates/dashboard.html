@@ -1,6 +1,5 @@
 {%- extends '_console_base.html' -%}
-{%- from '_console_macros.html' import icon, nav_item -%}
-{%- set invite = 'https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands' -%}
+{%- from '_console_macros.html' import icon, nav_item, invite_url -%}
 {%- set joined = guilds | selectattr('bot_joined') | list -%}
 {%- set not_joined = guilds | rejectattr('bot_joined') | list -%}
 
@@ -16,7 +15,7 @@
 {% endblock %}
 
 {% block topbar %}<h1 class="page-title">{{ tr('nav.servers') }}</h1>{% endblock %}
-{% block topbar_end %}<a class="btn btn--primary" href="{{ invite }}" target="_blank" rel="noopener noreferrer">{{ icon('plus') }}{{ tr('nav.invite') }}</a>{% endblock %}
+{% block topbar_end %}<a class="btn btn--primary" href="{{ invite_url() }}" target="_blank" rel="noopener noreferrer">{{ icon('plus') }}{{ tr('nav.invite') }}</a>{% endblock %}
 
 {% block content %}
 {%- if guilds %}
@@ -55,7 +54,7 @@
         <div class="server-card server-card--unjoined" data-guild-name="{{ g.name }}" data-guild-id="{{ g.id }}">
             <span class="server-icon">{% if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="44" height="44" loading="lazy">{% else %}{{ g.name[:1] }}{% endif %}</span>
             <span class="server-name" title="{{ g.name }}">{{ g.name }}</span>
-            <a class="btn btn--secondary" href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&guild_id={{ g.id }}&integration_type=0&scope=bot+applications.commands" target="_blank" rel="noopener noreferrer">{{ tr('nav.invite') }}</a>
+            <a class="btn btn--secondary" href="{{ invite_url(g.id) }}" target="_blank" rel="noopener noreferrer">{{ tr('nav.invite') }}</a>
         </div>
         {%- endfor %}
     </div>
@@ -66,7 +65,7 @@
     <img src="{{ url_for('static', filename='images/rin/confused-480.webp') }}" alt="" width="96" height="96">
     <h2 class="section-title">{{ tr('servers.none_title') }}</h2>
     <p>{{ tr('servers.none_hint') }}</p>
-    <a class="btn btn--primary" href="{{ invite }}" target="_blank" rel="noopener noreferrer">{{ tr('nav.invite') }}</a>
+    <a class="btn btn--primary" href="{{ invite_url() }}" target="_blank" rel="noopener noreferrer">{{ tr('nav.invite') }}</a>
 </div>
 {%- endif %}
 {% endblock %}

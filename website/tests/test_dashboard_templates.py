@@ -61,7 +61,7 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertLess(html.index('id="joined"'),html.index('id="not-joined"'))
         self.assertIn('小凛 &lt;img src=x&gt;',html)
         self.assertNotIn('<img src=x>',html)
-        self.assertIn('href="/dashboard#not-joined"',html)
+        self.assertIn('href="/dashboard"',html[html.index('id="switcher-pop"'):])
 
     def test_role_editor_follows_message_then_roles_then_destination(self):
         html,p=self.render('server.html')
@@ -86,7 +86,7 @@ class DashboardTemplateTests(unittest.TestCase):
         rows=re.findall(r'data-row="([a-z]+)"',html)
         self.assertEqual(sorted(rows),sorted(['welcome','roles','leveling','giveaway','automod','moderation','botlog','serverlog','music','utility','general']))
         self.assertEqual(re.findall(r'data-toggle="([a-z]+)"',html),['welcome','automod','botlog','serverlog'])
-        self.assertLess(p.ids.index('ov-headline'),html.count('data-row'))
+        self.assertLess(html.index('id="ov-headline"'),html.index('data-row='))
         self.assertIn('机器人运行日志',html)
         self.assertIn('服务器事件日志',html)
         self.assertNotIn('pg-personalizer',html)
@@ -100,6 +100,35 @@ class DashboardTemplateTests(unittest.TestCase):
     def render_all(self):
         for name in ['dashboard.html','server.html','settings.html','login_gate.html','error.html']:
             yield name,self.render(name)[0]
+
+    def test_shell_has_switcher_and_no_rail(self):
+        for name in ['dashboard.html','server.html','settings.html']:
+            html,p=self.render(name)
+            for id_ in ['switcher-btn','switcher-pop','switcher-search','switcher-empty']:self.assertIn(id_,p.ids,f'{name} {id_}')
+            for gone in ['rail-item','nav-head']:self.assertNotIn(gone,html,f'{name} {gone}')
+
+    def test_switcher_lists_joined_before_invites(self):
+        html,p=self.render('server.html')
+        pop=html[html.index('id="switcher-pop"'):]
+        self.assertLess(pop.index('data-name="小凛 &lt;img src=x&gt;"'),pop.index('guild_id=456'))
+        invite=[l for l in p.links if 'guild_id=456' in l]
+        self.assertEqual(len(invite),1)
+        query=parse_qs(urlsplit(invite[0]).query)
+        self.assertEqual(query['permissions'],['1374694796438'])
+        self.assertEqual(query['disable_guild_select'],['true'])
+
+    def test_switcher_popover_scrolls_inside_viewport(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        pop=re.search(r'\.switcher-pop\s*\{([^}]*)\}',css).group(1)
+        self.assertIn('max-height',pop);self.assertIn('overflow-y: auto',pop)
+        self.assertIn('text-overflow: ellipsis',re.search(r'\.switcher-name\s*\{([^}]*)\}',css).group(1))
+
+    def test_pages_carry_group_and_guild_name(self):
+        html,_=self.render('server.html')
+        sections=re.findall(r'<section class="page[^>]*>',html)
+        self.assertEqual(len(sections),12)
+        for tag in sections:self.assertIn('data-group=',tag)
+        self.assertIn('<body data-guild-name="小凛 &lt;img src=x&gt;"',html)
 
     def test_every_page_boots_theme_before_styles(self):
         for name,html in self.render_all():

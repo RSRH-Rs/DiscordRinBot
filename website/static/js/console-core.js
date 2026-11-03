@@ -162,9 +162,10 @@ window.Console = (() => {
         });
         const page = el('pg-' + slug), name = page?.dataset.title || '';
         const title = el('page-title'); if (title) title.textContent = name;
-        const crumb = el('crumbs'); if (crumb) crumb.hidden = slug === 'overview';
-        const current = el('crumb-current'); if (current) current.textContent = name;
-        document.title = tr('title.page', {page: name, guild: document.querySelector('.nav-head')?.title || ''});
+        const home = slug === 'overview';
+        const group = el('crumb-group'); if (group) { group.hidden = home || !page?.dataset.group; group.textContent = page?.dataset.group || ''; }
+        const current = el('crumb-current'); if (current) { current.hidden = home; current.textContent = name; }
+        document.title = tr('title.page', {page: name, guild: document.body?.dataset.guildName || ''});
         const heading = page?.querySelector('h2');
         if (heading && !initial) { heading.tabIndex = -1; heading.focus({preventScroll: true}); }
         el('main')?.scrollTo(0, 0);
@@ -172,10 +173,10 @@ window.Console = (() => {
         document.dispatchEvent(new CustomEvent('console:page', {detail: {slug}}));
     }
     const go = slug => router?.navigate(slug) || false;
-    // Leaving the page through the server rail or the breadcrumb obeys the same draft guard as in-page links.
-    function railClick(event) {
-        const link = event.target.closest('.rail-item, #crumbs a');
-        if (!link) return;
+    // Switching server from the sidebar obeys the same draft guard as in-page links; invites open a new tab and need none.
+    function leaveClick(event) {
+        const link = event.target.closest?.('#switcher-pop a');
+        if (!link || link.target === '_blank') return;
         if (!DashboardUI.confirmLeave([...document.querySelectorAll('[data-draft]')])) { event.preventDefault(); return; }
         if (router && link.dataset.guild) link.href = '/dashboard/server/' + link.dataset.guild + '#' + router.current();
     }
@@ -248,7 +249,7 @@ window.Console = (() => {
 
     document.addEventListener('DOMContentLoaded', () => {
         serverSearch();
-        document.addEventListener('click', railClick);
+        document.addEventListener('click', leaveClick);
         const pages = [...document.querySelectorAll('.page[data-slug]')];
         if (pages.length) {
             router = DashboardExtras.createHashRouter({
@@ -271,5 +272,5 @@ window.Console = (() => {
     });
 
     return {tr, api, apiGlobal, toast, escapeHtml, channels, roles, commands, channelName, channelOptions, roleOptions,
-        duration, dependencies, module, load, invalidate, go, railClick, refreshModules, stateLabel, dotState};
+        duration, dependencies, module, load, invalidate, go, leaveClick, refreshModules, stateLabel, dotState};
 })();

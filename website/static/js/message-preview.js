@@ -31,7 +31,7 @@ window.DashboardPreview = (() => {
     }
     function refreshWelcome(){
         const target=el('welcome-preview-content');if(!target)return;
-        const guild=document.querySelector('.nav-head')?.title||'';
+        const guild=document.body?.dataset.guildName||'';
         const embed=document.createElement('div');embed.className='preview-embed';
         embed.append(textNode('strong','preview-title',value('w-title').trim()||'欢迎来到 '+guild));
         embed.append(textNode('p','preview-body',formatWelcome(value('w-msg'),guild)));
@@ -86,7 +86,7 @@ window.DashboardPreview = (() => {
     function sample(kind){
         if(!window.confirm('这会替换当前的标题和正文，其他设置不会改变。要套用示例吗？'))return;
         if(kind==='welcome'){
-            el('w-title').value='欢迎来到 '+(document.querySelector('.nav-head')?.title||'');
+            el('w-title').value='欢迎来到 '+(document.body?.dataset.guildName||'');
             el('w-msg').value='欢迎 %member% 来到 %server%！\n先坐下来聊聊天吧，大家都在等你哦～';
         }else{
             el('rr-title').value='找到你的同好';el('rr-content').value='喜欢听歌，还是一起打游戏？\n点下面的按钮，选一个属于你的小角落吧。';

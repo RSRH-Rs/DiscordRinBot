@@ -62,25 +62,33 @@ test('channels() dedupes concurrent requests and caches the result', async () =>
     assert.equal(Console.channelName('9', a), null);
 });
 
-test('home rail item and breadcrumb are guarded too', () => {
+test('switcher links are guarded by the draft check', () => {
     const blocked = core({dirty: true});
-    for (const link of [{dataset: {}, href: '/dashboard'}, {dataset: {}, href: '/dashboard#not-joined'}]) {
-        const event = {target: {closest: () => link}, prevented: false, preventDefault() { this.prevented = true; }};
-        blocked.Console.railClick(event);
-        assert.equal(event.prevented, true);
-    }
-    assert.equal(blocked.calls.confirm, 2);
+    const link = {dataset: {}, href: '/dashboard'};
+    const event = {target: {closest: sel => sel === '#switcher-pop a' ? link : null}, prevented: false, preventDefault() { this.prevented = true; }};
+    blocked.Console.leaveClick(event);
+    assert.equal(event.prevented, true);
+    assert.equal(blocked.calls.confirm, 1);
 });
 
-test('rail click while a page has unsaved changes is blocked', () => {
+test('invite links open a new tab without the draft check', () => {
+    const blocked = core({dirty: true});
+    const link = {dataset: {}, href: 'https://discord.com/oauth2/authorize', target: '_blank'};
+    const event = {target: {closest: () => link}, prevented: false, preventDefault() { this.prevented = true; }};
+    blocked.Console.leaveClick(event);
+    assert.equal(event.prevented, false);
+    assert.equal(blocked.calls.confirm, undefined);
+});
+
+test('switching server while a page has unsaved changes is blocked', () => {
     const blocked = core({dirty: true});
     const link = {dataset: {guild: '456'}, href: '/dashboard/server/456'};
     const event = {target: {closest: () => link}, prevented: false, preventDefault() { this.prevented = true; }};
-    blocked.Console.railClick(event);
+    blocked.Console.leaveClick(event);
     assert.equal(event.prevented, true);
     assert.equal(blocked.calls.confirm, 1);
     const free = core({dirty: false});
     const pass = {target: {closest: () => link}, prevented: false, preventDefault() { this.prevented = true; }};
-    free.Console.railClick(pass);
+    free.Console.leaveClick(pass);
     assert.equal(pass.prevented, false);
 });

@@ -32,3 +32,7 @@
     <img class="upload-preview" id="w-{{ kind }}-image-preview" alt="{{ tr('welcome.image.' ~ kind ~ '_alt') }}" hidden>
 </div>
 {%- endmacro -%}
+
+{%- macro invite_url(guild_id=None) -%}
+https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands{% if guild_id %}&guild_id={{ guild_id }}&disable_guild_select=true{% endif %}
+{%- endmacro -%}

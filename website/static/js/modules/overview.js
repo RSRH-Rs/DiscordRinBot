@@ -85,7 +85,10 @@ window.Overview = (() => {
         try {
             const info = await Console.api('/info');
             if (info.bot_joined_at) el('ov-headline').textContent = tr('overview.hero', {time: joinDuration(info.bot_joined_at)});
-            if (info.member_count) facts.push(tr('overview.fact.members', {n: info.member_count.toLocaleString()}));
+            if (info.member_count) {
+                facts.push(tr('overview.fact.members', {n: info.member_count.toLocaleString()}));
+                const sub = el('switcher-sub'); if (sub) sub.textContent = tr('switcher.members', {n: info.member_count.toLocaleString()});
+            }
             if (info.online_count) facts.push(tr('overview.fact.online', {n: info.online_count.toLocaleString()}));
             if (info.text_channels) facts.push(tr('overview.fact.text', {n: info.text_channels}));
         } catch { /* the card keeps its default line */ }

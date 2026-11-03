@@ -556,5 +556,17 @@
     "light": "白天",
     "system": "跟随系统",
     "dark": "夜间"
+  },
+  "switcher": {
+    "choose": "选择服务器",
+    "open": "切换服务器",
+    "search": "搜索服务器",
+    "joined": "小凛已加入",
+    "not_joined": "还没邀请小凛",
+    "invite": "邀请",
+    "empty": "没有找到这个服务器",
+    "all": "所有服务器",
+    "add": "把小凛加到其他服务器",
+    "members": "{n} 位成员"
   }
 }

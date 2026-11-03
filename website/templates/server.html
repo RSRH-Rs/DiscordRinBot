@@ -9,7 +9,6 @@
 {%- set toggle_slugs = ['welcome', 'automod', 'botlog', 'serverlog'] -%}
 
 {% block title %}{{ tr('nav.overview') }} · {{ guild.name }}{% endblock %}
-{% block nav_head %}{{ guild.name }}{% endblock %}
 
 {% block nav %}
 {{ nav_item('#overview', 'layout-grid', tr('nav.overview'), 'overview') }}
@@ -22,13 +21,13 @@
 {% endblock %}
 
 {% block topbar %}
-<h1 class="page-title" id="page-title">{{ tr('nav.overview') }}</h1>
-<nav class="crumbs" id="crumbs" aria-label="{{ tr('nav.crumbs') }}" hidden><a href="/dashboard">{{ tr('nav.servers') }}</a><span aria-hidden="true">/</span><span id="crumb-current" aria-current="page"></span></nav>
+<h1 class="sr-only" id="page-title">{{ tr('nav.overview') }}</h1>
+<nav class="crumbs" id="crumbs" aria-label="{{ tr('nav.crumbs') }}"><a href="#overview" data-mod="overview">{{ tr('nav.overview') }}</a><span class="crumb-part" id="crumb-group" hidden></span><span class="crumb-part" id="crumb-current" aria-current="page" hidden></span></nav>
 {% endblock %}
 {% block topbar_end %}<span class="bot-status" data-bot-status data-state="unknown" role="status">{{ tr('status.unknown') }}</span>{% endblock %}
 
 {% block content %}
-<section class="page" id="pg-overview" data-slug="overview" data-title="{{ tr('nav.overview') }}">
+<section class="page" id="pg-overview" data-slug="overview" data-group="" data-title="{{ tr('nav.overview') }}">
     <div class="duty-card">
         <img src="{{ url_for('static', filename='images/rin/manage-480.webp') }}" alt="" width="120" height="120">
         <div class="duty-text">
@@ -61,7 +60,7 @@
     <p class="section-hint">{{ tr('overview.runtime_note') }}</p>
 </section>
 
-<section class="page" id="pg-music" data-slug="music" data-title="{{ tr('nav.module.music') }}" data-draft>
+<section class="page" id="pg-music" data-slug="music" data-group="{{ tr('nav.group.tools') }}" data-title="{{ tr('nav.module.music') }}" data-draft>
     <div class="page-head"><h2>{{ tr('nav.module.music') }}</h2><p>{{ tr('music.intro') }}</p></div>
     <div class="list">
         {% call row(tr('music.dj'), tr('music.dj_hint'), 'mu-dj') %}<select class="select" id="mu-dj" data-search="{{ tr('music.dj') }}"><option value="0">{{ tr('common.no_limit') }}</option></select>{% endcall %}
@@ -69,7 +68,7 @@
     </div>
 </section>
 
-<section class="page" id="pg-welcome" data-slug="welcome" data-title="{{ tr('nav.module.welcome') }}" data-draft>
+<section class="page" id="pg-welcome" data-slug="welcome" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.welcome') }}" data-draft>
     <div class="page-head"><h2>{{ tr('nav.module.welcome') }}</h2><p>{{ tr('welcome.intro') }}</p></div>
     <div class="editor">
         <div class="editor-form">
@@ -123,7 +122,7 @@
     </div>
 </section>
 
-<section class="page" id="pg-roles" data-slug="roles" data-title="{{ tr('nav.module.roles') }}" data-draft data-draft-inline>
+<section class="page" id="pg-roles" data-slug="roles" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.roles') }}" data-draft data-draft-inline>
     <div class="page-head"><h2>{{ tr('nav.module.roles') }}</h2><p>{{ tr('roles.intro') }}</p></div>
     <div class="editor">
         <div class="editor-form">
@@ -174,7 +173,7 @@
     </div>
 </section>
 
-<section class="page" id="pg-automod" data-slug="automod" data-title="{{ tr('nav.module.automod') }}" data-draft>
+<section class="page" id="pg-automod" data-slug="automod" data-group="{{ tr('nav.group.safety') }}" data-title="{{ tr('nav.module.automod') }}" data-draft>
     <div class="page-head"><h2>{{ tr('nav.module.automod') }}</h2><p>{{ tr('automod.intro') }}</p></div>
     <div class="section">
         <div class="list">
@@ -226,7 +225,7 @@
     </div>
 </section>
 
-<section class="page" id="pg-moderation" data-slug="moderation" data-title="{{ tr('nav.module.moderation') }}" data-draft>
+<section class="page" id="pg-moderation" data-slug="moderation" data-group="{{ tr('nav.group.safety') }}" data-title="{{ tr('nav.module.moderation') }}" data-draft>
     <div class="page-head"><h2>{{ tr('nav.module.moderation') }}</h2><p>{{ tr('moderation.intro') }}</p></div>
     <div class="section">
         <div class="list">
@@ -251,7 +250,7 @@
     </div>
 </section>
 
-<section class="page" id="pg-giveaway" data-slug="giveaway" data-title="{{ tr('nav.module.giveaway') }}" data-draft data-draft-inline>
+<section class="page" id="pg-giveaway" data-slug="giveaway" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.giveaway') }}" data-draft data-draft-inline>
     <div class="page-head"><h2>{{ tr('nav.module.giveaway') }}</h2><p>{{ tr('giveaway.intro') }}</p></div>
     <div class="section">
         <h3 class="section-title">{{ tr('giveaway.new') }}</h3>
@@ -283,7 +282,7 @@
     </div>
 </section>
 
-<section class="page" id="pg-leveling" data-slug="leveling" data-title="{{ tr('nav.module.leveling') }}">
+<section class="page" id="pg-leveling" data-slug="leveling" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.leveling') }}">
     <div class="page-head"><h2>{{ tr('nav.module.leveling') }}</h2><p>{{ tr('leveling.intro') }}</p></div>
     <div class="section">
         <h3 class="section-title">{{ tr('leveling.board') }}</h3>
@@ -291,7 +290,7 @@
     </div>
 </section>
 
-<section class="page" id="pg-general" data-slug="general" data-title="{{ tr('nav.module.general') }}">
+<section class="page" id="pg-general" data-slug="general" data-group="{{ tr('nav.group.tools') }}" data-title="{{ tr('nav.module.general') }}">
     <div class="page-head"><h2>{{ tr('nav.module.general') }}</h2><p>{{ tr('general.intro') }}</p></div>
     <div class="cmd-grid">
         {%- for name in ['status', 'avatar', 'roll', 'help', 'setstatus', 'setbio'] %}
@@ -300,7 +299,7 @@
     </div>
 </section>
 
-<section class="page" id="pg-utility" data-slug="utility" data-title="{{ tr('nav.module.utility') }}">
+<section class="page" id="pg-utility" data-slug="utility" data-group="{{ tr('nav.group.tools') }}" data-title="{{ tr('nav.module.utility') }}">
     <div class="page-head"><h2>{{ tr('nav.module.utility') }}</h2><p>{{ tr('utility.intro') }}</p></div>
     <p class="note note--info">{{ icon('info') }}<span>{{ tr('utility.tip') }}</span></p>
     <div class="server-search command-search">
@@ -314,7 +313,7 @@
     <div id="util-commands"></div>
 </section>
 
-<section class="page" id="pg-botlog" data-slug="botlog" data-title="{{ tr('nav.module.botlog') }}" data-draft>
+<section class="page" id="pg-botlog" data-slug="botlog" data-group="{{ tr('nav.group.safety') }}" data-title="{{ tr('nav.module.botlog') }}" data-draft>
     <div class="page-head"><h2>{{ tr('nav.module.botlog') }}</h2><p>{{ tr('logs.bot_intro') }}</p></div>
     <div class="list">
         {% call row(tr('logs.enabled'), tr('logs.enabled_hint'), 'bl-enabled', cls='row--switch') %}{{ toggle('bl-enabled', tr('logs.enabled')) }}{% endcall %}
@@ -330,7 +329,7 @@
     </div>
 </section>
 
-<section class="page" id="pg-serverlog" data-slug="serverlog" data-title="{{ tr('nav.module.serverlog') }}" data-draft>
+<section class="page" id="pg-serverlog" data-slug="serverlog" data-group="{{ tr('nav.group.safety') }}" data-title="{{ tr('nav.module.serverlog') }}" data-draft>
     <div class="page-head"><h2>{{ tr('nav.module.serverlog') }}</h2><p>{{ tr('logs.server_intro') }}</p></div>
     <div class="list">
         {% call row(tr('logs.server_enabled'), tr('logs.enabled_hint'), 'sl-enabled', cls='row--switch') %}{{ toggle('sl-enabled', tr('logs.server_enabled')) }}{% endcall %}
