@@ -165,19 +165,30 @@ def _contrast(a, b):
     return (hi + 0.05) / (lo + 0.05)
 
 
-# (文字色, 底色)：页面底色、面板和 Discord 对话框里实际出现的组合
+# (文字色, 底色)：页面底色、面板、宽屏侧栏和 Discord 对话框里实际出现的组合，日间夜间各查一遍
 TEXT_PAIRS = [
-    ("text", "bg"), ("muted", "bg"), ("text", "panel"), ("muted", "panel"), ("rin", "bg"),
-    ("on-rin", "rin"), ("chip-text", "chip-bg"),
-    ("text", "side-chan"), ("side-text", "side-chan"), ("text", "side-active"), ("side-text", "side-me"),
-    ("dc-text", "dc-bg"), ("dc-muted", "dc-bg"), ("dc-muted", "dc-deep"), ("rin", "dc-bg"), ("dc-text", "dc-deep"),
+    ("text", "bg"), ("muted", "bg"), ("text", "panel"), ("muted", "panel"), ("accent-text", "bg"),
+    ("on-accent", "accent"), ("accent-text", "accent-soft"),
+    ("text", "side"), ("muted", "side"), ("text", "cur"), ("muted", "hover"),
+    ("dc-text", "dc-bg"), ("dc-muted", "dc-bg"), ("dc-muted", "dc-deep"), ("accent-text", "dc-bg"), ("dc-text", "dc-deep"),
 ]
 
 
+def _palette(page, selector):
+    body = re.search(re.escape(selector) + r"\s*\{(.*?)\}", page, re.S).group(1)
+    return dict(re.findall(r"--([\w-]+):\s*(#[0-9A-Fa-f]{6})", body))
+
+
+@pytest.mark.parametrize("selector", [":root", ':root[data-theme="dark"]'])
 @pytest.mark.parametrize("fg,bg", TEXT_PAIRS)
-def test_text_colors_meet_contrast(page, fg, bg):
-    tokens = dict(re.findall(r"--([\w-]+):\s*(#[0-9A-Fa-f]{6})", page))
-    assert _contrast(tokens[fg], tokens[bg]) >= 4.5, (fg, bg)
+def test_text_colors_meet_contrast(page, selector, fg, bg):
+    tokens = _palette(page, selector)
+    assert _contrast(tokens[fg], tokens[bg]) >= 4.5, (selector, fg, bg)
+
+
+def test_pink_text_uses_the_text_shade(page):
+    # 樱粉 --accent 只给按钮和装饰；当文字用时要换成对比度够的 --accent-text
+    assert "var(--accent-text)" in re.search(r"\.motto\s*\{([^}]*)\}", page).group(1)
 
 
 def test_overview_links_point_to_sections(page):
