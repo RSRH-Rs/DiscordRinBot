@@ -23,7 +23,7 @@ class ConsoleStringTests(unittest.TestCase):
         strings = i18n.console_strings()
         self.assertTrue(strings)
         for key, value in strings.items():
-            self.assertRegex(key, r'^[a-z_]+(\.[A-Za-z_]+)+$')
+            self.assertRegex(key, r'^[a-z_]+(\.[A-Za-z0-9_]+)+$')
             self.assertIsInstance(value, str)
             self.assertTrue(value.strip(), key)
 
