@@ -169,6 +169,7 @@ def _contrast(a, b):
 TEXT_PAIRS = [
     ("text", "bg"), ("muted", "bg"), ("text", "panel"), ("muted", "panel"), ("rin", "bg"),
     ("on-rin", "rin"), ("chip-text", "chip-bg"),
+    ("text", "side-chan"), ("side-text", "side-chan"), ("text", "side-active"), ("side-text", "side-me"),
     ("dc-text", "dc-bg"), ("dc-muted", "dc-bg"), ("dc-muted", "dc-deep"), ("rin", "dc-bg"), ("dc-text", "dc-deep"),
 ]
 
@@ -187,6 +188,24 @@ def test_overview_links_point_to_sections(page):
     ids = {a.get("id") for _, a in tags(page)}
     for tid in targets:
         assert tid in ids, tid
+
+
+def test_sidebar_channels_link_to_sections(page):
+    # 宽屏左侧的频道列表就是导航：每个频道跳到页面上真实存在的区块，并参与滚动高亮
+    side = re.search(r'<aside class="side".*?</aside>', page, re.S).group(0)
+    spies = re.findall(r'<a href="#([\w-]+)" data-spy="([\w-]+)"', side)
+    assert [h for h, _ in spies] == ["lobby", "music", "welcome", "moderation", "dashboard"]
+    assert all(h == s for h, s in spies)
+    ids = {a.get("id") for _, a in tags(page)}
+    for h, _ in spies:
+        assert h in ids, h
+
+
+def test_sidebar_only_on_wide_screens(page):
+    css = "\n".join(re.findall(r"<style>(.*?)</style>", page, re.S))
+    assert re.search(r"\.side \{[^}]*display:\s*none", css)
+    wide = re.search(r"@media \(min-width: 1440px\) \{(.*?)\n    \}", css, re.S)
+    assert wide and ".side" in wide.group(1) and "padding-left" in wide.group(1)
 
 
 def test_modlog_shows_edit_and_join_records(page):

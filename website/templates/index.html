@@ -32,20 +32,20 @@
     </script>
     <title>小凛Rinbot</title>
     <meta name="description" content="小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。">
-    <meta name="theme-color" content="#FFF6F8">
+    <meta name="theme-color" content="#EFE2E7">
     <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
     :root {
-        /* 樱花白：小凛的粉白主题 */
-        --bg: #FFF6F8;
-        --panel: #FFFFFF;
-        --panel-line: #F6D9E2;
+        /* 雾粉：底色压到中间调，面板和对话窗口比底色亮，整页不刺眼 */
+        --bg: #EFE2E7;
+        --panel: #FBF6F8;
+        --panel-line: #E9D2DB;
         --text: #3A2433;
-        --muted: #7A6070;
-        --rin: #C23B64;
+        --muted: #6E5565;
+        --rin: #B0335A;
         --on-rin: #FFFFFF;
         --apricot: #FFB37A;
         --chip-bg: #FCE4EB;
@@ -57,6 +57,12 @@
         --dc-text: #313338;
         --dc-muted: #5C5E66;
         --dc-name: #060607;
+        /* 宽屏左侧的 Discord 侧栏：服务器栏最深，频道列表次之，内容区最浅 */
+        --side-rail: #DCC3CD;
+        --side-chan: #E7D4DC;
+        --side-active: #D9C1CB;
+        --side-me: #DFCAD3;
+        --side-text: #634A5A;
         /* 极淡的颗粒，让底色不是一块平涂 */
         --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .25 0 0 0 0 .35 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
         --blurple: #5865F2;
@@ -72,8 +78,8 @@
         font-family: var(--font); font-size: 16px; line-height: 1.7;
         background:
             var(--grain),
-            radial-gradient(900px 620px at 85% -8%, rgba(255, 179, 198, .55), transparent 62%),
-            radial-gradient(760px 560px at -8% 30%, rgba(255, 214, 170, .4), transparent 60%),
+            radial-gradient(900px 620px at 85% -8%, rgba(255, 190, 207, .45), transparent 62%),
+            radial-gradient(760px 560px at -8% 30%, rgba(255, 214, 170, .25), transparent 60%),
             var(--bg);
         background-size: 180px 180px, auto, auto, auto;
         color: var(--text);
@@ -90,10 +96,10 @@
         font: inherit; font-weight: 600; font-size: 16px; line-height: 1.2;
         text-decoration: none; border-radius: 10px; padding: 14px 24px;
         background: var(--rin); color: var(--on-rin); border: 0; cursor: pointer;
-        box-shadow: 0 8px 18px -10px rgba(201, 63, 105, .8);
+        box-shadow: 0 8px 18px -10px rgba(176, 51, 90, .8);
         transition: background .15s;
     }
-    .btn:hover { background: #B43560; }
+    .btn:hover { background: #9C2B4F; }
     .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
     .btn-ghost { background: #fff; color: var(--text); box-shadow: inset 0 0 0 1px #EFC9D5; }
     .btn-ghost:hover { background: #FFF0F4; }
@@ -106,7 +112,7 @@
     /* ── 导航 ── */
     .nav {
         position: sticky; top: 0; z-index: 50;
-        background: rgba(255, 246, 248, .86); backdrop-filter: blur(14px);
+        background: rgba(239, 226, 231, .88); backdrop-filter: blur(14px);
         border-bottom: 1px solid transparent; transition: border-color .2s;
     }
     .nav.scrolled { border-bottom-color: var(--panel-line); }
@@ -122,6 +128,59 @@
     .nav-link:hover { color: var(--text); background: rgba(201, 63, 105, .08); }
     .nav .btn { padding: 9px 16px; font-size: 15px; border-radius: 8px; }
     .short { display: none; }
+    section[id] { scroll-margin-top: 72px; }
+
+    /* ── 宽屏左侧：Discord 客户端式的服务器栏和频道列表，频道就是导航 ── */
+    .side { display: none; }
+    .rail { width: 72px; flex-shrink: 0; background: var(--side-rail); padding: 12px 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .rail a {
+        position: relative; width: 48px; height: 48px; border-radius: 50%;
+        display: grid; place-items: center; background: var(--bg); color: var(--side-text);
+        transition: border-radius .15s, background .15s, color .15s;
+    }
+    .rail a:hover, .rail a.home { border-radius: 16px; }
+    .rail a:hover { background: var(--rin); color: var(--on-rin); }
+    .rail a.home::before {
+        content: ''; position: absolute; left: -12px; top: 4px; width: 4px; height: 40px;
+        border-radius: 0 4px 4px 0; background: var(--text);
+    }
+    .rail img { width: 48px; height: 48px; border-radius: inherit; }
+    .rail svg { width: 22px; height: 22px; }
+    .rail .sep { width: 32px; height: 2px; background: #C9ACB8; border-radius: 1px; }
+    .tip {
+        display: none; position: absolute; left: 60px; top: 50%; transform: translateY(-50%); z-index: 2;
+        background: var(--text); color: #fff; font-size: 14px; font-weight: 600; line-height: 1.3;
+        padding: 6px 10px; border-radius: 6px; white-space: nowrap; pointer-events: none;
+    }
+    .rail a:hover .tip, .rail a:focus-visible .tip { display: block; }
+    .chan { flex: 1; min-width: 0; background: var(--side-chan); display: flex; flex-direction: column; }
+    .chan-head { height: 64px; flex-shrink: 0; display: flex; align-items: center; padding: 0 16px; font-weight: 700; border-bottom: 1px solid var(--side-active); }
+    .chan-cat { font-size: 12px; font-weight: 700; color: var(--side-text); padding: 20px 16px 6px; }
+    .chan a {
+        display: flex; align-items: center; gap: 8px; margin: 1px 8px; padding: 7px 10px; border-radius: 6px;
+        color: var(--side-text); text-decoration: none; font-weight: 500; font-size: 15px;
+    }
+    .chan a .h { color: #9C7F8D; font-weight: 700; width: 12px; }
+    .chan a:hover { background: rgba(255, 255, 255, .35); color: var(--text); }
+    .chan a.on { background: var(--side-active); color: var(--text); }
+    .me { margin-top: auto; background: var(--side-me); padding: 10px 12px; display: flex; gap: 10px; align-items: center; font-size: 14px; }
+    .me .pic { position: relative; flex-shrink: 0; }
+    .me .pic img { width: 34px; height: 34px; border-radius: 50%; }
+    .me .pic::after {
+        content: ''; position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px;
+        border-radius: 50%; background: var(--leaf); border: 3px solid var(--side-me);
+    }
+    .me b { display: block; font-weight: 600; }
+    .me small { display: block; color: var(--side-text); font-size: 12px; line-height: 1.3; }
+    .me small b { display: inline; }
+
+    @media (min-width: 1440px) {
+        body { padding-left: 312px; }
+        .side { display: flex; position: fixed; top: 0; bottom: 0; left: 0; width: 312px; z-index: 60; }
+        .nav .brand { display: none; }
+        .nav-in { justify-content: flex-end; }
+        .wrap { max-width: 1320px; }
+    }
 
     /* ── 对话面板：Discord 浅色主题 ── */
     .chat {
@@ -197,7 +256,7 @@
     .sec { padding: 20px 0; }
     .panel {
         position: relative; overflow: hidden;
-        background: linear-gradient(180deg, var(--panel) 0%, #FFF1F5 100%);
+        background: linear-gradient(180deg, var(--panel) 0%, #F6EBEF 100%);
         border: 1px solid var(--panel-line); border-radius: 20px;
         box-shadow: 0 30px 70px -45px rgba(201, 63, 105, .45);
         display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
@@ -391,6 +450,29 @@
 </head>
 <body>
 
+<aside class="side" aria-label="Channels">
+    <div class="rail">
+        <a href="/" class="home"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="48" height="48"><span class="tip">{{ t('小凛 RinBot', 'Rin') }}</span></a>
+        <span class="sep" aria-hidden="true"></span>
+        <a href="{{ invite_url }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="tip">{{ t('邀请小凛', 'Invite Rin') }}</span></a>
+        <a href="/dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="tip">{{ t('控制台', 'Dashboard') }}</span></a>
+        <a href="https://github.com/RSRH-Rs/DiscordRinBot" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg><span class="tip">GitHub</span></a>
+    </div>
+    <nav class="chan" aria-label="Sections">
+        <div class="chan-head">{{ t('小凛的服务器', 'Rin’s server') }}</div>
+        <div class="chan-cat">{{ t('文字频道', 'Text channels') }}</div>
+        <a href="#lobby" data-spy="lobby" class="on" aria-current="true"><span class="h" aria-hidden="true">#</span>{{ t('大厅', 'lobby') }}</a>
+        <a href="#music" data-spy="music"><span class="h" aria-hidden="true">#</span>{{ t('音乐', 'music') }}</a>
+        <a href="#welcome" data-spy="welcome"><span class="h" aria-hidden="true">#</span>{{ t('欢迎', 'welcome') }}</a>
+        <a href="#moderation" data-spy="moderation"><span class="h" aria-hidden="true">#</span>{{ t('管理日志', 'mod-log') }}</a>
+        <a href="#dashboard" data-spy="dashboard"><span class="h" aria-hidden="true">#</span>{{ t('控制台', 'dashboard') }}</a>
+        <div class="me">
+            <span class="pic"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34"></span>
+            <span><b>{{ t('小凛', 'Rin') }}</b><small>{{ t('在 <b data-stat="servers">12</b> 个服务器里', 'In <b data-stat="servers">12</b> servers') }}</small></span>
+        </div>
+    </nav>
+</aside>
+
 <nav class="nav" id="nav" aria-label="RinBot">
     <div class="wrap nav-in">
         <a href="/" class="brand"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34">小凛 RinBot</a>
@@ -404,7 +486,7 @@
 
 <main>
 <div class="wrap">
-    <section class="hero" aria-labelledby="hero-title">
+    <section class="hero" id="lobby" aria-labelledby="hero-title">
         <div>
             <h1 id="hero-title">{{ t('把小凛<br>拉进你的服务器', 'Bring Rin<br>into your server') }}</h1>
             <p class="lead">{{ t('放歌、迎新、抽奖，再帮你看着点刷屏。我就待在频道里，叫我就回。', 'Music, welcomes, giveaways, and an eye on spam. I hang out in your channels — just call me.') }}</p>
@@ -707,6 +789,25 @@ if (window.fetch) fetch('/api/stats').then(function (r) { return r.ok ? r.json()
         document.querySelectorAll('[data-stat="servers"]').forEach(function (el) { el.textContent = d.servers; });
     }
 }).catch(function () {});
+
+/* 宽屏侧栏：滚到哪个区块，就高亮哪个频道 */
+var spyLinks = document.querySelectorAll('[data-spy]');
+if ('IntersectionObserver' in window) {
+    var spyIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+            if (!e.isIntersecting) return;
+            spyLinks.forEach(function (a) {
+                var on = a.getAttribute('data-spy') === e.target.id;
+                a.classList.toggle('on', on);
+                if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
+            });
+        });
+    }, { rootMargin: '-45% 0px -50% 0px' });
+    spyLinks.forEach(function (a) {
+        var target = document.getElementById(a.getAttribute('data-spy'));
+        if (target) spyIO.observe(target);
+    });
+}
 
 /* 导航滚动后加一条底线 */
 var nav = document.getElementById('nav');
