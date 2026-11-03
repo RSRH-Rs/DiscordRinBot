@@ -33,13 +33,10 @@
 </div>
 {% endblock %}
 
-{% block topbar %}
-<h1 class="sr-only" id="page-title">{{ tr('nav.overview') }}</h1>
-<nav class="crumbs" id="crumbs" aria-label="{{ tr('nav.crumbs') }}"><a href="#overview" data-mod="overview">{{ tr('nav.overview') }}</a><span class="crumb-part" id="crumb-group" hidden></span><span class="crumb-part" id="crumb-current" aria-current="page" hidden></span></nav>
-{% endblock %}
-{% block topbar_end %}<span class="bot-status" data-bot-status data-state="unknown" role="status">{{ tr('status.unknown') }}</span>{% endblock %}
+{% block topbar_title %}{{ tr('nav.overview') }}{% endblock %}
 
 {% block content %}
+<h1 class="sr-only" id="page-title">{{ tr('nav.overview') }}</h1>
 <section class="page page--wide" id="pg-overview" data-slug="overview" data-group="" data-title="{{ tr('nav.overview') }}">
     <div class="hero">
         <img src="{{ url_for('static', filename='images/rin/manage-480.webp') }}" alt="" width="120" height="120">
@@ -47,6 +44,7 @@
             <h2 class="display" id="ov-headline">{{ tr('overview.hero_default') }}</h2>
             <p id="ov-facts"></p>
         </div>
+        <span class="bot-status" data-bot-status data-state="unknown" role="status">{{ tr('status.unknown') }}</span>
     </div>
     <div class="attention" id="ov-attention" role="status" hidden></div>
     <div class="ov-error" id="ov-error" role="alert" hidden>

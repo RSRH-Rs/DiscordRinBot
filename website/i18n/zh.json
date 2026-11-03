@@ -7,13 +7,14 @@
     "logout": "退出登录",
     "invite": "邀请小凛",
     "home": "回到我的服务器",
+    "homepage": "主页",
+    "homepage_label": "回到主页",
     "menu": "打开菜单",
     "group": {
       "community": "社区互动",
       "safety": "管理与安全",
       "tools": "音乐与工具"
     },
-    "crumbs": "当前位置",
     "module": {
       "welcome": "欢迎新成员",
       "roles": "领取身份组",

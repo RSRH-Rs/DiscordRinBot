@@ -156,6 +156,11 @@ window.Console = (() => {
         if (state && !DashboardUI.dirty('pg-' + slug)) state.loaded = false;
     }
     let router = null;
+    // The hidden page heading, the mobile top bar and the browser tab all name the current page.
+    function setTitles(name) {
+        for (const id of ['page-title', 'topbar-title']) { const node = el(id); if (node) node.textContent = name; }
+        document.title = tr('title.page', {page: name, guild: document.body?.dataset.currentGuild || ''});
+    }
     function show(slug, initial) {
         window.DashboardExtras?.closeSelects?.();
         DashboardUI.closeSidebar(false);
@@ -165,11 +170,7 @@ window.Console = (() => {
             if (link.dataset.mod === slug) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
         });
         const page = el('pg-' + slug), name = page?.dataset.title || '';
-        const title = el('page-title'); if (title) title.textContent = name;
-        const home = slug === 'overview';
-        const group = el('crumb-group'); if (group) { group.hidden = home || !page?.dataset.group; group.textContent = page?.dataset.group || ''; }
-        const current = el('crumb-current'); if (current) { current.hidden = home; current.textContent = name; }
-        document.title = tr('title.page', {page: name, guild: document.body?.dataset.currentGuild || ''});
+        setTitles(name);
         const heading = page?.querySelector('h2');
         if (heading && !initial) { heading.tabIndex = -1; heading.focus({preventScroll: true}); }
         el('main')?.scrollTo(0, 0);
@@ -199,9 +200,9 @@ window.Console = (() => {
             });
         });
     }
-    // Switching server from the sidebar obeys the same draft guard as in-page links; invites open a new tab and need none.
+    // Switching server or going back to the homepage obeys the same draft guard as in-page links; invites open a new tab and need none.
     function leaveClick(event) {
-        const link = event.target.closest?.('#switcher-pop a');
+        const link = event.target.closest?.('#switcher-pop a') || event.target.closest?.('a.brand-row');
         if (!link || link.target === '_blank') return;
         if (!DashboardUI.confirmLeave([...document.querySelectorAll('[data-draft]')])) { event.preventDefault(); return; }
         if (router && link.dataset.guild) link.href = '/dashboard/server/' + link.dataset.guild + '#' + router.current();
@@ -312,5 +313,5 @@ window.Console = (() => {
     });
 
     return {tr, api, apiGlobal, toast, escapeHtml, channels, roles, commands, channelName, channelOptions, roleOptions,
-        duration, dependencies, module, load, invalidate, go, selectTab, leaveClick, refreshModules, stateLabel, dotState};
+        duration, dependencies, module, load, invalidate, go, selectTab, setTitles, leaveClick, refreshModules, stateLabel, dotState};
 })();

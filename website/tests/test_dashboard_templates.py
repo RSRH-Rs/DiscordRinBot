@@ -271,4 +271,33 @@ class DashboardTemplateTests(unittest.TestCase):
             used|=set(re.findall(r"icon\('([a-z-]+)'",text))|set(re.findall(r'#i-([a-z-]+)',text))
         self.assertEqual(used-symbols,set())
 
+    def test_every_console_page_links_home_from_the_sidebar(self):
+        for name in ['dashboard.html','server.html','settings.html']:
+            html,_=self.render(name)
+            side=html[html.index('id="sideNav"'):html.index('id="switcher"')]
+            self.assertRegex(side,r'<a class="brand-row" href="/" aria-label="回到主页"',name)
+
+    def test_no_crumbs_and_titles_live_in_content(self):
+        for name in ['dashboard.html','server.html','settings.html']:
+            html,_=self.render(name)
+            self.assertNotIn('id="crumbs"',html,name)
+            topbar=html[html.index('<header class="topbar">'):html.index('</header>')]
+            self.assertIn('id="topbar-title"',topbar,name)
+            self.assertNotIn('<h1',topbar,name)
+        html,_=self.render('server.html')
+        content=html[html.index('<div class="content'):]
+        self.assertIn('<h1 class="sr-only" id="page-title">',content)
+        ov=html[html.index('id="pg-overview"'):html.index('</section>',html.index('id="pg-overview"'))]
+        self.assertIn('data-bot-status',ov)
+
+    def test_topbar_only_shows_while_the_sidebar_is_a_drawer(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertRegex(re.search(r'(?:^|\n)\.topbar\s*\{([^}]*)\}',css).group(1),r'display:\s*none')
+        narrow=css[css.index('@media (max-width: 859px)'):]
+        self.assertRegex(narrow,r'\.topbar\s*\{[^}]*display:\s*flex')
+
+    def test_only_warning_dots_show_in_the_sidebar(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertRegex(css,r'\.nav-dot:not\(\.nav-dot--warn\)\s*\{\s*display:\s*none;?\s*\}')
+
 if __name__=='__main__':unittest.main()

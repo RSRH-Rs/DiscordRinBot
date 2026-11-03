@@ -93,6 +93,29 @@ test('switching server while a page has unsaved changes is blocked', () => {
     assert.equal(pass.prevented, false);
 });
 
+test('the brand row back to the homepage is guarded by the draft check', () => {
+    const blocked = core({dirty: true});
+    const link = {dataset: {}, href: '/'};
+    const event = {target: {closest: sel => sel === 'a.brand-row' ? link : null}, prevented: false, preventDefault() { this.prevented = true; }};
+    blocked.Console.leaveClick(event);
+    assert.equal(event.prevented, true);
+    assert.equal(blocked.calls.confirm, 1);
+    assert.equal(link.href, '/');
+});
+
+test('setTitles writes the hidden heading, the mobile bar and the tab title', () => {
+    const nodes = {'page-title': {textContent: ''}, 'topbar-title': {textContent: ''}};
+    const {Console} = core({nodes});
+    Console.setTitles('自动审核');
+    assert.equal(nodes['page-title'].textContent, '自动审核');
+    assert.equal(nodes['topbar-title'].textContent, '自动审核');
+});
+
+test('setTitles works on pages without the hidden heading', () => {
+    const {Console} = core();
+    assert.doesNotThrow(() => Console.setTitles('我的服务器'));
+});
+
 test('selectTab shows one panel and marks its tab', () => {
     const panel = id => ({dataset: {panel: id}, hidden: false});
     const tab = id => ({dataset: {tab: id}, attrs: {}, tabIndex: 0, setAttribute(k, v) { this.attrs[k] = v; }});

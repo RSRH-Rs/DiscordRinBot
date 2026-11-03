@@ -11,11 +11,12 @@
 <a class="nav-item" href="#admin" data-settings-tab="admin">{{ icon('shield-check') }}<span class="nav-label">{{ tr('settings.tab.admin') }}</span><span class="nav-badge tab-draft" hidden>{{ tr('settings.unsaved') }}</span></a>
 {% endblock %}
 
-{% block topbar %}<h1 class="page-title">{{ tr('nav.settings') }}</h1><p class="crumbs">{{ tr('settings.subtitle') }}</p>{% endblock %}
+{% block topbar_title %}{{ tr('nav.settings') }}{% endblock %}
 
 {% block content_class %} content--page{% endblock %}
 
 {% block content %}
+<h1 class="sr-only">{{ tr('nav.settings') }}</h1>
 <section class="settings-panel" data-settings-panel="runtime" aria-labelledby="settings-runtime-title">
     <div class="page-head"><div class="page-head-text"><h2 id="settings-runtime-title" tabindex="-1">{{ tr('settings.runtime.title') }}</h2></div></div>
     <div class="section">
