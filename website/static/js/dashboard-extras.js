@@ -154,8 +154,6 @@ window.DashboardExtras = (() => {
     function setupSettings() {
         const panels=[...document.querySelectorAll('[data-settings-panel]')];
         if (!panels.length) return;
-        const profile=panels.find(p=>p.dataset.settingsPanel==='profile');
-        profile.append(document.getElementById('draft-avatar'),document.getElementById('draft-username'),document.getElementById('draft-profile'));
         const links=[...document.querySelectorAll('[data-settings-tab]')];
         const router=createHashRouter({
             ids:panels.map(p=>p.dataset.settingsPanel), fallback:'profile',
@@ -168,7 +166,7 @@ window.DashboardExtras = (() => {
                     if(selected)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
                 });
                 DashboardUI.closeSidebar(false);
-                document.querySelector('.main-content').scrollTo(0,0);
+                document.querySelector('.main')?.scrollTo(0,0);
                 if(!initial)document.querySelector(`[data-settings-panel="${id}"] h2`)?.focus();
             }
         });

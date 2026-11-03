@@ -1,211 +1,137 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全局设置 | 小凛 Rin</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826d">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260831d">
-    <style>
-        .health-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:4px 0 16px}
-        .htile{background:var(--card,#fff);border:1px solid var(--border,#ece8e2);border-radius:14px;padding:16px}
-        .htile .hv{font-size:1.45rem;font-weight:800;color:var(--text,#2a2320)}
-        .htile .hl{font-size:.76rem;color:var(--muted,#a99);margin-top:3px}
-        .hpill{display:inline-flex;align-items:center;gap:7px;font-size:.82rem;font-weight:700;padding:6px 13px;border-radius:999px;margin-bottom:14px}
-        .hpill.on{background:#EAF4EE;color:#2E6B43}
-        .hpill.off{background:#FCEBEB;color:#B3382F}
-        .hpill .d{width:8px;height:8px;border-radius:50%;background:currentColor}
-        .cog-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-        .cog-chip{font-size:.72rem;background:var(--warm,#f6f1ec);border:1px solid var(--border,#ece8e2);border-radius:999px;padding:3px 11px;color:var(--mid,#776);font-weight:600}
-        .avatar-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap;min-width:0;max-width:100%}
-        .avatar-row input{min-width:0;max-width:100%}
-        .avatar-prev{width:72px;height:72px;flex-shrink:0;border-radius:50%;object-fit:cover;border:1px solid var(--border,#ece8e2);background:var(--warm,#f6f1ec)}
-        .avatar-feedback{margin-top:10px}
-        .avatar-actions{display:flex;gap:12px;flex-wrap:wrap}
-        .avatar-actions [hidden]{display:none}
-        .sec-btns{margin-top:14px}
-    </style>
-</head>
-<body>
-    <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="打开菜单" aria-controls="sideNav" aria-expanded="false">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
+{%- extends '_console_base.html' -%}
+{%- from '_console_macros.html' import icon, nav_item, row, toggle -%}
 
-    <aside class="sidebar" id="sideNav">
-        <div class="sidebar-inner">
-            <a href="/" class="brand"><span class="brand-dot"></span>小凛 Rin</a>
-            <nav class="side-nav">
-                <span class="nav-label">导航</span>
-                <ul>
-                    <li><a href="/dashboard" class="nav-link">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                        我的服务器
-                    </a></li>
-                </ul>
-                <span class="nav-label" style="margin-top:18px;">设置</span>
-                <ul>
-                    <li><a href="/dashboard/settings" class="nav-link active">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-                        全局设置
-                    </a></li>
-                </ul>
-            </nav>
-            <div class="user-card">
-                <img src="{{ user.avatar_url }}" alt="头像" class="user-avatar">
-                <div class="user-info">
-                    <div class="user-name">{{ user.name }}</div>
-                    <a href="/logout" class="logout-link">退出登录</a>
+{% block title %}{{ tr('nav.settings') }}{% endblock %}
+{% block nav_head %}{{ tr('nav.settings') }}{% endblock %}
+
+{% block nav %}
+{{ nav_item('/dashboard', 'layout-grid', tr('nav.servers')) }}
+<span class="nav-group-title">{{ tr('nav.settings') }}</span>
+<a class="nav-item" href="#profile" data-settings-tab="profile">{{ icon('smile-plus') }}<span class="nav-label">{{ tr('settings.tab.profile') }}</span><span class="nav-badge tab-draft" hidden>{{ tr('settings.unsaved') }}</span></a>
+<a class="nav-item" href="#runtime" data-settings-tab="runtime">{{ icon('history') }}<span class="nav-label">{{ tr('settings.tab.runtime') }}</span><span class="nav-badge tab-draft" hidden>{{ tr('settings.unsaved') }}</span></a>
+<a class="nav-item" href="#admin" data-settings-tab="admin">{{ icon('shield-check') }}<span class="nav-label">{{ tr('settings.tab.admin') }}</span><span class="nav-badge tab-draft" hidden>{{ tr('settings.unsaved') }}</span></a>
+{% endblock %}
+
+{% block topbar %}<h1 class="page-title">{{ tr('nav.settings') }}</h1><p class="crumbs">{{ tr('settings.subtitle') }}</p>{% endblock %}
+
+{% block content %}
+<section class="settings-panel" data-settings-panel="runtime" aria-labelledby="settings-runtime-title">
+    <div class="page-head"><h2 id="settings-runtime-title" tabindex="-1">{{ tr('settings.runtime.title') }}</h2></div>
+    <div class="section">
+        <div class="section-head">
+            <div id="health-status"><span class="bot-status" data-state="unknown">{{ tr('settings.runtime.loading') }}</span></div>
+            <button type="button" class="btn btn--secondary" onclick="loadHealth()">{{ tr('settings.runtime.refresh') }}</button>
+        </div>
+        <div class="stat-grid" id="health-grid"></div>
+        <p class="section-hint">{{ tr('settings.runtime.cogs') }}</p>
+        <div class="chip-list" id="cog-chips"></div>
+    </div>
+</section>
+
+<section class="settings-panel" data-settings-panel="profile" aria-labelledby="settings-profile-title">
+    <div class="page-head"><h2 id="settings-profile-title" tabindex="-1">{{ tr('settings.profile.title') }}</h2><p>{{ tr('settings.profile.intro') }}</p></div>
+
+    <div class="section" id="draft-profile" data-draft data-draft-inline>
+        <h3 class="section-title">{{ tr('settings.profile.activity') }}</h3>
+        <div class="list">
+            {% call row(tr('settings.profile.status'), tr('settings.profile.status_hint'), 'bp-status') %}
+            <select class="select" id="bp-status">
+                <option value="online">{{ tr('settings.status.online') }}</option>
+                <option value="idle">{{ tr('settings.status.idle') }}</option>
+                <option value="dnd">{{ tr('settings.status.dnd') }}</option>
+                <option value="invisible">{{ tr('settings.status.invisible') }}</option>
+            </select>
+            {% endcall %}
+            {% call row(tr('settings.profile.type'), tr('settings.profile.type_hint'), 'bp-act-type') %}
+            <select class="select" id="bp-act-type">
+                <option value="playing">{{ tr('settings.activity.playing') }}</option>
+                <option value="watching">{{ tr('settings.activity.watching') }}</option>
+                <option value="listening">{{ tr('settings.activity.listening') }}</option>
+                <option value="competing">{{ tr('settings.activity.competing') }}</option>
+            </select>
+            {% endcall %}
+            {% call row(tr('settings.profile.text'), tr('settings.profile.text_hint'), 'bp-act-text') %}
+            <input class="input" id="bp-act-text" maxlength="128" placeholder="{{ tr('settings.profile.text_placeholder') }}">
+            {% endcall %}
+        </div>
+        <div class="actions"><button type="button" class="btn btn--primary" onclick="saveProfile(this)">{{ tr('bar.save') }}</button></div>
+    </div>
+
+    <div class="section" id="draft-username" data-draft data-draft-inline>
+        <h3 class="section-title">{{ tr('settings.profile.name') }}</h3>
+        <div class="list">
+            {% call row(tr('settings.profile.username'), tr('settings.profile.username_hint'), 'bp-username') %}
+            <input class="input" id="bp-username" minlength="2" maxlength="32" placeholder="{{ tr('settings.profile.username_placeholder') }}">
+            {% endcall %}
+        </div>
+        <div class="actions"><button type="button" class="btn btn--primary" onclick="saveUsername(this)">{{ tr('settings.profile.username_save') }}</button></div>
+    </div>
+
+    <div class="section" id="draft-avatar" data-draft data-draft-inline>
+        <h3 class="section-title"><label for="bp-avatar-file">{{ tr('settings.profile.avatar') }}</label></h3>
+        <div class="list">
+            <div class="row">
+                <img id="bp-avatar-preview" class="avatar-prev" src="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" data-fallback="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" alt="{{ tr('settings.profile.avatar_alt') }}" width="72" height="72" onerror="avatarImageError()">
+                <div class="row-text">
+                    <span class="row-hint" id="bp-avatar-hint">{{ tr('settings.profile.avatar_hint') }}</span>
+                    <span class="row-hint" id="bp-avatar-state" role="status" aria-live="polite">{{ tr('settings.profile.avatar_loading') }}</span>
+                </div>
+                <div class="row-control">
+                    <label class="btn btn--secondary" for="bp-avatar-file">{{ tr('settings.profile.avatar_pick') }}</label>
+                    <input class="sr-only" type="file" id="bp-avatar-file" accept="image/png,image/jpeg,image/gif,image/webp" aria-describedby="bp-avatar-hint bp-avatar-state" onchange="previewAvatar(this)">
                 </div>
             </div>
         </div>
-    </aside>
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+        <div class="actions"><button type="button" class="btn btn--primary" onclick="saveAvatar(this)">{{ tr('settings.profile.avatar_upload') }}</button><button type="button" class="btn btn--text" id="bp-avatar-reset" onclick="resetAvatarSelection()" hidden>{{ tr('settings.profile.avatar_cancel') }}</button></div>
+    </div>
+</section>
 
-    <main class="main-content">
-        <header class="topbar settings-topbar">
-            <div>
-                <h1 class="page-title">全局设置</h1>
-                <p class="page-sub">这些设置影响机器人本身，仅主人可改 (｡･ω･｡)</p>
-            </div>
-            <nav class="settings-tabs" aria-label="全局设置分区">
-                <a href="#profile" data-settings-tab="profile">小凛资料<span class="tab-draft" hidden>未保存</span></a>
-                <a href="#runtime" data-settings-tab="runtime">运行状态<span class="tab-draft" hidden>未保存</span></a>
-                <a href="#admin" data-settings-tab="admin">全局管理<span class="tab-draft" hidden>未保存</span></a>
-            </nav>
-        </header>
+<section class="settings-panel" data-settings-panel="admin" aria-labelledby="settings-admin-title">
+    <div class="page-head"><h2 id="settings-admin-title" tabindex="-1">{{ tr('settings.tab.admin') }}</h2></div>
+    <p class="note note--warn">{{ icon('triangle-alert') }}<span>{{ tr('settings.admin.warning') }}</span></p>
 
-        <div class="content-area">
-            <div class="draft-notice" id="draft-notice" hidden role="status">有未保存的更改，离开前记得保存哦。选择图片或填写公告不会自动上传、发送。</div>
-
-            <section data-settings-panel="runtime" aria-labelledby="settings-runtime-title">
-            <h2 class="group-title" id="settings-runtime-title" tabindex="-1">小凛现在怎么样？</h2>
-            <!-- 健康状态 -->
-            <div class="cfg-section">
-                <div class="cfg-section-title" style="display:flex;justify-content:space-between;align-items:center;">
-                    <span>💓 运行状态</span>
-                    <button class="btn-save" style="padding:6px 14px;" onclick="loadHealth()">刷新</button>
-                </div>
-                <div id="health-status"><span class="hpill off"><span class="d"></span>读取中…</span></div>
-                <div class="health-grid" id="health-grid"></div>
-                <div class="cfg-row-hint">已加载模块</div>
-                <div class="cog-chips" id="cog-chips"></div>
-            </div>
-            </section>
-
-            <section data-settings-panel="profile" aria-labelledby="settings-profile-title">
-            <h2 class="group-title" id="settings-profile-title" tabindex="-1">给小凛换个心情吧</h2>
-            <p class="group-intro">换个头像，或告诉大家小凛在做什么。各项分别保存哦。</p>
-            <!-- Bot 形象：状态 -->
-            <div class="cfg-section" id="draft-profile" data-draft>
-                <div class="cfg-section-title">活动状态</div>
-                <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">在线状态</div><div class="cfg-row-hint">机器人在成员列表显示的状态</div></div>
-                    <select class="cfg-select" id="bp-status" style="max-width:200px;">
-                        <option value="online">🟢 在线</option>
-                        <option value="idle">🌙 闲置</option>
-                        <option value="dnd">⛔ 请勿打扰</option>
-                        <option value="invisible">⚪ 隐身</option>
-                    </select>
-                </div>
-                <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">活动类型</div><div class="cfg-row-hint">显示在状态文案前的动词</div></div>
-                    <select class="cfg-select" id="bp-act-type" style="max-width:200px;">
-                        <option value="playing">正在玩</option>
-                        <option value="watching">正在看</option>
-                        <option value="listening">正在听</option>
-                        <option value="competing">正在参与</option>
-                    </select>
-                </div>
-                <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">活动文案</div><div class="cfg-row-hint">例如「陪大家听歌」</div></div>
-                    <input class="cfg-input" id="bp-act-text" maxlength="128" placeholder="活动状态文字" style="max-width:280px;">
-                </div>
-                <div class="sec-btns"><button class="btn-save" onclick="saveProfile(this)">保存设置</button></div>
-            </div>
-
-            <!-- 用户名 -->
-            <div class="cfg-section" id="draft-username" data-draft>
-                <div class="cfg-section-title">小凛的名字</div>
-                <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">机器人用户名</div><div class="cfg-row-hint">2–32 个字符。Discord 限制每小时最多修改 2 次</div></div>
-                    <input class="cfg-input" id="bp-username" minlength="2" maxlength="32" placeholder="新用户名" style="max-width:280px;">
-                </div>
-                <div class="sec-btns"><button class="btn-save" onclick="saveUsername(this)">更新用户名</button></div>
-            </div>
-
-            <!-- 头像 -->
-            <div class="cfg-section" id="draft-avatar" data-draft>
-                <label class="cfg-section-title field-label" for="bp-avatar-file">小凛的头像</label>
-                <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-hint" id="bp-avatar-hint">PNG / JPG / GIF / WebP，最大 5 MB</div></div>
-                    <div class="avatar-row">
-                        <img id="bp-avatar-preview" class="avatar-prev" src="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" data-fallback="{{ url_for('static', filename='images/rin/bot-avatar.png') }}" alt="小凛的头像" width="72" height="72" onerror="avatarImageError()">
-                        <label class="file-picker-label" for="bp-avatar-file">选一张新头像</label>
-                        <input class="sr-only" type="file" id="bp-avatar-file" accept="image/png,image/jpeg,image/gif,image/webp" aria-describedby="bp-avatar-hint bp-avatar-state" onchange="previewAvatar(this)">
-                    </div>
-                </div>
-                <p id="bp-avatar-state" class="cfg-row-hint avatar-feedback" role="status" aria-live="polite">正在读取小凛的当前头像…</p>
-                <div class="sec-btns avatar-actions"><button class="btn-save" onclick="saveAvatar(this)">上传头像</button><button class="tag-add-btn" id="bp-avatar-reset" onclick="resetAvatarSelection()" hidden>取消选择</button></div>
-            </div>
-
-            <!-- 全局公告 -->
-            </section>
-            <section data-settings-panel="admin" aria-labelledby="settings-admin-title">
-            <h2 class="group-title" id="settings-admin-title" tabindex="-1">全局管理</h2>
-            <p class="admin-warning">这里的操作会影响所有服务器。发公告、开维护或加入黑名单之前，再确认一下哦。</p>
-            <div class="cfg-section" id="draft-announce" data-draft data-draft-hint="写好后检查一下，点发送才会发出去哦。">
-                <div class="cfg-section-title">全局公告</div>
-                <div class="cfg-row" style="flex-direction:column;align-items:stretch;gap:10px;">
-                    <div class="cfg-row-info"><div class="cfg-row-label">向所有服务器广播</div><div class="cfg-row-hint">发送到每个服务器的系统频道（没有则发第一个可发言的频道）</div></div>
-                    <textarea class="cfg-textarea" id="ann-msg" maxlength="1800" placeholder="输入公告内容…" style="width:100%;min-height:90px;"></textarea>
-                </div>
-                <div class="sec-btns"><button class="btn-save" onclick="sendAnnounce(this)">发送给所有服务器</button></div>
-                <div class="cfg-row-hint" style="margin-top:18px;">最近发送</div>
-                <div id="ann-recent" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;"></div>
-            </div>
-
-            <!-- 维护模式 -->
-            <div class="cfg-section" id="draft-maint" data-draft>
-                <div class="cfg-section-title">维护模式</div>
-                <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">开启维护模式</div><div class="cfg-row-hint">开启后，除主人外所有人都无法使用指令</div></div>
-                    <label class="cfg-tog"><input type="checkbox" id="maint-on"><span class="track"></span><span class="thumb"></span></label>
-                </div>
-                <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">提示文案</div><div class="cfg-row-hint">用户尝试使用指令时看到的提示</div></div>
-                    <input class="cfg-input" id="maint-msg" maxlength="300" placeholder="🔧 机器人维护中，请稍后再试" style="max-width:300px;">
-                </div>
-                <div class="sec-btns"><button class="btn-save" onclick="saveMaint(this)">保存设置</button></div>
-            </div>
-
-            <!-- 黑名单 -->
-            <div class="cfg-section" id="draft-blacklist" data-draft data-draft-hint="确认用户 ID 后，点「加入黑名单」生效。">
-                <div class="cfg-section-title">黑名单</div>
-                <div class="cfg-row" style="flex-direction:column;align-items:stretch;gap:10px;">
-                    <div class="cfg-row-info"><div class="cfg-row-label">禁止用户使用 Bot</div><div class="cfg-row-hint">填 Discord 用户 ID，黑名单用户无法使用任何指令</div></div>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <input class="cfg-input" id="bl-id" placeholder="用户 ID" style="max-width:180px;">
-                        <input class="cfg-input" id="bl-reason" placeholder="原因（可选）" style="max-width:180px;">
-                        <button class="btn-save" onclick="addBlacklist(this)">加入黑名单</button>
-                    </div>
-                </div>
-                <div id="bl-list" style="display:flex;flex-direction:column;gap:6px;margin-top:12px;"></div>
-            </div>
-            </section>
-
+    <div class="section" id="draft-announce" data-draft data-draft-inline>
+        <h3 class="section-title">{{ tr('settings.admin.announce') }}</h3>
+        <div class="list">
+            {% call row(tr('settings.admin.announce_label'), tr('settings.admin.announce_hint'), 'ann-msg', block=True) %}
+            <textarea class="textarea" id="ann-msg" maxlength="1800" placeholder="{{ tr('settings.admin.announce_placeholder') }}"></textarea>
+            {% endcall %}
         </div>
-    </main>
+        <div class="actions"><button type="button" class="btn btn--primary" onclick="sendAnnounce(this)">{{ tr('settings.admin.announce_send') }}</button></div>
+        <p class="section-hint">{{ tr('settings.admin.recent') }}</p>
+        <div class="item-list" id="ann-recent"></div>
+    </div>
 
-    <div id="toast" class="toast toast--info" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div class="section" id="draft-maint" data-draft data-draft-inline>
+        <h3 class="section-title">{{ tr('settings.admin.maint') }}</h3>
+        <div class="list">
+            {% call row(tr('settings.admin.maint_on'), tr('settings.admin.maint_on_hint'), 'maint-on', cls='row--switch') %}{{ toggle('maint-on', tr('settings.admin.maint_on')) }}{% endcall %}
+            {% call row(tr('settings.admin.maint_msg'), tr('settings.admin.maint_msg_hint'), 'maint-msg') %}
+            <input class="input" id="maint-msg" maxlength="300" placeholder="{{ tr('settings.admin.maint_placeholder') }}">
+            {% endcall %}
+        </div>
+        <div class="actions"><button type="button" class="btn btn--primary" onclick="saveMaint(this)">{{ tr('bar.save') }}</button></div>
+    </div>
 
-    <script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826c"></script>
-    <script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826c"></script>
+    <div class="section" id="draft-blacklist" data-draft data-draft-inline>
+        <h3 class="section-title">{{ tr('settings.admin.blacklist') }}</h3>
+        <div class="list">
+            {% call row(tr('settings.admin.blacklist_label'), tr('settings.admin.blacklist_hint'), 'bl-id', block=True) %}
+            <div class="inline-fields">
+                <input class="input" id="bl-id" placeholder="{{ tr('settings.admin.blacklist_id') }}" inputmode="numeric">
+                <input class="input" id="bl-reason" placeholder="{{ tr('settings.admin.blacklist_reason') }}" aria-label="{{ tr('settings.admin.blacklist_reason') }}">
+                <button type="button" class="btn btn--danger" onclick="addBlacklist(this)">{{ tr('settings.admin.blacklist_add') }}</button>
+            </div>
+            {% endcall %}
+        </div>
+        <div class="item-list" id="bl-list"></div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261102a"></script>
     <script>
-    let _tt;
     const AVATAR_MAX_BYTES=5*1024*1024;
     const AVATAR_TYPES=new Set(['image/png','image/jpeg','image/gif','image/webp']);
     function avatarFileError(f){
@@ -213,19 +139,9 @@
         if(f.size>AVATAR_MAX_BYTES)return '头像文件不能超过 5 MB';
         return '';
     }
-    function toggleSidebar(){DashboardUI.toggleSidebar();}
-    function closeSidebar(){DashboardUI.closeSidebar();}
     function showToast(msg){
-        const el=document.getElementById('toast');
-        let type='info';
-        if(msg.startsWith('✅'))type='success'; else if(msg.startsWith('❌'))type='error';
-        const icons={info:'i',success:'✓',error:'✕'};
-        const text=msg.replace(/^[❌✅⚠️ℹ️]+\s*/u,'').trim();
-        el.className='toast toast--'+type;
-        el.innerHTML='<span class="toast-icon">'+icons[type]+'</span><span></span>';
-        el.querySelector('span:last-child').textContent=text;
-        requestAnimationFrame(()=>el.classList.add('show'));
-        clearTimeout(_tt); _tt=setTimeout(()=>el.classList.remove('show'),2800);
+        const kind=msg.startsWith('✅')?'ok':msg.startsWith('❌')?'bad':'info';
+        Console.toast(msg.replace(/^[❌✅⚠️ℹ️]+\s*/u,'').trim(),kind);
     }
     async function jpost(path,body){
         const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -361,11 +277,11 @@
             const r=await fetch('/api/bot/health'); const d=await r.json();
             if(!r.ok)throw new Error('运行状态读取失败');
             if(d.online){
-                statusEl.innerHTML='<span class="hpill on"><span class="d"></span>在线运行中</span>';
+                statusEl.innerHTML='<span class="bot-status" data-state="online">在线运行中</span>';
             }else{
                 const label=({offline:'暂时离线',stale:'运行状态已过期',unknown:'运行状态未知'})[d.state]||d.error||'暂无运行数据';
-                statusEl.innerHTML='<span class="hpill off"><span class="d"></span><span class="health-label"></span></span>';
-                statusEl.querySelector('.health-label').textContent=label;
+                statusEl.innerHTML='<span class="bot-status" data-state="offline"></span>';
+                statusEl.firstChild.textContent=label;
             }
             const tiles=[];
             if(d.started_at) tiles.push(['运行时长',fmtUptime(Date.now()/1000-d.started_at)]);
@@ -374,12 +290,12 @@
             if(d.user_count!=null) tiles.push(['服务用户',d.user_count.toLocaleString()]);
             if(d.cogs) tiles.push(['已加载模块',d.cogs.length]);
             if(d.dpy) tiles.push(['discord.py',d.dpy]);
-            grid.innerHTML=tiles.map(t=>'<div class="htile"><div class="hv"></div><div class="hl"></div></div>').join('');
-            [...grid.children].forEach((el,i)=>{el.querySelector('.hv').textContent=tiles[i][1];el.querySelector('.hl').textContent=tiles[i][0];});
-            chips.innerHTML=(d.cogs||[]).map(()=>'<span class="cog-chip"></span>').join('');
+            grid.innerHTML=tiles.map(t=>'<div class="stat"><div class="stat-value display"></div><div class="stat-label"></div></div>').join('');
+            [...grid.children].forEach((el,i)=>{el.querySelector('.stat-value').textContent=tiles[i][1];el.querySelector('.stat-label').textContent=tiles[i][0];});
+            chips.innerHTML=(d.cogs||[]).map(()=>'<span class="chip chip--static"></span>').join('');
             [...chips.children].forEach((el,i)=>{el.textContent=d.cogs[i];});
         }catch(e){
-            statusEl.innerHTML='<span class="hpill off"><span class="d"></span>读取失败</span>';
+            statusEl.innerHTML='<span class="bot-status" data-state="unknown">读取失败</span>';
         }
     }
 
@@ -399,13 +315,13 @@
         try{
             const r=await fetch('/api/bot/announce/recent'); if(!r.ok)throw new Error('read failed'); const list=await r.json();
             if(!Array.isArray(list))throw new Error('invalid list');
-            if(!list.length){box.innerHTML='<div class="cfg-row-hint">暂无记录</div>';return;}
+            if(!list.length){box.innerHTML='<p class="section-hint">暂无记录</p>';return;}
             const stat={pending:'⏳ 队列中',sending:'📤 发送中',done:'✅ 已发送'};
             box.innerHTML=list.map(b=>{
                 const snip=esc(b.message.length>40?b.message.slice(0,40)+'…':b.message);
                 const s=stat[b.status]||esc(b.status);
                 const cnt=b.status==='done'?` (${b.sent}/${b.total})`:'';
-                return `<div style="display:flex;justify-content:space-between;gap:12px;font-size:.82rem;padding:8px 12px;background:var(--warm,#f6f1ec);border-radius:10px;"><span style="color:var(--mid,#776);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${snip}</span><span style="flex-shrink:0;color:var(--muted,#a99);">${s}${cnt}</span></div>`;
+                return `<div class="item"><span class="item-text">${snip}</span><span class="item-meta">${s}${cnt}</span></div>`;
             }).join('');
         }catch(e){renderReadFailure(box,'暂时没读到发送记录。',loadRecent);}
     }
@@ -435,13 +351,13 @@
         try{
             const r=await fetch('/api/bot/blacklist'); if(!r.ok)throw new Error('read failed'); const list=await r.json();
             if(!Array.isArray(list))throw new Error('invalid list');
-            if(!list.length){box.innerHTML='<div class="cfg-row-hint">黑名单为空</div>';return;}
-            box.innerHTML=list.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;background:var(--warm,#f6f1ec);border-radius:10px;"><span style="font-size:.85rem;"><b>${esc(b.user_id)}</b>${b.reason?' · <span style="color:var(--mid,#776);">'+esc(b.reason)+'</span>':''}</span><button class="btn-save" style="padding:4px 12px;font-size:.78rem;" onclick="removeBlacklist('${esc(b.user_id)}')">移除</button></div>`).join('');
+            if(!list.length){box.innerHTML='<p class="section-hint">黑名单为空</p>';return;}
+            box.innerHTML=list.map(b=>`<div class="item"><span class="item-text"><b>${esc(b.user_id)}</b>${b.reason?' · '+esc(b.reason):''}</span><button type="button" class="btn btn--secondary" onclick="removeBlacklist('${esc(b.user_id)}')">移除</button></div>`).join('');
         }catch(e){renderReadFailure(box,'暂时没读到黑名单，不代表名单为空哦。',loadBlacklist);}
     }
     function renderReadFailure(box,message,retry){
-        box.replaceChildren();const text=document.createElement('p');text.className='cfg-row-hint';text.textContent=message;
-        const button=document.createElement('button');button.type='button';button.className='tag-add-btn';button.textContent='重试';button.onclick=retry;box.append(text,button);
+        box.replaceChildren();const text=document.createElement('p');text.className='section-hint';text.textContent=message;
+        const button=document.createElement('button');button.type='button';button.className='btn btn--secondary';button.textContent='重试';button.onclick=retry;box.append(text,button);
     }
     async function addBlacklist(btn){
         const id=document.getElementById('bl-id').value.trim();
@@ -476,5 +392,4 @@
     loadRecent();
     setInterval(loadHealth,30000);
     </script>
-</body>
-</html>
+{% endblock %}

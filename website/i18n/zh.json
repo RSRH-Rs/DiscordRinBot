@@ -85,5 +85,77 @@
     "none_title": "还没有可以管理的服务器",
     "none_hint": "你需要是服务器主人，或者有「管理服务器」权限。",
     "found": "找到 {n} 个服务器"
+  },
+  "settings": {
+    "subtitle": "这些设置影响小凛本身，只有主人能改。",
+    "unsaved": "未保存",
+    "tab": {
+      "profile": "小凛资料",
+      "runtime": "运行状态",
+      "admin": "全局管理"
+    },
+    "runtime": {
+      "title": "小凛现在怎么样？",
+      "loading": "读取中…",
+      "refresh": "刷新",
+      "cogs": "已加载模块"
+    },
+    "profile": {
+      "title": "给小凛换个心情",
+      "intro": "换个头像，或者告诉大家小凛在做什么。每一项分别保存。",
+      "activity": "活动状态",
+      "status": "在线状态",
+      "status_hint": "成员列表里显示的状态",
+      "type": "活动类型",
+      "type_hint": "状态文案前面的动词",
+      "text": "活动文案",
+      "text_hint": "例如「陪大家听歌」",
+      "text_placeholder": "活动状态文字",
+      "name": "小凛的名字",
+      "username": "机器人用户名",
+      "username_hint": "2–32 个字符，Discord 限制每小时最多改 2 次",
+      "username_placeholder": "新用户名",
+      "username_save": "更新用户名",
+      "avatar": "小凛的头像",
+      "avatar_alt": "小凛的头像",
+      "avatar_hint": "PNG / JPG / GIF / WebP，最大 5 MB",
+      "avatar_loading": "正在读取小凛的当前头像…",
+      "avatar_pick": "选一张新头像",
+      "avatar_upload": "上传头像",
+      "avatar_cancel": "取消选择"
+    },
+    "status": {
+      "online": "在线",
+      "idle": "闲置",
+      "dnd": "请勿打扰",
+      "invisible": "隐身"
+    },
+    "activity": {
+      "playing": "正在玩",
+      "watching": "正在看",
+      "listening": "正在听",
+      "competing": "正在参与"
+    },
+    "admin": {
+      "warning": "这里的操作会影响所有服务器。发公告、开维护或加黑名单之前，再确认一下。",
+      "announce": "全局公告",
+      "announce_label": "向所有服务器广播",
+      "announce_hint": "发到每个服务器的系统频道；没有系统频道时发到第一个能发言的频道",
+      "announce_placeholder": "输入公告内容…",
+      "announce_send": "发送给所有服务器",
+      "recent": "最近发送",
+      "maint": "维护模式",
+      "maint_on": "开启维护模式",
+      "maint_on_hint": "开启后，除主人外所有人都不能使用指令",
+      "maint_msg": "提示文案",
+      "maint_msg_hint": "有人用指令时看到的提示",
+      "maint_placeholder": "机器人维护中，请稍后再试",
+      "blacklist": "黑名单",
+      "blacklist_label": "禁止用户使用小凛",
+      "blacklist_hint": "填 Discord 用户 ID；黑名单里的人不能使用任何指令",
+      "blacklist_id": "用户 ID",
+      "blacklist_reason": "原因（可选）",
+      "blacklist_add": "加入黑名单"
+    }
   }
 }

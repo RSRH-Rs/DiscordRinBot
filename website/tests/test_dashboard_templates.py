@@ -38,12 +38,12 @@ class DashboardTemplateTests(unittest.TestCase):
             html,p=self.render(name)
             self.assertEqual(len(p.ids),len(set(p.ids)),name)
             self.assertNotIn('储存设定',html)
-        for name in ['dashboard.html']:
+        for name in ['dashboard.html','settings.html']:
             html,p=self.render(name)
             self.assertIn('console.css?v=20261102',html)
             self.assertIn('dashboard-ui.js?v=20261102',html)
             self.assertIn('console-core.js?v=20261102',html)
-        for name in ['settings.html','server.html']:
+        for name in ['server.html']:
             html,p=self.render(name)
             self.assertIn('dashboard-extras.js?v=20260826c',html)
             self.assertIn('dashboard-extras.css?v=20260831d',html)
