@@ -11,7 +11,7 @@ PAIRS = [
 ]
 NON_TEXT = [('field-line', 'field'), ('field-line', 'panel'), ('field-line', 'bg')]
 ALLOWED_SIZES = {12, 13, 14, 16, 22}
-EXEMPT = ('.preview', '.fake', '.palette-input')
+EXEMPT = ('.preview', '.fake')
 
 
 def luminance(hex_color):

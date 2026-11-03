@@ -371,4 +371,17 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertRegex(narrow,r'\.hero \.bot-status\s*\{[^}]*grid-column:\s*2')
 
 
+    def test_tabs_line_up_with_the_title(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('gap: 24px',re.search(r'(?:^|\n)\.tabs\s*\{([^}]*)\}',css).group(1))
+        self.assertIn('padding: 8px 0;',re.search(r'(?:^|\n)\.tab\s*\{([^}]*)\}',css).group(1))
+
+    def test_whole_module_row_is_clickable(self):
+        # The chevron sits outside the link; a stretched link makes the whole row open the module, and the switch stays on top.
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('position: relative',re.search(r'(?:^|\n)\.mod-row\s*\{([^}]*)\}',css).group(1))
+        after=re.search(r'(?:^|\n)\.mod-row-link::after\s*\{([^}]*)\}',css).group(1)
+        for part in ['content: ""','position: absolute','inset: 0']:self.assertIn(part,after)
+        self.assertRegex(css,r'\.mod-row \.tog\s*\{[^}]*position: relative;[^}]*z-index: 1')
+
 if __name__=='__main__':unittest.main()
