@@ -99,13 +99,37 @@ class DashboardTemplateTests(unittest.TestCase):
         for name in ['dashboard.html','server.html','settings.html','login_gate.html','error.html']:
             yield name,self.render(name)[0]
 
-    def test_only_server_cards_carry_data_guild_name(self):
+    def test_only_server_rows_carry_data_guild_name(self):
         # serverSearch() filters every [data-guild-name] element; anything else carrying it gets hidden.
         for name in ['dashboard.html','server.html','settings.html']:
             html,_=self.render(name)
-            tags=re.findall(r'<([a-z]+)[^>]*\sdata-guild-name=',html)
-            self.assertEqual(set(tags)-{'a'},set(),name)
+            tags=re.findall(r'<([a-z]+)\b[^>]*\sdata-guild-name=',html)
+            self.assertEqual(set(tags)-{'a','div'},set(),name)
+            for tag in re.findall(r'<[a-z]+\b[^>]*\sdata-guild-name=[^>]*>',html):self.assertIn('class="server-row',tag,name)
             self.assertNotIn('<body data-guild-name',html,name)
+
+    def test_server_list_and_settings_have_visible_page_heads(self):
+        html,_=self.render('dashboard.html')
+        self.assertRegex(html,r'<div class="page-head">\s*<div class="page-head-text">\s*<h1>')
+        self.assertEqual(len(re.findall(r'class="server-row[ "]',html)),2)
+        self.assertNotIn('server-card',html); self.assertNotIn('server-grid',html)
+        head=re.search(r'<div class="page-head">(.*?)</div>\s*</div>',html,re.S).group(1)
+        self.assertIn('邀请小凛',head)
+        html,_=self.render('settings.html')
+        self.assertIn('<h1 class="sr-only">全局设置</h1>',html)
+        heads=re.findall(r'<div class="page-head"><div class="page-head-text"><h2 id="settings-[a-z]+-title" tabindex="-1">[^<]+</h2><p>[^<]+</p></div></div>',html)
+        self.assertEqual(len(heads),3)
+        for name in ['dashboard.html','settings.html']:
+            html,_=self.render(name)
+            self.assertIn('<div class="content content--column">',html,name)
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('max-width: 680px',re.search(r'\.content--column > \*\s*\{([^}]*)\}',css).group(1))
+
+    def test_server_rows_truncate_long_names(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        body=re.search(r'(?:^|\n)\.server-name\s*\{([^}]*)\}',css).group(1)
+        for part in ['text-overflow: ellipsis','white-space: nowrap','min-width: 0']:self.assertIn(part,body)
+        self.assertNotIn('.server-card',css); self.assertNotIn('.server-grid',css)
 
     def test_page_heads_wrap_title_and_intro(self):
         for name in ['server.html','settings.html']:
@@ -154,10 +178,6 @@ class DashboardTemplateTests(unittest.TestCase):
         menu=html[html.index('id="side-modules"'):html.index('</nav>',html.index('id="side-modules"'))]
         self.assertIn('href="/dashboard"',menu)
         for tab in ['profile','runtime','admin']:self.assertIn(f'data-settings-tab="{tab}"',menu)
-
-    def test_server_grid_cards_are_at_least_260px(self):
-        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
-        self.assertIn('minmax(260px, 1fr)',re.search(r'\.server-grid\s*\{([^}]*)\}',css).group(1))
 
     def test_module_scripts_find_every_id_they_read(self):
         _,p=self.render('server.html')
@@ -244,10 +264,10 @@ class DashboardTemplateTests(unittest.TestCase):
         keys=set(i18n.console_strings())
         used=set()
         for path in (ROOT/'templates').glob('*.html'):
-            used|=set(re.findall(r"tr\('([a-z_][A-Za-z0-9_.]*)'",path.read_text(encoding='utf-8')))
+            used|=set(re.findall(r"\btr\('([a-z_][A-Za-z0-9_.]*)'",path.read_text(encoding='utf-8')))
         for path in (ROOT/'static/js').rglob('*.js'):
-            used|=set(re.findall(r"tr\('([a-z_][A-Za-z0-9_.]*)'",path.read_text(encoding='utf-8')))
-        used={k for k in used if not k.endswith('.')}
+            used|=set(re.findall(r"\btr\('([a-z_][A-Za-z0-9_.]*)'",path.read_text(encoding='utf-8')))
+        used={k for k in used if not k.endswith(('.','_'))}  # prefixes of keys built at runtime
         self.assertEqual(sorted(used-keys),[])
 
     def test_static_assets_exist_and_versioned(self):

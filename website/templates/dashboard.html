@@ -15,11 +15,16 @@
 {% endblock %}
 
 {% block topbar_title %}{{ tr('nav.servers') }}{% endblock %}
+{% block content_class %} content--column{% endblock %}
 
 
 {% block content %}
-<h1 class="sr-only">{{ tr('nav.servers') }}</h1>
-<a class="btn btn--primary" href="{{ invite_url() }}" target="_blank" rel="noopener noreferrer">{{ icon('plus') }}{{ tr('nav.invite') }}</a>
+<div class="page-head">
+    <div class="page-head-text">
+        <h1>{{ tr('nav.servers') }}</h1>
+    </div>
+    <a class="btn btn--primary" href="{{ invite_url() }}" target="_blank" rel="noopener noreferrer">{{ icon('plus') }}{{ tr('nav.invite') }}</a>
+</div>
 {%- if guilds %}
 <div class="server-search">
     <label class="sr-only" for="server-search">{{ tr('servers.search_label') }}</label>
@@ -35,10 +40,10 @@
 {%- if joined %}
 <section class="section" id="joined" data-server-group>
     <h2 class="section-title">{{ tr('servers.joined') }} <span class="count" data-count>{{ joined | length }}</span></h2>
-    <div class="server-grid">
+    <div class="list">
         {%- for g in joined %}
-        <a class="server-card" href="/dashboard/server/{{ g.id }}" data-guild-name="{{ g.name }}" data-guild-id="{{ g.id }}">
-            <span class="server-icon">{% if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="44" height="44" loading="lazy">{% else %}{{ g.name[:1] }}{% endif %}</span>
+        <a class="server-row" href="/dashboard/server/{{ g.id }}" data-guild-name="{{ g.name }}" data-guild-id="{{ g.id }}">
+            <span class="server-icon">{% if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="40" height="40" loading="lazy">{% else %}{{ g.name[:1] }}{% endif %}</span>
             <span class="server-name" title="{{ g.name }}">{{ g.name }}</span>
             <span class="server-go">{{ tr('servers.open') }}{{ icon('chevron-right') }}</span>
         </a>
@@ -51,10 +56,10 @@
 <section class="section" id="not-joined" data-server-group>
     <h2 class="section-title">{{ tr('servers.not_joined') }} <span class="count" data-count>{{ not_joined | length }}</span></h2>
     <p class="section-hint">{{ tr('servers.not_joined_hint') }}</p>
-    <div class="server-grid">
+    <div class="list">
         {%- for g in not_joined %}
-        <div class="server-card server-card--unjoined" data-guild-name="{{ g.name }}" data-guild-id="{{ g.id }}">
-            <span class="server-icon">{% if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="44" height="44" loading="lazy">{% else %}{{ g.name[:1] }}{% endif %}</span>
+        <div class="server-row is-unjoined" data-guild-name="{{ g.name }}" data-guild-id="{{ g.id }}">
+            <span class="server-icon">{% if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="40" height="40" loading="lazy">{% else %}{{ g.name[:1] }}{% endif %}</span>
             <span class="server-name" title="{{ g.name }}">{{ g.name }}</span>
             <a class="btn btn--secondary" href="{{ invite_url(g.id) }}" target="_blank" rel="noopener noreferrer">{{ tr('nav.invite') }}</a>
         </div>

@@ -12,12 +12,13 @@
 {% endblock %}
 
 {% block topbar_title %}{{ tr('nav.settings') }}{% endblock %}
+{% block content_class %} content--column{% endblock %}
 
 
 {% block content %}
 <h1 class="sr-only">{{ tr('nav.settings') }}</h1>
 <section class="settings-panel" data-settings-panel="runtime" aria-labelledby="settings-runtime-title">
-    <div class="page-head"><div class="page-head-text"><h2 id="settings-runtime-title" tabindex="-1">{{ tr('settings.runtime.title') }}</h2></div></div>
+    <div class="page-head"><div class="page-head-text"><h2 id="settings-runtime-title" tabindex="-1">{{ tr('settings.runtime.title') }}</h2><p>{{ tr('settings.subtitle') }}</p></div></div>
     <div class="section">
         <div class="section-head">
             <div id="health-status"><span class="bot-status" data-state="unknown">{{ tr('settings.runtime.loading') }}</span></div>
@@ -88,7 +89,7 @@
 </section>
 
 <section class="settings-panel" data-settings-panel="admin" aria-labelledby="settings-admin-title">
-    <div class="page-head"><div class="page-head-text"><h2 id="settings-admin-title" tabindex="-1">{{ tr('settings.tab.admin') }}</h2></div></div>
+    <div class="page-head"><div class="page-head-text"><h2 id="settings-admin-title" tabindex="-1">{{ tr('settings.tab.admin') }}</h2><p>{{ tr('settings.subtitle') }}</p></div></div>
     <p class="note note--warn">{{ icon('triangle-alert') }}<span>{{ tr('settings.admin.warning') }}</span></p>
 
     <div class="section" id="draft-announce" data-draft data-draft-inline>
