@@ -168,7 +168,8 @@ def _contrast(a, b):
 # (文字色, 底色)：页面底色、面板和 Discord 对话框里实际出现的组合
 TEXT_PAIRS = [
     ("text", "bg"), ("muted", "bg"), ("text", "panel"), ("muted", "panel"), ("rin", "bg"),
-    ("dc-text", "dc-bg"), ("dc-muted", "dc-bg"), ("dc-muted", "dc-deep"), ("rin", "dc-bg"),
+    ("on-rin", "rin"), ("chip-text", "chip-bg"),
+    ("dc-text", "dc-bg"), ("dc-muted", "dc-bg"), ("dc-muted", "dc-deep"), ("rin", "dc-bg"), ("dc-text", "dc-deep"),
 ]
 
 
