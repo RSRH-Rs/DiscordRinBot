@@ -251,163 +251,101 @@
     </div>
 </section>
 
-<!-- ═══════ 抽奖 ═══════ -->
-<div class="page mod-page" id="pg-giveaway" data-slug="giveaway" data-title="{{ tr('nav.module.giveaway') }}" data-draft-hint="填好活动内容后，点「建立」才会创建抽奖哦。">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="gift" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>抽奖管理</h2><p>机器人帮你管理，让你可以专注在奖品丰厚的抽奖活动</p></div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="plus-circle" style="width:14px;height:14px;"></i> 建立抽奖活动</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:680px;">
-            <div>
-                <div class="cfg-row-label">奖项名称 <span style="color:#E24B4A;">*</span></div>
-                <input class="cfg-input" id="gw-prize" placeholder="如: Discord Nitro 一个月" style="margin-top:6px;max-width:100%;">
+<section class="page" id="pg-giveaway" data-slug="giveaway" data-title="{{ tr('nav.module.giveaway') }}" data-draft data-draft-inline>
+    <div class="page-head"><h2>{{ tr('nav.module.giveaway') }}</h2><p>{{ tr('giveaway.intro') }}</p></div>
+    <div class="section">
+        <h3 class="section-title">{{ tr('giveaway.new') }}</h3>
+        <div class="list">
+            <div class="row row--block">
+                <div class="form-grid">
+                    <label class="field"><span class="row-title">{{ tr('giveaway.prize') }}</span><input class="input" id="gw-prize" maxlength="200" placeholder="{{ tr('giveaway.prize_placeholder') }}"></label>
+                    <label class="field"><span class="row-title">{{ tr('giveaway.winners') }}</span><input class="num" type="number" id="gw-winners" value="1" min="1" max="20"></label>
+                    <div class="field"><label class="row-title" for="gw-ch">{{ tr('giveaway.channel') }}</label><select class="select" id="gw-ch" data-search="{{ tr('giveaway.channel') }}"><option value="0">{{ tr('giveaway.pick_channel') }}</option></select></div>
+                    <div class="field"><label class="row-title" for="gw-role">{{ tr('giveaway.role') }}</label><span class="row-hint">{{ tr('giveaway.role_hint') }}</span><select class="select" id="gw-role" data-search="{{ tr('giveaway.role') }}"><option value="0">{{ tr('common.no_limit') }}</option></select></div>
+                </div>
             </div>
-            <div>
-                <div class="cfg-row-label">份数 <span style="color:#E24B4A;">*</span></div>
-                <input class="cfg-num" type="number" id="gw-winners" value="1" min="1" max="20" style="margin-top:6px;width:100%;max-width:100%;">
-            </div>
-            <div>
-                <div class="cfg-row-label">发起频道 <span style="color:#E24B4A;">*</span></div>
-                <select class="cfg-select" id="gw-ch" style="margin-top:6px;max-width:100%;"><option value="0"># 选择频道</option></select>
-            </div>
-            <div>
-                <div class="cfg-row-label">结束时间 <span style="color:#E24B4A;">*</span></div>
-                <input class="cfg-input" type="datetime-local" id="gw-end" style="margin-top:6px;max-width:100%;">
-            </div>
-        </div>
-        <div style="margin-top:16px;max-width:320px;">
-            <div class="cfg-row-label">限制参加成员身份组 (选填)</div>
-            <div class="cfg-row-hint">留空 = 所有人都可以参加</div>
-            <select class="cfg-select" id="gw-role" style="margin-top:6px;max-width:100%;"><option value="0">@ 不限制</option></select>
-        </div>
-        <button class="btn-save" style="margin-top:20px;width:auto;padding:10px 36px;" id="gw-create-btn" onclick="createGiveaway()">建立</button>
-    </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="clock" style="width:14px;height:14px;"></i> 抽奖记录</div>
-        <div id="gw-list"><div class="empty-state-sm">加载中…</div></div>
-    </div>
-</div>
-
-<!-- ═══════ 等级 ═══════ -->
-<div class="page mod-page" id="pg-leveling" data-slug="leveling" data-title="{{ tr('nav.module.leveling') }}">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="trophy" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>等级系统</h2><p>小凛独家经验算法，发言即积累经验</p></div>
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 排行榜</div>
-        <div id="lb-list"><div class="empty-state-sm">加载中…</div></div>
-    </div>
-</div>
-
-<!-- ═══════ 通用 ═══════ -->
-<div class="page mod-page" id="pg-general" data-slug="general" data-title="{{ tr('nav.module.general') }}">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="wrench" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>通用工具</h2><p>开箱即用的实用指令，无需额外配置</p></div>
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 可用指令</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/status</code> 服务器状态</div>
-            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/avatar</code> 查看头像</div>
-            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/roll</code> 投掷骰子</div>
-            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/help</code> 交互式帮助菜单</div>
-            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/setstatus</code> 修改 Bot 状态</div>
-            <div class="cfg-row" style="border:none;padding:8px 0;"><code style="background:var(--bg);padding:4px 10px;border-radius:6px;">/setbio</code> 修改 Bot 简介</div>
-        </div>
-    </div>
-</div>
-
-<!-- ═══════ Utility (指令开关) ═══════ -->
-<div class="page mod-page" id="pg-utility" data-slug="utility" data-title="{{ tr('nav.module.utility') }}">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="sliders-horizontal" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>指令管理</h2><p>按需启用或禁用每个指令，完全掌控你的服务器</p></div>
-    <div class="util-tip"><i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i> 开关会立即保存，不用再点保存哦。批量操作只影响当前筛选结果，不会改到隐藏的指令。</div>
-    <div class="search-toolbar command-search"><label for="command-search">查找指令</label><input type="search" id="command-search" class="cfg-input" data-draft-ignore placeholder="指令名称、说明或分类…"><label class="sr-only" for="command-filter">指令状态</label><select id="command-filter" class="cfg-select" data-draft-ignore><option value="all">全部状态</option><option value="enabled">已开启</option><option value="disabled">已关闭</option></select><span id="util-search-status" role="status"></span></div>
-    <div id="util-summary" style="font-size:.85rem;color:var(--text-muted);margin-bottom:18px;font-weight:600;"></div>
-    <div id="util-commands"><div class="empty-state-sm">加载中…</div></div>
-</div>
-
-<!-- ═══════ Bot Log (系统日志) ═══════ -->
-<div class="page mod-page" id="pg-botlog" data-slug="botlog" data-title="{{ tr('nav.module.botlog') }}">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="scroll-text" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>机器人运行日志</h2><p>查看小凛的运行、报错和配置记录</p></div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 基本设定</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">建议选一个只有管理员能看的频道</div></div>
-            <select class="cfg-select" id="bl-ch" style="max-width:220px;"><option value="0">— 未启用 —</option></select>
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">发送运行日志</div><div class="cfg-row-hint">关闭后不再发送到频道</div></div>
-            <label class="cfg-tog"><input type="checkbox" id="bl-enabled" checked><span class="track"></span><span class="thumb"></span></label>
-        </div>
-    </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 接收等级</div>
-        <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:14px;">
-            <div class="cfg-row-info" style="width:100%;"><div class="cfg-row-label">日志类型</div><div class="cfg-row-hint">勾选要接收的日志等级，不勾选的等级会被静默丢弃</div></div>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;">
-                <label class="bl-chip"><input type="checkbox" value="error" checked><span class="bl-dot" style="background:#E24B4A;"></span>错误</label>
-                <label class="bl-chip"><input type="checkbox" value="warning" checked><span class="bl-dot" style="background:#EF9F27;"></span>警告</label>
-                <label class="bl-chip"><input type="checkbox" value="info" checked><span class="bl-dot" style="background:#85B7EB;"></span>信息</label>
-                <label class="bl-chip"><input type="checkbox" value="config" checked><span class="bl-dot" style="background:#5A9E6F;"></span>配置变更</label>
+            <div class="row row--block">
+                <div class="row-text"><span class="row-title" id="gw-end-label">{{ tr('giveaway.end') }}</span></div>
+                <div class="seg" role="group" aria-labelledby="gw-end-label">
+                    <button type="button" class="seg-option" data-end-in="1" aria-pressed="false">{{ tr('giveaway.in_hour') }}</button>
+                    <button type="button" class="seg-option" data-end-in="24" aria-pressed="true">{{ tr('giveaway.in_day') }}</button>
+                    <button type="button" class="seg-option" data-end-in="168" aria-pressed="false">{{ tr('giveaway.in_week') }}</button>
+                    <button type="button" class="seg-option" data-end-in="custom" aria-pressed="false">{{ tr('duration.custom') }}</button>
+                </div>
+                <input class="input" type="datetime-local" id="gw-end" aria-labelledby="gw-end-label" hidden>
             </div>
         </div>
+        <div class="actions"><button type="button" class="btn btn--primary" id="gw-create-btn">{{ tr('giveaway.create') }}</button></div>
     </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 测试</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">发送测试日志</div><div class="cfg-row-hint">向所选频道发送一条测试消息，验证配置正确</div></div>
-            <button class="btn-save" id="bl-test" onclick="testBotLog()" style="background:var(--pink-bg);color:var(--pink);">📤 发送测试</button>
-        </div>
+    <div class="section">
+        <h3 class="section-title">{{ tr('giveaway.history') }}</h3>
+        <div class="case-list" id="gw-list"></div>
     </div>
+</section>
 
-    <div class="save-bar" id="bl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="bl-save" onclick="saveBotLog()">保存设置</button></div>
-</div>
-
-<!-- ═══════ Server Log (审计日志) ═══════ -->
-<div class="page mod-page" id="pg-serverlog" data-slug="serverlog" data-title="{{ tr('nav.module.serverlog') }}">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="history" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>服务器事件日志</h2><p>记录消息、成员、频道和身份组的变化</p></div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 基本设定</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">所有审计事件会发送到这个频道，建议选一个只有管理员能看的频道</div></div>
-            <select class="cfg-select" id="sl-ch" style="max-width:220px;"><option value="0">— 未启用 —</option></select>
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">发送事件日志</div><div class="cfg-row-hint">关闭后不再发送到频道</div></div>
-            <label class="cfg-tog"><input type="checkbox" id="sl-enabled" checked><span class="track"></span><span class="thumb"></span></label>
-        </div>
+<section class="page" id="pg-leveling" data-slug="leveling" data-title="{{ tr('nav.module.leveling') }}">
+    <div class="page-head"><h2>{{ tr('nav.module.leveling') }}</h2><p>{{ tr('leveling.intro') }}</p></div>
+    <div class="section">
+        <h3 class="section-title">{{ tr('leveling.board') }}</h3>
+        <div class="lb-list" id="lb-list"></div>
     </div>
+</section>
 
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 记录分类</div>
-        <div class="cfg-row" style="flex-direction:column;align-items:flex-start;gap:14px;">
-            <div class="cfg-row-info" style="width:100%;"><div class="cfg-row-label">事件类型</div><div class="cfg-row-hint">勾选要记录的事件分类，未勾选的会被静默丢弃。成员更新与语音活动较吵，默认关闭</div></div>
-            <div style="display:flex;flex-wrap:wrap;gap:10px;">
-                <label class="bl-chip"><input type="checkbox" value="message"><span class="bl-dot" style="background:#E24B4A;"></span>💬 消息变更</label>
-                <label class="bl-chip"><input type="checkbox" value="member"><span class="bl-dot" style="background:#57F287;"></span>🚪 成员进出</label>
-                <label class="bl-chip"><input type="checkbox" value="member_update"><span class="bl-dot" style="background:#5865F2;"></span>✏️ 成员更新</label>
-                <label class="bl-chip"><input type="checkbox" value="ban"><span class="bl-dot" style="background:#E24B4A;"></span>🔨 封禁记录</label>
-                <label class="bl-chip"><input type="checkbox" value="channel"><span class="bl-dot" style="background:#5A9E6F;"></span>📁 频道变更</label>
-                <label class="bl-chip"><input type="checkbox" value="role"><span class="bl-dot" style="background:#EB7DAB;"></span>🏷️ 身份组变更</label>
-                <label class="bl-chip"><input type="checkbox" value="voice"><span class="bl-dot" style="background:#9B59B6;"></span>🔊 语音活动</label>
-                <label class="bl-chip"><input type="checkbox" value="server"><span class="bl-dot" style="background:#85B7EB;"></span>🛠️ 服务器更新</label>
-            </div>
-        </div>
+<section class="page" id="pg-general" data-slug="general" data-title="{{ tr('nav.module.general') }}">
+    <div class="page-head"><h2>{{ tr('nav.module.general') }}</h2><p>{{ tr('general.intro') }}</p></div>
+    <div class="cmd-grid">
+        {%- for name in ['status', 'avatar', 'roll', 'help', 'setstatus', 'setbio'] %}
+        <div class="cmd-card"><code>/{{ name }}</code><span>{{ tr('general.cmd.' ~ name) }}</span></div>
+        {%- endfor %}
     </div>
+</section>
 
-    <div class="util-tip"><i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i> 想反查「谁删的消息 / 谁封的人」需要给 bot 开启「查看审计日志」权限。忽略某个频道请用指令 <code>/serverlog ignore</code>。</div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 测试</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">发送测试日志</div><div class="cfg-row-hint">向所选频道发送一条测试消息，验证配置正确</div></div>
-            <button class="btn-save" id="sl-test" onclick="testServerLog()" style="background:var(--pink-bg);color:var(--pink);">📤 发送测试</button>
-        </div>
+<section class="page" id="pg-utility" data-slug="utility" data-title="{{ tr('nav.module.utility') }}">
+    <div class="page-head"><h2>{{ tr('nav.module.utility') }}</h2><p>{{ tr('utility.intro') }}</p></div>
+    <p class="note note--info">{{ icon('info') }}<span>{{ tr('utility.tip') }}</span></p>
+    <div class="server-search command-search">
+        <label class="sr-only" for="command-search">{{ tr('utility.search') }}</label>
+        <input type="search" id="command-search" class="input" data-draft-ignore placeholder="{{ tr('utility.search_placeholder') }}">
+        <label class="sr-only" for="command-filter">{{ tr('utility.filter') }}</label>
+        <select id="command-filter" class="select" data-draft-ignore><option value="all">{{ tr('utility.filter_all') }}</option><option value="enabled">{{ tr('utility.filter_on') }}</option><option value="disabled">{{ tr('utility.filter_off') }}</option></select>
+        <span id="util-search-status" class="unit" role="status"></span>
     </div>
+    <p class="section-hint" id="util-summary"></p>
+    <div id="util-commands"></div>
+</section>
 
-    <div class="save-bar" id="sl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="sl-save" onclick="saveServerLog()">保存设置</button></div>
-</div>
+<section class="page" id="pg-botlog" data-slug="botlog" data-title="{{ tr('nav.module.botlog') }}" data-draft>
+    <div class="page-head"><h2>{{ tr('nav.module.botlog') }}</h2><p>{{ tr('logs.bot_intro') }}</p></div>
+    <div class="list">
+        {% call row(tr('logs.enabled'), tr('logs.enabled_hint'), 'bl-enabled', cls='row--switch') %}{{ toggle('bl-enabled', tr('logs.enabled')) }}{% endcall %}
+        {% call row(tr('logs.channel'), tr('logs.channel_hint'), 'bl-ch', depends='bl-enabled') %}<select class="select" id="bl-ch" data-search="{{ tr('logs.channel') }}"><option value="0">{{ tr('logs.off') }}</option></select>{% endcall %}
+        {% call row(tr('logs.levels'), tr('logs.levels_hint'), None, depends='bl-enabled', block=True) %}
+        <div class="check-list">
+            {%- for kind in ['error', 'warning', 'info', 'config'] %}
+            <label class="check-chip"><input type="checkbox" value="{{ kind }}" data-log-kind>{{ tr('logs.level.' ~ kind) }}</label>
+            {%- endfor %}
+        </div>
+        {% endcall %}
+        {% call row(tr('logs.test'), tr('logs.test_hint'), None, depends='bl-enabled') %}<button type="button" class="btn btn--secondary" id="bl-test">{{ tr('logs.test') }}</button>{% endcall %}
+    </div>
+</section>
+
+<section class="page" id="pg-serverlog" data-slug="serverlog" data-title="{{ tr('nav.module.serverlog') }}" data-draft>
+    <div class="page-head"><h2>{{ tr('nav.module.serverlog') }}</h2><p>{{ tr('logs.server_intro') }}</p></div>
+    <div class="list">
+        {% call row(tr('logs.server_enabled'), tr('logs.enabled_hint'), 'sl-enabled', cls='row--switch') %}{{ toggle('sl-enabled', tr('logs.server_enabled')) }}{% endcall %}
+        {% call row(tr('logs.channel'), tr('logs.channel_hint'), 'sl-ch', depends='sl-enabled') %}<select class="select" id="sl-ch" data-search="{{ tr('logs.channel') }}"><option value="0">{{ tr('logs.off') }}</option></select>{% endcall %}
+        {% call row(tr('logs.categories'), tr('logs.categories_hint'), None, depends='sl-enabled', block=True) %}
+        <div class="check-list">
+            {%- for kind in ['message', 'member', 'member_update', 'ban', 'channel', 'role', 'voice', 'server'] %}
+            <label class="check-chip"><input type="checkbox" value="{{ kind }}" data-log-kind>{{ tr('logs.category.' ~ kind) }}</label>
+            {%- endfor %}
+        </div>
+        {% endcall %}
+        {% call row(tr('logs.test'), tr('logs.test_hint'), None, depends='sl-enabled') %}<button type="button" class="btn btn--secondary" id="sl-test">{{ tr('logs.test') }}</button>{% endcall %}
+    </div>
+    <p class="note note--info">{{ icon('info') }}<span>{{ tr('logs.audit_note') }}</span></p>
+</section>
 
 {% endblock %}
 
@@ -420,6 +358,9 @@
 <script src="{{ url_for('static', filename='js/modules/music.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/modules/automod.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/modules/moderation.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/giveaway.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/leveling.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/utility.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/logs.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20261102a"></script>
-<script src="{{ url_for('static', filename='js/server.js') }}?v=20261102a"></script>
 {% endblock %}

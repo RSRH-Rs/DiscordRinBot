@@ -472,6 +472,29 @@ a.server-card:hover { border-color: var(--chip-bg); background: var(--bg); }
 .chip--kick, .chip--ban, .chip--tempban { background: var(--bad-bg); color: var(--bad); }
 .chip--unban, .chip--unmute { background: var(--ok-bg); color: var(--ok); }
 
+/* Pages: giveaway, leveling, general, commands */
+.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px 16px; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.field .input, .field .select, .field .search-select, .field .num { width: 100%; }
+#gw-end { margin-top: 8px; }
+.lb-list { display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.lb-list:has(.empty) { border: 0; background: none; }
+.lb-row { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--line); }
+.lb-row:first-child { border-top: 0; }
+.lb-rank { width: 32px; flex-shrink: 0; text-align: center; color: var(--muted); }
+.lb-name { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lb-stat { flex-shrink: 0; font-size: 13px; color: var(--muted); }
+.lb-row--top .lb-rank { font-size: 18px; }
+.lb-row--top .lb-name { font-size: 15px; }
+.cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.cmd-card { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.cmd-card code { color: var(--chip-text); font-weight: 600; }
+.cmd-card span { font-size: 13px; color: var(--muted); }
+.command-search .select { width: 150px; }
+.cmd-group > summary { justify-content: flex-start; }
+.cmd-bulk { margin-left: auto; min-height: 28px; font-weight: 400; font-size: 13px; }
+.cmd-name { font-family: var(--font-display); }
+
 /* Page: global settings */
 .settings-panel[hidden] { display: none; }
 .section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }

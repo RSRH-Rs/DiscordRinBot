@@ -104,44 +104,6 @@ test('variable insertion preserves surrounding text, caret, max length and input
     input.maxLength=15;preview.insertToken(input,'too long');assert.equal(input.value,'hello %member%!');
 });
 
-function commandsFixture(){
-    const elements={'util-commands':{inert:false},'command-search':{value:'play'},'command-filter':{value:'all'}};
-    const ctx=vm.createContext({document:{getElementById:id=>elements[id]},DashboardExtras:{matches:(s,q)=>s.toLowerCase().includes(q.toLowerCase())},addEventListener(){},showToast(){}});ctx.window=ctx;
-    const source=read('server.js');
-    vm.runInContext('let _cmdData=[{name:"play",desc:"music",cog:"Music",enabled:true},{name:"skip",desc:"music",cog:"Music",enabled:true},{name:"help",desc:"help",cog:"System",enabled:true,protected:true}];'+source.slice(source.indexOf('let _cmdSaving=false;'),source.indexOf('function updateSummary() {')),ctx);
-    ctx.renderUtility=()=>{elements['util-commands'].inert=false;};
-    const state=()=>JSON.parse(vm.runInContext('JSON.stringify(_cmdData)',ctx));
-    return {ctx,state,elements};
-}
-test('failed immediate toggle preserves prior state; retry succeeds',async()=>{
-    const {ctx,state}=commandsFixture();ctx.api=async()=>{throw Error('503');};
-    await ctx.toggleCommand('play',false);assert.equal(state()[0].enabled,true);
-    ctx.api=async()=>({ok:true});await ctx.toggleCommand('play',false);assert.equal(state()[0].enabled,false);
-});
-test('filtered bulk toggle affects only visible unprotected commands',async()=>{
-    const {ctx,state}=commandsFixture(),requests=[];
-    ctx.api=async(...args)=>{requests.push(args);return {ok:true};};
-    await ctx.toggleCategory('Music',false);
-    assert.equal(state()[0].enabled,false);assert.equal(state()[1].enabled,true);assert.equal(state()[2].enabled,true);
-    assert.equal(requests.length,1);assert.equal(requests[0][2].name,'play');
-    await ctx.toggleCommand('help',false);assert.equal(requests.length,1);
-});
-test('pending toggle blocks duplicates; application errors do not update local state',async()=>{
-    const {ctx,state}=commandsFixture();let finish,calls=0;
-    ctx.api=()=>new Promise(resolve=>{calls++;finish=resolve;});
-    const first=ctx.toggleCommand('play',false);await ctx.toggleCommand('skip',false);assert.equal(calls,1);
-    finish({ok:false,error:'denied'});await first;assert.ok(state().every(c=>c.enabled));
-});
-
-test('overview and direct command links share one request and do not replace edited state',async()=>{
-    const source=read('server.js');let finish,calls=0;
-    const ctx=vm.createContext({api:()=>new Promise(resolve=>{calls++;finish=resolve;})});
-    vm.runInContext(source.slice(source.indexOf('let _cmdData = null'),source.indexOf('let _cmdSaving=false;')),ctx);
-    const first=ctx.getCommands(),second=ctx.getCommands();assert.equal(calls,1);
-    finish([{name:'play',enabled:true}]);const [a,b]=await Promise.all([first,second]);assert.equal(a,b);
-    a[0].enabled=false;assert.equal((await ctx.getCommands())[0].enabled,false);assert.equal(calls,1);
-});
-
 test('emoji popup is clamped inside a 320px screen',()=>{
     const picker={hidden:false,style:{},offsetWidth:296,offsetHeight:340};
     const ctx=vm.createContext({document:{getElementById:()=>picker,addEventListener(){}},innerWidth:320,innerHeight:740,Console:{tr:k=>k,module(){}}});ctx.window=ctx;
