@@ -95,6 +95,7 @@
     <span class="unsaved-error" id="unsaved-error" role="alert" hidden></span>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+{% block palette %}{% endblock %}
 <script type="application/json" id="console-strings">{{ console_strings()|tojson }}</script>
 <script src="{{ url_for('static', filename='js/theme.js') }}?v=20261103a"></script>
 <script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20261103a"></script>

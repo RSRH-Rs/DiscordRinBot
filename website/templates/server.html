@@ -20,6 +20,19 @@
 {%- endfor %}
 {% endblock %}
 
+{% block side_search %}
+<button type="button" class="search-btn" id="palette-btn" aria-haspopup="dialog" aria-controls="palette">{{ icon('search') }}<span>{{ tr('palette.button') }}</span><kbd>Ctrl K</kbd></button>
+{% endblock %}
+
+{% block palette %}
+<div class="palette-scrim" id="palette" role="dialog" aria-modal="true" aria-label="{{ tr('palette.label') }}" hidden>
+    <div class="palette">
+        <label class="palette-input">{{ icon('search', 18) }}<input type="text" id="palette-input" placeholder="{{ tr('palette.placeholder') }}" autocomplete="off" role="combobox" aria-expanded="true" aria-controls="palette-list" aria-autocomplete="list" aria-label="{{ tr('palette.label') }}"></label>
+        <div class="palette-list" id="palette-list" role="listbox" aria-label="{{ tr('palette.label') }}"></div>
+    </div>
+</div>
+{% endblock %}
+
 {% block topbar %}
 <h1 class="sr-only" id="page-title">{{ tr('nav.overview') }}</h1>
 <nav class="crumbs" id="crumbs" aria-label="{{ tr('nav.crumbs') }}"><a href="#overview" data-mod="overview">{{ tr('nav.overview') }}</a><span class="crumb-part" id="crumb-group" hidden></span><span class="crumb-part" id="crumb-current" aria-current="page" hidden></span></nav>
@@ -358,6 +371,7 @@
 {% block scripts %}
 <script>window.GID = "{{ guild.id }}";</script>
 <script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261103a"></script>
+<script src="{{ url_for('static', filename='js/command-palette.js') }}?v=20261103a"></script>
 <script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261103a"></script>
 <script src="{{ url_for('static', filename='js/modules/welcome.js') }}?v=20261103a"></script>
 <script src="{{ url_for('static', filename='js/modules/roles.js') }}?v=20261103a"></script>

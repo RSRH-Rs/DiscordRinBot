@@ -107,6 +107,17 @@ class DashboardTemplateTests(unittest.TestCase):
         for id_ in ['ov-attention','ov-modules','ov-error','ov-retry']:self.assertIn(f'id="{id_}"',ov)
         self.assertIn('aria-busy="true"',ov)
 
+    def test_palette_only_on_server_page(self):
+        _,p=self.render('server.html')
+        for id_ in ['palette','palette-btn','palette-input','palette-list']:self.assertIn(id_,p.ids)
+        for name in ['dashboard.html','settings.html']:
+            _,q=self.render(name)
+            self.assertNotIn('palette',q.ids,name);self.assertNotIn('palette-btn',q.ids,name)
+
+    def test_tabs_carry_their_label(self):
+        html,_=self.render('server.html')
+        self.assertIn('data-tab="words" aria-controls="panel-automod-words" data-label="违禁词"',html)
+
     def test_module_scripts_find_every_id_they_read(self):
         _,p=self.render('server.html')
         DYNAMIC=set()  # ids the scripts create themselves at runtime
