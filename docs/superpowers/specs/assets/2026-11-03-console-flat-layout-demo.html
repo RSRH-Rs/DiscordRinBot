@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>控制台排版方向</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap">
+<style>
+:root {
+    --bg: #F7F7F8; --panel: #FFFFFF; --side: #F0F0F2; --line: #E4E4E8; --field: #FFFFFF; --field-line: #8A8A93;
+    --text: #18181B; --muted: #5F5F68; --accent: #D6336C; --accent-hover: #C42A60; --on-accent: #FFFFFF;
+    --accent-soft: #FDECF2; --accent-text: #B32457; --ok: #1A7A43; --ok-soft: #E7F5EC; --warn: #A15C00; --warn-soft: #FFF4E0;
+    --cur: #FFFFFF; --hover: #E7E7EA; --off: #C9C9CF;
+    --shadow-sm: 0 1px 2px rgba(24, 24, 27, .06), 0 1px 1px rgba(24, 24, 27, .04);
+    --font: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --display: "Fredoka", var(--font);
+    color-scheme: light;
+}
+:root[data-theme="dark"] {
+    --bg: #17171B; --panel: #1F1F24; --side: #121215; --line: #2C2C33; --field: #17171B; --field-line: #6A6A74;
+    --text: #EDEDF0; --muted: #9A9AA5; --accent: #FF6FA3; --accent-hover: #FF8DB7; --on-accent: #2A0A17;
+    --accent-soft: #3A1A28; --accent-text: #FF8DB7; --ok: #3DD68C; --ok-soft: #13291D; --warn: #F5B94A; --warn-soft: #33270F;
+    --cur: #303038; --hover: #28282F; --off: #44444C; --shadow-sm: none; color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+h1, h2, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ── 外壳：侧栏 + 内容，内容永远从同一条左边线开始 ── */
+.shell { display: grid; grid-template-columns: 252px minmax(0, 1fr); min-height: 100dvh; }
+.side { position: sticky; top: 0; height: 100dvh; display: flex; flex-direction: column; gap: 2px; padding: 12px 10px; background: var(--side); border-right: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; font: 600 16px/1 var(--display); }
+.brand img { width: 28px; height: 28px; border-radius: 50%; }
+.brand .home { margin-left: auto; display: flex; align-items: center; gap: 4px; font: 500 12px/1 var(--font); color: var(--muted); }
+.brand:hover { background: var(--hover); }
+.brand:hover .home { color: var(--text); }
+.switch { display: flex; align-items: center; gap: 10px; margin: 8px 0 6px; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); box-shadow: var(--shadow-sm); cursor: pointer; text-align: left; width: 100%; }
+.g-icon { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 8px; background: var(--accent); color: var(--on-accent); font-weight: 600; font-size: 13px; }
+.switch-text { flex: 1; min-width: 0; }
+.switch-text b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.switch-text small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; }
+.search { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; color: var(--muted); border: 0; background: none; cursor: pointer; width: 100%; }
+.search:hover { background: var(--hover); color: var(--text); }
+.search kbd { margin-left: auto; font: 12px/1 var(--font); padding: 3px 6px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); }
+.nav-group { padding: 16px 10px 4px; font-size: 12px; color: var(--muted); }
+.nav a { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--muted); }
+.nav a:hover { background: var(--hover); color: var(--text); }
+.nav a.on { background: var(--cur); color: var(--text); font-weight: 600; box-shadow: var(--shadow-sm); }
+.nav a .warn-dot { margin-left: auto; width: 7px; height: 7px; border-radius: 50%; background: var(--warn); }
+.side-foot { margin-top: auto; display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.theme { display: flex; align-items: center; justify-content: space-between; padding: 0 8px; color: var(--muted); font-size: 13px; }
+.theme-btns { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--hover); }
+.theme-btns button { border: 0; background: none; padding: 3px 8px; border-radius: 6px; cursor: pointer; font-size: 12px; color: var(--muted); }
+.theme-btns button[aria-pressed="true"] { background: var(--panel); color: var(--text); box-shadow: var(--shadow-sm); }
+.user { display: flex; align-items: center; gap: 10px; padding: 6px 8px; }
+.user img { width: 28px; height: 28px; border-radius: 50%; }
+.user span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+.main { min-width: 0; padding: 40px 48px 120px; }
+
+/* ── 页面骨架：所有页面都一样 ── */
+.view[hidden], .shell[hidden], .home-mock[hidden] { display: none; }
+.page { max-width: var(--page-w, 680px); }
+.page--ov { max-width: var(--ov-w, var(--page-w, 680px)); }
+.page--editor { max-width: var(--editor-w, 1040px); }
+.head { display: flex; align-items: flex-start; gap: 24px; }
+.head-text { flex: 1; min-width: 0; }
+.head h1 { font-size: 22px; font-weight: 600; line-height: 1.35; }
+.head p { margin-top: 4px; color: var(--muted); }
+.tog { position: relative; display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; cursor: pointer; color: var(--muted); font-size: 13px; }
+.tog i { position: relative; width: 34px; height: 20px; border-radius: 999px; background: var(--off); transition: background .15s; }
+.tog i::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform .15s; }
+.tog.on i { background: var(--accent); }
+.tog.on i::after { transform: translateX(14px); }
+.tabs { display: flex; gap: 24px; margin-top: 20px; border-bottom: 1px solid var(--line); }
+.tabs a { padding: 8px 0; margin-bottom: -1px; color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; }
+.tabs a.on { color: var(--text); font-weight: 600; border-color: var(--accent); }
+.body { margin-top: 28px; }
+
+.sec + .sec { margin-top: 32px; }
+.sec-head h2 { font-size: 16px; font-weight: 600; }
+.sec-head p { margin-top: 2px; color: var(--muted); font-size: 13px; }
+.rows { margin-top: 10px; }
+.row { display: flex; align-items: center; gap: 24px; padding: 14px 0; }
+.row-text { flex: 1; min-width: 0; }
+.row-title { font-weight: 500; }
+.row-desc { color: var(--muted); font-size: 13px; }
+.row.is-off .row-title, .row.is-off .row-desc { color: var(--muted); opacity: .7; }
+.select { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 220px; padding: 7px 10px; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field); }
+.select::after { content: ""; width: 7px; height: 7px; border-right: 1.6px solid var(--muted); border-bottom: 1.6px solid var(--muted); transform: rotate(45deg) translateY(-2px); }
+.num { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.num b { display: inline-block; width: 56px; padding: 6px 10px; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field); color: var(--text); font-weight: 400; text-align: right; }
+.seg { display: inline-flex; padding: 2px; border-radius: 8px; background: var(--hover); }
+.seg span { padding: 4px 10px; border-radius: 6px; color: var(--muted); font-size: 13px; }
+.seg span.on { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: var(--shadow-sm); }
+.textarea { min-height: 96px; padding: 10px 12px; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field); }
+.chips { display: flex; gap: 6px; margin-top: 8px; }
+.chips span { padding: 2px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent-text); font-size: 13px; }
+.link { color: var(--accent-text); font-size: 13px; font-weight: 500; }
+.field-label { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; font-weight: 500; }
+
+/* 欢迎页：编辑区 + 预览 */
+.editor { display: grid; grid-template-columns: minmax(0, 680px) 320px; gap: 40px; align-items: start; }
+.preview-box { position: sticky; top: 40px; }
+.dc { margin-top: 10px; padding: 14px; border-radius: 10px; background: #313338; color: #DBDEE1; font-size: 13px; line-height: 1.5; }
+.dc-top { display: flex; align-items: center; gap: 8px; }
+.dc-top img { width: 32px; height: 32px; border-radius: 50%; }
+.dc-top b { color: #F2F3F5; }
+.dc-top em { font-style: normal; font-size: 10px; padding: 0 4px; border-radius: 3px; background: #5865F2; color: #fff; }
+.dc-embed { margin-top: 8px; padding: 10px 12px; border-left: 4px solid var(--accent); border-radius: 4px; background: #2B2D31; }
+.dc-embed img { margin-top: 8px; width: 100%; border-radius: 6px; background: #1E1F22; }
+
+/* 概览 */
+.hero { display: flex; align-items: center; gap: 16px; }
+.hero img { width: 56px; height: 56px; border-radius: 50%; }
+.hero h1 { font-size: 22px; font-weight: 600; }
+.hero p { color: var(--muted); font-size: 13px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; padding: 4px 10px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-size: 13px; font-weight: 500; }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.notice { display: flex; align-items: center; gap: 12px; margin-top: 24px; padding: 10px 14px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); font-size: 13px; }
+.notice b { font-weight: 600; }
+.notice a { margin-left: auto; font-weight: 600; }
+.mods { margin-top: 10px; }
+.mod { display: flex; align-items: center; gap: 14px; padding: 12px 0; cursor: pointer; }
+.mod-icon { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 9px; background: var(--hover); color: var(--text); }
+.mod-text { flex: 1; min-width: 0; }
+.mod-text b { display: block; font-weight: 600; }
+.mod-text small { display: block; color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mod-text small.warn { color: var(--warn); }
+.mod .chev { width: 16px; height: 16px; color: var(--muted); }
+.mod .tog { order: 2; }
+.mod .chev { order: 3; }
+
+/* ─────────── 方向 A：平铺列表（Discord 设置式）─────────── */
+[data-dir="a"] .rows, [data-dir="a"] .mods { border-top: 1px solid var(--line); }
+[data-dir="a"] .row, [data-dir="a"] .mod { border-bottom: 1px solid var(--line); }
+[data-dir="a"] .mod:hover { background: linear-gradient(90deg, transparent, var(--hover) 8%, var(--hover) 92%, transparent); }
+
+/* ─────────── 方向 B：左右分栏（Stripe / GitHub 设置式）─────────── */
+[data-dir="b"] { --page-w: 920px; --editor-w: 920px; }
+[data-dir="b"] .body { margin-top: 0; }
+[data-dir="b"] .sec { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 40px; padding: 28px 0; border-bottom: 1px solid var(--line); }
+[data-dir="b"] .sec + .sec { margin-top: 0; }
+[data-dir="b"] .sec-head p { margin-top: 6px; line-height: 1.55; }
+[data-dir="b"] .rows, [data-dir="b"] .mods { margin-top: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-sm); }
+[data-dir="b"] .row, [data-dir="b"] .mod { padding: 14px 16px; }
+[data-dir="b"] .row + .row, [data-dir="b"] .mod + .mod { border-top: 1px solid var(--line); }
+[data-dir="b"] .row-desc { display: none; }
+[data-dir="b"] .editor { display: block; }
+[data-dir="b"] .preview-box { position: static; }
+[data-dir="b"] .preview-box .dc { margin-top: 0; max-width: 400px; }
+[data-dir="b"] .mods--grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border: 0; background: none; box-shadow: none; gap: 10px; }
+[data-dir="b"] .mods--grid .mod { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-sm); }
+[data-dir="b"] .mods--grid .mod + .mod { border-top: 1px solid var(--line); }
+
+/* ─────────── 方向 C：整理现状（分组卡片，修边线和噪点）─────────── */
+[data-dir="c"] { --page-w: 760px; --ov-w: 920px; --editor-w: 1120px; }
+[data-dir="c"] .rows { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-sm); }
+[data-dir="c"] .row { padding: 14px 16px; }
+[data-dir="c"] .row + .row { border-top: 1px solid var(--line); }
+[data-dir="c"] .editor { grid-template-columns: minmax(0, 760px) 320px; }
+[data-dir="c"] .mods--grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+[data-dir="c"] .mods--grid .mod { align-items: flex-start; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-sm); }
+[data-dir="c"] .mods--grid .mod-text small { white-space: normal; }
+[data-dir="c"] .mods--grid .chev { display: none; }
+
+/* ── 主页导航（换成控制台同一套颜色）── */
+.home-mock { --h-rail: var(--hover); --h-chan: var(--side); --h-on: var(--cur); }
+.home-mock.old { --h-rail: #DCC3CD; --h-chan: #E7D4DC; --h-on: #D9C1CB; --h-bg: #F8F6F7; }
+.home-mock { display: grid; grid-template-columns: 72px 240px minmax(0, 1fr); min-height: 100dvh; background: var(--h-bg, var(--bg)); }
+.h-rail { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px 0; background: var(--h-rail); }
+.h-rail span { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; background: var(--h-bg, var(--bg)); color: var(--muted); }
+.h-rail span:first-child { border-radius: 14px; overflow: hidden; }
+.h-rail img { width: 44px; height: 44px; }
+.h-chan { padding: 0 8px; background: var(--h-chan); border-right: 1px solid var(--line); }
+.h-chan-head { height: 60px; display: flex; align-items: center; padding: 0 8px; font-weight: 600; border-bottom: 1px solid var(--line); }
+.h-chan .nav-group { padding: 18px 8px 4px; }
+.h-chan a { display: block; padding: 6px 10px; border-radius: 6px; color: var(--muted); }
+.h-chan a.on { background: var(--h-on); color: var(--text); font-weight: 600; box-shadow: var(--shadow-sm); }
+.h-chan a::before { content: "#  "; color: var(--muted); opacity: .7; }
+.h-main { min-width: 0; }
+.h-nav { display: flex; align-items: center; justify-content: flex-end; gap: 8px; height: 60px; padding: 0 32px; }
+.h-nav a { padding: 7px 12px; border-radius: 8px; color: var(--muted); font-weight: 600; }
+.h-nav a.btn { background: var(--accent); color: var(--on-accent); }
+.h-hero { padding: 90px 64px; }
+.h-hero h1 { font: 700 56px/1.1 var(--display); letter-spacing: -.01em; }
+.h-hero p { margin-top: 18px; max-width: 460px; color: var(--muted); font-size: 16px; }
+.old-toggle { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); z-index: 90; }
+
+/* ── 试装工具条（不属于设计）── */
+.demo-bar { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 100; display: flex; align-items: center; gap: 4px; padding: 5px; border-radius: 12px; background: #18181B; color: #FAFAFA; box-shadow: 0 12px 32px rgba(0,0,0,.25); font-size: 13px; white-space: nowrap; }
+.demo-bar span { padding: 0 8px 0 10px; color: #A1A1AA; }
+.demo-bar button { border: 0; padding: 7px 12px; border-radius: 8px; background: none; color: #D4D4D8; cursor: pointer; }
+.demo-bar button[aria-pressed="true"] { background: #FAFAFA; color: #18181B; font-weight: 600; }
+.demo-bar i { width: 1px; height: 20px; margin: 0 6px; background: #3F3F46; }
+.chip-btn { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 6px 14px; cursor: pointer; box-shadow: var(--shadow-sm); }
+
+@media (max-width: 1240px) { .editor { grid-template-columns: minmax(0, 1fr); } .preview-box { position: static; } }
+@media (max-width: 860px) {
+    .shell { grid-template-columns: 1fr; }
+    .side { position: static; height: auto; }
+    .side .nav, .side .nav-group, .side-foot { display: none; }
+    .main { padding: 24px 16px 120px; }
+    [data-dir="b"] .sec { grid-template-columns: 1fr; gap: 12px; }
+    [data-dir="b"] .mods--grid, [data-dir="c"] .mods--grid { grid-template-columns: 1fr; }
+    .row { flex-wrap: wrap; gap: 10px; }
+    .home-mock { grid-template-columns: 1fr; } .h-rail, .h-chan { display: none; } .h-hero { padding: 48px 20px; } .h-hero h1 { font-size: 40px; }
+    .demo-bar { left: 8px; right: 8px; transform: none; overflow-x: auto; }
+}
+</style>
+</head>
+<body data-dir="a">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></symbol>
+    <symbol id="i-wave" viewBox="0 0 24 24"><path d="M7 12V6.5a1.5 1.5 0 0 1 3 0V11"/><path d="M10 10V5a1.5 1.5 0 0 1 3 0v6"/><path d="M13 10V6.5a1.5 1.5 0 0 1 3 0V13"/><path d="M16 10.5a1.5 1.5 0 0 1 3 0V14a7 7 0 0 1-12.5 4.3L4 15a1.6 1.6 0 0 1 2.4-2.1L7 13.5"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v6a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 14v4M8 20h8"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M3 9h18M12 9v11M12 9c-2-4-6-4-6-1.5S9 9 12 9c3 0 6-.5 6-1.5S14 5 12 9"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6z"/></symbol>
+    <symbol id="i-gavel" viewBox="0 0 24 24"><path d="m14 5 5 5M11 8l5 5M12.5 6.5l-6 6 5 5 6-6M8 15l-5 5"/></symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4v4M9.5 13h.01M14.5 13h.01"/></symbol>
+    <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M7 4h11v13a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-1h11v1a3 3 0 0 0 3 3"/><path d="M7 4v12M10 8h5M10 12h5"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l11-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/></symbol>
+    <symbol id="i-cmd" viewBox="0 0 24 24"><path d="m5 8 4 4-4 4M12 17h7"/></symbol>
+    <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.5 5.5a4 4 0 0 0 5 5L12 18a2.1 2.1 0 0 1-3-3z"/><path d="m4 20 3.5-3.5"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+</svg>
+
+<div class="shell" id="console">
+    <aside class="side">
+        <a class="brand" href="#" onclick="showHome(); return false" title="回到主页">
+            <img src="/files/bot-avatar-96.webp" alt="">小凛 RinBot
+            <span class="home"><svg class="icon" style="width:14px;height:14px"><use href="#i-home"/></svg>主页</span>
+        </a>
+        <button class="switch" type="button">
+            <span class="g-icon">超</span>
+            <span class="switch-text"><b>超级无敌长的服务器名字 Super Long Community</b><small>12,873 位成员</small></span>
+            <svg class="icon" style="width:16px;height:16px;color:var(--muted)"><use href="#i-chev"/></svg>
+        </button>
+        <button class="search" type="button"><svg class="icon"><use href="#i-search"/></svg>搜索设置<kbd>Ctrl K</kbd></button>
+        <nav class="nav">
+            <a data-go="overview" class="on"><svg class="icon"><use href="#i-grid"/></svg>概览</a>
+            <div class="nav-group">社区互动</div>
+            <a data-go="welcome"><svg class="icon"><use href="#i-wave"/></svg>欢迎新成员</a>
+            <a data-go="x"><svg class="icon"><use href="#i-tag"/></svg>领取身份组</a>
+            <a data-go="x"><svg class="icon"><use href="#i-trophy"/></svg>等级系统</a>
+            <a data-go="x"><svg class="icon"><use href="#i-gift"/></svg>抽奖</a>
+            <div class="nav-group">管理与安全</div>
+            <a data-go="automod"><svg class="icon"><use href="#i-shield"/></svg>自动审核</a>
+            <a data-go="x"><svg class="icon"><use href="#i-gavel"/></svg>管理模块</a>
+            <a data-go="x"><svg class="icon"><use href="#i-bot"/></svg>机器人运行日志</a>
+            <a data-go="x"><svg class="icon"><use href="#i-scroll"/></svg>服务器事件日志<span class="warn-dot" title="需要处理"></span></a>
+            <div class="nav-group">音乐与工具</div>
+            <a data-go="x"><svg class="icon"><use href="#i-music"/></svg>音乐</a>
+            <a data-go="x"><svg class="icon"><use href="#i-cmd"/></svg>指令管理</a>
+            <a data-go="x"><svg class="icon"><use href="#i-tool"/></svg>通用工具</a>
+        </nav>
+        <div class="side-foot">
+            <div class="theme">外观<span class="theme-btns"><button data-t="light" aria-pressed="true">日间</button><button data-t="dark" aria-pressed="false">夜间</button></span></div>
+            <div class="user"><img src="/files/bot-avatar-96.webp" alt=""><span>Jack_With_A_Really_Long_Name</span></div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <!-- 概览 -->
+        <section class="view" data-view="overview">
+            <div class="page page--ov">
+                <div class="hero">
+                    <img src="/files/bot-avatar-96.webp" alt="">
+                    <div><h1>小凛在这里值班 1 年 8 个月了</h1><p>12,873 位成员，1,043 位在线，开着 7 个模块</p></div>
+                    <span class="pill">小凛在线</span>
+                </div>
+                <div class="notice"><span><b>服务器事件日志</b>　日志频道被删掉了，记录暂时发不出去</span><a href="#">去选频道</a></div>
+                <div class="body">
+                    <section class="sec">
+                        <header class="sec-head"><h2>社区互动</h2><p>新成员进来、领身份组、聊天升级</p></header>
+                        <div class="mods mods--grid">
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-wave"/></svg></span><span class="mod-text"><b>欢迎新成员</b><small>发到 #welcome-and-rules</small></span><span class="tog on"><i></i></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-tag"/></svg></span><span class="mod-text"><b>领取身份组</b><small>已发出 2 个面板</small></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-trophy"/></svg></span><span class="mod-text"><b>等级系统</b><small>聊天得经验，看排行榜</small></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-gift"/></svg></span><span class="mod-text"><b>抽奖</b><small>进行中 1 场</small></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                        </div>
+                    </section>
+                    <section class="sec">
+                        <header class="sec-head"><h2>管理与安全</h2><p>拦截违规内容，记下发生了什么</p></header>
+                        <div class="mods mods--grid">
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-shield"/></svg></span><span class="mod-text"><b>自动审核</b><small>开着 3 条规则</small></span><span class="tog on"><i></i></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-gavel"/></svg></span><span class="mod-text"><b>管理模块</b><small>记录发到 #mod-log</small></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-bot"/></svg></span><span class="mod-text"><b>机器人运行日志</b><small>发到 #mod-log</small></span><span class="tog on"><i></i></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-scroll"/></svg></span><span class="mod-text"><b>服务器事件日志</b><small class="warn">日志频道被删掉了</small></span><span class="tog on"><i></i></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                        </div>
+                    </section>
+                    <section class="sec">
+                        <header class="sec-head"><h2>音乐与工具</h2><p>放歌、指令开关和常用小工具</p></header>
+                        <div class="mods mods--grid">
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-music"/></svg></span><span class="mod-text"><b>音乐</b><small>DJ 身份组：DJ</small></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-cmd"/></svg></span><span class="mod-text"><b>指令管理</b><small>关掉了 1 条指令</small></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                            <div class="mod"><span class="mod-icon"><svg class="icon"><use href="#i-tool"/></svg></span><span class="mod-text"><b>通用工具</b><small>/status、/avatar、/roll 等</small></span><svg class="icon chev"><use href="#i-chev"/></svg></div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <!-- 自动审核 -->
+        <section class="view" data-view="automod" hidden>
+            <div class="page">
+                <div class="head">
+                    <div class="head-text"><h1>自动审核</h1><p>自动拦下违规内容和刷屏，保护服务器的聊天环境。</p></div>
+                    <span class="tog on">开启<i></i></span>
+                </div>
+                <div class="tabs"><a class="on">规则</a><a>违禁词</a><a>链接白名单</a></div>
+                <div class="body">
+                    <section class="sec">
+                        <header class="sec-head"><h2>日志</h2><p>小凛拦下内容后，把记录发到这个频道。</p></header>
+                        <div class="rows">
+                            <div class="row"><div class="row-text"><div class="row-title">日志频道</div><div class="row-desc">拦截记录发到这里</div></div><span class="select"># mod-log</span></div>
+                        </div>
+                    </section>
+                    <section class="sec">
+                        <header class="sec-head"><h2>反刷屏</h2><p>短时间内发太多消息的成员会被禁言一段时间。</p></header>
+                        <div class="rows">
+                            <div class="row"><div class="row-text"><div class="row-title">启用反刷屏</div><div class="row-desc">刷屏的消息会被删除</div></div><span class="tog on"><i></i></span></div>
+                            <div class="row"><div class="row-text"><div class="row-title">触发条件</div><div class="row-desc">几秒内发几条消息算刷屏</div></div><span class="num"><b>5</b>条 /<b>5</b>秒</span></div>
+                            <div class="row"><div class="row-text"><div class="row-title">禁言多久</div></div><span class="seg"><span>1 分钟</span><span class="on">5 分钟</span><span>1 小时</span><span>1 天</span><span>自定义</span></span></div>
+                        </div>
+                    </section>
+                    <section class="sec">
+                        <header class="sec-head"><h2>其他过滤</h2><p>大写字母、重复消息和一次提到太多人。</p></header>
+                        <div class="rows">
+                            <div class="row"><div class="row-text"><div class="row-title">大写字母过滤</div><div class="row-desc">大写占比超过阈值时删除</div></div><span class="tog"><i></i></span></div>
+                            <div class="row is-off"><div class="row-text"><div class="row-title">大写比例阈值</div><div class="row-desc">先打开上面的开关</div></div><span class="num"><b>70</b>%</span></div>
+                            <div class="row"><div class="row-text"><div class="row-title">重复消息过滤</div><div class="row-desc">连续发同样的消息会被删除</div></div><span class="tog on"><i></i></span></div>
+                            <div class="row"><div class="row-text"><div class="row-title">一次最多提到几个人</div></div><span class="num"><b>5</b>人</span></div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <!-- 欢迎新成员 -->
+        <section class="view" data-view="welcome" hidden>
+            <div class="page page--editor">
+                <div class="head">
+                    <div class="head-text"><h1>欢迎新成员</h1><p>选个频道，写一句欢迎词吧。</p></div>
+                    <span class="tog on">开启<i></i></span>
+                </div>
+                <div class="tabs"><a class="on">欢迎消息</a><a>图卡与外观</a><a>道别消息</a><a>自动身份组</a></div>
+                <div class="body editor">
+                    <div>
+                        <section class="sec">
+                            <header class="sec-head"><h2>发到哪里</h2><p>有人加入服务器时，小凛在这个频道打招呼。</p></header>
+                            <div class="rows">
+                                <div class="row"><div class="row-text"><div class="row-title">欢迎频道</div></div><span class="select"># welcome-and-rules</span></div>
+                            </div>
+                        </section>
+                        <section class="sec">
+                            <header class="sec-head"><h2>欢迎正文</h2><p>可以用变量插入成员和服务器的名字。</p></header>
+                            <div class="rows">
+                                <div class="row" style="display:block">
+                                    <div class="field-label"><span class="row-title">正文</span><a class="link" href="#">用小凛的示例</a></div>
+                                    <div class="textarea">欢迎 {成员} 加入 {服务器}！先去 #规则 看一眼哦。</div>
+                                    <div class="chips"><span>{成员}</span><span>{服务器}</span><span>{人数}</span></div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                    <section class="sec preview-box">
+                        <header class="sec-head"><h2>预览</h2><p>新成员进来时会看到这条消息。</p></header>
+                        <div class="dc">
+                            <div class="dc-top"><img src="/files/bot-avatar-96.webp" alt=""><b>小凛 Rin</b><em>APP</em></div>
+                            <div class="dc-embed">欢迎 <b>@新成员</b> 加入 <b>超级无敌长的服务器名字</b>！先去 #规则 看一眼哦。<img src="/files/welcome-480.webp" alt=""></div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </section>
+
+        <section class="view" data-view="x" hidden>
+            <div class="page"><div class="head"><div class="head-text"><h1>这页没做</h1><p>试装只做了概览、欢迎新成员和自动审核三页，其他页面用同一套骨架。</p></div></div></div>
+        </section>
+    </main>
+</div>
+
+<!-- 主页（宽屏）导航换色示意 -->
+<div class="home-mock" id="home" hidden>
+    <div class="h-rail"><span><img src="/files/bot-avatar-96.webp" alt=""></span><span>＋</span><span><svg class="icon"><use href="#i-grid"/></svg></span></div>
+    <nav class="h-chan">
+        <div class="h-chan-head">小凛的服务器</div>
+        <div class="nav-group">文字频道</div>
+        <a class="on">大厅</a><a>音乐</a><a>欢迎</a><a>管理日志</a><a>控制台</a>
+    </nav>
+    <div class="h-main">
+        <div class="h-nav"><a>EN</a><a href="#" onclick="showConsole(); return false">打开控制台</a><a class="btn">邀请小凛</a></div>
+        <div class="h-hero"><h1>把小凛拉进<br>你的服务器</h1><p>我是小凛，平时在语音频道放歌，有新人进来就发张欢迎卡。有人刷屏发广告，我先删掉，再记到日志里。</p></div>
+    </div>
+    <button class="chip-btn old-toggle" type="button" onclick="this.parentNode.classList.toggle('old'); this.textContent = this.parentNode.classList.contains('old') ? '现在：旧配色（点我看新配色）' : '现在：新配色（点我看旧配色）'">现在：新配色（点我看旧配色）</button>
+</div>
+
+<div class="demo-bar" role="toolbar" aria-label="试装切换">
+    <span>排版方向</span>
+    <button data-dir-set="a" aria-pressed="true">A 平铺列表</button>
+    <button data-dir-set="b" aria-pressed="false">B 左右分栏</button>
+    <button data-dir-set="c" aria-pressed="false">C 整理现状</button>
+    <i></i>
+    <button id="home-btn" aria-pressed="false">主页导航</button>
+</div>
+
+<script>
+const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+$$('.nav a').forEach(a => a.addEventListener('click', e => { e.preventDefault(); $$('.view').forEach(v => v.hidden = v.dataset.view !== a.dataset.go); $$('.nav a').forEach(n => n.classList.toggle('on', n === a)); scrollTo(0, 0); }));
+$$('.mod').forEach(m => m.addEventListener('click', e => {
+    if (e.target.closest('.tog')) return;
+    const name = $('b', m).textContent, link = $$('.nav a').find(a => a.textContent.trim().startsWith(name));
+    link?.click();
+}));
+$$('.tog').forEach(t => t.addEventListener('click', e => { e.stopPropagation(); t.classList.toggle('on'); }));
+$$('.tabs a').forEach(t => t.addEventListener('click', () => { $$('a', t.parentNode).forEach(a => a.classList.toggle('on', a === t)); }));
+$$('[data-dir-set]').forEach(b => b.addEventListener('click', () => {
+    document.body.dataset.dir = b.dataset.dirSet;
+    $$('[data-dir-set]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    showConsole();
+}));
+$$('[data-t]').forEach(b => b.addEventListener('click', () => {
+    document.documentElement.dataset.theme = b.dataset.t;
+    $$('[data-t]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+}));
+function showHome() { $('#console').hidden = true; $('#home').hidden = false; $('#home-btn').setAttribute('aria-pressed', 'true'); scrollTo(0, 0); }
+function showConsole() { $('#console').hidden = false; $('#home').hidden = true; $('#home-btn').setAttribute('aria-pressed', 'false'); }
+$('#home-btn').addEventListener('click', () => $('#home').hidden ? showHome() : showConsole());
+</script>
+</body>
+</html>
