@@ -20,6 +20,7 @@ from urllib.parse import urlparse
 
 from PIL import Image, UnidentifiedImageError
 from config import BOT_TOKEN
+from i18n import tr
 
 try:
     from config import OWNER_ID
@@ -1187,6 +1188,40 @@ def setup_routes(app, discord):
             result.append({k:v for k,v in m.items() if k != "db"} |
                           {"loaded": loaded, "config_state": config_state, "summary": summary})
         return jsonify({"bot_state": state, "updated_at": health["updated_at"], "modules": result})
+
+    _TOGGLE_TABLES = {
+        "welcome": ("DB_WELCOME", "welcome_config"),
+        "automod": ("DB_AUTOMOD", "automod_config"),
+        "botlog": ("DB_BOTLOG", "botlog_config"),
+        "serverlog": ("DB_SERVERLOG", "serverlog_config"),
+    }
+
+    @app.route("/api/guild/<string:gid>/modules/<string:slug>/enabled", methods=["POST"])
+    async def api_guild_module_enabled(gid, slug):
+        """只改 enabled 一列；各模块的保存接口是整份覆盖，不能拿来做快捷开关。"""
+        if not gid.isascii() or not gid.isdigit() or not await check_guild_access(discord, gid):
+            return jsonify({"error": "unauthorized"}), 401
+        if slug not in _TOGGLE_TABLES:
+            return jsonify({"error": "这个模块没有开关"}), 404
+        d = await request.get_json(silent=True)
+        if not isinstance(d, dict) or not isinstance(d.get("enabled"), bool):
+            return jsonify({"error": "enabled 必须是 true 或 false"}), 400
+        g = int(gid)
+        db_name, table = _TOGGLE_TABLES[slug]
+        try:
+            async with aiosqlite.connect(globals()[db_name]) as db:
+                await db.execute(f"INSERT OR IGNORE INTO {table} (guild_id) VALUES (?)", (g,))
+                await db.execute(f"UPDATE {table} SET enabled=? WHERE guild_id=?", (1 if d["enabled"] else 0, g))
+                await db.commit()
+        except Exception:
+            print(f"[api_guild_module_enabled] {traceback.format_exc()}")
+            return jsonify({"error": "保存失败，请稍后再试"}), 500
+        await _notify_bot(slug, g)
+        name = next(m["name"] for m in MODULES if m["slug"] == slug)
+        state = tr("common.enabled" if d["enabled"] else "common.disabled")
+        audit(g, tr("audit.module_toggled", module=name, state=state),
+              **{"操作者": await _resolve_actor(discord)})
+        return jsonify({"ok": True, "config_state": await _guild_module_config(slug, g)})
 
     @app.route("/api/stats")
     async def api_stats():

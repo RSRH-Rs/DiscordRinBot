@@ -115,6 +115,45 @@ class DashboardStatusTests(unittest.IsolatedAsyncioTestCase):
             data=await (await self.client.get('/api/guild/123/modules')).get_json()
         self.assertTrue(all(m['summary']=={'x':1} for m in data['modules']))
 
+    def toggle_patches(self, path, access=True):
+        notify=AsyncMock()
+        stack=[patch.object(routes,'DB_WELCOME',path),patch.object(routes,'check_guild_access',AsyncMock(return_value=access)),
+               patch.object(routes,'_notify_bot',notify),patch.object(routes,'audit',lambda *a,**k:None),
+               patch.object(routes,'_resolve_actor',AsyncMock(return_value='测试'))]
+        for p in stack:p.start();self.addCleanup(p.stop)
+        return notify
+
+    async def test_toggle_only_changes_enabled(self):
+        path=self.make_db('welcome.db',"CREATE TABLE welcome_config (guild_id INTEGER PRIMARY KEY, welcome_channel INTEGER DEFAULT 0, farewell_channel INTEGER DEFAULT 0, auto_roles TEXT DEFAULT '', welcome_msg TEXT DEFAULT '默认', enabled INTEGER DEFAULT 1)",[(123,777,0,'',  '自定义',1)])
+        notify=self.toggle_patches(path)
+        response=await self.client.post('/api/guild/123/modules/welcome/enabled',json={'enabled':False})
+        self.assertEqual(response.status_code,200)
+        self.assertEqual((await response.get_json())['config_state'],'disabled')
+        with sqlite3.connect(path) as db:
+            row=db.execute('SELECT welcome_msg,welcome_channel,enabled FROM welcome_config WHERE guild_id=123').fetchone()
+        db.close()
+        self.assertEqual(row,('自定义',777,0))
+        notify.assert_awaited_once_with('welcome',123)
+
+    async def test_toggle_creates_row_when_missing(self):
+        path=self.make_db('welcome.db',"CREATE TABLE welcome_config (guild_id INTEGER PRIMARY KEY, welcome_channel INTEGER DEFAULT 0, welcome_msg TEXT DEFAULT '默认', enabled INTEGER DEFAULT 0)",[])
+        self.toggle_patches(path)
+        response=await self.client.post('/api/guild/123/modules/welcome/enabled',json={'enabled':True})
+        self.assertEqual(response.status_code,200)
+        with sqlite3.connect(path) as db:
+            row=db.execute('SELECT welcome_msg,enabled FROM welcome_config WHERE guild_id=123').fetchone()
+        db.close()
+        self.assertEqual(row,('默认',1))
+
+    async def test_toggle_rejects(self):
+        path=self.make_db('welcome.db','CREATE TABLE welcome_config (guild_id INTEGER PRIMARY KEY, enabled INTEGER DEFAULT 1)',[])
+        self.toggle_patches(path,access=False)
+        self.assertEqual((await self.client.post('/api/guild/123/modules/welcome/enabled',json={'enabled':True})).status_code,401)
+        routes.check_guild_access.return_value=True
+        self.assertEqual((await self.client.post('/api/guild/123/modules/music/enabled',json={'enabled':True})).status_code,404)
+        for body in ({'enabled':'yes'},[]):
+            self.assertEqual((await self.client.post('/api/guild/123/modules/welcome/enabled',json=body)).status_code,400)
+
     def test_manageable_guilds_filters_and_orders(self):
         guilds=[SimpleNamespace(id='1',permissions=0x20),SimpleNamespace(id='2',owner=True,permissions=0),
                 SimpleNamespace(id='3',permissions=0x8),SimpleNamespace(id='4',permissions=0)]

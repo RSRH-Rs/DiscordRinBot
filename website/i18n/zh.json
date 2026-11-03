@@ -29,6 +29,9 @@
     "blocked": "先保存或重置哦",
     "save_failed": "没保存上：{reason}"
   },
+  "audit": {
+    "module_toggled": "{module}已{state}"
+  },
   "toast": {
     "saved": "已保存"
   },
