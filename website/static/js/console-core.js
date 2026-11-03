@@ -169,7 +169,7 @@ window.Console = (() => {
         const home = slug === 'overview';
         const group = el('crumb-group'); if (group) { group.hidden = home || !page?.dataset.group; group.textContent = page?.dataset.group || ''; }
         const current = el('crumb-current'); if (current) { current.hidden = home; current.textContent = name; }
-        document.title = tr('title.page', {page: name, guild: document.body?.dataset.guildName || ''});
+        document.title = tr('title.page', {page: name, guild: document.body?.dataset.currentGuild || ''});
         const heading = page?.querySelector('h2');
         if (heading && !initial) { heading.tabIndex = -1; heading.focus({preventScroll: true}); }
         el('main')?.scrollTo(0, 0);
@@ -183,7 +183,7 @@ window.Console = (() => {
         const panels = [...page.querySelectorAll('[data-panel]')]; if (!panels.length) return null;
         const active = panels.find(p => p.dataset.panel === tab) || panels[0];
         panels.forEach(p => { p.hidden = p !== active; });
-        page.querySelectorAll('[data-tab]').forEach(t => {
+        page.querySelectorAll('[role="tab"][data-tab]').forEach(t => {
             const on = t.dataset.tab === active.dataset.panel;
             t.setAttribute('aria-selected', String(on));
             t.tabIndex = on ? 0 : -1;
@@ -193,7 +193,7 @@ window.Console = (() => {
     // A dot on every tab whose panel holds unsaved changes.
     function markTabs() {
         document.querySelectorAll('.page[data-slug]').forEach(page => {
-            page.querySelectorAll('[data-tab]').forEach(tab => {
+            page.querySelectorAll('[role="tab"][data-tab]').forEach(tab => {
                 const panel = page.querySelector(`[data-panel="${tab.dataset.tab}"]`), dot = tab.querySelector('.tab-dot');
                 if (dot) dot.hidden = !DashboardUI.changedWithin(page, panel);
             });

@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/console.css') }}?v=20261103a">
     {% block head %}{% endblock %}
 </head>
-<body data-guild-name="{{ current_guild.name if current_guild else '' }}">
+<body data-current-guild="{{ current_guild.name if current_guild else '' }}">
 <div class="shell" id="shell">
     <aside class="sidebar" id="sideNav">
         <div class="switcher" id="switcher">

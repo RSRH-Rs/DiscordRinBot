@@ -10,7 +10,7 @@ window.CommandPalette = (() => {
         for (const page of pages) {
             const {slug, title} = page.dataset, where = page.dataset.group || tr('nav.overview');
             add({label: title, where, slug, tab: null, row: null});
-            page.querySelectorAll('[data-tab]').forEach(tab => add({label: `${title} › ${tab.dataset.label}`, where, slug, tab: tab.dataset.tab, row: null}));
+            page.querySelectorAll('[role="tab"][data-tab]').forEach(tab => add({label: `${title} › ${tab.dataset.label}`, where, slug, tab: tab.dataset.tab, row: null}));
             page.querySelectorAll('.row-title').forEach(row => add({label: `${title} › ${row.textContent.trim()}`, where, slug,
                 tab: row.closest('[data-panel]')?.dataset.panel ?? null, row}));
         }
@@ -64,6 +64,7 @@ window.CommandPalette = (() => {
     function jump(entry) {
         close();
         if (!Console.go(entry.slug, entry.tab)) return false;
+        DashboardUI.closeSidebar?.(false);
         const row = entry.row?.closest('.row');
         if (row) {
             row.scrollIntoView({block: 'center'});

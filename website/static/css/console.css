@@ -57,8 +57,8 @@
     --warn-soft: #33270F;
     --bad: #FF8A80;
     --bad-soft: #3A1715;
-    --cur: #26262C;
-    --hover: #1E1E23;
+    --cur: #303038;
+    --hover: #28282F;
     --bar: #EDEDF0;
     --bar-text: #18181B;
     --scrim: rgba(0, 0, 0, .55);
@@ -87,8 +87,8 @@
         --warn-soft: #33270F;
         --bad: #FF8A80;
         --bad-soft: #3A1715;
-        --cur: #26262C;
-        --hover: #1E1E23;
+        --cur: #303038;
+        --hover: #28282F;
         --bar: #EDEDF0;
         --bar-text: #18181B;
         --scrim: rgba(0, 0, 0, .55);
@@ -178,7 +178,7 @@ img { max-width: 100%; }
 .user-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .user-name { flex: 1; min-width: 0; color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-logout { display: flex; padding: 6px; border-radius: 6px; color: var(--muted); }
-.user-logout:hover { background: var(--side); color: var(--text); }
+.user-logout:hover { background: var(--hover); color: var(--text); }
 
 .main { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
 .topbar {
@@ -190,6 +190,7 @@ img { max-width: 100%; }
     gap: 12px;
     min-height: 56px;
     padding: 8px 32px;
+    background: var(--bg);
     background: color-mix(in srgb, var(--bg) 88%, transparent);
     backdrop-filter: blur(10px);
     border-bottom: 1px solid var(--line);

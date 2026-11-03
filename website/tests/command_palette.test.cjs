@@ -18,19 +18,20 @@ function automodPage() {
     const rowTitle = text => ({textContent: text, closest: sel => sel === '[data-panel]' ? {dataset: {panel: 'words'}} : sel === '.row' ? rowBox : null});
     const titles = [rowTitle(' 违禁词列表 '), rowTitle('违禁词')];
     const tabs = [{dataset: {tab: 'rules', label: '规则'}}, {dataset: {tab: 'words', label: '违禁词'}}];
+    const emojiButton = {dataset: {tab: 'custom'}};
     const page = {dataset: {slug: 'automod', title: '自动审核', group: '管理与安全'},
-        querySelectorAll: sel => sel === '[data-tab]' ? tabs : sel === '.row-title' ? titles : []};
+        querySelectorAll: sel => sel === '[role="tab"][data-tab]' ? tabs : sel === '[data-tab]' ? [...tabs, emojiButton] : sel === '.row-title' ? titles : []};
     const overview = {dataset: {slug: 'overview', title: '概览', group: ''}, querySelectorAll: () => []};
     return {pages: [overview, page], rowBox};
 }
 function palette({go = () => true} = {}) {
-    const listeners = {}, timers = [], calls = {go: []};
+    const listeners = {}, timers = [], calls = {go: [], drawer: []};
     const {pages, rowBox} = automodPage();
     const nodes = {palette: el({hidden: true}), 'palette-input': el(), 'palette-list': el(), 'palette-btn': el()};
     const ctx = vm.createContext({
         document: {getElementById: id => nodes[id] || null, querySelectorAll: sel => sel === '.page[data-slug]' ? pages : [],
             addEventListener(type, fn) { (listeners[type] ||= []).push(fn); }, createElement: tag => el({tagName: tag}), activeElement: null},
-        DashboardUI: {tr: key => ({'nav.overview': '概览', 'palette.empty': '没有找到'})[key] || key},
+        DashboardUI: {tr: key => ({'nav.overview': '概览', 'palette.empty': '没有找到'})[key] || key, closeSidebar: (...args) => calls.drawer.push(args)},
         DashboardExtras: {matches: (text, query) => text.toLowerCase().includes(query.trim().toLowerCase())},
         Console: {go: (...args) => { calls.go.push(args); return go(...args); }},
         setTimeout: (fn, ms) => { timers.push([fn, ms]); return timers.length; },
@@ -97,6 +98,7 @@ test('jump navigates to the tab and flashes the row', () => {
     assert.equal(rowBox.scrolled, true);
     assert.equal(rowBox.classList.contains('is-flash'), true);
     assert.equal(timers[0][1], 1000);
+    assert.deepEqual(plain(calls.drawer), [[false]]);
     timers[0][0]();
     assert.equal(rowBox.classList.contains('is-flash'), false);
 });

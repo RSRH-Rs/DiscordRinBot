@@ -99,6 +99,26 @@ class DashboardTemplateTests(unittest.TestCase):
         for name in ['dashboard.html','server.html','settings.html','login_gate.html','error.html']:
             yield name,self.render(name)[0]
 
+    def test_only_server_cards_carry_data_guild_name(self):
+        # serverSearch() filters every [data-guild-name] element; anything else carrying it gets hidden.
+        for name in ['dashboard.html','server.html','settings.html']:
+            html,_=self.render(name)
+            tags=re.findall(r'<([a-z]+)[^>]*\sdata-guild-name=',html)
+            self.assertEqual(set(tags)-{'a'},set(),name)
+            self.assertNotIn('<body data-guild-name',html,name)
+
+    def test_page_heads_wrap_title_and_intro(self):
+        for name in ['server.html','settings.html']:
+            html,_=self.render(name)
+            for head in re.findall(r'<div class="page-head">\s*<[^>]+>',html):
+                self.assertIn('class="page-head-text"',head,name)
+
+    def test_topbar_has_a_plain_background_before_color_mix(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        body=re.search(r'\.topbar\s*\{([^}]*)\}',css).group(1)
+        self.assertIn('background: var(--bg);',body)
+        self.assertLess(body.index('background: var(--bg);'),body.index('color-mix('))
+
     def test_overview_cards(self):
         html,_=self.render('server.html')
         start=html.index('id="pg-overview"');ov=html[start:html.index('</section>',start)]
@@ -188,7 +208,7 @@ class DashboardTemplateTests(unittest.TestCase):
         sections=re.findall(r'<section class="page[^>]*>',html)
         self.assertEqual(len(sections),12)
         for tag in sections:self.assertIn('data-group=',tag)
-        self.assertIn('<body data-guild-name="小凛 &lt;img src=x&gt;"',html)
+        self.assertIn('<body data-current-guild="小凛 &lt;img src=x&gt;"',html)
 
     def test_every_page_boots_theme_before_styles(self):
         for name,html in self.render_all():

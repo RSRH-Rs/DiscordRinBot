@@ -59,6 +59,12 @@ class ConsoleContrastTests(unittest.TestCase):
                 with self.subTest(palette=label, fg=fg, bg=bg):
                     self.assertGreaterEqual(ratio(self.color(palette, fg), self.color(palette, bg)), 3.0)
 
+    def test_hover_is_visible_on_panels_and_fields(self):
+        for label, palette in self.palettes():
+            for surface in ['panel', 'field', 'side']:
+                with self.subTest(palette=label, surface=surface):
+                    self.assertGreaterEqual(ratio(self.color(palette, 'hover'), self.color(palette, surface)), 1.08)
+
     def test_system_dark_matches_manual_dark(self):
         self.assertEqual(self.system_dark, self.dark)
 

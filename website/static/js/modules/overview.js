@@ -139,7 +139,9 @@ window.Overview = (() => {
             row.querySelector('[data-state]').textContent = Console.stateLabel(m);
         }
         rendered = true;
-        el('ov-modules')?.setAttribute('aria-busy', 'false');
+        const grid = el('ov-modules'), error = el('ov-error');
+        if (grid) { grid.hidden = false; grid.setAttribute('aria-busy', 'false'); }
+        if (error) error.hidden = true;
     }
 
     // Only the very first load can fail visibly; later polling failures keep the cards that already loaded.

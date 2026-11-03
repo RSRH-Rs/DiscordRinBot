@@ -17,7 +17,7 @@
 
 {% block content %}
 <section class="settings-panel" data-settings-panel="runtime" aria-labelledby="settings-runtime-title">
-    <div class="page-head"><h2 id="settings-runtime-title" tabindex="-1">{{ tr('settings.runtime.title') }}</h2></div>
+    <div class="page-head"><div class="page-head-text"><h2 id="settings-runtime-title" tabindex="-1">{{ tr('settings.runtime.title') }}</h2></div></div>
     <div class="section">
         <div class="section-head">
             <div id="health-status"><span class="bot-status" data-state="unknown">{{ tr('settings.runtime.loading') }}</span></div>
@@ -30,7 +30,7 @@
 </section>
 
 <section class="settings-panel" data-settings-panel="profile" aria-labelledby="settings-profile-title">
-    <div class="page-head"><h2 id="settings-profile-title" tabindex="-1">{{ tr('settings.profile.title') }}</h2><p>{{ tr('settings.profile.intro') }}</p></div>
+    <div class="page-head"><div class="page-head-text"><h2 id="settings-profile-title" tabindex="-1">{{ tr('settings.profile.title') }}</h2><p>{{ tr('settings.profile.intro') }}</p></div></div>
 
     <div class="section" id="draft-profile" data-draft data-draft-inline>
         <h3 class="section-title">{{ tr('settings.profile.activity') }}</h3>
@@ -88,7 +88,7 @@
 </section>
 
 <section class="settings-panel" data-settings-panel="admin" aria-labelledby="settings-admin-title">
-    <div class="page-head"><h2 id="settings-admin-title" tabindex="-1">{{ tr('settings.tab.admin') }}</h2></div>
+    <div class="page-head"><div class="page-head-text"><h2 id="settings-admin-title" tabindex="-1">{{ tr('settings.tab.admin') }}</h2></div></div>
     <p class="note note--warn">{{ icon('triangle-alert') }}<span>{{ tr('settings.admin.warning') }}</span></p>
 
     <div class="section" id="draft-announce" data-draft data-draft-inline>

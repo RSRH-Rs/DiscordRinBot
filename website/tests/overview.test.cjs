@@ -186,3 +186,13 @@ test('a later failure keeps the cards that already loaded', async () => {
     assert.equal(nodes['ov-modules'].hidden, false);
 });
 
+test('a successful poll after a failed first load brings the cards back', async () => {
+    const {nodes, cards} = overviewPage();
+    const {Overview, fire} = overview({nodes, cards});
+    fire('DOMContentLoaded');
+    fire('console:modules-failed', Error('500'));
+    await Overview.render(modulesData(1));
+    assert.equal(nodes['ov-error'].hidden, true);
+    assert.equal(nodes['ov-modules'].hidden, false);
+});
+
