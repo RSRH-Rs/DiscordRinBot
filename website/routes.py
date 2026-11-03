@@ -342,6 +342,54 @@ async def _guild_module_config(slug: str, gid: int) -> str:
         return "unknown"
 
 
+def _row_summary(*fields):
+    return lambda row: {name: int(row[column] or 0) for name, column in fields}
+
+
+_AUTOMOD_RULES = ("anti_spam", "anti_badword", "anti_link", "anti_caps", "anti_repeat")
+# slug → (DB 常量名, SQL, 行 → 摘要)；DB 常量在调用时读取，测试可以替换
+_SUMMARY_SPECS = {
+    "welcome": ("DB_WELCOME", "SELECT * FROM welcome_config WHERE guild_id=?",
+                lambda row: {"welcome_channel": int(row["welcome_channel"] or 0),
+                             "farewell_channel": int(row["farewell_channel"] or 0),
+                             "auto_roles_count": len([x for x in str(row["auto_roles"] or "").split(",") if x])}),
+    "automod": ("DB_AUTOMOD", "SELECT * FROM automod_config WHERE guild_id=?",
+                lambda row: {"log_channel": int(row["log_channel"] or 0),
+                             "rules_on": sum(1 for rule in _AUTOMOD_RULES if row[rule])}),
+    "moderation": ("DB_MODERATION", "SELECT * FROM mod_config WHERE guild_id=?",
+                   _row_summary(("log_channel", "log_channel"), ("mute_at", "warn_mute_threshold"),
+                                ("kick_at", "warn_kick_threshold"), ("ban_at", "warn_ban_threshold"))),
+    "music": ("DB_MUSIC", "SELECT * FROM music_config WHERE guild_id=?",
+              _row_summary(("notify_channel", "notify_channel"), ("dj_role", "dj_role"))),
+    "botlog": ("DB_BOTLOG", "SELECT * FROM botlog_config WHERE guild_id=?",
+               _row_summary(("channel_id", "channel_id"))),
+    "serverlog": ("DB_SERVERLOG", "SELECT * FROM serverlog_config WHERE guild_id=?",
+                  _row_summary(("channel_id", "channel_id"))),
+    "roles": ("DB_RR", "SELECT COUNT(*) AS n FROM rr_panels WHERE guild_id=?",
+              lambda row: {"panels": int(row["n"])}),
+    "giveaway": ("DB_GIVEAWAY", "SELECT COUNT(*) AS n FROM giveaways WHERE guild_id=? AND ended=0",
+                 lambda row: {"active": int(row["n"])}),
+}
+
+
+async def _guild_module_summary(slug: str, gid: int):
+    """概览用的配置摘要；只读本地数据库，读不到就返回 None。"""
+    spec = _SUMMARY_SPECS.get(slug)
+    if spec is None:
+        return None
+    filename = globals()[spec[0]]
+    if not os.path.isfile(filename):
+        return None
+    try:
+        uri = Path(filename).resolve().as_uri() + "?mode=ro"
+        async with aiosqlite.connect(uri, uri=True, timeout=2) as db:
+            db.row_factory = aiosqlite.Row
+            row = await (await db.execute(spec[1], (gid,))).fetchone()
+        return spec[2](row) if row is not None else None
+    except (aiosqlite.Error, OSError, ValueError, KeyError, IndexError, TypeError):
+        return None
+
+
 async def ensure_tables():
     """Bot 可能还没跑过，先建好所有表"""
     await storage.enable_wal()
@@ -1128,13 +1176,16 @@ def setup_routes(app, discord):
         state = health["state"]
         if isinstance(health["guild_ids"], list) and gid not in health["guild_ids"]:
             state = "not_joined"
-        configs = await asyncio.gather(*(_guild_module_config(m["slug"], int(gid)) for m in MODULES))
+        configs, summaries = await asyncio.gather(
+            asyncio.gather(*(_guild_module_config(m["slug"], int(gid)) for m in MODULES)),
+            asyncio.gather(*(_guild_module_summary(m["slug"], int(gid)) for m in MODULES)),
+        )
         result = []
-        for m, config_state in zip(MODULES, configs):
+        for m, config_state, summary in zip(MODULES, configs, summaries):
             loaded = (_MODULE_COGS[m["slug"]] in health["cogs"]
                       if health["cogs"] is not None else None)
             result.append({k:v for k,v in m.items() if k != "db"} |
-                          {"loaded": loaded, "config_state": config_state})
+                          {"loaded": loaded, "config_state": config_state, "summary": summary})
         return jsonify({"bot_state": state, "updated_at": health["updated_at"], "modules": result})
 
     @app.route("/api/stats")

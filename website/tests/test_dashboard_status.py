@@ -72,6 +72,49 @@ class DashboardStatusTests(unittest.IsolatedAsyncioTestCase):
         with patch.object(routes,'check_guild_access',AsyncMock(return_value=False)):
             self.assertEqual((await self.client.get('/api/guild/123/modules')).status_code,401)
 
+    def make_db(self, name, ddl, rows):
+        path=self.root/name
+        with sqlite3.connect(path) as db:
+            db.execute(ddl)
+            if rows:
+                marks=','.join('?'*len(rows[0]))
+                db.executemany(f'INSERT INTO {ddl.split()[2]} VALUES ({marks})',rows)
+        db.close()
+        return str(path)
+
+    async def test_summary_welcome(self):
+        path=self.make_db('welcome.db','CREATE TABLE welcome_config (guild_id INTEGER, welcome_channel INTEGER, farewell_channel INTEGER, auto_roles TEXT)',[(123,777,0,'1,2,')])
+        with patch.object(routes,'DB_WELCOME',path):
+            self.assertEqual(await routes._guild_module_summary('welcome',123),{'welcome_channel':777,'farewell_channel':0,'auto_roles_count':2})
+            self.assertIsNone(await routes._guild_module_summary('welcome',999))
+
+    async def test_summary_automod_counts_rules(self):
+        path=self.make_db('automod.db','CREATE TABLE automod_config (guild_id INTEGER, log_channel INTEGER, anti_spam INTEGER, anti_badword INTEGER, anti_link INTEGER, anti_caps INTEGER, anti_repeat INTEGER)',[(123,5,1,0,1,0,1)])
+        with patch.object(routes,'DB_AUTOMOD',path):
+            self.assertEqual(await routes._guild_module_summary('automod',123),{'log_channel':5,'rules_on':3})
+
+    async def test_summary_counts_panels_and_active_giveaways(self):
+        rr=self.make_db('rr.db','CREATE TABLE rr_panels (message_id INTEGER, guild_id INTEGER)',[(1,123),(2,123),(3,456)])
+        gw=self.make_db('gw.db','CREATE TABLE giveaways (id INTEGER, guild_id INTEGER, ended INTEGER)',[(1,123,0),(2,123,1)])
+        with patch.object(routes,'DB_RR',rr),patch.object(routes,'DB_GIVEAWAY',gw):
+            self.assertEqual(await routes._guild_module_summary('roles',123),{'panels':2})
+            self.assertEqual(await routes._guild_module_summary('giveaway',123),{'active':1})
+            self.assertEqual(await routes._guild_module_summary('roles',999),{'panels':0})
+
+    async def test_summary_missing_db_and_broken_db_are_none(self):
+        missing=self.root/'missing.db'
+        broken=self.root/'broken.db';broken.write_bytes(b'not a database')
+        with patch.object(routes,'DB_MUSIC',str(missing)),patch.object(routes,'DB_BOTLOG',str(broken)):
+            self.assertIsNone(await routes._guild_module_summary('music',123))
+            self.assertIsNone(await routes._guild_module_summary('botlog',123))
+            self.assertIsNone(await routes._guild_module_summary('leveling',123))
+        self.assertFalse(missing.exists())
+
+    async def test_modules_endpoint_includes_summary(self):
+        with patch.object(routes,'check_guild_access',AsyncMock(return_value=True)),patch.object(routes,'_guild_module_config',AsyncMock(return_value='configured')),patch.object(routes,'_guild_module_summary',AsyncMock(return_value={'x':1})):
+            data=await (await self.client.get('/api/guild/123/modules')).get_json()
+        self.assertTrue(all(m['summary']=={'x':1} for m in data['modules']))
+
     def test_manageable_guilds_filters_and_orders(self):
         guilds=[SimpleNamespace(id='1',permissions=0x20),SimpleNamespace(id='2',owner=True,permissions=0),
                 SimpleNamespace(id='3',permissions=0x8),SimpleNamespace(id='4',permissions=0)]
