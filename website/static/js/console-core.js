@@ -120,6 +120,10 @@ window.Console = (() => {
             if (!row.dataset.dependsReady) { row.dataset.dependsReady = 'true'; source.addEventListener('change', () => dependencies(root)); }
             apply();
         });
+        root.querySelectorAll('[data-master-hint]').forEach(hint => {
+            const source = el(hint.dataset.masterHint);
+            if (source) hint.hidden = source.checked;
+        });
     }
 
     /* ── Module pages ── */

@@ -60,7 +60,8 @@
     "request_failed": "请求失败（{status}）",
     "not_set": "— 未设置 —",
     "no_limit": "— 不限制 —",
-    "optional": "可选"
+    "optional": "可选",
+    "master_hint": "先打开右上角的开关，下面的设置才会生效。"
   },
   "title": {
     "page": "{page} · {guild}"
@@ -315,6 +316,12 @@
       "clear_confirm": "要清除这张自定义图片吗？",
       "cleared": "图片已清除",
       "clear_failed": "清除失败：{reason}"
+    },
+    "tab": {
+      "message": "欢迎消息",
+      "appearance": "图卡与外观",
+      "farewell": "道别消息",
+      "autoroles": "自动身份组"
     }
   },
   "roles": {
@@ -390,7 +397,12 @@
     "repeat": "重复消息过滤",
     "repeat_hint": "连续发同样的消息达到次数时删除",
     "repeat_threshold": "连续次数",
-    "times": "次"
+    "times": "次",
+    "tab": {
+      "rules": "规则",
+      "words": "违禁词",
+      "links": "链接白名单"
+    }
   },
   "moderation": {
     "intro": "踢出、封禁、禁言、警告和清理消息，一整套管理指令。",

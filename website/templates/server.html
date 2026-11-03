@@ -1,5 +1,5 @@
 {%- extends '_console_base.html' -%}
-{%- from '_console_macros.html' import icon, nav_item, row, toggle, upload -%}
+{%- from '_console_macros.html' import icon, nav_item, row, toggle, upload, page_head, tabs, tab_panel -%}
 {%- set active_guild_id = guild.id -%}
 {%- set module_groups = [
     ('community', [('welcome', 'smile-plus'), ('roles', 'tags'), ('leveling', 'trophy'), ('giveaway', 'gift')]),
@@ -27,7 +27,7 @@
 {% block topbar_end %}<span class="bot-status" data-bot-status data-state="unknown" role="status">{{ tr('status.unknown') }}</span>{% endblock %}
 
 {% block content %}
-<section class="page" id="pg-overview" data-slug="overview" data-group="" data-title="{{ tr('nav.overview') }}">
+<section class="page page--wide" id="pg-overview" data-slug="overview" data-group="" data-title="{{ tr('nav.overview') }}">
     <div class="duty-card">
         <img src="{{ url_for('static', filename='images/rin/manage-480.webp') }}" alt="" width="120" height="120">
         <div class="duty-text">
@@ -61,58 +61,54 @@
 </section>
 
 <section class="page" id="pg-music" data-slug="music" data-group="{{ tr('nav.group.tools') }}" data-title="{{ tr('nav.module.music') }}" data-draft>
-    <div class="page-head"><h2>{{ tr('nav.module.music') }}</h2><p>{{ tr('music.intro') }}</p></div>
+    {{ page_head(tr('nav.module.music'), tr('music.intro')) }}
     <div class="list">
         {% call row(tr('music.dj'), tr('music.dj_hint'), 'mu-dj') %}<select class="select" id="mu-dj" data-search="{{ tr('music.dj') }}"><option value="0">{{ tr('common.no_limit') }}</option></select>{% endcall %}
         {% call row(tr('music.notify'), tr('music.notify_hint'), 'mu-ch') %}<select class="select" id="mu-ch" data-search="{{ tr('music.notify') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
     </div>
 </section>
 
-<section class="page" id="pg-welcome" data-slug="welcome" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.welcome') }}" data-draft>
-    <div class="page-head"><h2>{{ tr('nav.module.welcome') }}</h2><p>{{ tr('welcome.intro') }}</p></div>
+<section class="page page--wide" id="pg-welcome" data-slug="welcome" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.welcome') }}" data-draft>
+    {{ page_head(tr('nav.module.welcome'), tr('welcome.intro'), 'w-enabled', tr('welcome.enabled')) }}
+    {{ tabs('welcome', [('message', tr('welcome.tab.message')), ('appearance', tr('welcome.tab.appearance')), ('farewell', tr('welcome.tab.farewell')), ('autoroles', tr('welcome.tab.autoroles'))]) }}
     <div class="editor">
         <div class="editor-form">
+            {% call tab_panel('welcome', 'message') %}
             <div class="list">
-                {% call row(tr('welcome.enabled'), tr('welcome.enabled_hint'), 'w-enabled', cls='row--switch') %}{{ toggle('w-enabled', tr('welcome.enabled')) }}{% endcall %}
                 {% call row(tr('welcome.channel'), None, 'w-ch', depends='w-enabled') %}<select class="select" id="w-ch" data-search="{{ tr('welcome.channel') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
                 <div class="row row--block" data-depends-on="w-enabled">
                     <div class="row-text row-text--split"><label class="row-title" for="w-msg">{{ tr('welcome.message') }}</label><span data-sample-slot="welcome"></span></div>
                     <textarea class="textarea" id="w-msg" placeholder="{{ tr('welcome.message_placeholder') }}"></textarea>
                 </div>
             </div>
-
-            <details class="fold" id="welcome-appearance">
-                <summary>{{ tr('welcome.appearance') }} <span class="fold-hint">{{ tr('common.optional') }}</span><span class="fold-state" data-optional-status="appearance"></span></summary>
-                <div class="list">
-                    {% call row(tr('welcome.title'), None, 'w-title', block=True) %}<input class="input" id="w-title" maxlength="200" placeholder="{{ tr('welcome.title_placeholder') }}">{% endcall %}
-                    {% call row(tr('welcome.thumb'), tr('welcome.thumb_hint'), 'w-thumb', block=True) %}<input class="input" id="w-thumb" placeholder="%avatar%">{% endcall %}
-                    {{ upload('welcome') }}
-                    {% call row(tr('welcome.image_url'), tr('welcome.image_url_hint'), 'w-image', block=True) %}<input class="input" id="w-image" placeholder="{{ tr('welcome.image_url_placeholder') }}">{% endcall %}
-                    {% call row(tr('welcome.card'), tr('welcome.card_hint'), 'w-card', cls='row--switch') %}{{ toggle('w-card', tr('welcome.card')) }}{% endcall %}
+            {% endcall %}
+            {% call tab_panel('welcome', 'appearance') %}
+                        <div class="list">
+                {% call row(tr('welcome.title'), None, 'w-title', block=True) %}<input class="input" id="w-title" maxlength="200" placeholder="{{ tr('welcome.title_placeholder') }}">{% endcall %}
+                {% call row(tr('welcome.thumb'), tr('welcome.thumb_hint'), 'w-thumb', block=True) %}<input class="input" id="w-thumb" placeholder="%avatar%">{% endcall %}
+                {{ upload('welcome') }}
+                {% call row(tr('welcome.image_url'), tr('welcome.image_url_hint'), 'w-image', block=True) %}<input class="input" id="w-image" placeholder="{{ tr('welcome.image_url_placeholder') }}">{% endcall %}
+                {% call row(tr('welcome.card'), tr('welcome.card_hint'), 'w-card', cls='row--switch') %}{{ toggle('w-card', tr('welcome.card')) }}{% endcall %}
+            </div>
+            {% endcall %}
+            {% call tab_panel('welcome', 'farewell') %}
+                        <div class="list">
+                {% call row(tr('welcome.farewell_channel'), tr('welcome.farewell_channel_hint'), 'w-fch') %}<select class="select" id="w-fch" data-search="{{ tr('welcome.farewell_channel') }}"><option value="0">{{ tr('welcome.farewell_off') }}</option></select>{% endcall %}
+                {% call row(tr('welcome.farewell_message'), None, 'w-fmsg', block=True) %}<textarea class="textarea" id="w-fmsg" placeholder="{{ tr('welcome.farewell_placeholder') }}"></textarea>{% endcall %}
+                {{ upload('farewell') }}
+            </div>
+            {% endcall %}
+            {% call tab_panel('welcome', 'autoroles') %}
+                        <div class="list">
+                <div class="row row--block">
+                    <div class="row-text"><span class="row-hint">{{ tr('welcome.autoroles_hint') }}</span></div>
+                    <input type="search" class="input" id="w-roles-search" placeholder="{{ tr('welcome.roles_search') }}" aria-label="{{ tr('welcome.roles_search') }}" data-draft-ignore>
+                    <span class="search-feedback" id="w-roles-result" role="status"></span>
+                    <div class="check-list" id="w-roles"></div>
+                    <p class="note note--warn">{{ icon('triangle-alert') }}<span>{{ tr('roles.position_note') }}</span></p>
                 </div>
-            </details>
-
-            <details class="fold" id="welcome-farewell">
-                <summary>{{ tr('welcome.farewell') }} <span class="fold-hint">{{ tr('common.optional') }}</span><span class="fold-state" data-optional-status="farewell"></span></summary>
-                <div class="list">
-                    {% call row(tr('welcome.farewell_channel'), tr('welcome.farewell_channel_hint'), 'w-fch') %}<select class="select" id="w-fch" data-search="{{ tr('welcome.farewell_channel') }}"><option value="0">{{ tr('welcome.farewell_off') }}</option></select>{% endcall %}
-                    {% call row(tr('welcome.farewell_message'), None, 'w-fmsg', block=True) %}<textarea class="textarea" id="w-fmsg" placeholder="{{ tr('welcome.farewell_placeholder') }}"></textarea>{% endcall %}
-                    {{ upload('farewell') }}
-                </div>
-            </details>
-
-            <details class="fold" id="welcome-autoroles">
-                <summary>{{ tr('welcome.autoroles') }} <span class="fold-hint">{{ tr('common.optional') }}</span><span class="fold-state" data-optional-status="autoroles"></span></summary>
-                <div class="list">
-                    <div class="row row--block">
-                        <div class="row-text"><span class="row-hint">{{ tr('welcome.autoroles_hint') }}</span></div>
-                        <input type="search" class="input" id="w-roles-search" placeholder="{{ tr('welcome.roles_search') }}" aria-label="{{ tr('welcome.roles_search') }}" data-draft-ignore>
-                        <span class="search-feedback" id="w-roles-result" role="status"></span>
-                        <div class="check-list" id="w-roles"></div>
-                        <p class="note note--warn">{{ icon('triangle-alert') }}<span>{{ tr('roles.position_note') }}</span></p>
-                    </div>
-                </div>
-            </details>
+            </div>
+            {% endcall %}
         </div>
         <details class="message-preview" id="welcome-preview" open>
             <summary>{{ tr('preview.title') }}</summary>
@@ -122,8 +118,8 @@
     </div>
 </section>
 
-<section class="page" id="pg-roles" data-slug="roles" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.roles') }}" data-draft data-draft-inline>
-    <div class="page-head"><h2>{{ tr('nav.module.roles') }}</h2><p>{{ tr('roles.intro') }}</p></div>
+<section class="page page--wide" id="pg-roles" data-slug="roles" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.roles') }}" data-draft data-draft-inline>
+    {{ page_head(tr('nav.module.roles'), tr('roles.intro')) }}
     <div class="editor">
         <div class="editor-form">
             <div class="section" id="rr-message-section">
@@ -174,59 +170,65 @@
 </section>
 
 <section class="page" id="pg-automod" data-slug="automod" data-group="{{ tr('nav.group.safety') }}" data-title="{{ tr('nav.module.automod') }}" data-draft>
-    <div class="page-head"><h2>{{ tr('nav.module.automod') }}</h2><p>{{ tr('automod.intro') }}</p></div>
-    <div class="section">
-        <div class="list">
-            {% call row(tr('automod.enabled'), tr('automod.enabled_hint'), 'am-enabled', cls='row--switch') %}{{ toggle('am-enabled', tr('automod.enabled')) }}{% endcall %}
-            {% call row(tr('automod.log'), tr('automod.log_hint'), 'am-log', depends='am-enabled') %}<select class="select" id="am-log" data-search="{{ tr('automod.log') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
+    {{ page_head(tr('nav.module.automod'), tr('automod.intro'), 'am-enabled', tr('automod.enabled')) }}
+    {{ tabs('automod', [('rules', tr('automod.tab.rules')), ('words', tr('automod.tab.words')), ('links', tr('automod.tab.links'))]) }}
+    {% call tab_panel('automod', 'rules') %}
+        <div class="section">
+            <div class="list">
+                {% call row(tr('automod.log'), tr('automod.log_hint'), 'am-log', depends='am-enabled') %}<select class="select" id="am-log" data-search="{{ tr('automod.log') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
+            </div>
         </div>
-    </div>
-    <div class="section">
-        <h3 class="section-title">{{ tr('automod.spam') }}</h3>
-        <div class="list">
-            {% call row(tr('automod.spam_on'), tr('automod.spam_hint'), 'am-spam', depends='am-enabled', cls='row--switch') %}{{ toggle('am-spam', tr('automod.spam_on')) }}{% endcall %}
-            {% call row(tr('automod.spam_threshold'), tr('automod.spam_threshold_hint'), 'am-st', depends='am-spam') %}
-            <input class="num" type="number" id="am-st" min="2" max="20" value="5"><span class="unit">{{ tr('automod.messages_per') }}</span>
-            <input class="num" type="number" id="am-si" min="2" max="30" value="5" aria-label="{{ tr('automod.seconds_label') }}"><span class="unit">{{ tr('automod.seconds') }}</span>
-            {% endcall %}
-            {% call row(tr('automod.mute'), tr('automod.mute_hint'), None, depends='am-spam', block=True) %}
-            <div class="duration-field"><div class="seg" data-duration data-for="am-mute" role="group" aria-label="{{ tr('automod.mute') }}"></div><input type="number" id="am-mute" min="60" max="86400" value="300" hidden></div>
-            {% endcall %}
+        <div class="section">
+            <h3 class="section-title">{{ tr('automod.spam') }}</h3>
+            <div class="list">
+                {% call row(tr('automod.spam_on'), tr('automod.spam_hint'), 'am-spam', depends='am-enabled', cls='row--switch') %}{{ toggle('am-spam', tr('automod.spam_on')) }}{% endcall %}
+                {% call row(tr('automod.spam_threshold'), tr('automod.spam_threshold_hint'), 'am-st', depends='am-spam') %}
+                <input class="num" type="number" id="am-st" min="2" max="20" value="5"><span class="unit">{{ tr('automod.messages_per') }}</span>
+                <input class="num" type="number" id="am-si" min="2" max="30" value="5" aria-label="{{ tr('automod.seconds_label') }}"><span class="unit">{{ tr('automod.seconds') }}</span>
+                {% endcall %}
+                {% call row(tr('automod.mute'), tr('automod.mute_hint'), None, depends='am-spam', block=True) %}
+                <div class="duration-field"><div class="seg" data-duration data-for="am-mute" role="group" aria-label="{{ tr('automod.mute') }}"></div><input type="number" id="am-mute" min="60" max="86400" value="300" hidden></div>
+                {% endcall %}
+            </div>
         </div>
-    </div>
-    <div class="section">
-        <h3 class="section-title">{{ tr('automod.badwords') }}</h3>
-        <div class="list">
-            {% call row(tr('automod.badwords_on'), tr('automod.badwords_hint'), 'am-bw', depends='am-enabled', cls='row--switch') %}{{ toggle('am-bw', tr('automod.badwords_on')) }}{% endcall %}
-            {% call row(tr('automod.badwords_list'), None, 'am-bw-new', depends='am-bw', block=True) %}
-            <div class="chip-list" id="am-bw-tags" data-tags></div>
-            <div class="chip-add"><input class="input" id="am-bw-new" placeholder="{{ tr('automod.badwords_placeholder') }}" data-draft-ignore><button type="button" class="btn btn--secondary" id="am-bw-add">{{ tr('automod.add') }}</button></div>
-            {% endcall %}
+        <div class="section">
+            <h3 class="section-title">{{ tr('automod.other') }}</h3>
+            <div class="list">
+                {% call row(tr('automod.caps'), tr('automod.caps_hint'), 'am-caps', depends='am-enabled', cls='row--switch') %}{{ toggle('am-caps', tr('automod.caps')) }}{% endcall %}
+                {% call row(tr('automod.caps_threshold'), None, 'am-ct', depends='am-caps') %}<input class="num" type="number" id="am-ct" min="50" max="100" value="70"><span class="unit">%</span>{% endcall %}
+                {% call row(tr('automod.repeat'), tr('automod.repeat_hint'), 'am-repeat', depends='am-enabled', cls='row--switch') %}{{ toggle('am-repeat', tr('automod.repeat')) }}{% endcall %}
+                {% call row(tr('automod.repeat_threshold'), None, 'am-rt', depends='am-repeat') %}<input class="num" type="number" id="am-rt" min="2" max="10" value="3"><span class="unit">{{ tr('automod.times') }}</span>{% endcall %}
+            </div>
         </div>
-    </div>
-    <div class="section">
-        <h3 class="section-title">{{ tr('automod.links') }}</h3>
-        <div class="list">
-            {% call row(tr('automod.links_on'), tr('automod.links_hint'), 'am-link', depends='am-enabled', cls='row--switch') %}{{ toggle('am-link', tr('automod.links_on')) }}{% endcall %}
-            {% call row(tr('automod.whitelist'), None, 'am-wl-new', depends='am-link', block=True) %}
-            <div class="chip-list" id="am-wl-tags" data-tags></div>
-            <div class="chip-add"><input class="input" id="am-wl-new" placeholder="{{ tr('automod.whitelist_placeholder') }}" data-draft-ignore><button type="button" class="btn btn--secondary" id="am-wl-add">{{ tr('automod.add') }}</button></div>
-            {% endcall %}
+    {% endcall %}
+    {% call tab_panel('automod', 'words') %}
+        <div class="section">
+            <h3 class="section-title">{{ tr('automod.badwords') }}</h3>
+            <div class="list">
+                {% call row(tr('automod.badwords_on'), tr('automod.badwords_hint'), 'am-bw', depends='am-enabled', cls='row--switch') %}{{ toggle('am-bw', tr('automod.badwords_on')) }}{% endcall %}
+                {% call row(tr('automod.badwords_list'), None, 'am-bw-new', depends='am-bw', block=True) %}
+                <div class="chip-list" id="am-bw-tags" data-tags></div>
+                <div class="chip-add"><input class="input" id="am-bw-new" placeholder="{{ tr('automod.badwords_placeholder') }}" data-draft-ignore><button type="button" class="btn btn--secondary" id="am-bw-add">{{ tr('automod.add') }}</button></div>
+                {% endcall %}
+            </div>
         </div>
-    </div>
-    <div class="section">
-        <h3 class="section-title">{{ tr('automod.other') }}</h3>
-        <div class="list">
-            {% call row(tr('automod.caps'), tr('automod.caps_hint'), 'am-caps', depends='am-enabled', cls='row--switch') %}{{ toggle('am-caps', tr('automod.caps')) }}{% endcall %}
-            {% call row(tr('automod.caps_threshold'), None, 'am-ct', depends='am-caps') %}<input class="num" type="number" id="am-ct" min="50" max="100" value="70"><span class="unit">%</span>{% endcall %}
-            {% call row(tr('automod.repeat'), tr('automod.repeat_hint'), 'am-repeat', depends='am-enabled', cls='row--switch') %}{{ toggle('am-repeat', tr('automod.repeat')) }}{% endcall %}
-            {% call row(tr('automod.repeat_threshold'), None, 'am-rt', depends='am-repeat') %}<input class="num" type="number" id="am-rt" min="2" max="10" value="3"><span class="unit">{{ tr('automod.times') }}</span>{% endcall %}
+    {% endcall %}
+    {% call tab_panel('automod', 'links') %}
+        <div class="section">
+            <h3 class="section-title">{{ tr('automod.links') }}</h3>
+            <div class="list">
+                {% call row(tr('automod.links_on'), tr('automod.links_hint'), 'am-link', depends='am-enabled', cls='row--switch') %}{{ toggle('am-link', tr('automod.links_on')) }}{% endcall %}
+                {% call row(tr('automod.whitelist'), None, 'am-wl-new', depends='am-link', block=True) %}
+                <div class="chip-list" id="am-wl-tags" data-tags></div>
+                <div class="chip-add"><input class="input" id="am-wl-new" placeholder="{{ tr('automod.whitelist_placeholder') }}" data-draft-ignore><button type="button" class="btn btn--secondary" id="am-wl-add">{{ tr('automod.add') }}</button></div>
+                {% endcall %}
+            </div>
         </div>
-    </div>
+    {% endcall %}
 </section>
 
 <section class="page" id="pg-moderation" data-slug="moderation" data-group="{{ tr('nav.group.safety') }}" data-title="{{ tr('nav.module.moderation') }}" data-draft>
-    <div class="page-head"><h2>{{ tr('nav.module.moderation') }}</h2><p>{{ tr('moderation.intro') }}</p></div>
+    {{ page_head(tr('nav.module.moderation'), tr('moderation.intro')) }}
     <div class="section">
         <div class="list">
             {% call row(tr('moderation.log'), tr('moderation.log_hint'), 'mod-log') %}<select class="select" id="mod-log" data-search="{{ tr('moderation.log') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
@@ -251,7 +253,7 @@
 </section>
 
 <section class="page" id="pg-giveaway" data-slug="giveaway" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.giveaway') }}" data-draft data-draft-inline>
-    <div class="page-head"><h2>{{ tr('nav.module.giveaway') }}</h2><p>{{ tr('giveaway.intro') }}</p></div>
+    {{ page_head(tr('nav.module.giveaway'), tr('giveaway.intro')) }}
     <div class="section">
         <h3 class="section-title">{{ tr('giveaway.new') }}</h3>
         <div class="list">
@@ -283,7 +285,7 @@
 </section>
 
 <section class="page" id="pg-leveling" data-slug="leveling" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.leveling') }}">
-    <div class="page-head"><h2>{{ tr('nav.module.leveling') }}</h2><p>{{ tr('leveling.intro') }}</p></div>
+    {{ page_head(tr('nav.module.leveling'), tr('leveling.intro')) }}
     <div class="section">
         <h3 class="section-title">{{ tr('leveling.board') }}</h3>
         <div class="lb-list" id="lb-list"></div>
@@ -291,7 +293,7 @@
 </section>
 
 <section class="page" id="pg-general" data-slug="general" data-group="{{ tr('nav.group.tools') }}" data-title="{{ tr('nav.module.general') }}">
-    <div class="page-head"><h2>{{ tr('nav.module.general') }}</h2><p>{{ tr('general.intro') }}</p></div>
+    {{ page_head(tr('nav.module.general'), tr('general.intro')) }}
     <div class="cmd-grid">
         {%- for name in ['status', 'avatar', 'roll', 'help', 'setstatus', 'setbio'] %}
         <div class="cmd-card"><code>/{{ name }}</code><span>{{ tr('general.cmd.' ~ name) }}</span></div>
@@ -300,7 +302,7 @@
 </section>
 
 <section class="page" id="pg-utility" data-slug="utility" data-group="{{ tr('nav.group.tools') }}" data-title="{{ tr('nav.module.utility') }}">
-    <div class="page-head"><h2>{{ tr('nav.module.utility') }}</h2><p>{{ tr('utility.intro') }}</p></div>
+    {{ page_head(tr('nav.module.utility'), tr('utility.intro')) }}
     <p class="note note--info">{{ icon('info') }}<span>{{ tr('utility.tip') }}</span></p>
     <div class="server-search command-search">
         <label class="sr-only" for="command-search">{{ tr('utility.search') }}</label>
@@ -314,9 +316,8 @@
 </section>
 
 <section class="page" id="pg-botlog" data-slug="botlog" data-group="{{ tr('nav.group.safety') }}" data-title="{{ tr('nav.module.botlog') }}" data-draft>
-    <div class="page-head"><h2>{{ tr('nav.module.botlog') }}</h2><p>{{ tr('logs.bot_intro') }}</p></div>
+    {{ page_head(tr('nav.module.botlog'), tr('logs.bot_intro'), 'bl-enabled', tr('logs.enabled')) }}
     <div class="list">
-        {% call row(tr('logs.enabled'), tr('logs.enabled_hint'), 'bl-enabled', cls='row--switch') %}{{ toggle('bl-enabled', tr('logs.enabled')) }}{% endcall %}
         {% call row(tr('logs.channel'), tr('logs.channel_hint'), 'bl-ch', depends='bl-enabled') %}<select class="select" id="bl-ch" data-search="{{ tr('logs.channel') }}"><option value="0">{{ tr('logs.off') }}</option></select>{% endcall %}
         {% call row(tr('logs.levels'), tr('logs.levels_hint'), None, depends='bl-enabled', block=True) %}
         <div class="check-list">
@@ -330,9 +331,8 @@
 </section>
 
 <section class="page" id="pg-serverlog" data-slug="serverlog" data-group="{{ tr('nav.group.safety') }}" data-title="{{ tr('nav.module.serverlog') }}" data-draft>
-    <div class="page-head"><h2>{{ tr('nav.module.serverlog') }}</h2><p>{{ tr('logs.server_intro') }}</p></div>
+    {{ page_head(tr('nav.module.serverlog'), tr('logs.server_intro'), 'sl-enabled', tr('logs.server_enabled')) }}
     <div class="list">
-        {% call row(tr('logs.server_enabled'), tr('logs.enabled_hint'), 'sl-enabled', cls='row--switch') %}{{ toggle('sl-enabled', tr('logs.server_enabled')) }}{% endcall %}
         {% call row(tr('logs.channel'), tr('logs.channel_hint'), 'sl-ch', depends='sl-enabled') %}<select class="select" id="sl-ch" data-search="{{ tr('logs.channel') }}"><option value="0">{{ tr('logs.off') }}</option></select>{% endcall %}
         {% call row(tr('logs.categories'), tr('logs.categories_hint'), None, depends='sl-enabled', block=True) %}
         <div class="check-list">

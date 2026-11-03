@@ -95,12 +95,6 @@ window.DashboardPreview = (() => {
     }
     function refresh(){
         refreshWelcome();refreshRoles();
-        const statuses={
-            appearance:[value('w-title')||value('w-thumb')||value('w-image')||window.WelcomeImageUploads?.has('welcome')?'自定义外观':'',el('w-card')?.checked&&!window.WelcomeImageUploads?.has('welcome')?'附带横幅':''].filter(Boolean).join(' · ')||'默认外观',
-            farewell:value('w-fch')&&value('w-fch')!=='0'?(window.WelcomeImageUploads?.has('farewell')?'已选频道 · 有图片':'已选频道'):'不发送',
-            autoroles:'已选 '+document.querySelectorAll('#w-roles input:checked').length+' 个'
-        };
-        document.querySelectorAll('[data-optional-status]').forEach(node=>{node.textContent=statuses[node.dataset.optionalStatus];});
     }
     document.addEventListener('DOMContentLoaded',()=>{
         for(const kind of ['welcome','roles']){

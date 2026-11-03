@@ -106,3 +106,16 @@ test('selectTab shows one panel and marks its tab', () => {
     assert.equal(Console.selectTab('welcome', 'nope'), 'message');
     assert.equal(Console.selectTab('music', null), null);
 });
+
+test('master hint shows while the master switch is off', () => {
+    const source = {checked: false, closest: () => null, listeners: {}, addEventListener(type, fn) { this.listeners[type] = fn; }};
+    const hint = {hidden: true};
+    const row = {dataset: {dependsOn: 'w-enabled'}, setAttribute() {}, querySelectorAll: () => []};
+    const {Console} = core({nodes: {'w-enabled': source}});
+    const root = {querySelectorAll: sel => sel === '[data-depends-on]' ? [row] : sel === '[data-master-hint]' ? [Object.assign(hint, {dataset: {masterHint: 'w-enabled'}})] : []};
+    Console.dependencies(root);
+    assert.equal(hint.hidden, false);
+    source.checked = true;
+    Console.dependencies(root);
+    assert.equal(hint.hidden, true);
+});

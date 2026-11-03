@@ -75,9 +75,7 @@ class DashboardTemplateTests(unittest.TestCase):
         html,p=self.render('server.html')
         for field in ['w-enabled','w-ch','w-msg','w-title','w-thumb','w-image','w-card','w-fch','w-fmsg','w-roles','w-welcome-file','w-farewell-file','w-welcome-image-preview','w-farewell-image-preview']:
             self.assertEqual(p.ids.count(field),1)
-        self.assertLess(p.ids.index('w-msg'),p.ids.index('welcome-appearance'))
-        for name in ['welcome-appearance','welcome-farewell','welcome-autoroles']:
-            self.assertIn(f'<details class="fold" id="{name}">',html)
+        self.assertLess(p.ids.index('w-msg'),p.ids.index('panel-welcome-appearance'))
         self.assertIn('最大 5 MB、4096×4096',html)
         self.assertIn('message-preview.js?v=20261103',html)
 
@@ -100,6 +98,35 @@ class DashboardTemplateTests(unittest.TestCase):
     def render_all(self):
         for name in ['dashboard.html','server.html','settings.html','login_gate.html','error.html']:
             yield name,self.render(name)[0]
+
+    def test_module_scripts_find_every_id_they_read(self):
+        _,p=self.render('server.html')
+        DYNAMIC=set()  # ids the scripts create themselves at runtime
+        used=set()
+        for path in list((ROOT/'static/js/modules').glob('*.js'))+[ROOT/'static/js/message-preview.js']:
+            used|=set(re.findall(r"(?:el|getElementById)\('([a-z][a-z0-9-]*)'\)",path.read_text(encoding='utf-8')))
+        self.assertEqual(sorted(used-set(p.ids)-DYNAMIC),[])
+
+    def test_master_switches_live_in_page_heads(self):
+        html,_=self.render('server.html')
+        for master in ['w-enabled','am-enabled','bl-enabled','sl-enabled']:
+            head=re.search(r'<div class="page-head">(?:(?!</section>).)*?id="%s"(?:(?!</section>).)*?</div>\s*<p class="master-hint" data-master-hint="%s" hidden>'%(master,master),html,re.S)
+            self.assertIsNotNone(head,master)
+
+    def test_welcome_and_automod_use_tabs(self):
+        _,p=self.render('server.html')
+        for slug,tabs in [('welcome',['message','appearance','farewell','autoroles']),('automod',['rules','words','links'])]:
+            for tab in tabs:
+                self.assertIn(f'panel-{slug}-{tab}',p.ids)
+                self.assertIn(f'tab-{slug}-{tab}',p.ids)
+        html,_=self.render('server.html')
+        self.assertEqual(re.findall(r'<details class="fold[^"]*"',html),['<details class="fold sent-panels"'])
+
+    def test_wide_pages(self):
+        html,_=self.render('server.html')
+        wide=re.findall(r'<section class="page page--wide" id="pg-([a-z]+)"',html)
+        self.assertEqual(sorted(wide),['overview','roles','welcome'])
+        self.assertEqual(len(re.findall(r'<section class="page[" ]',html)),12)
 
     def test_shell_has_switcher_and_no_rail(self):
         for name in ['dashboard.html','server.html','settings.html']:

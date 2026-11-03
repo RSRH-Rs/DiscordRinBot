@@ -49,3 +49,17 @@ https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1
 {%- macro tab_panel(slug, id) -%}
 <div class="tab-panel" role="tabpanel" id="panel-{{ slug }}-{{ id }}" data-panel="{{ id }}" aria-labelledby="tab-{{ slug }}-{{ id }}">{{ caller() }}</div>
 {%- endmacro -%}
+
+{#- Page title and intro; a master switch sits on the right and a hint shows below while it is off. -#}
+{%- macro page_head(title, intro, master=None, master_label=None) -%}
+<div class="page-head">
+    <div class="page-head-text"><h2>{{ title }}</h2><p>{{ intro }}</p></div>
+    {%- if master %}
+    <label class="tog tog--head"><input type="checkbox" role="switch" id="{{ master }}" aria-label="{{ master_label }}"><span class="tog-track"></span><span class="tog-on">{{ tr('common.enabled') }}</span><span class="tog-off">{{ tr('common.disabled') }}</span></label>
+    {%- endif %}
+</div>
+{%- if master %}
+<p class="master-hint" data-master-hint="{{ master }}" hidden>{{ tr('common.master_hint') }}</p>
+{%- endif %}
+{%- endmacro -%}
+
