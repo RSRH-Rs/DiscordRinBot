@@ -74,6 +74,21 @@ window.DashboardUI = (() => {
         refresh(root);
     }
     function changed(id) { const root = rootOf(id); if (root) refresh(root); }
+    // Whether anything inside one part of a draft (e.g. one tab) differs from the last saved values.
+    function changedWithin(id, container) {
+        const root = rootOf(id), state = root && drafts.get(root);
+        if (!state?.values || !container) return false;
+        for (const [key, field] of keyed(root)) {
+            if (!container.contains(field)) continue;
+            if (field.type === 'file') { if (field.files?.length) return true; continue; }
+            if (!state.values.has(key) || valueOf(field) !== state.values.get(key)) return true;
+        }
+        for (const list of container.querySelectorAll('[data-tags]')) {
+            const values = [...list.querySelectorAll('.chip')].map(c => c.dataset.value);
+            if (JSON.stringify(values) !== JSON.stringify(state.tags.get(list.id) || [])) return true;
+        }
+        return false;
+    }
     function dirty(id) { const root = rootOf(id), state = drafts.get(root); return !!state && (state.saving || snapshot(root) !== state.saved); }
     function chip(value) {
         const node = document.createElement('span');
@@ -213,5 +228,5 @@ window.DashboardUI = (() => {
         document.querySelector('.drawer-backdrop')?.addEventListener('click', () => closeSidebar());
         window.matchMedia('(min-width:860px)').addEventListener('change', e => { if (e.matches) closeSidebar(false); });
     });
-    return {tr, snapshot, clean, changed, dirty, confirmSwitch, confirmLeave, saving, loading, onSave, save, reset, shake, renderTags, toggleSidebar, closeSidebar};
+    return {tr, snapshot, clean, changed, changedWithin, dirty, confirmSwitch, confirmLeave, saving, loading, onSave, save, reset, shake, renderTags, toggleSidebar, closeSidebar};
 })();

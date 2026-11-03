@@ -2,29 +2,40 @@
 window.DashboardExtras = (() => {
     const normal = value => String(value || '').trim().toLocaleLowerCase();
     const matches = (text, query) => normal(text).includes(normal(query));
-    function createHashRouter({ids, fallback, show, canLeave}) {
-        let current = null;
-        const target = () => ids.includes(location.hash.slice(1)) ? location.hash.slice(1) : fallback;
-        const write = (id, replace) => history[replace ? 'replaceState' : 'pushState'](null, '', '#'+id);
-        function navigate(id, {fromHistory=false, initial=false}={}) {
+    // Hashes are "#page" or "#page/tab". Only a page change asks canLeave; switching tabs keeps the page and its drafts.
+    function createHashRouter({ids, fallback, show, canLeave, showTab = () => null}) {
+        let current = null, currentTab = null;
+        const target = () => {
+            const [id, tab] = location.hash.slice(1).split('/');
+            return ids.includes(id) ? [id, tab || null] : [fallback, null];
+        };
+        const hashOf = (id, tab) => '#' + id + (tab ? '/' + tab : '');
+        const write = (hash, replace) => history[replace ? 'replaceState' : 'pushState'](null, '', hash);
+        function navigate(id, {tab = null, fromHistory = false, initial = false} = {}) {
             if (!ids.includes(id)) return false;
-            if (id === current) return true;
-            if (!initial && current && !canLeave(current)) {
-                if (fromHistory) write(current, true);
-                return false;
+            if (id === current && tab === currentTab) return true;
+            if (id !== current) {
+                if (!initial && current && !canLeave(current)) {
+                    if (fromHistory) write(hashOf(current, currentTab), true);
+                    return false;
+                }
+                current = id;
+                show(id, initial);
             }
-            current = id;
-            if (!fromHistory || location.hash !== '#'+id) write(id, initial || fromHistory);
-            show(id, initial);
+            const shown = showTab(id, tab) ?? null;
+            currentTab = tab ? shown : null;
+            const hash = hashOf(id, currentTab);
+            if (!fromHistory || location.hash !== hash) write(hash, initial || fromHistory);
             return true;
         }
         window.addEventListener('hashchange', () => {
-            const id = target();
-            if (id === current && location.hash !== '#'+id) write(id, true);
-            else navigate(id, {fromHistory:true});
+            const [id, tab] = target();
+            if (id === current && tab === currentTab && location.hash !== hashOf(id, tab)) write(hashOf(id, tab), true);
+            else navigate(id, {tab, fromHistory: true});
         });
-        navigate(target(), {initial:true});
-        return {navigate, current:()=>current};
+        const [id, tab] = target();
+        navigate(id, {tab, initial: true});
+        return {navigate, current: () => current, currentTab: () => currentTab};
     }
     // Filtering preserves the current selection and "not set" option.
     function filterOptions(select, query) {

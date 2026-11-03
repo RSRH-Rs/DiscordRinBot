@@ -6,10 +6,10 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../static/js/console-core.js'), 'utf8');
 
-function core({dirty = false, fetchImpl} = {}) {
+function core({dirty = false, fetchImpl, nodes = {}} = {}) {
     const calls = {shake: 0, fetch: []};
     const ctx = vm.createContext({
-        document: {addEventListener() {}, querySelectorAll: () => [{id: 'pg-welcome'}], getElementById: () => null},
+        document: {addEventListener() {}, querySelectorAll: () => [{id: 'pg-welcome'}], getElementById: id => nodes[id] || null},
         DashboardUI: {
             tr: (key, vars = {}) => key === 'common.request_failed' ? `请求失败 (${vars.status})` : key,
             dirty: () => dirty, shake: () => { calls.shake++; },
@@ -91,4 +91,18 @@ test('switching server while a page has unsaved changes is blocked', () => {
     const pass = {target: {closest: () => link}, prevented: false, preventDefault() { this.prevented = true; }};
     free.Console.leaveClick(pass);
     assert.equal(pass.prevented, false);
+});
+
+test('selectTab shows one panel and marks its tab', () => {
+    const panel = id => ({dataset: {panel: id}, hidden: false});
+    const tab = id => ({dataset: {tab: id}, attrs: {}, tabIndex: 0, setAttribute(k, v) { this.attrs[k] = v; }});
+    const panelsList = ['message', 'card', 'farewell'].map(panel), tabsList = ['message', 'card', 'farewell'].map(tab);
+    const page = {querySelectorAll: sel => sel === '[data-panel]' ? panelsList : sel === '[data-tab]' ? tabsList : []};
+    const {Console} = core({nodes: {'pg-welcome': page}});
+    assert.equal(Console.selectTab('welcome', 'card'), 'card');
+    assert.deepEqual(panelsList.map(p => p.hidden), [true, false, true]);
+    assert.deepEqual(tabsList.map(t => t.attrs['aria-selected']), ['false', 'true', 'false']);
+    assert.deepEqual(tabsList.map(t => t.tabIndex), [-1, 0, -1]);
+    assert.equal(Console.selectTab('welcome', 'nope'), 'message');
+    assert.equal(Console.selectTab('music', null), null);
 });

@@ -249,3 +249,31 @@ test('failed post-save refresh cannot re-enable an unread form', async () => {
     await ui.loading('a', async () => {}, () => {});
     assert.equal(a.inert, false);
 });
+
+function panels(ui, a, field) {
+    const one = field({id: 'one', value: 'x'}), two = field({id: 'two', value: 'y'});
+    a.fields.push(one, two);
+    ui.clean(a);
+    const panel = members => ({contains: f => members.includes(f), querySelectorAll: () => []});
+    return {one, two, first: panel([one]), second: panel([two])};
+}
+
+test('changedWithin only reports fields inside the container', () => {
+    const {ui, a, field} = fixture();
+    const {one, first, second} = panels(ui, a, field);
+    assert.equal(ui.changedWithin(a, first), false);
+    one.value = 'changed';
+    assert.equal(ui.changedWithin(a, first), true);
+    assert.equal(ui.changedWithin(a, second), false);
+});
+
+test('reset and clean clear every tab', () => {
+    const {ui, a, field} = fixture();
+    const {one, two, first, second} = panels(ui, a, field);
+    one.value = 'changed'; ui.changed(a);
+    ui.reset(a);
+    assert.equal(ui.changedWithin(a, first), false);
+    two.value = 'changed'; ui.changed(a);
+    ui.clean(a);
+    assert.equal(ui.changedWithin(a, second), false);
+});

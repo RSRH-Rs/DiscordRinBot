@@ -172,7 +172,29 @@ window.Console = (() => {
         load(slug);
         document.dispatchEvent(new CustomEvent('console:page', {detail: {slug}}));
     }
-    const go = slug => router?.navigate(slug) || false;
+    const go = (slug, tab = null) => router?.navigate(slug, {tab}) || false;
+    // Shows one tab panel of a page; unknown tabs fall back to the first. Pages without tabs return null.
+    function selectTab(slug, tab) {
+        const page = el('pg-' + slug); if (!page) return null;
+        const panels = [...page.querySelectorAll('[data-panel]')]; if (!panels.length) return null;
+        const active = panels.find(p => p.dataset.panel === tab) || panels[0];
+        panels.forEach(p => { p.hidden = p !== active; });
+        page.querySelectorAll('[data-tab]').forEach(t => {
+            const on = t.dataset.tab === active.dataset.panel;
+            t.setAttribute('aria-selected', String(on));
+            t.tabIndex = on ? 0 : -1;
+        });
+        return active.dataset.panel;
+    }
+    // A dot on every tab whose panel holds unsaved changes.
+    function markTabs() {
+        document.querySelectorAll('.page[data-slug]').forEach(page => {
+            page.querySelectorAll('[data-tab]').forEach(tab => {
+                const panel = page.querySelector(`[data-panel="${tab.dataset.tab}"]`), dot = tab.querySelector('.tab-dot');
+                if (dot) dot.hidden = !DashboardUI.changedWithin(page, panel);
+            });
+        });
+    }
     // Switching server from the sidebar obeys the same draft guard as in-page links; invites open a new tab and need none.
     function leaveClick(event) {
         const link = event.target.closest?.('#switcher-pop a');
@@ -254,8 +276,22 @@ window.Console = (() => {
         if (pages.length) {
             router = DashboardExtras.createHashRouter({
                 ids: pages.map(p => p.dataset.slug), fallback: pages[0].dataset.slug, show,
-                canLeave: slug => DashboardUI.confirmSwitch('pg-' + slug),
+                canLeave: slug => DashboardUI.confirmSwitch('pg-' + slug), showTab: selectTab,
             });
+            document.addEventListener('click', e => {
+                const tab = e.target.closest('a[data-tab]');
+                if (!tab || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+                e.preventDefault();
+                router.navigate(tab.closest('.page').dataset.slug, {tab: tab.dataset.tab});
+            });
+            document.addEventListener('keydown', e => {
+                const tab = e.target.closest?.('[role="tablist"] [data-tab]');
+                if (!tab || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+                const tabs = [...tab.parentElement.querySelectorAll('[data-tab]')];
+                const next = tabs[(tabs.indexOf(tab) + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+                e.preventDefault(); next.focus();
+            });
+            document.addEventListener('dashboard:drafts-changed', markTabs);
             document.addEventListener('click', e => {
                 const link = e.target.closest('a[data-mod]');
                 if (!link || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
@@ -272,5 +308,5 @@ window.Console = (() => {
     });
 
     return {tr, api, apiGlobal, toast, escapeHtml, channels, roles, commands, channelName, channelOptions, roleOptions,
-        duration, dependencies, module, load, invalidate, go, leaveClick, refreshModules, stateLabel, dotState};
+        duration, dependencies, module, load, invalidate, go, selectTab, leaveClick, refreshModules, stateLabel, dotState};
 })();

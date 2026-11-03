@@ -37,6 +37,32 @@ test('back/forward/direct hash navigation obeys draft guard and restores URL on 
     allow=true;ctx.location.hash='#overview';events.hashchange();assert.equal(router.current(),'overview');
     ctx.location.hash='#welcome';events.hashchange();assert.equal(router.current(),'welcome');
 });
+const tabsOf=(id,tab)=>['message','card','farewell'].includes(tab)?tab:'message';
+test('#welcome/farewell opens the page on that tab',()=>{
+    const {ui,ctx}=extras('#welcome/farewell'),shown=[],tabs=[];
+    const router=ui.createHashRouter({ids:['overview','welcome'],fallback:'overview',show:id=>shown.push(id),canLeave:()=>true,showTab:(id,tab)=>{tabs.push([id,tab]);return tabsOf(id,tab);}});
+    assert.deepEqual(shown,['welcome']);assert.deepEqual(tabs.at(-1),['welcome','farewell']);
+    assert.equal(router.currentTab(),'farewell');assert.equal(ctx.location.hash,'#welcome/farewell');
+});
+test('switching tabs never asks canLeave; leaving the page still does',()=>{
+    const {ui,ctx,writes,events}=extras('#welcome');let asked=0;
+    const router=ui.createHashRouter({ids:['overview','welcome'],fallback:'overview',show(){},canLeave:()=>{asked++;return false;},showTab:tabsOf});
+    assert.equal(ctx.location.hash,'#welcome');
+    assert.equal(router.navigate('welcome',{tab:'card'}),true);
+    assert.equal(asked,0);assert.deepEqual(writes.at(-1),['pushState','#welcome/card']);
+    ctx.location.hash='#welcome/farewell';events.hashchange();
+    assert.equal(asked,0);assert.equal(router.currentTab(),'farewell');
+    assert.equal(router.navigate('overview'),false);assert.equal(asked,1);
+    assert.equal(router.current(),'welcome');assert.equal(ctx.location.hash,'#welcome/farewell');
+});
+test('unknown tab and unknown page fall back without errors',()=>{
+    const bad=extras('#welcome/nope');
+    const router=bad.ui.createHashRouter({ids:['overview','welcome'],fallback:'overview',show(){},canLeave:()=>true,showTab:tabsOf});
+    assert.equal(router.currentTab(),'message');assert.equal(bad.ctx.location.hash,'#welcome/message');
+    const lost=extras('#nope/x');
+    const other=lost.ui.createHashRouter({ids:['overview','welcome'],fallback:'overview',show(){},canLeave:()=>true,showTab:()=>null});
+    assert.equal(other.current(),'overview');assert.equal(lost.ctx.location.hash,'#overview');
+});
 test('search is case-insensitive and treats HTML/regex symbols as ordinary text',()=>{
     const {ui}=extras();
     assert.equal(ui.matches('周末一起听歌 123',' 听歌 '),true);

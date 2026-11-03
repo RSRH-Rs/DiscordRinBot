@@ -36,3 +36,16 @@
 {%- macro invite_url(guild_id=None) -%}
 https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands{% if guild_id %}&guild_id={{ guild_id }}&disable_guild_select=true{% endif %}
 {%- endmacro -%}
+
+{#- Tabs split a long page; every panel stays in the page so switching never loses edits. items: [(tab_id, label)] -#}
+{%- macro tabs(slug, items) -%}
+<div class="tabs" role="tablist">
+    {%- for id, label in items %}
+    <a class="tab" role="tab" id="tab-{{ slug }}-{{ id }}" href="#{{ slug }}/{{ id }}" data-tab="{{ id }}" aria-controls="panel-{{ slug }}-{{ id }}" aria-selected="{{ 'true' if loop.first else 'false' }}"{% if not loop.first %} tabindex="-1"{% endif %}>{{ label }}<span class="tab-dot" hidden><span class="sr-only">{{ tr('settings.unsaved') }}</span></span></a>
+    {%- endfor %}
+</div>
+{%- endmacro -%}
+
+{%- macro tab_panel(slug, id) -%}
+<div class="tab-panel" role="tabpanel" id="panel-{{ slug }}-{{ id }}" data-panel="{{ id }}" aria-labelledby="tab-{{ slug }}-{{ id }}">{{ caller() }}</div>
+{%- endmacro -%}

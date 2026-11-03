@@ -405,6 +405,13 @@ input[type="file"]::file-selector-button { margin-right: 10px; padding: 7px 12px
 .empty img { width: 96px; height: 96px; object-fit: contain; }
 .load-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; padding: 10px 14px; border-radius: 10px; background: var(--bad-soft); color: var(--bad); }
 
+.tabs { display: flex; gap: 4px; margin: 0 0 20px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tab { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--muted); white-space: nowrap; }
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { border-bottom-color: var(--accent); color: var(--text); font-weight: 600; }
+.tab-dot { width: 6px; height: 6px; flex-shrink: 0; border-radius: 50%; background: var(--warn); }
+.tab-panel { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
 /* ── Pages ──────────────────────────────────────────── */
 
 /* Page: server list */
