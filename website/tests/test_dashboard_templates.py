@@ -19,7 +19,7 @@ class Parser(HTMLParser):
         if 'id' in a:self.ids.append(a['id'])
         if tag=='a':self.links.append(a.get('href',''))
         if 'data-settings-panel' in a:self.current=a['data-settings-panel'];self.panels[self.current]=[]
-        if 'data-draft' in a:self.panels[self.current].append(a['id'])
+        if 'data-draft' in a and self.current:self.panels[self.current].append(a['id'])
     def handle_endtag(self, tag):
         if tag=='section':self.current=None
 
@@ -77,7 +77,7 @@ class DashboardTemplateTests(unittest.TestCase):
             self.assertEqual(p.ids.count(field),1)
         self.assertLess(p.ids.index('w-msg'),p.ids.index('welcome-appearance'))
         for name in ['welcome-appearance','welcome-farewell','welcome-autoroles']:
-            self.assertIn(f'<details class="cfg-section optional-section" id="{name}">',html)
+            self.assertIn(f'<details class="fold" id="{name}">',html)
         self.assertIn('最大 5 MB、4096×4096',html)
         self.assertIn('message-preview.js?v=20261102',html)
 

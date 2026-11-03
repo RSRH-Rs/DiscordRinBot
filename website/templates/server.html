@@ -1,5 +1,5 @@
 {%- extends '_console_base.html' -%}
-{%- from '_console_macros.html' import icon, nav_item -%}
+{%- from '_console_macros.html' import icon, nav_item, row, toggle, upload -%}
 {%- set active_guild_id = guild.id -%}
 {%- set module_groups = [
     ('community', [('welcome', 'smile-plus'), ('roles', 'tags'), ('leveling', 'trophy'), ('giveaway', 'gift')]),
@@ -61,155 +61,118 @@
     <p class="section-hint">{{ tr('overview.runtime_note') }}</p>
 </section>
 
-<!-- ═══════ 音乐 ═══════ -->
-<div class="page mod-page" id="pg-music" data-slug="music" data-title="{{ tr('nav.module.music') }}">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="music" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>音乐系统</h2><p>完整播放器：队列、循环、音量、洗牌、投票跳过</p></div>
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 基本设定</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">DJ 身份组</div><div class="cfg-row-hint">限制特定身份组才能操作音乐指令（留空 = 所有人可用）</div></div>
-            <select class="cfg-select" id="mu-dj" style="max-width:220px;"><option value="0">— 不限制 —</option></select>
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">消息通知频道 🎶</div><div class="cfg-row-hint">有新歌播放时在频道通知当前播放的音乐</div></div>
-            <select class="cfg-select" id="mu-ch" style="max-width:220px;"><option value="0">#</option></select>
-        </div>
+<section class="page" id="pg-music" data-slug="music" data-title="{{ tr('nav.module.music') }}" data-draft>
+    <div class="page-head"><h2>{{ tr('nav.module.music') }}</h2><p>{{ tr('music.intro') }}</p></div>
+    <div class="list">
+        {% call row(tr('music.dj'), tr('music.dj_hint'), 'mu-dj') %}<select class="select" id="mu-dj" data-search="{{ tr('music.dj') }}"><option value="0">{{ tr('common.no_limit') }}</option></select>{% endcall %}
+        {% call row(tr('music.notify'), tr('music.notify_hint'), 'mu-ch') %}<select class="select" id="mu-ch" data-search="{{ tr('music.notify') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
     </div>
-    <div class="save-bar" id="mu-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mu-save" onclick="saveMusic()">保存设置</button></div>
-</div>
+</section>
 
-<!-- ═══════ 欢迎新成员 ═══════ -->
-<div class="page mod-page" id="pg-welcome" data-slug="welcome" data-title="{{ tr('nav.module.welcome') }}">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="smile-plus" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>欢迎新成员</h2><p>选个频道，写一句欢迎吧</p></div>
-
-    <div class="cfg-section">
-        <div class="cfg-row compact-toggle">
-            <div class="cfg-row-info"><label class="cfg-row-label" for="w-enabled">发送欢迎消息</label></div>
-            <label class="cfg-tog"><input type="checkbox" id="w-enabled"><span class="track"></span><span class="thumb"></span></label>
-        </div>
-        <div style="margin-top:14px;">
-            <label class="cfg-row-label field-label" for="w-ch">欢迎频道</label>
-            <select class="cfg-select" id="w-ch" style="max-width:100%;"><option value="0">#</option></select>
-        </div>
-        <div class="welcome-body-field">
-            <div class="field-heading"><label class="cfg-row-label" for="w-msg">欢迎内文</label><span data-sample-slot="welcome"></span></div>
-            <textarea class="cfg-textarea" id="w-msg" placeholder="欢迎 %member% 加入 %server%！🎉"></textarea>
-        </div>
-    </div>
-
-    <details class="cfg-section optional-section" id="welcome-appearance">
-        <summary>标题和图片 <span class="fold-hint">可选</span><span class="optional-state" data-optional-status="appearance"></span></summary>
-        <div class="optional-body">
-        <label class="cfg-row-label field-label" for="w-title">标题</label>
-        <input class="cfg-input" id="w-title" maxlength="200" placeholder="欢迎来到 服务器名（默认）" style="max-width:100%;margin-bottom:14px;">
-        <div style="margin-bottom:14px;">
-            <label class="cfg-row-label" for="w-thumb">缩图</label>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">右侧小图。填 %avatar% 用用户头像，或图片链接</div>
-            <input class="cfg-input" id="w-thumb" placeholder="%avatar%" style="max-width:100%;">
-        </div>
-        <div class="welcome-image-upload">
-            <label class="cfg-row-label" for="w-welcome-file">迎新自定义大图</label>
-            <div class="cfg-row-hint">支持 PNG / JPG / GIF / WebP，最大 5 MB、4096×4096。上传后会优先使用这张图片。</div>
-            <input type="file" id="w-welcome-file" accept="image/png,image/jpeg,image/gif,image/webp" data-draft-ignore onchange="previewWelcomeImage('welcome',this)">
-            <div class="welcome-upload-actions">
-                <button type="button" class="tag-add-btn" id="w-welcome-upload" onclick="uploadWelcomeImage('welcome')">上传图片</button>
-                <button type="button" class="welcome-image-clear" id="w-welcome-clear" onclick="clearWelcomeImage('welcome')" hidden>清除图片</button>
-                <span class="welcome-image-state" id="w-welcome-image-state" role="status">尚未上传</span>
+<section class="page" id="pg-welcome" data-slug="welcome" data-title="{{ tr('nav.module.welcome') }}" data-draft>
+    <div class="page-head"><h2>{{ tr('nav.module.welcome') }}</h2><p>{{ tr('welcome.intro') }}</p></div>
+    <div class="editor">
+        <div class="editor-form">
+            <div class="list">
+                {% call row(tr('welcome.enabled'), tr('welcome.enabled_hint'), 'w-enabled', cls='row--switch') %}{{ toggle('w-enabled', tr('welcome.enabled')) }}{% endcall %}
+                {% call row(tr('welcome.channel'), None, 'w-ch', depends='w-enabled') %}<select class="select" id="w-ch" data-search="{{ tr('welcome.channel') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
+                <div class="row row--block" data-depends-on="w-enabled">
+                    <div class="row-text row-text--split"><label class="row-title" for="w-msg">{{ tr('welcome.message') }}</label><span data-sample-slot="welcome"></span></div>
+                    <textarea class="textarea" id="w-msg" placeholder="{{ tr('welcome.message_placeholder') }}"></textarea>
+                </div>
             </div>
-            <img class="welcome-image-preview" id="w-welcome-image-preview" alt="迎新自定义图片预览" hidden>
-        </div>
-        <div class="welcome-image-fallback">
-            <label class="cfg-row-label" for="w-image">或使用图片链接</label>
-            <div class="cfg-row-hint" style="margin-bottom:8px;">没有上传图片时才会使用。可填图片链接或 %avatar% / %server_avatar%</div>
-            <input class="cfg-input" id="w-image" placeholder="https://…（留空关闭）" style="max-width:100%;">
-        </div>
-        <div class="cfg-row compact-toggle">
-            <div class="cfg-row-info"><label class="cfg-row-label" for="w-card">附带欢迎横幅</label><div class="cfg-row-hint">没有上传自定义图片时，成员加入会自动生成</div></div>
-            <label class="cfg-tog"><input type="checkbox" id="w-card"><span class="track"></span><span class="thumb"></span></label>
-        </div>
-        </div>
-    </details>
 
-    <details class="cfg-section optional-section" id="welcome-farewell">
-        <summary>离开时的道别 <span class="fold-hint">可选</span><span class="optional-state" data-optional-status="farewell"></span></summary>
-        <div class="optional-body">
-        <div style="margin-bottom:14px;">
-            <label class="cfg-row-label field-label" for="w-fch">道别频道 · 不选就不发送</label>
-            <select class="cfg-select" id="w-fch" style="max-width:100%;"><option value="0">#</option></select>
+            <details class="fold" id="welcome-appearance">
+                <summary>{{ tr('welcome.appearance') }} <span class="fold-hint">{{ tr('common.optional') }}</span><span class="fold-state" data-optional-status="appearance"></span></summary>
+                <div class="list">
+                    {% call row(tr('welcome.title'), None, 'w-title', block=True) %}<input class="input" id="w-title" maxlength="200" placeholder="{{ tr('welcome.title_placeholder') }}">{% endcall %}
+                    {% call row(tr('welcome.thumb'), tr('welcome.thumb_hint'), 'w-thumb', block=True) %}<input class="input" id="w-thumb" placeholder="%avatar%">{% endcall %}
+                    {{ upload('welcome') }}
+                    {% call row(tr('welcome.image_url'), tr('welcome.image_url_hint'), 'w-image', block=True) %}<input class="input" id="w-image" placeholder="{{ tr('welcome.image_url_placeholder') }}">{% endcall %}
+                    {% call row(tr('welcome.card'), tr('welcome.card_hint'), 'w-card', cls='row--switch') %}{{ toggle('w-card', tr('welcome.card')) }}{% endcall %}
+                </div>
+            </details>
+
+            <details class="fold" id="welcome-farewell">
+                <summary>{{ tr('welcome.farewell') }} <span class="fold-hint">{{ tr('common.optional') }}</span><span class="fold-state" data-optional-status="farewell"></span></summary>
+                <div class="list">
+                    {% call row(tr('welcome.farewell_channel'), tr('welcome.farewell_channel_hint'), 'w-fch') %}<select class="select" id="w-fch" data-search="{{ tr('welcome.farewell_channel') }}"><option value="0">{{ tr('welcome.farewell_off') }}</option></select>{% endcall %}
+                    {% call row(tr('welcome.farewell_message'), None, 'w-fmsg', block=True) %}<textarea class="textarea" id="w-fmsg" placeholder="{{ tr('welcome.farewell_placeholder') }}"></textarea>{% endcall %}
+                    {{ upload('farewell') }}
+                </div>
+            </details>
+
+            <details class="fold" id="welcome-autoroles">
+                <summary>{{ tr('welcome.autoroles') }} <span class="fold-hint">{{ tr('common.optional') }}</span><span class="fold-state" data-optional-status="autoroles"></span></summary>
+                <div class="list">
+                    <div class="row row--block">
+                        <div class="row-text"><span class="row-hint">{{ tr('welcome.autoroles_hint') }}</span></div>
+                        <input type="search" class="input" id="w-roles-search" placeholder="{{ tr('welcome.roles_search') }}" aria-label="{{ tr('welcome.roles_search') }}" data-draft-ignore>
+                        <span class="search-feedback" id="w-roles-result" role="status"></span>
+                        <div class="check-list" id="w-roles"></div>
+                        <p class="note note--warn">{{ icon('triangle-alert') }}<span>{{ tr('roles.position_note') }}</span></p>
+                    </div>
+                </div>
+            </details>
         </div>
-        <div>
-            <label class="cfg-row-label field-label" for="w-fmsg">道别内文</label>
-            <textarea class="cfg-textarea" id="w-fmsg" placeholder="%member% 离开了我们... 👋"></textarea>
-        </div>
-        <div class="welcome-image-upload">
-            <label class="cfg-row-label" for="w-farewell-file">道别自定义大图</label>
-            <div class="cfg-row-hint">支持 PNG / JPG / GIF / WebP，最大 5 MB、4096×4096。</div>
-            <input type="file" id="w-farewell-file" accept="image/png,image/jpeg,image/gif,image/webp" data-draft-ignore onchange="previewWelcomeImage('farewell',this)">
-            <div class="welcome-upload-actions">
-                <button type="button" class="tag-add-btn" id="w-farewell-upload" onclick="uploadWelcomeImage('farewell')">上传图片</button>
-                <button type="button" class="welcome-image-clear" id="w-farewell-clear" onclick="clearWelcomeImage('farewell')" hidden>清除图片</button>
-                <span class="welcome-image-state" id="w-farewell-image-state" role="status">尚未上传</span>
+        <details class="message-preview" id="welcome-preview" open>
+            <summary>{{ tr('preview.title') }}</summary>
+            <div class="preview-content" id="welcome-preview-content"></div>
+            <p class="preview-disclaimer">{{ tr('preview.disclaimer') }}</p>
+        </details>
+    </div>
+</section>
+
+<section class="page" id="pg-roles" data-slug="roles" data-title="{{ tr('nav.module.roles') }}" data-draft data-draft-inline>
+    <div class="page-head"><h2>{{ tr('nav.module.roles') }}</h2><p>{{ tr('roles.intro') }}</p></div>
+    <div class="editor">
+        <div class="editor-form">
+            <div class="section" id="rr-message-section">
+                <div class="section-head"><h3 class="section-title">{{ tr('roles.step_message') }}</h3><span data-sample-slot="roles"></span></div>
+                <div class="list">
+                    {% call row(tr('roles.title'), None, 'rr-title', block=True) %}<input class="input" id="rr-title" placeholder="{{ tr('roles.default_title') }}">{% endcall %}
+                    {% call row(tr('roles.content'), None, 'rr-content', block=True) %}<textarea class="textarea" id="rr-content" placeholder="{{ tr('roles.default_content') }}"></textarea>{% endcall %}
+                </div>
             </div>
-            <img class="welcome-image-preview" id="w-farewell-image-preview" alt="道别自定义图片预览" hidden>
-        </div>
-        </div>
-    </details>
-
-    <details class="cfg-section optional-section" id="welcome-autoroles">
-        <summary>自动给予身份组 <span class="fold-hint">可选</span><span class="optional-state" data-optional-status="autoroles"></span></summary>
-        <div class="optional-body">
-        <div class="cfg-row-hint" style="margin-bottom:10px;">新加入的成员将自动获得这些身份组</div>
-        <div class="role-select-list" id="w-roles"></div>
-        <div class="warn-box">⚠️ 请确保身份组位置在机器人下方，且机器人有「管理身份组」权限</div>
-        </div>
-    </details>
-
-    <div class="save-bar" id="w-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="w-save" onclick="saveWelcome()">保存设置</button></div>
-</div>
-
-<!-- ═══════ 领取身份组 ═══════ -->
-<div class="page mod-page" id="pg-roles" data-slug="roles" data-title="{{ tr('nav.module.roles') }}" data-draft-hint="检查好后，再发到频道哦。">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="tags" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>领取身份组讯息</h2><p>点一下按钮，找到和自己合拍的身份组吧</p></div>
-
-    <div class="cfg-section" id="rr-message-section">
-        <div class="field-heading"><h3 class="cfg-section-title">1. 面板内文</h3><span data-sample-slot="roles"></span></div>
-        <label class="cfg-row-label field-label" for="rr-title">标题</label>
-        <input class="cfg-input" id="rr-title" placeholder="🏷 身份组选择" style="margin-bottom:12px;max-width:100%;">
-        <label class="cfg-row-label field-label" for="rr-content">内文</label>
-        <textarea class="cfg-textarea" id="rr-content" placeholder="点击下方的按钮来领取身份组"></textarea>
-    </div>
-
-    <div class="cfg-section">
-        <h3 class="cfg-section-title">2. 身份组清单</h3>
-        <div class="cfg-row-hint" style="margin-bottom:10px;">每个身份组会对应一个消息下方的按钮</div>
-        <div id="rr-roles-list" style="display:flex;flex-direction:column;gap:8px;"></div>
-        <button class="tag-add-btn" style="margin-top:12px;" onclick="addRoleRow()">+ 新增身份组</button>
-        <div class="warn-box">⚠️ 最多可选 20 个身份组。请确保身份组位置在机器人下方</div>
-        <div class="cfg-row compact-toggle">
-            <div class="cfg-row-info">
-                <div class="cfg-row-label">单选模式</div>
-                <div class="cfg-row-hint">只能领取一个；改选时自动替换。</div>
+            <div class="section">
+                <h3 class="section-title">{{ tr('roles.step_roles') }}</h3>
+                <p class="section-hint">{{ tr('roles.roles_hint') }}</p>
+                <div class="list">
+                    <div class="row row--block">
+                        <div class="rr-list" id="rr-roles-list"></div>
+                        <div class="actions"><button type="button" class="btn btn--secondary" id="rr-add">{{ icon('plus') }}{{ tr('roles.add') }}</button></div>
+                    </div>
+                    {% call row(tr('roles.exclusive'), tr('roles.exclusive_hint'), 'rr-exclusive', cls='row--switch') %}{{ toggle('rr-exclusive', tr('roles.exclusive')) }}{% endcall %}
+                </div>
+                <p class="note note--warn">{{ icon('triangle-alert') }}<span>{{ tr('roles.limit_note') }}</span></p>
             </div>
-            <label class="cfg-tog"><input type="checkbox" id="rr-exclusive"><span class="track"></span><span class="thumb"></span></label>
+            <div class="section">
+                <h3 class="section-title">{{ tr('roles.step_channel') }}</h3>
+                <div class="list">
+                    {% call row(tr('roles.channel'), None, 'rr-ch') %}<select class="select" id="rr-ch" data-search="{{ tr('roles.channel') }}"><option value="0">{{ tr('roles.pick_channel') }}</option></select>{% endcall %}
+                </div>
+                <div class="actions"><button type="button" class="btn btn--primary" id="rr-send">{{ tr('roles.send') }}</button><span class="section-hint">{{ tr('roles.send_hint') }}</span></div>
+            </div>
+            <details class="fold sent-panels">
+                <summary>{{ tr('roles.sent_panels') }}</summary>
+                <div class="item-list" id="rr-existing"></div>
+            </details>
         </div>
+        <details class="message-preview" id="roles-preview" open>
+            <summary>{{ tr('preview.title') }}</summary>
+            <div class="preview-content" id="roles-preview-content"></div>
+            <p class="preview-disclaimer">{{ tr('preview.disclaimer') }}</p>
+        </details>
     </div>
-
-    <div class="cfg-section">
-        <h3 class="cfg-section-title">3. 发到哪里？</h3>
-        <label class="cfg-row-label field-label" for="rr-ch">发送频道</label>
-        <select class="cfg-select" id="rr-ch" style="max-width:100%;"><option value="0"># 选择频道</option></select>
+    <div class="emoji-picker" id="emoji-picker" role="dialog" aria-label="{{ tr('roles.pick_emoji') }}" hidden>
+        <input type="search" class="input" id="ep-search" placeholder="{{ tr('roles.emoji_search') }}" aria-label="{{ tr('roles.emoji_search') }}" data-draft-ignore>
+        <div class="seg ep-tabs">
+            <button type="button" class="seg-option ep-tab" data-tab="default" aria-pressed="true">{{ tr('roles.emoji_common') }}</button>
+            <button type="button" class="seg-option ep-tab" data-tab="custom" aria-pressed="false">{{ tr('roles.emoji_server') }}</button>
+        </div>
+        <div class="ep-grid" id="ep-grid"></div>
     </div>
-
-    <div class="save-bar">
-        <span class="save-hint">配置好后点击发送面板，小凛会发到选定频道</span>
-        <button class="btn-save" id="rr-send" onclick="sendRRPanel()">发送面板</button>
-    </div>
-
-    <details class="cfg-section optional-section sent-panels">
-        <summary>已发送的面板</summary>
-        <div class="optional-body" id="rr-existing"><div class="empty-state-sm">加载中…</div></div>
-    </details>
-</div>
+</section>
 
 <!-- ═══════ 自动审核 ═══════ -->
 <div class="page mod-page" id="pg-automod" data-slug="automod" data-title="{{ tr('nav.module.automod') }}">
@@ -482,19 +445,12 @@
 {% endblock %}
 
 {% block scripts %}
-    <!-- Emoji Picker (单例) -->
-    <div id="emoji-picker" class="emoji-picker" style="display:none;">
-        <input id="ep-search" placeholder="搜索 emoji…" oninput="filterEmojis()">
-        <div class="ep-tabs">
-            <button class="ep-tab active" data-tab="default" onclick="switchEmojiTab('default')">😀 常用</button>
-            <button class="ep-tab" data-tab="custom" onclick="switchEmojiTab('custom')">🌸 服务器</button>
-        </div>
-        <div id="ep-grid" class="ep-grid"></div>
-    </div>
-
 <script>window.GID = "{{ guild.id }}";</script>
 <script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/welcome.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/roles.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/music.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/server.js') }}?v=20261102a"></script>
 {% endblock %}

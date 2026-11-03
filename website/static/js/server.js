@@ -1,69 +1,18 @@
 const GID = window.GID || "";
 let _ch = null, _roles = null, _chPromise = null, _rolesPromise = null;
-const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
-const AVATAR_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
-const WELCOME_IMAGE_MAX_BYTES = 5 * 1024 * 1024;
-const WELCOME_IMAGE_MAX_DIMENSION = 4096;
-const WELCOME_IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
-const welcomeImages = {
-    welcome: {uploaded:false, objectUrl:''},
-    farewell: {uploaded:false, objectUrl:''},
-};
-window.WelcomeImageUploads = {has: kind => !!welcomeImages[kind]?.uploaded};
-
-function avatarFileError(file) {
-    if (!AVATAR_TYPES.has(file.type)) return '仅支持 PNG、JPEG、GIF 或 WebP 图片';
-    if (file.size > AVATAR_MAX_BYTES) return '头像文件不能超过 5 MB';
-    return '';
-}
-
-function welcomeImageFileError(file) {
-    if (!file) return '请先选择一张图片';
-    if (!WELCOME_IMAGE_TYPES.has(file.type)) return '仅支持 PNG、JPG、GIF 或 WebP 图片';
-    if (file.size > WELCOME_IMAGE_MAX_BYTES) return '图片不能超过 5 MB';
-    return '';
-}
-
-function welcomeImageDimensions(file) {
-    return new Promise(resolve => {
-        const url = URL.createObjectURL(file);
-        const image = new Image();
-        image.onload = () => {
-            const result = {width:image.naturalWidth, height:image.naturalHeight};
-            URL.revokeObjectURL(url); resolve(result);
-        };
-        image.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
-        image.src = url;
-    });
-}
-
-async function validateWelcomeImageFile(file) {
-    const basicError = welcomeImageFileError(file);
-    if (basicError) return basicError;
-    const dimensions = await welcomeImageDimensions(file);
-    if (!dimensions) return '图片文件损坏或无法读取';
-    if (dimensions.width > WELCOME_IMAGE_MAX_DIMENSION || dimensions.height > WELCOME_IMAGE_MAX_DIMENSION) {
-        return '图片尺寸不能超过 4096×4096';
-    }
-    return '';
-}
-
 /* ── Navigation ── */
 /* Legacy module pages, driven by Console's router until each page is rebuilt. */
 const legacyLoaders = {
-    welcome: () => loadWelcome(), automod: () => loadAutoMod(), moderation: () => loadModeration(),
-    giveaway: () => { loadGiveaways(); loadGiveawayPage(); }, leveling: () => loadLeaderboard(),
-    music: () => loadMusicSelects(), roles: () => loadRolesPage(), utility: () => loadUtility(),
+    automod: () => loadAutoMod(), moderation: () => loadModeration(),
+    giveaway: () => { loadGiveaways(); loadGiveawayPage(); }, leveling: () => loadLeaderboard(), utility: () => loadUtility(),
     botlog: () => loadBotLog(), serverlog: () => loadServerLog(),
 };
 document.addEventListener('console:page', e => {
-    closeEmojiPicker();
     legacyLoaders[e.detail.slug]?.();
     window.DashboardPreview?.refresh();
 });
 window.legacyInvalidate = slug => {
     if (DashboardUI.dirty('pg-' + slug)) return;
-    if (slug === 'welcome') _wLoaded = false;
     if (slug === 'automod') _amLoaded = false;
     if (slug === 'botlog') _blLoaded = false;
     if (slug === 'serverlog') _slLoaded = false;
@@ -138,125 +87,6 @@ function chOpts(sel, channels, selected) {
     const el = document.getElementById(sel);
     el.innerHTML = '<option value="0">— 未设置 —</option>' +
         channels.map(c => `<option value="${c.id}" ${String(c.id)===String(selected)?'selected':''}># ${escapeHtml(c.name)}</option>`).join('');
-}
-
-/* ── Welcome ── */
-let _wLoaded = false;
-function setWelcomeImageState(kind, uploaded, previewUrl='', statusText='') {
-    const state = welcomeImages[kind];
-    if (!state) return;
-    if (state.objectUrl && state.objectUrl !== previewUrl) URL.revokeObjectURL(state.objectUrl);
-    state.objectUrl = previewUrl.startsWith('blob:') ? previewUrl : '';
-    state.uploaded = !!uploaded;
-    const image = document.getElementById(`w-${kind}-image-preview`);
-    const clear = document.getElementById(`w-${kind}-clear`);
-    const status = document.getElementById(`w-${kind}-image-state`);
-    if (image) {
-        image.hidden = !previewUrl;
-        if (previewUrl) image.src = previewUrl;
-        else image.removeAttribute('src');
-    }
-    if (clear) clear.hidden = !uploaded;
-    if (status) status.textContent = statusText || (uploaded ? '已上传，发送时会优先使用' : '尚未上传');
-    window.DashboardPreview?.refresh();
-}
-
-async function previewWelcomeImage(kind, input) {
-    const file = input.files?.[0];
-    const error = await validateWelcomeImageFile(file);
-    if (error) {
-        input.value = '';
-        showToast('❌ ' + error);
-        const current = welcomeImages[kind]?.uploaded;
-        setWelcomeImageState(kind, current, current ? `/api/guild/${GID}/welcome/image/${kind}?v=${Date.now()}` : '', current ? '' : '尚未上传');
-        return;
-    }
-    const previewUrl = URL.createObjectURL(file);
-    setWelcomeImageState(kind, welcomeImages[kind].uploaded, previewUrl, '已选择，点「上传图片」才会生效');
-}
-
-async function uploadWelcomeImage(kind) {
-    const input = document.getElementById(`w-${kind}-file`);
-    const button = document.getElementById(`w-${kind}-upload`);
-    const file = input?.files?.[0];
-    const error = await validateWelcomeImageFile(file);
-    if (error) { showToast('❌ ' + error); return; }
-    button.disabled = true; button.textContent = '上传中…';
-    try {
-        const form = new FormData(); form.append('image', file);
-        const response = await fetch(`/api/guild/${GID}/welcome/image/${kind}`, {method:'POST', body:form});
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || `上传失败 (${response.status})`);
-        input.value = '';
-        setWelcomeImageState(kind, true, `${result.image_url}?v=${Date.now()}`);
-        showToast(`✅ ${kind === 'welcome' ? '迎新' : '道别'}图片已上传`);
-    } catch (e) {
-        showToast('❌ 上传失败，已选择的图片仍保留：' + e.message);
-    } finally {
-        button.disabled = false; button.textContent = '上传图片';
-    }
-}
-
-async function clearWelcomeImage(kind) {
-    if (!window.confirm(`要清除${kind === 'welcome' ? '迎新' : '道别'}自定义图片吗？`)) return;
-    const button = document.getElementById(`w-${kind}-clear`);
-    button.disabled = true;
-    try {
-        const response = await fetch(`/api/guild/${GID}/welcome/image/${kind}`, {method:'DELETE'});
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(result.error || `清除失败 (${response.status})`);
-        document.getElementById(`w-${kind}-file`).value = '';
-        setWelcomeImageState(kind, false);
-        showToast(`✅ ${kind === 'welcome' ? '迎新' : '道别'}图片已清除`);
-    } catch (e) {
-        showToast('❌ 清除失败：' + e.message);
-    } finally { button.disabled = false; }
-}
-
-async function loadWelcome() {
-    if (_wLoaded) return; _wLoaded = true;
-    try {
-        const [cfg, ch, roles] = await Promise.all([api('/welcome'), getCh(), getRoles()]);
-        chOpts('w-ch', ch, cfg.welcome_channel);
-        chOpts('w-fch', ch, cfg.farewell_channel);
-        document.getElementById('w-msg').value = cfg.welcome_msg || '';
-        document.getElementById('w-fmsg').value = cfg.farewell_msg || '';
-        document.getElementById('w-title').value = cfg.welcome_title || '';
-        document.getElementById('w-thumb').value = cfg.thumbnail_url || '';
-        document.getElementById('w-image').value = cfg.image_url || '';
-        document.getElementById('w-card').checked = !!cfg.show_card;
-        document.getElementById('w-enabled').checked = cfg.enabled !== 0;
-        for (const kind of ['welcome', 'farewell']) {
-            const uploaded = !!cfg[`has_${kind}_image`];
-            setWelcomeImageState(kind, uploaded, uploaded ? `/api/guild/${GID}/welcome/image/${kind}?v=${Date.now()}` : '');
-        }
-        const autoRoles = cfg.auto_roles ? cfg.auto_roles.split(',').filter(Boolean) : [];
-        document.getElementById('w-roles').innerHTML = roles.map(r =>
-            `<label class="role-opt"><input type="checkbox" value="${r.id}" ${autoRoles.includes(String(r.id))?'checked':''} onchange="markDirty('w-savebar')"> ${escapeHtml(r.name)}</label>`
-        ).join('');
-        // Attach dirty listeners
-        document.querySelectorAll('#w-ch,#w-fch,#w-msg,#w-fmsg,#w-title,#w-thumb,#w-image,#w-card,#w-enabled').forEach(el => el.addEventListener('input', () => markDirty('w-savebar')));
-    } catch(e) { _wLoaded=false; throw e; }
-}
-async function saveWelcome() {
-    const btn = document.getElementById('w-save'); btn.disabled = true; btn.textContent = '保存中…';
-    const checked = [...document.querySelectorAll('#w-roles input:checked')].map(i => i.value);
-    try {
-    await api('/welcome', 'POST', {
-        welcome_channel: document.getElementById('w-ch').value,
-        farewell_channel: document.getElementById('w-fch').value,
-        auto_roles: checked.join(','),
-        welcome_msg: document.getElementById('w-msg').value,
-        farewell_msg: document.getElementById('w-fmsg').value,
-        welcome_title: document.getElementById('w-title').value,
-        thumbnail_url: document.getElementById('w-thumb').value,
-        image_url: document.getElementById('w-image').value,
-        show_card: document.getElementById('w-card').checked,
-        enabled: document.getElementById('w-enabled').checked,
-    });
-    btn.textContent = '✅ 已保存！'; showToast('✅ 欢迎配置已保存！'); markClean('w-savebar');
-    } catch(e) { showToast('❌ 保存失败，输入已保留，可重试：' + e.message); }
-    finally { btn.disabled = false; btn.textContent = '保存设置'; }
 }
 
 /* ── AutoMod ── */
@@ -342,32 +172,6 @@ async function saveModeration() {
             warn_ban_threshold: +document.getElementById('mod-bt').value,
         });
         btn.textContent = '✅ 已保存！'; showToast('✅ 管理配置已保存！'); markClean('mod-savebar');
-    } catch(e) { showToast('❌ 保存失败: ' + e.message); }
-    setTimeout(() => { btn.disabled = false; btn.textContent = '保存设置'; }, 1500);
-}
-
-/* ── Music config ── */
-let _muLoaded = false;
-async function loadMusicSelects() {
-    if (_muLoaded) return; _muLoaded = true;
-    try {
-        const [ch, roles, cfg] = await Promise.all([getCh(), getRoles(), api('/music')]);
-        chOpts('mu-ch', ch, cfg.notify_channel || 0);
-        const djSel = document.getElementById('mu-dj');
-        djSel.innerHTML = '<option value="0">— 不限制 —</option>' + roles.map(r =>
-            `<option value="${r.id}" ${String(r.id)===String(cfg.dj_role||0)?'selected':''}>@ ${escapeHtml(r.name)}</option>`
-        ).join('');
-        document.querySelectorAll('#mu-dj,#mu-ch').forEach(el => el.addEventListener('change', () => markDirty('mu-savebar')));
-    } catch(e) { _muLoaded=false; throw e; }
-}
-async function saveMusic() {
-    const btn = document.getElementById('mu-save'); btn.disabled = true; btn.textContent = '保存中…';
-    try {
-        await api('/music', 'POST', {
-            dj_role: document.getElementById('mu-dj').value,
-            notify_channel: document.getElementById('mu-ch').value,
-        });
-        btn.textContent = '✅ 已保存！'; showToast('✅ 音乐配置已保存！'); markClean('mu-savebar');
     } catch(e) { showToast('❌ 保存失败: ' + e.message); }
     setTimeout(() => { btn.disabled = false; btn.textContent = '保存设置'; }, 1500);
 }
@@ -515,181 +319,6 @@ function updateSummary() {
     if (ov2) ov2.textContent = disabled > 0 ? disabled : '0';
 }
 
-/* ── Reaction Roles config ── */
-let _rrLoaded = false, _rrRoleCount = 0;
-async function loadRolesPage() {
-    if (_rrLoaded) return; _rrLoaded = true;
-    showSkeleton('rr-existing', 2);
-    try {
-        const [ch, roles] = await Promise.all([getCh(), getRoles()]);
-        chOpts('rr-ch', ch, 0);
-        window._rrAvailRoles = roles;
-        const panels = await api('/reactionroles');
-        const el = document.getElementById('rr-existing');
-        if (!panels || panels.length === 0) { el.innerHTML = '<div class="empty-state-sm">还没有任何面板</div>'; }
-        else {
-            el.innerHTML = panels.map(p => {
-                const mappings = typeof p.mappings === 'string' ? JSON.parse(p.mappings) : p.mappings;
-                const count = Object.keys(mappings).length;
-                return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:var(--pink);">${escapeHtml(p.title || '身份组面板')}</span><span class="case-time">消息 ID: ${p.message_id} · ${count} 个映射</span></div><div class="case-body">频道 ID: ${p.channel_id}</div></div>`;
-            }).join('');
-        }
-    } catch(e) {
-        _rrLoaded = false;
-        showError('rr-existing', '加载失败，请重新打开此页面重试: ' + e.message);
-        showToast('❌ 加载身份组配置失败: ' + e.message);
-    }
-}
-function addRoleRow() {
-    if (_rrRoleCount >= 20) { showToast('最多 20 个身份组'); return; }
-    _rrRoleCount++;
-    const roles = window._rrAvailRoles || [];
-    const ropts = roles.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
-    document.getElementById('rr-roles-list').insertAdjacentHTML('beforeend', `
-        <div class="rr-row" style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--bg);border:1px solid var(--border-light);border-radius:10px;max-width:560px;">
-            <button type="button" class="emoji-trigger rr-emoji-trigger" onclick="openEmojiPicker(this)" aria-label="选择 emoji"><span class="ep-placeholder">🎮</span></button>
-            <input type="hidden" class="rr-emoji" value="">
-            <select class="cfg-select rr-role" style="flex:1;max-width:none;" aria-label="选择身份组">${ropts}</select>
-            <button onclick="this.parentElement.remove();_rrRoleCount--;DashboardUI.changed('pg-roles');" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:1.1rem;padding:4px 8px;" title="移除" aria-label="移除这一行">✕</button>
-        </div>
-    `);
-    DashboardUI.changed('pg-roles');
-}
-
-/* ── Emoji Picker ── */
-let _epTab = 'default', _epTarget = null, _epCustom = null;
-const EP_DEFAULT_EMOJIS = [
-    {e:'😀',k:'笑 smile happy'},{e:'😂',k:'笑哭 lol'},{e:'🥰',k:'爱 love'},{e:'😎',k:'酷 cool'},
-    {e:'🥺',k:'求 pleading'},{e:'😭',k:'哭 cry'},{e:'😡',k:'怒 angry'},{e:'🤔',k:'想 think'},
-    {e:'😴',k:'睡 sleep'},{e:'🤗',k:'抱 hug'},{e:'😏',k:'坏笑 smirk'},{e:'🙄',k:'翻白眼 eyeroll'},
-    {e:'👍',k:'赞 thumbs up like'},{e:'👎',k:'踩 thumbs down'},{e:'👏',k:'拍手 clap'},{e:'🙏',k:'谢谢 thanks pray'},
-    {e:'✌️',k:'胜利 peace'},{e:'🤝',k:'握手 handshake'},{e:'💪',k:'肌肉 strong'},{e:'🫡',k:'敬礼 salute'},
-    {e:'❤️',k:'红心 heart love'},{e:'🧡',k:'橙心 orange heart'},{e:'💛',k:'黄心 yellow heart'},{e:'💚',k:'绿心 green heart'},
-    {e:'💙',k:'蓝心 blue heart'},{e:'💜',k:'紫心 purple heart'},{e:'🖤',k:'黑心 black heart'},{e:'🤍',k:'白心 white heart'},
-    {e:'💖',k:'闪心 sparkle heart'},{e:'💗',k:'粉心 pink heart'},{e:'💕',k:'两颗心 two hearts'},{e:'✨',k:'闪 sparkles'},
-    {e:'🔥',k:'火 fire'},{e:'⭐',k:'星 star'},{e:'🌟',k:'闪星 glow star'},{e:'⚡',k:'闪电 lightning'},
-    {e:'🎉',k:'庆祝 party'},{e:'🎊',k:'彩带 confetti'},{e:'🎁',k:'礼物 gift'},{e:'🏆',k:'奖杯 trophy'},
-    {e:'🌸',k:'樱花 cherry blossom'},{e:'🌺',k:'花 flower'},{e:'🌷',k:'郁金香 tulip'},{e:'🌻',k:'向日葵 sunflower'},
-    {e:'🌹',k:'玫瑰 rose'},{e:'🍀',k:'四叶草 clover'},{e:'🌈',k:'彩虹 rainbow'},{e:'☀️',k:'太阳 sun'},
-    {e:'🌙',k:'月亮 moon'},{e:'⛅',k:'云 cloud'},{e:'❄️',k:'雪 snow'},{e:'🎵',k:'音符 music'},
-    {e:'🎮',k:'游戏 game'},{e:'🕹️',k:'摇杆 joystick'},{e:'🎲',k:'骰子 dice'},{e:'🎯',k:'目标 target'},
-    {e:'🍕',k:'披萨 pizza'},{e:'🍔',k:'汉堡 burger'},{e:'🍣',k:'寿司 sushi'},{e:'🍰',k:'蛋糕 cake'},
-    {e:'☕',k:'咖啡 coffee'},{e:'🍺',k:'啤酒 beer'},{e:'🐱',k:'猫 cat'},{e:'🐶',k:'狗 dog'},
-    {e:'🐼',k:'熊猫 panda'},{e:'🦊',k:'狐狸 fox'},{e:'🐰',k:'兔子 bunny'},{e:'🦄',k:'独角兽 unicorn'},
-    {e:'✅',k:'对 check yes'},{e:'❌',k:'错 cross no'},{e:'⚠️',k:'警告 warning'},{e:'❓',k:'问号 question'},
-    {e:'❗',k:'感叹号 exclamation'},{e:'💯',k:'满分 100'},{e:'🚀',k:'火箭 rocket'},{e:'💎',k:'钻石 diamond'},
-];
-
-async function openEmojiPicker(triggerBtn) {
-    _epTarget = triggerBtn;
-    if (_epCustom === null) {
-        try { _epCustom = await api('/emojis'); } catch(e) { _epCustom = []; }
-    }
-    const picker = document.getElementById('emoji-picker');
-    if(!triggerBtn.isConnected||!triggerBtn.closest('.mod-page.active'))return;
-    picker.style.display = 'flex';
-    positionEmojiPicker();
-    document.getElementById('ep-search').value = '';
-    renderEmojiGrid('');
-    // Close on outside click
-    setTimeout(() => document.addEventListener('click', closeEmojiPickerOnOutside), 0);
-}
-
-function positionEmojiPicker(){
-    const picker=document.getElementById('emoji-picker');
-    if(!picker||picker.style.display==='none'||!_epTarget)return;
-    const rect=_epTarget.getBoundingClientRect(),width=picker.offsetWidth,height=picker.offsetHeight;
-    picker.style.left=Math.max(12,Math.min(rect.left,window.innerWidth-width-12))+'px';
-    picker.style.top=Math.max(12,Math.min(rect.bottom+6,window.innerHeight-height-12))+'px';
-}
-function closeEmojiPicker(restoreFocus=false){
-    const picker=document.getElementById('emoji-picker');if(!picker)return;
-    picker.style.display='none';document.removeEventListener('click',closeEmojiPickerOnOutside);
-    if(restoreFocus)_epTarget?.focus();
-}
-function closeEmojiPickerOnOutside(e) {
-    const picker = document.getElementById('emoji-picker');
-    if (picker.contains(e.target) || (_epTarget && _epTarget.contains(e.target))) return;
-    closeEmojiPicker();
-}
-
-function switchEmojiTab(tab) {
-    _epTab = tab;
-    document.querySelectorAll('.ep-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
-    renderEmojiGrid(document.getElementById('ep-search').value);
-}
-
-function filterEmojis() {
-    renderEmojiGrid(document.getElementById('ep-search').value);
-}
-
-function renderEmojiGrid(q) {
-    const grid = document.getElementById('ep-grid');
-    q = (q || '').toLowerCase().trim();
-    let html = '';
-    if (_epTab === 'default') {
-        const list = q
-            ? EP_DEFAULT_EMOJIS.filter(x => x.k.includes(q) || x.e === q)
-            : EP_DEFAULT_EMOJIS;
-        if (list.length === 0) html = '<div class="ep-empty">没有匹配的 emoji</div>';
-        else html = list.map(x =>
-            `<button class="ep-item" type="button" onclick="pickEmoji(${JSON.stringify(x.e).replace(/"/g,'&quot;')})">${x.e}</button>`
-        ).join('');
-    } else {
-        const list = q ? (_epCustom||[]).filter(x => x.name.toLowerCase().includes(q)) : (_epCustom||[]);
-        if (list.length === 0) html = '<div class="ep-empty">服务器没有自定义 emoji</div>';
-        else html = list.map(x => {
-            const code = `<${x.animated?'a':''}:${x.name}:${x.id}>`;
-            const safe = JSON.stringify(code).replace(/"/g,'&quot;');
-            return `<button class="ep-item" type="button" title=":${escapeHtml(x.name)}:" onclick="pickEmoji(${safe},'${x.url}')"><img src="${x.url}" alt=""></button>`;
-        }).join('');
-    }
-    grid.innerHTML = html;
-    positionEmojiPicker();
-}
-
-function pickEmoji(code, imgUrl) {
-    if (!_epTarget) return;
-    const row = _epTarget.parentElement;
-    row.querySelector('.rr-emoji').value = code;
-    if (imgUrl) {
-        _epTarget.innerHTML = `<img src="${imgUrl}" alt="">`;
-    } else {
-        _epTarget.innerHTML = code;
-    }
-    document.getElementById('emoji-picker').style.display = 'none';
-    document.removeEventListener('click', closeEmojiPickerOnOutside);
-    DashboardUI.changed('pg-roles');
-}
-async function sendRRPanel() {
-    const ch = document.getElementById('rr-ch').value;
-    const title = document.getElementById('rr-title').value || '🏷 身份组选择';
-    const content = document.getElementById('rr-content').value || '点击下方的按钮来领取身份组';
-    const exclusive = document.getElementById('rr-exclusive').checked;
-    if (ch === '0') { showToast('请选择发送频道'); return; }
-    const rows = document.querySelectorAll('.rr-row');
-    if (rows.length === 0) { showToast('请至少添加一个身份组'); return; }
-    const mappings = [];
-    for (const row of rows) {
-        const emoji = row.querySelector('.rr-emoji').value.trim();
-        const roleSel = row.querySelector('.rr-role');
-        const roleId = roleSel.value;
-        const roleName = roleSel.options[roleSel.selectedIndex].text;
-        if (!emoji) { showToast('每个身份组都需要选择 emoji'); return; }
-        mappings.push({ emoji, role_id: roleId, role_name: roleName });
-    }
-    const btn = document.getElementById('rr-send'); btn.disabled = true; btn.textContent = '发送中…';
-    try {
-        const r = await api('/reactionroles/send', 'POST', { channel_id: ch, title, content, mappings, exclusive });
-        if (r.ok) {
-            showToast('✅ 身份组面板已发送到频道!');
-            DashboardUI.clean('pg-roles');
-            _rrLoaded = false; await loadRolesPage();
-        } else { showToast('❌ ' + (r.error || '发送失败')); }
-    } catch(e) { showToast('❌ 网络错误'); }
-    btn.disabled = false; btn.textContent = '发送面板';
-}
-
 /* ── Giveaway creation ── */
 let _gwPageLoaded = false;
 async function loadGiveawayPage() {
@@ -737,88 +366,6 @@ async function createGiveaway() {
     btn.disabled = false; btn.textContent = '建立';
 }
 
-/* ── Bot Personalizer ── */
-let _bpLoaded = false, _avData = null;
-async function loadPersonalizer() {
-    if (_bpLoaded) return; _bpLoaded = true;
-    try {
-        const cfg = await apiGlobal('/api/bot/personalizer');
-        document.getElementById('bp-status').value = cfg.bot_status || 'online';
-        document.getElementById('bp-atype').value = cfg.activity_type || 'watching';
-        document.getElementById('bp-atext').value = cfg.activity_text || '';
-        updatePreview();
-    } catch(e) { showToast('❌ 加载 Bot 配置失败: ' + e.message); }
-}
-function updatePreview() {
-    const atype = document.getElementById('bp-atype').value;
-    const atext = document.getElementById('bp-atext').value;
-    const status = document.getElementById('bp-status').value;
-    const labels = {watching:'观看中',playing:'游玩中',listening:'收听',competing:'竞争中',custom:'',none:''};
-    const emojis = {watching:'👀',playing:'🎮',listening:'🎧',competing:'🏆',custom:'💬',none:''};
-    const act = atype === 'none' ? '' : `${emojis[atype]||''} ${labels[atype]||''} ${atext}`.trim();
-    document.getElementById('prev-act').textContent = act || '无活动';
-    document.getElementById('prev-act2').textContent = act || '无活动';
-    const dot = document.getElementById('prev-dot');
-    const dColors = {online:'#23A559',idle:'#F0B232',dnd:'#F23F43',invisible:'#80848E'};
-    dot.style.background = dColors[status] || '#23A559';
-}
-function previewAvatar(input) {
-    if (!input.files || !input.files[0]) return;
-    const file = input.files[0];
-    const error = avatarFileError(file);
-    if (error) {
-        input.value = '';
-        _avData = null;
-        showToast('❌ ' + error);
-        return;
-    }
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        _avData = e.target.result; // data:image/...;base64,...
-        ['bp-av-img','prev-av-1','prev-av-2'].forEach(id => {
-            const img = document.getElementById(id); img.src = _avData; img.style.display = 'block';
-        });
-        ['bp-av-placeholder','prev-av-1-ph','prev-av-2-ph'].forEach(id => {
-            const el = document.getElementById(id); if(el) el.style.display = 'none';
-        });
-    };
-    reader.readAsDataURL(file);
-}
-async function uploadAvatar() {
-    if (!_avData) { showToast('⚠ 请先选择一张图片'); return; }
-    const btn = document.getElementById('bp-av-btn'); btn.textContent = '上传中…'; btn.disabled = true;
-    try {
-        const d = await apiGlobal('/api/bot/avatar', 'POST', { avatar: _avData });
-        if (d.ok) showToast('✅ 头像已更新!');
-        else showToast('❌ ' + (d.error || '上传失败'));
-    } catch(e) { showToast('❌ 上传失败: ' + e.message); }
-    btn.textContent = '上传头像'; btn.disabled = false;
-}
-async function changeName() {
-    const name = document.getElementById('bp-name').value.trim();
-    if (!name) { showToast('⚠ 请输入用户名'); return; }
-    try {
-        const d = await apiGlobal('/api/bot/username', 'POST', { username: name });
-        if (d.ok) {
-            showToast('✅ 用户名已更新!');
-            document.getElementById('prev-name').textContent = name;
-            document.getElementById('prev-name2').textContent = name;
-        } else { showToast('❌ ' + (d.error || '修改失败')); }
-    } catch(e) { showToast('❌ 修改失败: ' + e.message); }
-}
-async function savePersonalizer() {
-    const btn = document.getElementById('bp-save'); btn.disabled = true; btn.textContent = '保存中…';
-    try {
-        await apiGlobal('/api/bot/personalizer', 'POST', {
-            bot_status: document.getElementById('bp-status').value,
-            activity_type: document.getElementById('bp-atype').value,
-            activity_text: document.getElementById('bp-atext').value,
-        });
-        btn.textContent = '✅ 已保存!'; showToast('✅ 状态配置已保存,30 秒内生效!');
-    } catch(e) { showToast('❌ 保存失败: ' + e.message); }
-    setTimeout(() => { btn.disabled = false; btn.textContent = '保存设置'; }, 1500);
-}
-
 /* ── Toast ── */
 function showToast(msg) {
     const kind = msg.startsWith('✅') ? 'ok' : msg.startsWith('❌') ? 'bad' : 'info';
@@ -826,9 +373,6 @@ function showToast(msg) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelector('.main').addEventListener('scroll',positionEmojiPicker,{passive:true});
-    window.addEventListener('resize',positionEmojiPicker);
-    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('emoji-picker').style.display!=='none'){e.preventDefault();closeEmojiPicker(true);}});
     document.getElementById('command-search').addEventListener('input',renderUtility);
     document.getElementById('command-filter').addEventListener('change',renderUtility);
 });
@@ -931,15 +475,12 @@ function guardedLoader(mod, original, loaded){
     };
     return wrapped;
 }
-loadWelcome=guardedLoader('welcome',loadWelcome,()=>_wLoaded);
 loadAutoMod=guardedLoader('automod',loadAutoMod,()=>_amLoaded);
 loadModeration=guardedLoader('moderation',loadModeration,()=>_modLoaded);
-loadMusicSelects=guardedLoader('music',loadMusicSelects,()=>_muLoaded);
 loadBotLog=guardedLoader('botlog',loadBotLog,()=>_blLoaded);
 loadServerLog=guardedLoader('serverlog',loadServerLog,()=>_slLoaded);
-loadRolesPage=guardedLoader('roles',loadRolesPage,()=>_rrLoaded);
 loadGiveawayPage=guardedLoader('giveaway',loadGiveawayPage,()=>_gwPageLoaded);
-for(const [name,mod] of Object.entries({saveWelcome:'welcome',saveAutoMod:'automod',saveModeration:'moderation',saveMusic:'music',saveBotLog:'botlog',saveServerLog:'serverlog',sendRRPanel:'roles',createGiveaway:'giveaway'})){
+for(const [name,mod] of Object.entries({saveAutoMod:'automod',saveModeration:'moderation',saveBotLog:'botlog',saveServerLog:'serverlog',createGiveaway:'giveaway'})){
     const original=window[name];
     window[name]=(...args)=>DashboardUI.saving('pg-'+mod,()=>original(...args));
 }

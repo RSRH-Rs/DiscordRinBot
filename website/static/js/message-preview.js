@@ -14,24 +14,6 @@ window.DashboardPreview = (() => {
         try{return ['http:','https:'].includes(new URL(input).protocol)?'external':'invalid';}catch{return 'invalid';}
     }
     function textNode(tag,cls,text){const node=document.createElement(tag);node.className=cls;node.textContent=text;return node;}
-    function previewShell(root,kind){
-        const layout=document.createElement('div');layout.className='editor-layout';
-        const form=document.createElement('div');form.className='editor-form';
-        const history=kind==='roles'?el('rr-existing').closest('.cfg-section'):null;
-        [...root.children].forEach(child=>{if(child.classList.contains('cfg-section')&&child!==history)form.append(child);});
-        const details=document.createElement('details');details.className='message-preview';details.id=kind+'-preview';
-        details.open=window.matchMedia('(min-width:1100px)').matches;
-        details.append(textNode('summary','','看看消息预览'));
-        const content=document.createElement('div');content.className='preview-content';content.id=kind+'-preview-content';
-        details.append(content,textNode('p','preview-disclaimer','本地示意，不会发送。图片与 Markdown 以 Discord 实际显示为准。'));
-        layout.append(form,details);root.querySelector('.save-bar').before(layout);
-        const media=window.matchMedia('(min-width:1100px)');
-        const placePreview=()=>{
-            if(media.matches)layout.append(details);
-            else form.querySelector('.cfg-section').after(details);
-        };
-        media.addEventListener('change',placePreview);placePreview();
-    }
     function bubble(content){
         const card=document.createElement('div');card.className='discord-preview';
         const header=document.createElement('div');header.className='preview-author';
@@ -49,7 +31,7 @@ window.DashboardPreview = (() => {
     }
     function refreshWelcome(){
         const target=el('welcome-preview-content');if(!target)return;
-        const guild=el('page-title').textContent;
+        const guild=document.querySelector('.nav-head')?.title||'';
         const embed=document.createElement('div');embed.className='preview-embed';
         embed.append(textNode('strong','preview-title',value('w-title').trim()||'欢迎来到 '+guild));
         embed.append(textNode('p','preview-body',formatWelcome(value('w-msg'),guild)));
@@ -104,7 +86,7 @@ window.DashboardPreview = (() => {
     function sample(kind){
         if(!window.confirm('这会替换当前的标题和正文，其他设置不会改变。要套用示例吗？'))return;
         if(kind==='welcome'){
-            el('w-title').value='欢迎来到 '+el('page-title').textContent;
+            el('w-title').value='欢迎来到 '+(document.querySelector('.nav-head')?.title||'');
             el('w-msg').value='欢迎 %member% 来到 %server%！\n先坐下来聊聊天吧，大家都在等你哦～';
         }else{
             el('rr-title').value='找到你的同好';el('rr-content').value='喜欢听歌，还是一起打游戏？\n点下面的按钮，选一个属于你的小角落吧。';
@@ -123,8 +105,7 @@ window.DashboardPreview = (() => {
     document.addEventListener('DOMContentLoaded',()=>{
         for(const kind of ['welcome','roles']){
             const root=el('pg-'+kind);if(!root)continue;
-            previewShell(root,kind);
-            const button=document.createElement('button');button.type='button';button.className='sample-link';button.textContent='用小凛的示例';button.onclick=()=>sample(kind);
+            const button=document.createElement('button');button.type='button';button.className='btn btn--text';button.textContent='用小凛的示例';button.onclick=()=>sample(kind);
             root.querySelector('[data-sample-slot]').append(button);
             root.addEventListener('input',refresh);root.addEventListener('change',refresh);
         }

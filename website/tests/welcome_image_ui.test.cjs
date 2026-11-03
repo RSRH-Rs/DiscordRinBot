@@ -4,8 +4,8 @@ const path = require('node:path');
 const vm = require('node:vm');
 const {test} = require('node:test');
 
-const source = fs.readFileSync(path.join(__dirname, '../static/js/server.js'), 'utf8');
-const validationOnly = source.slice(0, source.indexOf('/* ── Navigation'));
+const source = fs.readFileSync(path.join(__dirname, '../static/js/modules/welcome.js'), 'utf8');
+const validationOnly = source.slice(0, source.indexOf('/* ── end validation ── */'));
 const context = vm.createContext({
     window:{},
     URL:{createObjectURL(){return 'blob:test';}, revokeObjectURL(){}},

@@ -19,3 +19,16 @@
 {%- macro nav_item(href, icon_name, label, slug=None, dot=False) -%}
 <a class="nav-item" href="{{ href }}"{% if slug %} data-mod="{{ slug }}"{% endif %}>{{ icon(icon_name) }}<span class="nav-label">{{ label }}</span>{% if dot %}<span class="nav-dot nav-dot--unknown" data-dot="{{ slug }}" role="img" aria-label="{{ tr('status.unknown') }}"></span>{% endif %}</a>
 {%- endmacro -%}
+
+{%- macro upload(kind) -%}
+<div class="row row--block">
+    <div class="row-text"><label class="row-title" for="w-{{ kind }}-file">{{ tr('welcome.image.' ~ kind ~ '_title') }}</label><span class="row-hint">{{ tr('welcome.image.hint') }}</span></div>
+    <input type="file" id="w-{{ kind }}-file" accept="image/png,image/jpeg,image/gif,image/webp" data-draft-ignore>
+    <div class="actions">
+        <button type="button" class="btn btn--secondary" id="w-{{ kind }}-upload">{{ tr('welcome.image.upload') }}</button>
+        <button type="button" class="btn btn--text" id="w-{{ kind }}-clear" hidden>{{ tr('welcome.image.clear') }}</button>
+        <span class="unit" id="w-{{ kind }}-image-state" role="status">{{ tr('welcome.image.none') }}</span>
+    </div>
+    <img class="upload-preview" id="w-{{ kind }}-image-preview" alt="{{ tr('welcome.image.' ~ kind ~ '_alt') }}" hidden>
+</div>
+{%- endmacro -%}

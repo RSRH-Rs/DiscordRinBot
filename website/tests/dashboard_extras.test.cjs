@@ -74,10 +74,13 @@ test('navigation preferences are UI-only and tolerate unavailable storage',()=>{
 test('saving welcome retains optional fields even when their sections are collapsed',async()=>{
     const values={'w-ch':'111','w-fch':'222','w-msg':'欢迎','w-fmsg':'再见','w-title':'标题','w-thumb':'%avatar%','w-image':'https://example.com/a.png'};
     const elements=Object.fromEntries(Object.entries(values).map(([id,value])=>[id,{value}]));
-    elements['w-card']={checked:true};elements['w-enabled']={checked:true};elements['w-save']={};
-    const requests=[],ctx=vm.createContext({document:{getElementById:id=>elements[id],querySelectorAll:()=>[{value:'333'}]},api:async(...args)=>{requests.push(args);},showToast(){},markClean(){}});
-    const source=read('server.js');vm.runInContext(source.slice(source.indexOf('async function saveWelcome()'),source.indexOf('/* ── AutoMod')),ctx);
-    await ctx.saveWelcome();const payload=requests[0][2];
+    elements['w-card']={checked:true};elements['w-enabled']={checked:true};
+    let module;const requests=[];
+    const ctx=vm.createContext({document:{getElementById:id=>elements[id],querySelectorAll:()=>[{value:'333'}],addEventListener(){}},
+        Console:{tr:k=>k,module:def=>{module=def;},api:async(...args)=>{requests.push(args);}}});
+    ctx.window=ctx;
+    vm.runInContext(read('modules/welcome.js'),ctx);
+    await module.save();const payload=requests[0][2];
     assert.equal(payload.farewell_channel,'222');assert.equal(payload.thumbnail_url,'%avatar%');assert.equal(payload.image_url,values['w-image']);
     assert.equal(payload.auto_roles,'333');assert.equal(payload.show_card,true);assert.equal(payload.welcome_title,'标题');
     assert.equal(Object.keys(payload).length,10);
@@ -140,9 +143,9 @@ test('overview and direct command links share one request and do not replace edi
 });
 
 test('emoji popup is clamped inside a 320px screen',()=>{
-    const source=read('server.js'),picker={style:{display:'flex'},offsetWidth:296,offsetHeight:340};
-    const ctx=vm.createContext({document:{getElementById:()=>picker},innerWidth:320,innerHeight:740});ctx.window=ctx;
-    ctx._epTarget={getBoundingClientRect:()=>({left:46,bottom:700})};
-    vm.runInContext(source.slice(source.indexOf('function positionEmojiPicker()'),source.indexOf('function closeEmojiPicker(')),ctx);
-    ctx.positionEmojiPicker();assert.equal(picker.style.left,'12px');assert.equal(picker.style.top,'388px');
+    const picker={hidden:false,style:{},offsetWidth:296,offsetHeight:340};
+    const ctx=vm.createContext({document:{getElementById:()=>picker,addEventListener(){}},innerWidth:320,innerHeight:740,Console:{tr:k=>k,module(){}}});ctx.window=ctx;
+    vm.runInContext(read('modules/roles.js'),ctx);
+    ctx.RolePanel.setTarget({getBoundingClientRect:()=>({left:46,bottom:700})});
+    ctx.RolePanel.positionPicker();assert.equal(picker.style.left,'12px');assert.equal(picker.style.top,'388px');
 });
