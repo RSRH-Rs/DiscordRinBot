@@ -259,7 +259,9 @@
     "giveaway": {
       "active": "进行中 {n} 场",
       "none": "没有进行中的抽奖"
-    }
+    },
+    "attention_item": "{module}：{text}",
+    "attention_go": "去处理"
   },
   "preview": {
     "title": "看看消息预览",

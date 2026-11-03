@@ -1,4 +1,4 @@
-/* Server overview: Rin's duty card, per-module config summaries and quick switches. */
+/* Server overview: Rin's duty card, attention notices, module cards with config summaries and quick switches. */
 window.Overview = (() => {
     const {tr} = Console;
     const TOGGLE_SLUGS = ['welcome', 'automod', 'botlog', 'serverlog'];
@@ -47,6 +47,23 @@ window.Overview = (() => {
         return {text: parts.join(' · '), warn: false};
     }
 
+    // Modules whose saved config needs the owner's attention (no channel, deleted channel...), in page order, at most three.
+    function attention(modules, channels) {
+        return modules.map(m => ({slug: m.slug, summary: summaryText(m.slug, m.summary, channels)}))
+            .filter(a => a.summary?.warn).slice(0, 3).map(a => ({slug: a.slug, text: a.summary.text}));
+    }
+
+    function notice({slug, text}) {
+        const line = document.createElement('p');
+        line.className = 'notice notice--warn';
+        const label = document.createElement('span');
+        label.textContent = tr('overview.attention_item', {module: tr('nav.module.' + slug), text});
+        const link = document.createElement('a');
+        link.href = '#' + slug; link.dataset.mod = slug; link.textContent = tr('overview.attention_go');
+        line.append(label, link);
+        return line;
+    }
+
     async function toggle(slug, enabled, input) {
         const holder = input.closest('.tog');
         if (DashboardUI.dirty('pg-' + slug)) {
@@ -54,7 +71,7 @@ window.Overview = (() => {
             Console.toast(tr('overview.toggle_blocked'), 'bad');
             return false;
         }
-        input.disabled = true;
+        input.disabled = true; input.dataset.busy = '1';
         holder?.setAttribute('aria-busy', 'true');
         try {
             await Console.api(`/modules/${slug}/enabled`, 'POST', {enabled});
@@ -66,7 +83,7 @@ window.Overview = (() => {
             Console.toast(tr('overview.toggle_failed', {reason: e.message}), 'bad');
             return false;
         } finally {
-            input.disabled = false;
+            input.disabled = false; delete input.dataset.busy;
             holder?.removeAttribute('aria-busy');
         }
     }
@@ -99,10 +116,13 @@ window.Overview = (() => {
         el('ov-facts').textContent = facts.join(' · ');
     }
 
+    let rendered = false;
     async function render(data) {
         let list = null;
         try { list = await Console.channels(); } catch { /* summaries fall back to blurbs */ }
         if (!list?.length) list = null;
+        const notices = attention(data.modules, list), box = el('ov-attention');
+        if (box) { box.replaceChildren(...notices.map(notice)); box.hidden = !notices.length; }
         for (const m of data.modules) {
             const row = document.querySelector(`[data-row="${m.slug}"]`);
             if (!row) continue;
@@ -111,19 +131,41 @@ window.Overview = (() => {
             node.textContent = summary ? summary.text : node.dataset.blurb;
             node.classList.toggle('is-warn', !!summary?.warn);
             const input = row.querySelector('input[data-toggle]');
-            if (input && !input.disabled) input.checked = m.summary ? !!m.summary.enabled : m.config_state !== 'disabled';
+            if (input && !input.dataset.busy) {
+                input.disabled = false;
+                input.checked = m.summary ? !!m.summary.enabled : m.config_state !== 'disabled';
+            }
+            row.classList.toggle('is-on', !input || input.checked);
             row.querySelector('[data-state]').textContent = Console.stateLabel(m);
         }
+        rendered = true;
+        el('ov-modules')?.setAttribute('aria-busy', 'false');
+    }
+
+    // Only the very first load can fail visibly; later polling failures keep the cards that already loaded.
+    function failed() {
+        if (rendered) return;
+        const grid = el('ov-modules'), error = el('ov-error');
+        if (grid) grid.hidden = true;
+        if (error) error.hidden = false;
+    }
+    function retry() {
+        const grid = el('ov-modules'), error = el('ov-error');
+        if (error) error.hidden = true;
+        if (grid) grid.hidden = false;
+        Console.refreshModules();
     }
 
     document.addEventListener('DOMContentLoaded', () => {
         if (!el('pg-overview')) return;
         document.addEventListener('console:modules', e => render(e.detail));
+        document.addEventListener('console:modules-failed', failed);
+        el('ov-retry')?.addEventListener('click', retry);
         document.querySelectorAll('input[data-toggle]').forEach(input => {
             input.addEventListener('change', () => toggle(input.dataset.toggle, input.checked, input));
         });
         loadInfo();
     });
 
-    return {TOGGLE_SLUGS, summaryText, toggle, joinDuration, render};
+    return {TOGGLE_SLUGS, summaryText, attention, toggle, joinDuration, render};
 })();

@@ -99,6 +99,14 @@ class DashboardTemplateTests(unittest.TestCase):
         for name in ['dashboard.html','server.html','settings.html','login_gate.html','error.html']:
             yield name,self.render(name)[0]
 
+    def test_overview_cards(self):
+        html,_=self.render('server.html')
+        start=html.index('id="pg-overview"');ov=html[start:html.index('</section>',start)]
+        self.assertEqual(ov.count('class="mod-card"'),11)
+        self.assertEqual(len(re.findall(r'<input type="checkbox" role="switch" data-toggle="[a-z]+" data-draft-ignore disabled',ov)),4)
+        for id_ in ['ov-attention','ov-modules','ov-error','ov-retry']:self.assertIn(f'id="{id_}"',ov)
+        self.assertIn('aria-busy="true"',ov)
+
     def test_module_scripts_find_every_id_they_read(self):
         _,p=self.render('server.html')
         DYNAMIC=set()  # ids the scripts create themselves at runtime

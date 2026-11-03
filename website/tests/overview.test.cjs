@@ -7,8 +7,22 @@ const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../static/js/modules/overview.js'), 'utf8');
 const channels = [{id: '7', name: 'welcome'}, {id: '8', name: 'mod-log'}];
 
-function overview({dirty = false, api} = {}) {
+function node(props = {}) {
+    const classes = new Set();
+    return {hidden: false, disabled: false, checked: false, attrs: {}, dataset: {}, textContent: '', children: [], handlers: {},
+        classList: {toggle(c, on) { if (on) classes.add(c); else classes.delete(c); }, contains: c => classes.has(c)},
+        setAttribute(k, v) { this.attrs[k] = String(v); }, append(...kids) { this.children.push(...kids); },
+        replaceChildren(...kids) { this.children = kids; }, addEventListener(type, fn) { this.handlers[type] = fn; },
+        closest: () => null, ...props};
+}
+function card(slug, toggle) {
+    const parts = {summary: node({dataset: {blurb: slug + ' blurb'}}), state: node(), input: toggle ? node({disabled: true, dataset: {toggle: slug}}) : null};
+    return Object.assign(node({dataset: {row: slug}}), {parts,
+        querySelector: sel => sel === '[data-summary]' ? parts.summary : sel === '[data-state]' ? parts.state : sel === 'input[data-toggle]' ? parts.input : null});
+}
+function overview({dirty = false, api, nodes = {}, cards = []} = {}) {
     const calls = {api: [], invalidate: [], toast: [], refresh: 0};
+    const listeners = {};
     const Console = {
         tr: (key, vars) => vars ? key + JSON.stringify(vars) : key,
         channelName: (id, list) => list.find(c => c.id === String(id))?.name ?? null,
@@ -17,12 +31,20 @@ function overview({dirty = false, api} = {}) {
         toast: (...args) => calls.toast.push(args),
         refreshModules: () => { calls.refresh++; },
         channels: async () => channels,
+        stateLabel: () => 'state',
+        commands: async () => [],
     };
-    const ctx = vm.createContext({document: {addEventListener() {}, getElementById: () => null, querySelectorAll: () => []},
-        Console, DashboardUI: {dirty: () => dirty}});
+    const ctx = vm.createContext({document: {
+        addEventListener(type, fn) { (listeners[type] ||= []).push(fn); },
+        getElementById: id => nodes[id] || null,
+        querySelector: sel => cards.find(c => sel === `[data-row="${c.dataset.row}"]`) || null,
+        querySelectorAll: sel => sel === 'input[data-toggle]' ? cards.map(c => c.parts.input).filter(Boolean) : [],
+        createElement: tag => node({tagName: tag}),
+    }, Console, DashboardUI: {dirty: () => dirty}});
     ctx.window = ctx;
     vm.runInContext(source, ctx);
-    return {Overview: ctx.Overview, calls};
+    const fire = (type, detail) => (listeners[type] || []).forEach(fn => fn({detail}));
+    return {Overview: ctx.Overview, calls, fire};
 }
 const plain = value => value && JSON.parse(JSON.stringify(value));
 
@@ -49,7 +71,7 @@ test('an unknown channel list falls back to the blurb instead of claiming deleti
 
 test('toggle is blocked while the module page has unsaved changes', async () => {
     const {Overview, calls} = overview({dirty: true});
-    const input = {checked: false, disabled: false, closest: () => ({setAttribute() {}, removeAttribute() {}})};
+    const input = {checked: false, disabled: false, dataset: {}, closest: () => ({setAttribute() {}, removeAttribute() {}})};
     assert.equal(await Overview.toggle('welcome', false, input), false);
     assert.equal(calls.api.length, 0);
     assert.equal(input.checked, true);
@@ -58,7 +80,7 @@ test('toggle is blocked while the module page has unsaved changes', async () => 
 
 test('toggle failure restores the switch and says why', async () => {
     const {Overview, calls} = overview({api: async () => { throw Error('500'); }});
-    const input = {checked: true, disabled: false, closest: () => ({setAttribute() {}, removeAttribute() {}})};
+    const input = {checked: true, disabled: false, dataset: {}, closest: () => ({setAttribute() {}, removeAttribute() {}})};
     assert.equal(await Overview.toggle('automod', true, input), false);
     assert.equal(input.checked, false);
     assert.equal(input.disabled, false);
@@ -68,7 +90,7 @@ test('toggle failure restores the switch and says why', async () => {
 
 test('toggle success posts enabled-only and invalidates the module page', async () => {
     const {Overview, calls} = overview();
-    const input = {checked: false, disabled: false, closest: () => ({setAttribute() {}, removeAttribute() {}})};
+    const input = {checked: false, disabled: false, dataset: {}, closest: () => ({setAttribute() {}, removeAttribute() {}})};
     assert.equal(await Overview.toggle('serverlog', false, input), true);
     assert.deepEqual(plain(calls.api[0]), ['/modules/serverlog/enabled', 'POST', {enabled: false}]);
     assert.deepEqual(calls.invalidate, ['serverlog']);
@@ -83,3 +105,84 @@ test('join duration reads naturally', () => {
     assert.equal(Overview.joinDuration(ago(12)), 'overview.duration.days{"n":12}');
     assert.equal(Overview.joinDuration(ago(400)), 'overview.duration.years_months{"y":1,"m":1}');
 });
+
+test('attention lists warned modules in order, at most three', () => {
+    const {Overview} = overview();
+    const modules = [{slug: 'roles', summary: {panels: 2}}, {slug: 'welcome', summary: {welcome_channel: 0, farewell_channel: 0, auto_roles_count: 0}},
+        {slug: 'botlog', summary: {channel_id: 0}}, {slug: 'serverlog', summary: {channel_id: 0}}, {slug: 'automod', summary: {log_channel: 99, rules_on: 1}}];
+    assert.deepEqual(plain(Overview.attention(modules, channels)).map(a => a.slug), ['welcome', 'botlog', 'serverlog']);
+    assert.equal(plain(Overview.attention(modules, channels))[1].text, 'overview.log.unset');
+});
+
+test('attention skips modules when the channel list is unknown', () => {
+    const {Overview} = overview();
+    assert.deepEqual(plain(Overview.attention([{slug: 'serverlog', summary: {channel_id: 5}}, {slug: 'automod', summary: {log_channel: 9, rules_on: 1}}], null)), []);
+});
+
+function overviewPage() {
+    const nodes = {'pg-overview': node(), 'ov-attention': node({hidden: true}), 'ov-modules': node(), 'ov-error': node({hidden: true}), 'ov-retry': node(), 'ov-headline': node(), 'ov-facts': node()};
+    nodes['ov-modules'].setAttribute('aria-busy', 'true');
+    const cards = [card('welcome', true), card('roles', false)];
+    return {nodes, cards};
+}
+const modulesData = enabled => ({modules: [{slug: 'welcome', summary: {welcome_channel: 7, farewell_channel: 0, auto_roles_count: 0, enabled}}, {slug: 'roles', summary: {panels: 1}}]});
+
+test('switches stay disabled until the first render, then follow data', async () => {
+    const {nodes, cards} = overviewPage();
+    const {Overview} = overview({nodes, cards});
+    assert.equal(cards[0].parts.input.disabled, true);
+    await Overview.render(modulesData(1));
+    assert.equal(cards[0].parts.input.disabled, false);
+    assert.equal(cards[0].parts.input.checked, true);
+    assert.equal(nodes['ov-modules'].attrs['aria-busy'], 'false');
+    assert.equal(cards[0].classList.contains('is-on'), true);
+    await Overview.render(modulesData(0));
+    assert.equal(cards[0].parts.input.checked, false);
+    assert.equal(cards[0].classList.contains('is-on'), false);
+    assert.equal(cards[1].classList.contains('is-on'), true);
+});
+
+test('a toggle in flight is not overwritten by render', async () => {
+    const {nodes, cards} = overviewPage();
+    const {Overview} = overview({nodes, cards});
+    cards[0].parts.input.checked = true;
+    cards[0].parts.input.disabled = false;
+    cards[0].parts.input.dataset.busy = '1';
+    await Overview.render(modulesData(0));
+    assert.equal(cards[0].parts.input.checked, true);
+});
+
+test('attention notices are rendered with a link to the module', async () => {
+    const {nodes, cards} = overviewPage();
+    const {Overview} = overview({nodes, cards});
+    await Overview.render({modules: [{slug: 'botlog', summary: {channel_id: 0}}]});
+    assert.equal(nodes['ov-attention'].hidden, false);
+    const link = nodes['ov-attention'].children[0].children.find(c => c.tagName === 'a');
+    assert.equal(link.dataset.mod, 'botlog');
+    await Overview.render({modules: [{slug: 'roles', summary: {panels: 1}}]});
+    assert.equal(nodes['ov-attention'].hidden, true);
+});
+
+test('first load failure shows retry; retry refreshes', async () => {
+    const {nodes, cards} = overviewPage();
+    const {calls, fire} = overview({nodes, cards});
+    fire('DOMContentLoaded');
+    fire('console:modules-failed', Error('500'));
+    assert.equal(nodes['ov-error'].hidden, false);
+    assert.equal(nodes['ov-modules'].hidden, true);
+    nodes['ov-retry'].handlers.click();
+    assert.equal(nodes['ov-error'].hidden, true);
+    assert.equal(nodes['ov-modules'].hidden, false);
+    assert.equal(calls.refresh, 1);
+});
+
+test('a later failure keeps the cards that already loaded', async () => {
+    const {nodes, cards} = overviewPage();
+    const {Overview, fire} = overview({nodes, cards});
+    fire('DOMContentLoaded');
+    await Overview.render(modulesData(1));
+    fire('console:modules-failed', Error('500'));
+    assert.equal(nodes['ov-error'].hidden, true);
+    assert.equal(nodes['ov-modules'].hidden, false);
+});
+
