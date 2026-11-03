@@ -228,7 +228,9 @@
     }
     /* 中文标题上下各五个字；介绍一句一行，换行由 <br> 决定而不是由宽度决定 */
     .hero h1 { font-size: clamp(40px, 4.6vw, 68px); line-height: 1.12; font-weight: 700; letter-spacing: -.02em; margin-bottom: 20px; }
-    .hero .lead { font-size: 19px; line-height: 1.75; color: var(--muted); text-wrap: pretty; margin-bottom: 32px; }
+    /* 句子放不下一行时：中文只在标点处换行（keep-all），英文两行等长（balance），不留孤字 */
+    .hero .lead { font-size: 19px; line-height: 1.75; color: var(--muted); word-break: keep-all; margin-bottom: 32px; }
+    .lead .s { display: block; text-wrap: balance; }
     .actions { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; }
     /* 服务器数前面一颗 Discord 的「在线」绿点 */
     .count { margin-top: 32px; color: var(--muted); font-size: 15px; display: flex; align-items: center; gap: 9px; }
@@ -495,12 +497,12 @@
     <section class="hero" id="lobby" aria-labelledby="hero-title">
         <div>
             <h1 id="hero-title">{{ t('把小凛拉进<br>你的服务器', 'Bring Rin<br>into your server') }}</h1>
-            <p class="lead">{{ t('放歌、迎新、抽奖，再帮你看着点刷屏。<br>我就待在频道里，叫我就回。', 'Music, welcomes, giveaways, and an eye on spam.<br>I hang out in your channels. Just call me.') }}</p>
+            <p class="lead">{{ t('<span class="s">我是小凛，平时在语音频道放歌，有新人进来就发张欢迎卡。</span><span class="s">有人刷屏发广告，我先删掉，再记到日志里。</span>', '<span class="s">I’m Rin. I play music in voice channels and post a welcome card when someone joins.</span><span class="s">If someone floods the chat or posts scam links, I delete it and note it in your log.</span>') }}</p>
             <div class="actions">
                 <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ t('邀请小凛', 'Invite Rin') }}</a>
                 <a href="/dashboard" class="btn btn-ghost">{{ t(dash_zh, dash_en) }}</a>
             </div>
-            <p class="count">{{ t('已经在 <b data-stat="servers">12</b> 个服务器里，免费使用', 'Already in <b data-stat="servers">12</b> servers, free to use') }}</p>
+            <p class="count">{{ t('我现在待在 <b data-stat="servers">12</b> 个服务器里', 'I’m in <b data-stat="servers">12</b> servers right now') }}</p>
         </div>
 
         <div class="stage left hero-stage">
@@ -533,16 +535,16 @@
 
     <!-- 功能一览 -->
     <section class="overview" aria-labelledby="overview-title">
-        <h2 id="overview-title">{{ t('我能帮你做这些', 'What I can do') }}</h2>
+        <h2 id="overview-title">{{ t('都能做什么', 'What it does') }}</h2>
         <ul class="mods">
-            <li><a href="#music" style="--c:#FFB37A"><b>{{ t('♪ 音乐', '♪ Music') }}</b><span class="d">{{ t('/play 点歌，支持网易云，播放器上直接切歌、循环。', '/play songs, NetEase included; skip and loop right on the player.') }}</span></a></li>
-            <li><a href="#music" style="--c:#FF8FAB"><b>{{ t('⭐ 等级', '⭐ Levels') }}</b><span class="d">{{ t('聊天攒经验，/rank 看等级卡，/leaderboard 看排行。', 'Chat to earn XP; /rank for your card, /leaderboard for the top.') }}</span></a></li>
-            <li><a href="#welcome" style="--c:#23A55A"><b>{{ t('👋 迎新', '👋 Welcomes') }}</b><span class="d">{{ t('新人进来自动发欢迎消息，顺手发好身份组。', 'Greets new members and hands out their roles.') }}</span></a></li>
-            <li><a href="#welcome" style="--c:#F0B232"><b>{{ t('🎉 抽奖', '🎉 Giveaways') }}</b><span class="d">{{ t('/giveaway 定奖品和时间，到点自动开奖，可以重抽。', 'Set prize and time with /giveaway; I draw on time and can reroll.') }}</span></a></li>
-            <li><a href="#moderation" style="--c:#5865F2"><b>{{ t('🛡️ 自动审核', '🛡️ AutoMod') }}</b><span class="d">{{ t('刷屏、违禁词、可疑链接按你的规则处理。', 'Spam, banned words and sketchy links, handled your way.') }}</span></a></li>
-            <li><a href="#moderation" style="--c:#ED4245"><b>{{ t('⚠️ 警告与处罚', '⚠️ Warnings') }}</b><span class="d">{{ t('/warn 记次数，到几次自动禁言由你定。', '/warn keeps count; you decide when it becomes a timeout.') }}</span></a></li>
-            <li><a href="#moderation" style="--c:#9AA0AA"><b>{{ t('📋 服务器日志', '📋 Server log') }}</b><span class="d">{{ t('编辑、删除、进出记录都发到日志频道。', 'Edits, deletions, joins and leaves go to your log channel.') }}</span></a></li>
-            <li><a href="#dashboard" style="--c:#FF8FAB"><b>{{ t('⚙️ 网页控制台', '⚙️ Dashboard') }}</b><span class="d">{{ t('上面这些都能在网页上开关和设置。', 'Turn all of this on and set it up on the web.') }}</span></a></li>
+            <li><a href="#music" style="--c:#FFB37A"><b>{{ t('♪ 音乐', '♪ Music') }}</b><span class="d">{{ t('/play 后面跟歌名、链接或 Spotify 歌单，网易云用 /netease。队列可以存档，下次直接载入。', '/play takes a song name, a link or a Spotify playlist, and /netease plays NetEase songs. Save a queue and load it again later.') }}</span></a></li>
+            <li><a href="#music" style="--c:#FF8FAB"><b>{{ t('⭐ 等级', '⭐ Levels') }}</b><span class="d">{{ t('发消息涨经验，一分钟最多算一次，刷屏刷不上去。/rank 出一张等级卡。', 'Messages earn XP, at most once a minute, so spamming doesn’t help. /rank shows your card.') }}</span></a></li>
+            <li><a href="#welcome" style="--c:#23A55A"><b>{{ t('👋 迎新', '👋 Welcomes') }}</b><span class="d">{{ t('新人进来发一张带头像的欢迎卡，走的时候也能发道别，可以顺手给身份组。', 'New members get a welcome card with their avatar, leavers can get a goodbye, and roles can be handed out on join.') }}</span></a></li>
+            <li><a href="#welcome" style="--c:#F0B232"><b>{{ t('🎉 抽奖', '🎉 Giveaways') }}</b><span class="d">{{ t('/giveaway start 开一个，大家点按钮报名，时间到自动开奖，不满意可以重抽。', 'Start one with /giveaway start. People enter with a button, the draw happens on time, and you can reroll.') }}</span></a></li>
+            <li><a href="#moderation" style="--c:#5865F2"><b>{{ t('🛡️ 自动审核', '🛡️ AutoMod') }}</b><span class="d">{{ t('刷屏、狂 @ 人、全大写、违禁词、白名单外的链接，每一项都能单独开关。', 'Flooding, mass mentions, all caps, banned words and links outside your allowlist. Each has its own switch.') }}</span></a></li>
+            <li><a href="#moderation" style="--c:#ED4245"><b>{{ t('⚠️ 警告与处罚', '⚠️ Warnings') }}</b><span class="d">{{ t('警告攒够次数自动禁言。临时封禁到期会自己解开。', 'Enough warnings and the member gets a timeout. Temp bans lift on their own.') }}</span></a></li>
+            <li><a href="#moderation" style="--c:#9AA0AA"><b>{{ t('📋 服务器日志', '📋 Server log') }}</b><span class="d">{{ t('删消息、改消息、进出、封禁、改身份组、进出语音，都记到你指定的频道。', 'Deleted and edited messages, joins, leaves, bans, role changes and voice activity, posted to a channel you pick.') }}</span></a></li>
+            <li><a href="#dashboard" style="--c:#FF8FAB"><b>{{ t('⚙️ 网页控制台', '⚙️ Dashboard') }}</b><span class="d">{{ t('用 Discord 账号登录，上面这些都在网页上开关。', 'Log in with Discord and switch all of this on or off on the web.') }}</span></a></li>
         </ul>
     </section>
 </div>
@@ -552,8 +554,8 @@
     <div class="wrap">
         <div class="panel">
             <div class="scene-text">
-                <h2 id="music-title">{{ t('叫一声，就开始放歌', 'Ask, and the music starts') }}</h2>
-                <p>{{ t('输入 /play 加歌名或链接，我就开始放。切歌、循环、调音量，在播放器上点一下就行。聊天还会攒经验，用 /rank 看看自己排第几。', 'Type /play with a song name or link and I’ll start playing. Skip, loop or change the volume right from the player. Chatting earns XP too — check your spot with /rank.') }}</p>
+                <h2 id="music-title">{{ t('在语音频道里放歌', 'Music in your voice channel') }}</h2>
+                <p>{{ t('先进语音频道，再 /play 歌名或链接，Spotify 歌单也行。播放器下面有暂停、跳过、循环和队列按钮，人多的时候跳歌可以投票。聊天还会涨经验，/rank 看等级卡。', 'Join a voice channel, then /play a song name or link. Spotify playlists work too. The player has buttons for pause, skip, loop and the queue, and skips can go to a vote when the room is busy. Chatting also earns XP, and /rank shows your card.') }}</p>
                 {{ chips(['/play', '/skip', '/loop', '/volume', '/queue', '/netease', '/rank', '/leaderboard']) }}
             </div>
             <div class="stage">
@@ -604,8 +606,8 @@
     <div class="wrap">
         <div class="panel flip">
             <div class="scene-text">
-                <h2 id="welcome-title">{{ t('新朋友来了，我去打招呼', 'New friend? I’ll say hi') }}</h2>
-                <p>{{ t('有人加入，我就发欢迎消息，顺手把身份组发好。想办活动的话，用 /giveaway 定好奖品和时间，开奖交给我。', 'When someone joins, I post a welcome and hand out their roles. Planning an event? Set the prize and time with /giveaway and I’ll draw the winners.') }}</p>
+                <h2 id="welcome-title">{{ t('欢迎新人，办个抽奖', 'Welcomes and giveaways') }}</h2>
+                <p>{{ t('有人进服务器，小凛会发一张欢迎卡，标题、横幅图和提示语都能改，改完先预览。抽奖用按钮报名，到点自动开奖，不满意可以重抽。', 'When someone joins, Rin posts a welcome card. You can change its title, banner and message, and preview it first. Giveaways take entries through a button, draw on time, and can be rerolled.') }}</p>
                 {{ chips(['/giveaway start', '/giveaway end', '/giveaway reroll', '/giveaway list']) }}
             </div>
             <div class="stage left">
@@ -639,8 +641,8 @@
     <div class="wrap">
         <div class="panel">
             <div class="scene-text">
-                <h2 id="moderation-title">{{ t('规则你定，我来执行', 'You set the rules. I follow them') }}</h2>
-                <p>{{ t('刷屏、违禁词、可疑链接，按你定的规则处理；警告到几次自动禁言，也由你决定。处理过的事都记在日志频道里。', 'Spam, banned words and sketchy links get handled the way you set. You decide how many warnings mean a timeout, and every action lands in your log channel.') }}</p>
+                <h2 id="moderation-title">{{ t('自动审核和日志', 'AutoMod and logs') }}</h2>
+                <p>{{ t('开哪些检测、多严、哪些频道不管，都由你设。被拦下的消息和处罚会记到日志频道，警告攒够次数会自动禁言。', 'You choose which checks run, how strict they are and which channels to skip. Blocked messages and punishments go to your log channel, and enough warnings lead to a timeout.') }}</p>
                 {{ chips(['/warn', '/mute', '/tempban', '/lock', '/automod', '/serverlog']) }}
             </div>
             <div class="stage">
@@ -692,8 +694,8 @@
                 </div>
             </div>
             <div class="scene-text">
-                <h2 id="dashboard-title">{{ t('这些都在控制台里设', 'Set it all up in the dashboard') }}</h2>
-                <p>{{ t('欢迎频道、自动身份组、审核规则、警告几次禁言，打开网页慢慢选。改完保存，哪里没填好页面会提醒你。', 'Welcome channel, auto roles, moderation rules, warning limits — pick them at your own pace on the web. Save when you’re done; the page tells you if anything needs fixing.') }}</p>
+                <h2 id="dashboard-title">{{ t('在网页上设置', 'Set it up on the web') }}</h2>
+                <p>{{ t('用 Discord 账号登录，选好服务器，上面这些功能的开关都在那里。', 'Log in with Discord, pick your server, and every feature above has its switches there.') }}</p>
                 <div class="actions" style="margin-top:26px">
                     <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ t('邀请小凛', 'Invite Rin') }}</a>
                     <a href="/dashboard" class="btn btn-ghost">{{ t(dash_zh, dash_en) }}</a>
@@ -701,11 +703,11 @@
                 <ul class="facts">
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('免费使用', 'Free to use') }}</li>
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('不需要管理员权限', 'No Administrator permission needed') }}</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('不做完整聊天归档', 'No full chat archive') }}</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('不会保存完整的聊天记录', 'Doesn’t keep a full archive of your chats') }}</li>
                 </ul>
                 <div class="ask">
                     <div class="stk stk-blink" aria-hidden="true">{{ sticker('confused', 96) }}{{ sticker('confused-blink', 96, 'lid') }}</div>
-                    <a href="https://github.com/RSRH-Rs/DiscordRinBot/issues" target="_blank" rel="noopener" class="link">{{ t('还有问题？去 GitHub 问我', 'Still wondering? Ask me on GitHub') }}</a>
+                    <a href="https://github.com/RSRH-Rs/DiscordRinBot/issues" target="_blank" rel="noopener" class="link">{{ t('有问题或想要新功能，去 GitHub 提 issue', 'Questions or feature ideas? Open an issue on GitHub') }}</a>
                 </div>
             </div>
         </div>
@@ -719,7 +721,7 @@
         <div class="footer-top">
             <div>
                 <a href="/" class="brand"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34" loading="lazy">小凛 RinBot</a>
-                <p class="tagline">{{ t('会放歌，会帮忙，也想认识你们。', 'Here to play songs, lend a hand, and get to know you.') }}</p>
+                <p class="tagline">{{ t('一个 Discord 机器人，代码开源在 GitHub。', 'A Discord bot. The code is open source on GitHub.') }}</p>
                 <p class="motto" lang="en">All in one, one for all.</p>
             </div>
             <div class="footer-links">

@@ -195,11 +195,14 @@ def test_hero_title_and_lead_break_on_purpose(page):
     title = re.search(r'<h1 id="hero-title"><span data-l="zh">(.*?)</span>', page).group(1)
     lines = title.split("<br>")
     assert len(lines) == 2 and len(lines[0]) == len(lines[1]), lines
-    lead = re.search(r'<p class="lead"><span data-l="zh">(.*?)</span><span data-l="en" lang="en">(.*?)</span>', page)
-    for text in lead.groups():
-        sentences = text.split("<br>")
-        assert len(sentences) == 2, text
-        assert "—" not in text, text
+    lead = re.search(r'<p class="lead">(.*?)</p>', page).group(1)
+    for lang in ("zh", "en"):
+        block = re.search(rf'<span data-l="{lang}"[^>]*>(.*?</span>)</span>', lead).group(1)
+        sentences = re.findall(r'<span class="s">(.*?)</span>', block)
+        assert len(sentences) == 2, block
+        assert "—" not in block, block
+    css = "\n".join(re.findall(r"<style>(.*?)</style>", page, re.S))
+    assert re.search(r"\.lead \.s \{[^}]*display:\s*block[^}]*text-wrap:\s*balance", css)
 
 
 def test_sidebar_channels_link_to_sections(page):
