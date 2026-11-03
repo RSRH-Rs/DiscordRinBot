@@ -41,9 +41,9 @@ class DashboardTemplateTests(unittest.TestCase):
             self.assertNotIn('储存设定',html)
         for name in ['dashboard.html','settings.html','server.html']:
             html,p=self.render(name)
-            self.assertIn('console.css?v=20261102',html)
-            self.assertIn('dashboard-ui.js?v=20261102',html)
-            self.assertIn('console-core.js?v=20261102',html)
+            self.assertIn('console.css?v=20261103',html)
+            self.assertIn('dashboard-ui.js?v=20261103',html)
+            self.assertIn('console-core.js?v=20261103',html)
     def test_invites_do_not_request_administrator_and_match_homepage(self):
         html,p=self.render('dashboard.html')
         invites=[link for link in p.links if link.startswith('https://discord.com/oauth2/authorize')]
@@ -79,7 +79,7 @@ class DashboardTemplateTests(unittest.TestCase):
         for name in ['welcome-appearance','welcome-farewell','welcome-autoroles']:
             self.assertIn(f'<details class="fold" id="{name}">',html)
         self.assertIn('最大 5 MB、4096×4096',html)
-        self.assertIn('message-preview.js?v=20261102',html)
+        self.assertIn('message-preview.js?v=20261103',html)
 
     def test_overview_lists_every_module_once_with_toggles_for_four(self):
         html,p=self.render('server.html')
@@ -130,7 +130,7 @@ class DashboardTemplateTests(unittest.TestCase):
             for ref in re.findall(r'(?:src|href)="/static/([^"?#]+)(\?[^"]*)?"',html):
                 path,query=ref
                 self.assertTrue((ROOT/'static'/path).is_file(),f'{name}: missing {path}')
-                if path.endswith(('.css','.js')):self.assertIn('v=20261102',query,f'{name}: {path} not versioned')
+                if path.endswith(('.css','.js')):self.assertIn('v=20261103',query,f'{name}: {path} not versioned')
 
     def test_legacy_assets_are_gone(self):
         for old in ['css/dashboard.css','css/dashboard-ui.css','css/server.css','css/dashboard-extras.css','js/server.js','js/dashboard.js']:
