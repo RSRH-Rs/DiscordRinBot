@@ -4,8 +4,11 @@ from pathlib import Path
 import unittest
 from urllib.parse import parse_qs, urlsplit
 from jinja2 import Environment, FileSystemLoader
+import sys
 
 ROOT=Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT))
+import i18n  # noqa: E402
 
 class Parser(HTMLParser):
     def __init__(self):
@@ -22,9 +25,9 @@ class Parser(HTMLParser):
 class DashboardTemplateTests(unittest.TestCase):
     def render(self, name):
         env=Environment(loader=FileSystemLoader(ROOT/'templates'),autoescape=True)
-        env.globals['url_for']=lambda endpoint,filename:'/static/'+filename
+        env.globals.update(url_for=lambda endpoint,filename:'/static/'+filename,tr=i18n.tr,console_strings=i18n.console_strings)
         guild=dict(id='123',name='小凛 <img src=x>',icon_url=None,bot_joined=True)
-        html=env.get_template(name).render(guild=guild,guilds=[guild,dict(guild,id='456',bot_joined=False)],user=dict(name='测试',avatar_url='/avatar.png'),is_owner=True)
+        html=env.get_template(name).render(guild=guild,guilds=[dict(guild,id='456',bot_joined=False),guild],user=dict(name='测试',avatar_url='/avatar.png'),is_owner=True)
         parser=Parser();parser.feed(html)
         return html,parser
     def test_settings_groups_preserve_all_independent_drafts(self):
@@ -34,6 +37,14 @@ class DashboardTemplateTests(unittest.TestCase):
         for name in ['dashboard.html','settings.html','server.html']:
             html,p=self.render(name)
             self.assertEqual(len(p.ids),len(set(p.ids)),name)
+            self.assertNotIn('储存设定',html)
+        for name in ['dashboard.html']:
+            html,p=self.render(name)
+            self.assertIn('console.css?v=20261102',html)
+            self.assertIn('dashboard-ui.js?v=20261102',html)
+            self.assertIn('console-core.js?v=20261102',html)
+        for name in ['settings.html','server.html']:
+            html,p=self.render(name)
             self.assertIn('dashboard-extras.js?v=20260826c',html)
             self.assertIn('dashboard-extras.css?v=20260831d',html)
             self.assertIn('dashboard-ui.js?v=20260826c',html)
@@ -49,6 +60,14 @@ class DashboardTemplateTests(unittest.TestCase):
             self.assertEqual(permissions & 8,0)
         self.assertNotIn('即将上线',html)
         self.assertIn('小凛 &lt;img src=x&gt;',html)
+
+    def test_dashboard_lists_joined_first_and_escapes_names(self):
+        html,p=self.render('dashboard.html')
+        self.assertLess(html.index('data-guild-id="123"'),html.index('data-guild-id="456"'))
+        self.assertLess(html.index('id="joined"'),html.index('id="not-joined"'))
+        self.assertIn('小凛 &lt;img src=x&gt;',html)
+        self.assertNotIn('<img src=x>',html)
+        self.assertIn('href="/dashboard#not-joined"',html)
 
     def test_role_editor_follows_message_then_roles_then_destination(self):
         html,p=self.render('server.html')

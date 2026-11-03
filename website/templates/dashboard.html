@@ -1,192 +1,74 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>控制台 | 小凛 Rin</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826d">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260831d">
-</head>
-<body>
-    <button class="mobile-menu-btn" id="menuBtn" onclick="DashboardUI.toggleSidebar()" aria-label="打开菜单" aria-controls="sideNav" aria-expanded="false">☰</button>
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="DashboardUI.closeSidebar()"></div>
+{%- extends '_console_base.html' -%}
+{%- from '_console_macros.html' import icon, nav_item -%}
+{%- set invite = 'https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands' -%}
+{%- set joined = guilds | selectattr('bot_joined') | list -%}
+{%- set not_joined = guilds | rejectattr('bot_joined') | list -%}
 
-    <aside class="sidebar" id="sideNav">
-        <div class="sidebar-inner">
+{% block title %}{{ tr('nav.servers') }}{% endblock %}
 
-            <a href="/" class="brand">
-                <span class="brand-dot"></span>
-                小凛 Rin
-            </a>
+{% block nav %}
+<a class="nav-item" href="/dashboard" aria-current="page">{{ icon('layout-grid') }}<span class="nav-label">{{ tr('nav.servers') }}</span></a>
+{%- if is_owner %}
+{{ nav_item('/dashboard/settings', 'settings', tr('nav.settings')) }}
+{%- else %}
+<span class="nav-item" aria-disabled="true">{{ icon('settings') }}<span class="nav-label">{{ tr('nav.settings') }}</span><span class="nav-badge">{{ tr('nav.owner_only') }}</span></span>
+{%- endif %}
+{% endblock %}
 
-            <nav class="side-nav">
-                <span class="nav-label">导航</span>
-                <ul>
-                    <li>
-                        <a href="/dashboard" class="nav-link active">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-                                <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
-                            </svg>
-                            我的服务器
-                        </a>
-                    </li>
-                </ul>
+{% block topbar %}<h1 class="page-title">{{ tr('nav.servers') }}</h1>{% endblock %}
+{% block topbar_end %}<a class="btn btn--primary" href="{{ invite }}" target="_blank" rel="noopener noreferrer">{{ icon('plus') }}{{ tr('nav.invite') }}</a>{% endblock %}
 
-                <span class="nav-label" style="margin-top:18px;">设置</span>
-                <ul>
-                    <li>
-                        {% if is_owner %}
-                        <a href="/dashboard/settings" class="nav-link">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="3"/>
-                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                            </svg>
-                            全局设置
-                        </a>
-                        {% else %}
-                        <a class="nav-link nav-disabled">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="3"/>
-                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                            </svg>
-                            全局设置
-                            <span class="nav-badge">仅主人</span>
-                        </a>
-                        {% endif %}
-                    </li>
-                </ul>
-            </nav>
+{% block content %}
+{%- if guilds %}
+<div class="server-search">
+    <label class="sr-only" for="server-search">{{ tr('servers.search_label') }}</label>
+    <input type="search" id="server-search" class="input" placeholder="{{ tr('servers.search_placeholder') }}" autocomplete="off">
+    <span id="server-search-result" class="unit" role="status"></span>
+</div>
+<div id="server-no-results" class="empty" hidden>
+    <img src="{{ url_for('static', filename='images/rin/confused-480.webp') }}" alt="" width="96" height="96" loading="lazy">
+    <p>{{ tr('servers.no_match') }}</p>
+    <button type="button" class="btn btn--secondary" id="server-search-clear">{{ tr('servers.clear_search') }}</button>
+</div>
 
-            <div class="user-card">
-                <img src="{{ user.avatar_url }}" alt="头像" class="user-avatar">
-                <div class="user-info">
-                    <div class="user-name">{{ user.name }}</div>
-                    <a href="/logout" class="logout-link">退出登录</a>
-                </div>
-            </div>
+{%- if joined %}
+<section class="section" id="joined" data-server-group>
+    <h2 class="section-title">{{ tr('servers.joined') }} <span class="count" data-count>{{ joined | length }}</span></h2>
+    <div class="server-grid">
+        {%- for g in joined %}
+        <a class="server-card" href="/dashboard/server/{{ g.id }}" data-guild-name="{{ g.name }}" data-guild-id="{{ g.id }}">
+            <span class="server-icon">{% if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="44" height="44" loading="lazy">{% else %}{{ g.name[:1] }}{% endif %}</span>
+            <span class="server-name" title="{{ g.name }}">{{ g.name }}</span>
+            <span class="server-go">{{ tr('servers.open') }}{{ icon('chevron-right') }}</span>
+        </a>
+        {%- endfor %}
+    </div>
+</section>
+{%- endif %}
 
+{%- if not_joined %}
+<section class="section" id="not-joined" data-server-group>
+    <h2 class="section-title">{{ tr('servers.not_joined') }} <span class="count" data-count>{{ not_joined | length }}</span></h2>
+    <p class="section-hint">{{ tr('servers.not_joined_hint') }}</p>
+    <div class="server-grid">
+        {%- for g in not_joined %}
+        <div class="server-card server-card--unjoined" data-guild-name="{{ g.name }}" data-guild-id="{{ g.id }}">
+            <span class="server-icon">{% if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="44" height="44" loading="lazy">{% else %}{{ g.name[:1] }}{% endif %}</span>
+            <span class="server-name" title="{{ g.name }}">{{ g.name }}</span>
+            <a class="btn btn--secondary" href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&guild_id={{ g.id }}&integration_type=0&scope=bot+applications.commands" target="_blank" rel="noopener noreferrer">{{ tr('nav.invite') }}</a>
         </div>
-    </aside>
+        {%- endfor %}
+    </div>
+</section>
+{%- endif %}
+{%- else %}
+<div class="empty">
+    <img src="{{ url_for('static', filename='images/rin/confused-480.webp') }}" alt="" width="96" height="96">
+    <h2 class="section-title">{{ tr('servers.none_title') }}</h2>
+    <p>{{ tr('servers.none_hint') }}</p>
+    <a class="btn btn--primary" href="{{ invite }}" target="_blank" rel="noopener noreferrer">{{ tr('nav.invite') }}</a>
+</div>
+{%- endif %}
+{% endblock %}
 
-    <main class="main-content">
-        <header class="topbar">
-            <div>
-                <h1 class="page-title">我的服务器</h1>
-                <p class="page-sub">选择你要管理配置的服务器 (´• ω •`)ﾉ</p>
-            </div>
-            <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
-               target="_blank" rel="noopener noreferrer" class="btn-add">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                邀请到新服务器
-            </a>
-        </header>
-
-        <div class="content-area">
-            {% if guilds %}
-            <div class="search-toolbar">
-                <label for="server-search">找一个服务器</label>
-                <input type="search" id="server-search" class="cfg-input" placeholder="输入服务器名称或 ID…">
-                <span id="server-search-result" role="status"></span>
-            </div>
-            <div id="server-no-results" class="empty-state" hidden><h3>诶，没有找到呢</h3><p>换个名字试试，或者清空搜索看看全部服务器。</p><button type="button" class="tag-add-btn" id="server-search-clear">清空搜索</button></div>
-
-            {# ── 已加入的服务器 ── #}
-            {% set joined = guilds | selectattr('bot_joined') | list %}
-            {% set not_joined = guilds | rejectattr('bot_joined') | list %}
-
-            {% if joined %}
-            <section data-server-group aria-label="小凛已加入的服务器">
-            <div class="section-heading">
-                <span class="section-dot section-dot--green"></span>
-                小凛已加入
-                <span class="section-count">{{ joined | length }}</span>
-            </div>
-            <div class="server-grid">
-                {% for guild in joined %}
-                <div class="server-card server-card--joined" data-guild-name="{{ guild.name }}" data-guild-id="{{ guild.id }}">
-                    <div class="card-top">
-                        {% if guild.icon_url %}
-                            <img src="{{ guild.icon_url }}" alt="{{ guild.name }}" class="server-icon">
-                        {% else %}
-                            <div class="server-icon server-icon--text">{{ guild.name[0] | upper }}</div>
-                        {% endif %}
-                        <div class="server-meta">
-                            <h3 class="server-name" title="{{ guild.name }}">{{ guild.name }}</h3>
-                            <span class="server-status status--joined">
-                                <span class="status-dot dot--green"></span>小凛在此服务器
-                            </span>
-                        </div>
-                    </div>
-                    <a class="btn-manage" href="/dashboard/server/{{ guild.id }}">
-                        打开设置
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
-                        </svg>
-                    </a>
-                </div>
-                {% endfor %}
-            </div>
-            </section>
-            {% endif %}
-
-            {# ── 未加入的服务器 ── #}
-            {% if not_joined %}
-            <section data-server-group aria-label="小凛未加入的服务器">
-            <div class="section-heading" style="margin-top: {% if joined %}36px{% else %}0{% endif %}">
-                <span class="section-dot section-dot--gray"></span>
-                小凛未加入
-                <span class="section-count">{{ not_joined | length }}</span>
-            </div>
-            <div class="server-grid">
-                {% for guild in not_joined %}
-                <div class="server-card server-card--unjoined" data-guild-name="{{ guild.name }}" data-guild-id="{{ guild.id }}">
-                    <div class="card-top">
-                        {% if guild.icon_url %}
-                            <img src="{{ guild.icon_url }}" alt="{{ guild.name }}" class="server-icon server-icon--dim">
-                        {% else %}
-                            <div class="server-icon server-icon--text server-icon--dim-text">{{ guild.name[0] | upper }}</div>
-                        {% endif %}
-                        <div class="server-meta">
-                            <h3 class="server-name" title="{{ guild.name }}">{{ guild.name }}</h3>
-                            <span class="server-status status--unjoined">
-                                <span class="status-dot dot--gray"></span>小凛尚未加入
-                            </span>
-                        </div>
-                    </div>
-                    <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&guild_id={{ guild.id }}&integration_type=0&scope=bot+applications.commands"
-                       target="_blank" rel="noopener noreferrer" class="btn-invite-server">
-                        邀请小凛加入
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                            <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                    </a>
-                </div>
-                {% endfor %}
-            </div>
-            </section>
-            {% endif %}
-
-            {% else %}
-            <div class="empty-state">
-                <div class="empty-emoji">( •᷄ ω •᷅ )</div>
-                <h3>找不到可管理的服务器</h3>
-                <p>你还没有拥有服务器，或者没有「管理服务器」权限哦。</p>
-                <a href="https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands"
-                   target="_blank" rel="noopener noreferrer" class="btn-add" style="margin-top:24px; display:inline-flex;">邀请小凛到你的服务器</a>
-            </div>
-            {% endif %}
-        </div>
-    </main>
-
-    <script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826c"></script>
-    <script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826c"></script>
-    <script src="{{ url_for('static', filename='js/dashboard.js') }}?v=20260826c"></script>
-</body>
-</html>
+{% block scripts %}<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261102a"></script>{% endblock %}

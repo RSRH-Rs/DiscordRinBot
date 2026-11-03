@@ -72,5 +72,18 @@
     "available": "可以使用",
     "unknown": "读取失败",
     "not_loaded": "模块未加载"
+  },
+  "servers": {
+    "search_label": "找一个服务器",
+    "search_placeholder": "输入服务器名称或 ID…",
+    "no_match": "没有找到这个服务器，换个名字试试。",
+    "clear_search": "清空搜索",
+    "joined": "小凛已加入",
+    "not_joined": "小凛还没加入",
+    "not_joined_hint": "邀请小凛进去之后，就能在这里管理了。",
+    "open": "打开设置",
+    "none_title": "还没有可以管理的服务器",
+    "none_hint": "你需要是服务器主人，或者有「管理服务器」权限。",
+    "found": "找到 {n} 个服务器"
   }
 }

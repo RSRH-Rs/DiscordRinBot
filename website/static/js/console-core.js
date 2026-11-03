@@ -221,7 +221,31 @@ window.Console = (() => {
         }
     }
 
+    /* ── Server list search (dashboard home) ── */
+    function serverSearch() {
+        const search = el('server-search'); if (!search) return;
+        const cards = [...document.querySelectorAll('[data-guild-name]')];
+        const filter = () => {
+            let count = 0;
+            cards.forEach(card => {
+                card.hidden = !DashboardExtras.matches(card.dataset.guildName + ' ' + card.dataset.guildId, search.value);
+                if (!card.hidden) count++;
+            });
+            document.querySelectorAll('[data-server-group]').forEach(group => {
+                const visible = [...group.querySelectorAll('[data-guild-name]')].filter(card => !card.hidden).length;
+                group.hidden = !visible;
+                group.querySelector('[data-count]').textContent = visible;
+            });
+            el('server-search-result').textContent = search.value ? tr('servers.found', {n: count}) : '';
+            el('server-no-results').hidden = count > 0;
+        };
+        search.addEventListener('input', filter);
+        el('server-search-clear').addEventListener('click', () => { search.value = ''; filter(); search.focus(); });
+        filter();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        serverSearch();
         document.addEventListener('click', railClick);
         const pages = [...document.querySelectorAll('.page[data-slug]')];
         if (pages.length) {
