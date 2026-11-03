@@ -13,14 +13,10 @@
 </head>
 <body class="gate-body">
 <div class="gate-backdrop" aria-hidden="true">
-    <div class="fake-rail">
-        <span class="fake-orb fake-orb--home"></span>
-        <span class="fake-sep"></span>
-        {%- for _ in range(4) %}<span class="fake-orb"></span>{% endfor %}
-    </div>
-    <div class="fake-nav">
-        <span class="fake-line fake-line--head"></span>
-        {%- for group in [3, 4, 2] %}{% set first_group = loop.first %}
+    <div class="fake-side">
+        <span class="fake-switcher"><span class="fake-tile"></span><span class="fake-lines"><span class="fake-line fake-line--title"></span><span class="fake-line"></span></span></span>
+        <span class="fake-search"></span>
+        {%- for group in [3, 4, 3] %}{% set first_group = loop.first %}
         <span class="fake-line fake-line--group"></span>
         {%- for _ in range(group) %}<span class="fake-item{{ ' is-current' if first_group and loop.first else '' }}"><span class="fake-dot"></span><span class="fake-line"></span></span>{% endfor %}
         {%- endfor %}
@@ -28,19 +24,17 @@
     <div class="fake-main">
         <div class="fake-topbar"><span class="fake-line fake-line--title"></span></div>
         <div class="fake-content">
-            <div class="fake-duty"><span class="fake-avatar"></span><span class="fake-lines"><span class="fake-line fake-line--title"></span><span class="fake-line"></span></span></div>
-            {%- for rows in [4, 3] %}
+            <div class="fake-hero"><span class="fake-avatar"></span><span class="fake-lines"><span class="fake-line fake-line--title"></span><span class="fake-line"></span></span></div>
             <span class="fake-line fake-line--group"></span>
-            <div class="fake-list">
-                {%- for _ in range(rows) %}<div class="fake-row"><span class="fake-lines"><span class="fake-line fake-line--title"></span><span class="fake-line"></span></span><span class="fake-switch{{ ' is-on' if loop.index is odd else '' }}"></span></div>{% endfor %}
+            <div class="fake-cards">
+                {%- for i in range(6) %}<div class="fake-card"><span class="fake-tile"></span><span class="fake-lines"><span class="fake-line fake-line--title"></span><span class="fake-line"></span></span>{% if i is odd %}<span class="fake-switch"></span>{% endif %}</div>{% endfor %}
             </div>
-            {%- endfor %}
         </div>
     </div>
 </div>
 <main class="gate">
     <img class="gate-art" src="{{ url_for('static', filename='images/rin/confused-480.webp') }}" alt="" width="160" height="160">
-    <h1 class="display">{{ tr('gate.heading') }}</h1>
+    <h1>{{ tr('gate.heading') }}</h1>
     <p>{{ tr('gate.body') }}</p>
     <div class="gate-actions">
         <a class="btn btn--discord" href="/login">

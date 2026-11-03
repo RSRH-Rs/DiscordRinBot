@@ -118,6 +118,20 @@ class DashboardTemplateTests(unittest.TestCase):
         html,_=self.render('server.html')
         self.assertIn('data-tab="words" aria-controls="panel-automod-words" data-label="违禁词"',html)
 
+    def test_dashboard_and_settings_menus(self):
+        html,_=self.render('dashboard.html')
+        menu=html[html.index('id="side-modules"'):html.index('</nav>',html.index('id="side-modules"'))]
+        self.assertIn('<a class="nav-item" href="/dashboard" aria-current="page">',menu)
+        self.assertIn('所有服务器',menu)
+        html,_=self.render('settings.html')
+        menu=html[html.index('id="side-modules"'):html.index('</nav>',html.index('id="side-modules"'))]
+        self.assertIn('href="/dashboard"',menu)
+        for tab in ['profile','runtime','admin']:self.assertIn(f'data-settings-tab="{tab}"',menu)
+
+    def test_server_grid_cards_are_at_least_260px(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('minmax(260px, 1fr)',re.search(r'\.server-grid\s*\{([^}]*)\}',css).group(1))
+
     def test_module_scripts_find_every_id_they_read(self):
         _,p=self.render('server.html')
         DYNAMIC=set()  # ids the scripts create themselves at runtime
@@ -193,7 +207,9 @@ class DashboardTemplateTests(unittest.TestCase):
         html,_=self.render('login_gate.html')
         backdrop=re.search(r'<div class="gate-backdrop" aria-hidden="true">(.*?)</div>\s*<main class="gate',html,re.S)
         self.assertIsNotNone(backdrop)
-        for part in ['fake-rail','fake-nav','fake-main']:self.assertIn(part,backdrop.group(1))
+        for part in ['fake-side','fake-main','fake-hero','fake-card']:self.assertIn(part,backdrop.group(1))
+        self.assertEqual(backdrop.group(1).count('class="fake-card"'),6)
+        for gone in ['fake-rail','fake-nav']:self.assertNotIn(gone,backdrop.group(1))
         self.assertNotIn('<a ',backdrop.group(1))
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
         self.assertRegex(css,r'\.gate-backdrop\s*\{[^}]*filter:\s*blur\(')

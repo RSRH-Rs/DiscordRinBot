@@ -4,7 +4,7 @@
 {% block title %}{{ tr('nav.settings') }}{% endblock %}
 
 {% block nav %}
-{{ nav_item('/dashboard', 'layout-grid', tr('nav.servers')) }}
+{{ nav_item('/dashboard', 'layout-grid', tr('switcher.all')) }}
 <span class="nav-group-title">{{ tr('nav.settings') }}</span>
 <a class="nav-item" href="#profile" data-settings-tab="profile">{{ icon('smile-plus') }}<span class="nav-label">{{ tr('settings.tab.profile') }}</span><span class="nav-badge tab-draft" hidden>{{ tr('settings.unsaved') }}</span></a>
 <a class="nav-item" href="#runtime" data-settings-tab="runtime">{{ icon('history') }}<span class="nav-label">{{ tr('settings.tab.runtime') }}</span><span class="nav-badge tab-draft" hidden>{{ tr('settings.unsaved') }}</span></a>
@@ -12,6 +12,8 @@
 {% endblock %}
 
 {% block topbar %}<h1 class="page-title">{{ tr('nav.settings') }}</h1><p class="crumbs">{{ tr('settings.subtitle') }}</p>{% endblock %}
+
+{% block content_class %} content--page{% endblock %}
 
 {% block content %}
 <section class="settings-panel" data-settings-panel="runtime" aria-labelledby="settings-runtime-title">
