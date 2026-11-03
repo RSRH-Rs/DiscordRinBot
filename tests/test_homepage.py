@@ -190,6 +190,18 @@ def test_overview_links_point_to_sections(page):
         assert tid in ids, tid
 
 
+def test_hero_title_and_lead_break_on_purpose(page):
+    # 中文标题上下两行字数相同；介绍一句一行，不让浏览器在句中随意断开
+    title = re.search(r'<h1 id="hero-title"><span data-l="zh">(.*?)</span>', page).group(1)
+    lines = title.split("<br>")
+    assert len(lines) == 2 and len(lines[0]) == len(lines[1]), lines
+    lead = re.search(r'<p class="lead"><span data-l="zh">(.*?)</span><span data-l="en" lang="en">(.*?)</span>', page)
+    for text in lead.groups():
+        sentences = text.split("<br>")
+        assert len(sentences) == 2, text
+        assert "—" not in text, text
+
+
 def test_sidebar_channels_link_to_sections(page):
     # 宽屏左侧的频道列表就是导航：每个频道跳到页面上真实存在的区块，并参与滚动高亮
     side = re.search(r'<aside class="side".*?</aside>', page, re.S).group(0)

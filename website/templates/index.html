@@ -226,10 +226,16 @@
         display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
         gap: 64px; align-items: center; padding: 64px 0 88px;
     }
-    .hero h1 { font-size: clamp(40px, 5.4vw, 64px); line-height: 1.1; font-weight: 700; letter-spacing: -.01em; margin-bottom: 20px; }
-    .hero .lead { font-size: 18px; color: var(--muted); max-width: 27em; margin-bottom: 32px; }
+    /* 中文标题上下各五个字；介绍一句一行，换行由 <br> 决定而不是由宽度决定 */
+    .hero h1 { font-size: clamp(40px, 4.6vw, 68px); line-height: 1.12; font-weight: 700; letter-spacing: -.02em; margin-bottom: 20px; }
+    .hero .lead { font-size: 19px; line-height: 1.75; color: var(--muted); text-wrap: pretty; margin-bottom: 32px; }
     .actions { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; }
-    .count { margin-top: 32px; color: var(--muted); font-size: 15px; }
+    /* 服务器数前面一颗 Discord 的「在线」绿点 */
+    .count { margin-top: 32px; color: var(--muted); font-size: 15px; display: flex; align-items: center; gap: 9px; }
+    .count::before {
+        content: ''; flex-shrink: 0; width: 10px; height: 10px; border-radius: 50%;
+        background: var(--leaf); box-shadow: 0 0 0 3px rgba(35, 165, 90, .18);
+    }
     .count b { color: var(--text); font-weight: 600; }
     /* 小凛身后的一团柔光 */
     .hero-stage::before {
@@ -488,8 +494,8 @@
 <div class="wrap">
     <section class="hero" id="lobby" aria-labelledby="hero-title">
         <div>
-            <h1 id="hero-title">{{ t('把小凛<br>拉进你的服务器', 'Bring Rin<br>into your server') }}</h1>
-            <p class="lead">{{ t('放歌、迎新、抽奖，再帮你看着点刷屏。我就待在频道里，叫我就回。', 'Music, welcomes, giveaways, and an eye on spam. I hang out in your channels — just call me.') }}</p>
+            <h1 id="hero-title">{{ t('把小凛拉进<br>你的服务器', 'Bring Rin<br>into your server') }}</h1>
+            <p class="lead">{{ t('放歌、迎新、抽奖，再帮你看着点刷屏。<br>我就待在频道里，叫我就回。', 'Music, welcomes, giveaways, and an eye on spam.<br>I hang out in your channels. Just call me.') }}</p>
             <div class="actions">
                 <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ t('邀请小凛', 'Invite Rin') }}</a>
                 <a href="/dashboard" class="btn btn-ghost">{{ t(dash_zh, dash_en) }}</a>
