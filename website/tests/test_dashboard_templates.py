@@ -364,4 +364,11 @@ class DashboardTemplateTests(unittest.TestCase):
         body=re.search(r'\n\.input, \.select, \.textarea, \.num, \.select-trigger\s*\{([^}]*)\}',css).group(1)
         self.assertIn('background: var(--field)',body)
 
+    def test_phone_hero_puts_the_status_under_the_title(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        narrow=css[css.index('@media (max-width: 859px)'):]
+        self.assertRegex(narrow,r'\.hero\s*\{[^}]*grid-template-columns:\s*64px minmax\(0, 1fr\)')
+        self.assertRegex(narrow,r'\.hero \.bot-status\s*\{[^}]*grid-column:\s*2')
+
+
 if __name__=='__main__':unittest.main()

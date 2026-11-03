@@ -661,11 +661,12 @@ a.server-row:hover .server-name { color: var(--accent-text); }
     .row-control { flex-wrap: wrap; }
     .row-control > .input, .row-control > .select, .row-control > .search-select, .row-control > .textarea { width: 100%; }
     .row--switch { flex-direction: row; align-items: center; }
-    .hero img { width: 80px; height: 80px; margin: -8px 0; }
+    .hero { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: start; gap: 4px 14px; }
+    .hero img { width: 64px; height: 64px; margin: 0; }
+    .hero .bot-status { grid-column: 2; justify-self: start; margin: 0; }
     .rr-row { grid-template-columns: 44px minmax(0, 1fr) 36px; }
     .seg { display: flex; width: 100%; }
     .seg-option { flex: 1 0 auto; }
-    .hero-text h2 { font-size: 22px; }
     .unsaved-bar { left: 0; right: 0; bottom: 0; width: auto; border-radius: 0; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
     .fake-side { display: none; }
     .fake-topbar, .fake-content { padding-left: 16px; padding-right: 16px; }
