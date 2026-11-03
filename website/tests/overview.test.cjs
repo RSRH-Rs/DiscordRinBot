@@ -40,6 +40,13 @@ test('summaryText describes real config and flags what is missing', () => {
     assert.equal(s('music', null), null);
 });
 
+test('an unknown channel list falls back to the blurb instead of claiming deletion', () => {
+    const {Overview} = overview();
+    assert.equal(Overview.summaryText('serverlog', {channel_id: 5}, null), null);
+    assert.equal(Overview.summaryText('welcome', {welcome_channel: 7, auto_roles_count: 0}, null), null);
+    assert.deepEqual(plain(Overview.summaryText('roles', {panels: 1}, null)), {text: 'overview.roles.panels{"n":1}', warn: false});
+});
+
 test('toggle is blocked while the module page has unsaved changes', async () => {
     const {Overview, calls} = overview({dirty: true});
     const input = {checked: false, disabled: false, closest: () => ({setAttribute() {}, removeAttribute() {}})};

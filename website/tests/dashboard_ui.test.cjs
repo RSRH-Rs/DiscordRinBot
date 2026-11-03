@@ -136,6 +136,16 @@ test('reset restores saved values and fires change', () => {
     assert.equal(ui.dirty(a), false);
 });
 
+test('reset restores unnamed checkboxes one by one', () => {
+    const {ui, a, field} = fixture();
+    const boxes = [true, true, true, false].map(checked => field({type: 'checkbox', checked, id: '', name: '', className: ''}));
+    a.fields.push(...boxes); ui.clean(a);
+    boxes[0].checked = false; ui.changed(a);
+    ui.reset(a);
+    assert.deepEqual(boxes.map(b => b.checked), [true, true, true, false]);
+    assert.equal(ui.dirty(a), false);
+});
+
 test('bar opens when dirty and closes when changed back', () => {
     const {ui, a, bar} = fixture();
     a.fields[0].value = 'x'; ui.changed(a);

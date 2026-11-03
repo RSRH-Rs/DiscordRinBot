@@ -96,6 +96,7 @@ window.Console = (() => {
             return {show};
         },
         check(input) {
+            if (input.disabled) return;
             const value = Number(input.value), min = Number(input.min), max = Number(input.max);
             if (!Number.isFinite(value) || (input.min && value < min) || (input.max && value > max)) {
                 throw new Error(tr('duration.out_of_range', {min: duration.label(min), max: duration.label(max)}));
@@ -171,12 +172,12 @@ window.Console = (() => {
         document.dispatchEvent(new CustomEvent('console:page', {detail: {slug}}));
     }
     const go = slug => router?.navigate(slug) || false;
+    // Leaving the page through the server rail or the breadcrumb obeys the same draft guard as in-page links.
     function railClick(event) {
-        const link = event.target.closest('.rail-item[data-guild]');
+        const link = event.target.closest('.rail-item, #crumbs a');
         if (!link) return;
-        const dirty = [...document.querySelectorAll('[data-draft]')].some(root => DashboardUI.dirty(root));
-        if (dirty) { event.preventDefault(); DashboardUI.shake(); return; }
-        if (router) link.href = '/dashboard/server/' + link.dataset.guild + '#' + router.current();
+        if (!DashboardUI.confirmLeave([...document.querySelectorAll('[data-draft]')])) { event.preventDefault(); return; }
+        if (router && link.dataset.guild) link.href = '/dashboard/server/' + link.dataset.guild + '#' + router.current();
     }
 
     /* ── Module status polling (server pages only) ── */

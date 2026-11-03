@@ -86,7 +86,7 @@ class DashboardStatusTests(unittest.IsolatedAsyncioTestCase):
         path=self.make_db('welcome.db','CREATE TABLE welcome_config (guild_id INTEGER, welcome_channel INTEGER, farewell_channel INTEGER, auto_roles TEXT)',[(123,777,0,'1,2,')])
         with patch.object(routes,'DB_WELCOME',path):
             self.assertEqual(await routes._guild_module_summary('welcome',123),{'welcome_channel':777,'farewell_channel':0,'auto_roles_count':2,'enabled':1})
-            self.assertIsNone(await routes._guild_module_summary('welcome',999))
+            self.assertEqual(await routes._guild_module_summary('welcome',999),{'enabled':1})
 
     async def test_summary_automod_counts_rules(self):
         path=self.make_db('automod.db','CREATE TABLE automod_config (guild_id INTEGER, log_channel INTEGER, anti_spam INTEGER, anti_badword INTEGER, anti_link INTEGER, anti_caps INTEGER, anti_repeat INTEGER)',[(123,5,1,0,1,0,1)])
@@ -158,6 +158,35 @@ class DashboardStatusTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual((await self.client.post('/api/guild/123/modules/music/enabled',json={'enabled':True})).status_code,404)
         for body in ({'enabled':'yes'},[]):
             self.assertEqual((await self.client.post('/api/guild/123/modules/welcome/enabled',json=body)).status_code,400)
+
+    async def test_summary_without_row_reports_bot_default_enabled(self):
+        welcome=self.make_db('welcome.db','CREATE TABLE welcome_config (guild_id INTEGER, welcome_channel INTEGER, farewell_channel INTEGER, auto_roles TEXT, enabled INTEGER)',[])
+        automod=self.make_db('automod.db','CREATE TABLE automod_config (guild_id INTEGER, enabled INTEGER)',[])
+        with patch.object(routes,'DB_WELCOME',welcome),patch.object(routes,'DB_AUTOMOD',automod):
+            self.assertEqual(await routes._guild_module_summary('automod',123),{'enabled':0})
+            self.assertEqual(await routes._guild_module_summary('welcome',123),{'enabled':1})
+
+    async def test_channels_fetch_failure_is_an_error_not_an_empty_list(self):
+        with patch.object(routes,'check_guild_access',AsyncMock(return_value=True)),patch.object(routes,'discord_api_get',AsyncMock(return_value=None)):
+            self.assertEqual((await self.client.get('/api/guild/123/channels')).status_code,502)
+        data=[{'id':1,'name':'news','type':5},{'id':2,'name':'chat','type':0},{'id':3,'name':'voice','type':2}]
+        with patch.object(routes,'check_guild_access',AsyncMock(return_value=True)),patch.object(routes,'discord_api_get',AsyncMock(return_value=data)):
+            names=[c['name'] for c in await (await self.client.get('/api/guild/123/channels')).get_json()]
+        self.assertEqual(names,['chat','news'])
+
+    async def test_settings_page_survives_guild_list_failure(self):
+        class FakeDiscord:
+            @property
+            async def authorized(self): return True
+            async def fetch_user(self): return SimpleNamespace(id=1,name='主人',avatar_url='')
+            async def fetch_guilds(self): raise RuntimeError('429')
+        app=Quart(__name__);routes.setup_routes(app,FakeDiscord())
+        app.before_serving_funcs.clear();app.after_serving_funcs.clear()
+        render=AsyncMock(return_value='ok')
+        with patch.object(routes,'is_owner',AsyncMock(return_value=True)),patch.object(routes,'render_template',render):
+            response=await app.test_client().get('/dashboard/settings')
+        self.assertEqual(response.status_code,200)
+        self.assertEqual(render.await_args.kwargs['guilds'],[])
 
     def test_manageable_guilds_filters_and_orders(self):
         guilds=[SimpleNamespace(id='1',permissions=0x20),SimpleNamespace(id='2',owner=True,permissions=0),

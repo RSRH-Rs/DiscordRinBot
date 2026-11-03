@@ -37,6 +37,11 @@ class ConsoleContrastTests(unittest.TestCase):
             with self.subTest(fg=fg, bg=bg):
                 self.assertGreaterEqual(ratio(self.color(fg), self.color(bg)), 4.5)
 
+    def test_reduced_motion_overrides_every_animated_selector(self):
+        block = self.css[self.css.index('@media (prefers-reduced-motion: reduce)'):]
+        for selector in ['.unsaved-bar', '.unsaved-bar.is-open', '.unsaved-bar.is-shaking', '.sidebar', '.shell.is-drawer-open .sidebar', '.skeleton']:
+            self.assertIn(selector, block)
+
     def test_no_important(self):
         self.assertNotIn('!important', self.css)
 

@@ -49,6 +49,14 @@ test('out-of-range stored duration is shown as is and blocks save with the allow
     assert.equal(requests.filter(r => r[1] === 'POST').length, 0);
 });
 
+test('a disabled out-of-range duration does not block saving', async () => {
+    const {nodes, module, requests} = page({enabled: 1, mute_duration: 100000, badwords: [], link_whitelist: []});
+    await module().load();
+    nodes['am-mute'].disabled = true;
+    await module().save();
+    assert.equal(requests.filter(r => r[1] === 'POST').length, 1);
+});
+
 test('save sends tags from the chip lists and numeric fields', async () => {
     const {nodes, module, requests} = page({enabled: 1, mute_duration: 300, badwords: [], link_whitelist: []});
     await module().load();

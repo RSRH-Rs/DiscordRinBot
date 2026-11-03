@@ -378,20 +378,25 @@ _SUMMARY_SPECS = {
 }
 
 
+# 没有配置行时 bot 的实际行为：自动审核不运行，其余模块按表默认值开启。
+_ENABLED_WITHOUT_ROW = {"welcome": 1, "automod": 0, "botlog": 1, "serverlog": 1}
+
+
 async def _guild_module_summary(slug: str, gid: int):
     """概览用的配置摘要；只读本地数据库，读不到就返回 None。"""
     spec = _SUMMARY_SPECS.get(slug)
     if spec is None:
         return None
     filename = globals()[spec[0]]
+    no_row = {"enabled": _ENABLED_WITHOUT_ROW[slug]} if slug in _ENABLED_WITHOUT_ROW else None
     if not os.path.isfile(filename):
-        return None
+        return no_row
     try:
         uri = Path(filename).resolve().as_uri() + "?mode=ro"
         async with aiosqlite.connect(uri, uri=True, timeout=2) as db:
             db.row_factory = aiosqlite.Row
             row = await (await db.execute(spec[1], (gid,))).fetchone()
-        return spec[2](row) if row is not None else None
+        return spec[2](row) if row is not None else no_row
     except (aiosqlite.Error, OSError, ValueError, KeyError, IndexError, TypeError):
         return None
 
@@ -935,9 +940,14 @@ def setup_routes(app, discord):
                     403,
                 )
             user = await discord.fetch_user()
-            guilds = manageable_guilds(
-                await discord.fetch_guilds(), await fetch_bot_guild_ids()
-            )
+            try:
+                guilds = manageable_guilds(
+                    await discord.fetch_guilds(), await fetch_bot_guild_ids()
+                )
+            except Exception as e:
+                # 服务器栏只是导航；读不到时设置页照样能用
+                print(f"[global_settings] guild list unavailable: {e!r}")
+                guilds = []
             return await render_template(
                 "settings.html", user=user, guilds=guilds, is_owner=True
             )
@@ -985,13 +995,13 @@ def setup_routes(app, discord):
             if not await check_guild_access(discord, gid):
                 return jsonify({"error": "unauthorized"}), 401
             data = await discord_api_get(f"/guilds/{gid}/channels")
-            if not data:
-                return jsonify([])
+            if data is None:
+                return jsonify({"error": "暂时读不到频道列表"}), 502
             ch = sorted(
                 [
                     {"id": str(c["id"]), "name": c["name"]}
                     for c in data
-                    if c.get("type") == 0
+                    if c.get("type") in (0, 5)
                 ],
                 key=lambda c: c["name"],
             )

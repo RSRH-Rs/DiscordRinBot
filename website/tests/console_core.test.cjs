@@ -13,6 +13,7 @@ function core({dirty = false, fetchImpl} = {}) {
         DashboardUI: {
             tr: (key, vars = {}) => key === 'common.request_failed' ? `请求失败 (${vars.status})` : key,
             dirty: () => dirty, shake: () => { calls.shake++; },
+            confirmLeave: roots => { calls.confirm = (calls.confirm || 0) + 1; return !dirty; },
         },
         DashboardExtras: {},
         fetch: async (...args) => { calls.fetch.push(args); return fetchImpl ? fetchImpl(...args) : {ok: true, json: async () => []}; },
@@ -61,13 +62,23 @@ test('channels() dedupes concurrent requests and caches the result', async () =>
     assert.equal(Console.channelName('9', a), null);
 });
 
+test('home rail item and breadcrumb are guarded too', () => {
+    const blocked = core({dirty: true});
+    for (const link of [{dataset: {}, href: '/dashboard'}, {dataset: {}, href: '/dashboard#not-joined'}]) {
+        const event = {target: {closest: () => link}, prevented: false, preventDefault() { this.prevented = true; }};
+        blocked.Console.railClick(event);
+        assert.equal(event.prevented, true);
+    }
+    assert.equal(blocked.calls.confirm, 2);
+});
+
 test('rail click while a page has unsaved changes is blocked', () => {
     const blocked = core({dirty: true});
     const link = {dataset: {guild: '456'}, href: '/dashboard/server/456'};
     const event = {target: {closest: () => link}, prevented: false, preventDefault() { this.prevented = true; }};
     blocked.Console.railClick(event);
     assert.equal(event.prevented, true);
-    assert.equal(blocked.calls.shake, 1);
+    assert.equal(blocked.calls.confirm, 1);
     const free = core({dirty: false});
     const pass = {target: {closest: () => link}, prevented: false, preventDefault() { this.prevented = true; }};
     free.Console.railClick(pass);

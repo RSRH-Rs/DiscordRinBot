@@ -5,10 +5,12 @@ window.Overview = (() => {
     const el = id => document.getElementById(id);
 
     // Returns {text, warn} built from this server's saved config, or null to fall back to the module blurb.
+    // channels === null means the channel list could not be read: never claim a channel was deleted then.
     function summaryText(slug, summary, channels) {
         if (!summary) return null;
-        let deleted = false;
+        let deleted = false, unknown = false;
         const channel = id => {
+            if (channels === null) { unknown = true; return ''; }
             const name = Console.channelName(id, channels);
             if (name === null) deleted = true;
             return name;
@@ -39,6 +41,7 @@ window.Overview = (() => {
         } else {
             return null;
         }
+        if (unknown) return null;
         if (deleted) return {text: tr('overview.channel_deleted'), warn: true};
         if (warn) return {text: tr(warn), warn: true};
         return {text: parts.join(' · '), warn: false};
@@ -94,8 +97,9 @@ window.Overview = (() => {
     }
 
     async function render(data) {
-        let list = [];
+        let list = null;
         try { list = await Console.channels(); } catch { /* summaries fall back to blurbs */ }
+        if (!list?.length) list = null;
         for (const m of data.modules) {
             const row = document.querySelector(`[data-row="${m.slug}"]`);
             if (!row) continue;

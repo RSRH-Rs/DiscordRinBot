@@ -563,4 +563,6 @@ a.server-card:hover { border-color: var(--chip-bg); background: var(--bg); }
 }
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none; transition: none; }
+    .unsaved-bar, .unsaved-bar.is-open, .sidebar, .shell.is-drawer-open .sidebar, .tog-track, .tog-track::after, .rail-item { transition: none; }
+    .unsaved-bar.is-shaking, .skeleton, .page[aria-busy="true"] .list { animation: none; }
 }

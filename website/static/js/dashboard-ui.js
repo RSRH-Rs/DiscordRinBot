@@ -13,6 +13,8 @@ window.DashboardUI = (() => {
         return Object.entries(vars).reduce((out, [name, value]) => out.replaceAll('{' + name + '}', String(value)), text);
     }
     const keyOf = field => field.id || field.name || field.className;
+    // Unnamed controls (e.g. log level chips) are told apart by their position in the page.
+    const keyed = root => fieldsOf(root).map((field, i) => [keyOf(field) || '#' + i, field]);
     const fieldsOf = root => [...root.querySelectorAll('input,select,textarea')].filter(f => !f.matches('[data-draft-ignore]'));
     const valueOf = field => field.type === 'file' ? [...field.files].map(f => [f.name, f.size, f.lastModified]) :
         /^(checkbox|radio)$/.test(field.type) ? field.checked : field.value;
@@ -61,7 +63,7 @@ window.DashboardUI = (() => {
     }
     function record(root) {
         const state = drafts.get(root);
-        state.values = new Map(fieldsOf(root).filter(f => f.type !== 'file').map(f => [keyOf(f), valueOf(f)]));
+        state.values = new Map(keyed(root).filter(([, f]) => f.type !== 'file').map(([key, f]) => [key, valueOf(f)]));
         state.tags = new Map(tagsOf(root));
     }
     function clean(id) {
@@ -89,8 +91,7 @@ window.DashboardUI = (() => {
         const root = id ? rootOf(id) : activeRoot();
         const state = root && drafts.get(root);
         if (!state || state.saving) return;
-        for (const field of fieldsOf(root)) {
-            const key = keyOf(field);
+        for (const [key, field] of keyed(root)) {
             if (field.type === 'file' || !state.values.has(key)) continue;
             const saved = state.values.get(key);
             if (valueOf(field) === saved) continue;
