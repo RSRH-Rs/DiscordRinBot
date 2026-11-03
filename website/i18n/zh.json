@@ -42,6 +42,35 @@
     "count": "{n} 个",
     "enabled": "开启",
     "disabled": "关闭",
-    "remove_item": "移除「{item}」"
+    "remove_item": "移除「{item}」",
+    "request_failed": "请求失败（{status}）",
+    "not_set": "— 未设置 —",
+    "no_limit": "— 不限制 —"
+  },
+  "title": {
+    "page": "{page} · {guild}"
+  },
+  "duration": {
+    "preset_60": "1 分钟",
+    "preset_300": "5 分钟",
+    "preset_3600": "1 小时",
+    "preset_86400": "1 天",
+    "custom": "自定义",
+    "minute": "分钟",
+    "hour": "小时",
+    "day": "天",
+    "amount": "时长",
+    "unit": "单位",
+    "out_of_range": "时长要在 {min} 到 {max} 之间"
+  },
+  "module_state": {
+    "enabled": "已开启",
+    "disabled": "未开启",
+    "unconfigured": "还没配置",
+    "configured": "已配置",
+    "default": "默认设置",
+    "available": "可以使用",
+    "unknown": "读取失败",
+    "not_loaded": "模块未加载"
   }
 }
