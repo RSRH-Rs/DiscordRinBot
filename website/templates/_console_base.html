@@ -1,0 +1,64 @@
+{%- from '_console_macros.html' import icon -%}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>{% block title %}{{ tr('nav.servers') }}{% endblock %} · 小凛 Rin</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" onload="this.rel='stylesheet'">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/console.css') }}?v=20261102a">
+    {% block head %}{% endblock %}
+</head>
+<body>
+<div class="shell" id="shell">
+    <aside class="sidebar" id="sideNav">
+        <nav class="rail" aria-label="{{ tr('nav.servers') }}">
+            <a class="rail-item{{ ' is-current' if not active_guild_id }}" href="/dashboard" title="{{ tr('nav.home') }}" aria-label="{{ tr('nav.home') }}"{% if not active_guild_id %} aria-current="page"{% endif %}>
+                <img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="48" height="48">
+            </a>
+            <span class="rail-sep" aria-hidden="true"></span>
+            {%- for g in guilds or [] if g.bot_joined %}
+            <a class="rail-item{{ ' is-current' if g.id|string == active_guild_id|string }}" href="/dashboard/server/{{ g.id }}" data-guild="{{ g.id }}" title="{{ g.name }}" aria-label="{{ g.name }}"{% if g.id|string == active_guild_id|string %} aria-current="page"{% endif %}>
+                {%- if g.icon_url %}<img src="{{ g.icon_url }}" alt="" width="48" height="48" loading="lazy">{% else %}{{ g.name[:1] }}{% endif -%}
+            </a>
+            {%- endfor %}
+            <a class="rail-item is-add" href="/dashboard#not-joined" title="{{ tr('nav.invite') }}" aria-label="{{ tr('nav.invite') }}">{{ icon('plus', 20) }}</a>
+        </nav>
+        <div class="nav">
+            <div class="nav-head" title="{% block nav_head %}{{ tr('nav.servers') }}{% endblock %}">{{ self.nav_head() }}</div>
+            <nav class="nav-body" id="side-modules">{% block nav %}{% endblock %}</nav>
+            <div class="user-card">
+                <img src="{{ user.avatar_url }}" alt="" class="user-avatar" width="32" height="32">
+                <span class="user-name" title="{{ user.name }}">{{ user.name }}</span>
+                <a class="user-logout" href="/logout" title="{{ tr('nav.logout') }}" aria-label="{{ tr('nav.logout') }}">{{ icon('log-out') }}</a>
+            </div>
+        </div>
+    </aside>
+    <div class="drawer-backdrop" id="sidebarBackdrop"></div>
+    <main class="main" id="main">
+        <header class="topbar">
+            <button type="button" class="menu-btn" id="menuBtn" aria-label="{{ tr('nav.menu') }}" aria-controls="sideNav" aria-expanded="false">{{ icon('menu', 20) }}</button>
+            <div class="topbar-text">{% block topbar %}{% endblock %}</div>
+            {% block topbar_end %}{% endblock %}
+        </header>
+        <div class="content{% block content_class %}{% endblock %}">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+<div class="unsaved-bar" id="unsaved-bar" role="region" aria-label="{{ tr('bar.unsaved') }}" aria-hidden="true">
+    <span class="unsaved-text" id="unsaved-text" aria-live="polite">{{ tr('bar.unsaved') }}</span>
+    <button type="button" class="btn btn--text" id="unsaved-reset" disabled>{{ tr('bar.reset') }}</button>
+    <button type="button" class="btn btn--primary" id="unsaved-save" disabled>{{ tr('bar.save') }}</button>
+    <span class="unsaved-error" id="unsaved-error" role="alert" hidden></span>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+<script type="application/json" id="console-strings">{{ console_strings()|tojson }}</script>
+<script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20261102a"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

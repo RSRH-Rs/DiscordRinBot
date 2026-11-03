@@ -66,11 +66,11 @@ window.DashboardExtras = (() => {
             if (select.style.maxWidth && select.style.maxWidth !== 'none') wrapper.style.maxWidth=select.style.maxWidth;
             select.before(wrapper);
             const input = document.createElement('input');
-            input.type='search'; input.className='cfg-input select-search'; input.placeholder='输入名称搜索…';
+            input.type='search'; input.className='input select-search'; input.placeholder='输入名称搜索…';
             input.setAttribute('aria-label','搜索'+name); input.setAttribute('data-draft-ignore','');
             if (!select.id) select.id='searchable-select-'+(++searchId);
             if (!select.getAttribute('aria-label')) select.setAttribute('aria-label',name);
-            const trigger=document.createElement('button');trigger.type='button';trigger.className='select-trigger cfg-select';
+            const trigger=document.createElement('button');trigger.type='button';trigger.className='select-trigger';
             trigger.id=select.id+'-trigger';trigger.setAttribute('aria-haspopup','listbox');trigger.setAttribute('aria-expanded','false');
             const popup=document.createElement('div');popup.className='select-popup';popup.hidden=true;
             const list=document.createElement('div');list.className='select-options';list.id=select.id+'-options';list.setAttribute('role','listbox');list.setAttribute('aria-label',name);

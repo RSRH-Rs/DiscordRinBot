@@ -5,44 +5,58 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../static/js/dashboard-ui.js'), 'utf8');
+const flatten = (node, prefix = '') => Object.entries(node).reduce((out, [k, v]) =>
+    Object.assign(out, typeof v === 'object' ? flatten(v, prefix + k + '.') : {[prefix + k]: v}), {});
+const strings = flatten(JSON.parse(fs.readFileSync(path.join(__dirname, '../i18n/zh.json'), 'utf8')));
 
 function fixture() {
-    const nodes = new Map(), events = {};
+    const nodes = new Map(), events = {}, docEvents = {};
     function element(id = '') {
         const classes = new Set();
         const el = {
-            id, fields: [], tags: [], children: [], dataset: {}, hidden: false, inert: false,
+            id, fields: [], lists: [], children: [], dataset: {}, hidden: false, inert: false, disabled: false, textContent: '', dispatched: [],
             classList: {
-                toggle(c, on) { if (on) classes.add(c); else classes.delete(c); },
+                add(c) { classes.add(c); }, remove(c) { classes.delete(c); },
+                toggle(c, on) { if (on === undefined) on = !classes.has(c); if (on) classes.add(c); else classes.delete(c); },
                 contains(c) { return classes.has(c); },
             },
             setAttribute(k, v) { this[k] = v; },
             removeAttribute(k) { delete this[k]; },
             append(child) { this.children.push(child); },
+            replaceChildren(...kids) { this.children = kids; },
             before(child) { nodes.set(child.id, child); },
             remove() { nodes.delete(this.id); },
+            dispatchEvent(e) { this.dispatched.push(e.type); },
+            addEventListener() {},
             querySelector(s) { return s === '.save-bar' ? this.bar : this.hint; },
-            querySelectorAll(s) { return s === '.tag-chip' ? this.tags : this.fields; },
+            querySelectorAll(s) { return s === '[data-tags]' ? this.lists : s === '.chip' ? this.chips || [] : this.fields; },
         };
         if (id) nodes.set(id, el);
         return el;
     }
+    function field(props) { return {type: 'text', value: '', matches: () => false, dispatched: [], dispatchEvent(e) { this.dispatched.push(e.type); }, ...props}; }
     function root(id) {
         const el = element(id);
         el.hint = element(); el.bar = element();
-        el.fields = [{id: 'title', type: 'text', value: 'original', matches: () => false}];
+        el.fields = [field({id: 'title', value: 'original'})];
         return el;
     }
-    const a = root('a'), b = root('b'), notice = element('draft-notice');
+    const a = root('a'), b = root('b');
+    for (const id of ['unsaved-bar', 'unsaved-save', 'unsaved-reset', 'unsaved-error', 'unsaved-text']) element(id);
+    element('console-strings').textContent = JSON.stringify(strings);
     const ctx = vm.createContext({
         document: {
             getElementById: id => nodes.get(id),
             createElement: () => element(),
             createTextNode: text => ({textContent: text}),
-            addEventListener() {},
+            addEventListener: (name, callback) => { (docEvents[name] ||= []).push(callback); },
+            dispatchEvent() {},
+            querySelector: () => null,
         },
         addEventListener: (name, callback) => { events[name] = callback; },
-        confirm: () => false,
+        confirm: () => { throw Error('window.confirm must not be used for console pages'); },
+        setTimeout: () => 1, clearTimeout() {},
+        Event: class { constructor(type) { this.type = type; } },
     });
     ctx.window = ctx;
     vm.runInContext(source, ctx);
@@ -53,22 +67,30 @@ function fixture() {
         events.beforeunload(e);
         return e;
     }
-    return {ui, a, b, notice, ctx, nodes, unload};
+    function key(props) {
+        const e = {key: 's', ctrlKey: true, metaKey: false, isComposing: false, prevented: false, preventDefault() { this.prevented = true; }, ...props};
+        docEvents.keydown.forEach(fn => fn(e));
+        return e;
+    }
+    const bar = nodes.get('unsaved-bar');
+    return {ui, a, b, bar, ctx, nodes, unload, key, field};
 }
 
 test('editing/reverting fields and tags updates draft and departure warnings', () => {
-    const {ui, a, notice, unload} = fixture();
+    const {ui, a, bar, unload} = fixture();
+    const list = {id: 'words', chips: [], querySelectorAll() { return this.chips; }};
+    a.lists.push(list); ui.clean(a);
     assert.equal(unload().prevented, false);
     a.fields[0].value = 'new'; ui.changed(a);
     assert.equal(ui.dirty(a), true);
-    assert.equal(notice.hidden, false);
+    assert.equal(bar.classList.contains('is-open'), true);
     assert.equal(unload().prevented, true);
     a.fields[0].value = 'original'; ui.changed(a);
     assert.equal(ui.dirty(a), false);
-    a.tags.push({firstChild: {textContent: 'word'}}); ui.changed(a);
+    list.chips.push({dataset: {value: 'word'}}); ui.changed(a);
     assert.equal(ui.dirty(a), true);
-    a.tags.pop(); ui.changed(a);
-    assert.equal(notice.hidden, true);
+    list.chips.pop(); ui.changed(a);
+    assert.equal(bar.classList.contains('is-open'), false);
 });
 
 test('checkboxes/files are tracked; ignored controls do not create drafts', () => {
@@ -84,22 +106,78 @@ test('checkboxes/files are tracked; ignored controls do not create drafts', () =
     assert.equal(ui.dirty(a), true);
 });
 
-test('cancel/accept navigation leaves unsaved input intact', () => {
-    const {ui, a, ctx} = fixture();
+test('leaving with unsaved input shakes the bar instead of confirming', () => {
+    const {ui, a, bar} = fixture();
     assert.equal(ui.confirmSwitch(a), true);
     a.fields[0].value = 'draft';
     assert.equal(ui.confirmSwitch(a), false);
-    ctx.confirm = () => true;
-    assert.equal(ui.confirmSwitch(a), true);
+    assert.equal(bar.classList.contains('is-shaking'), true);
     assert.equal(a.fields[0].value, 'draft');
     assert.equal(ui.dirty(a), true);
 });
 
-test('a settings group asks only once for multiple drafts',()=>{
-    const {ui,a,b,ctx}=fixture();let prompts=0;
-    a.fields[0].value='one';b.fields[0].value='two';
-    ctx.confirm=()=>{prompts++;return false;};
-    assert.equal(ui.confirmLeave([a,b]),false);assert.equal(prompts,1);
+test('inline settings drafts still ask once before leaving', () => {
+    const {ui, a, b, ctx} = fixture(); let prompts = 0;
+    a.dataset.draftInline = ''; b.dataset.draftInline = '';
+    a.fields[0].value = 'one'; b.fields[0].value = 'two';
+    ctx.confirm = () => { prompts++; return false; };
+    assert.equal(ui.confirmLeave([a, b]), false); assert.equal(prompts, 1);
+});
+
+test('reset restores saved values and fires change', () => {
+    const {ui, a, field} = fixture();
+    const box = field({id: 'on', type: 'checkbox', checked: true});
+    a.fields.push(box); ui.clean(a);
+    a.fields[0].value = 'edited'; box.checked = false; ui.changed(a);
+    ui.reset(a);
+    assert.equal(a.fields[0].value, 'original');
+    assert.equal(box.checked, true);
+    assert.ok(box.dispatched.includes('change'));
+    assert.equal(ui.dirty(a), false);
+});
+
+test('bar opens when dirty and closes when changed back', () => {
+    const {ui, a, bar} = fixture();
+    a.fields[0].value = 'x'; ui.changed(a);
+    assert.equal(bar.classList.contains('is-open'), true);
+    a.fields[0].value = 'original'; ui.changed(a);
+    assert.equal(bar.classList.contains('is-open'), false);
+});
+
+test('ctrl+s prevents default always and saves only when dirty', async () => {
+    const {ui, a, key} = fixture();
+    let saves = 0; ui.onSave(a, async () => { saves++; });
+    assert.equal(key({}).prevented, true); assert.equal(saves, 0);
+    a.fields[0].value = 'x'; ui.changed(a);
+    assert.equal(key({isComposing: true}).prevented, true); assert.equal(saves, 0);
+    key({metaKey: true, ctrlKey: false, key: 'S'});
+    await new Promise(r => setImmediate(r));
+    assert.equal(saves, 1);
+});
+
+test('reset and save are disabled while saving', async () => {
+    const {ui, a, nodes} = fixture();
+    let finish; ui.onSave(a, () => new Promise(r => { finish = r; }));
+    a.fields[0].value = 'x'; ui.changed(a);
+    const pending = ui.save();
+    assert.equal(nodes.get('unsaved-save').disabled, true);
+    assert.equal(nodes.get('unsaved-reset').disabled, true);
+    finish(); await pending;
+    assert.equal(ui.dirty(a), false);
+    a.fields[0].value = 'again'; ui.changed(a);
+    assert.equal(nodes.get('unsaved-save').disabled, false);
+    assert.equal(nodes.get('unsaved-reset').disabled, false);
+});
+
+test('save failure keeps bar open with reason', async () => {
+    const {ui, a, bar, nodes} = fixture();
+    ui.onSave(a, async () => { throw Error('频道不存在'); });
+    a.fields[0].value = 'x'; ui.changed(a);
+    await ui.save();
+    assert.equal(bar.classList.contains('is-open'), true);
+    assert.match(nodes.get('unsaved-error').textContent, /频道不存在/);
+    assert.equal(nodes.get('unsaved-error').hidden, false);
+    assert.equal(a.fields[0].value, 'x');
 });
 
 test('saving prevents duplicate submissions and departure even on a clean form', async () => {
@@ -130,12 +208,12 @@ test('failed save restores controls, preserves input and allows retry', async ()
 });
 
 test('saving one section never clears another section; cleared fields are the new baseline', async () => {
-    const {ui, a, b, notice, unload} = fixture();
+    const {ui, a, b, bar, unload} = fixture();
     a.fields[0].value = 'announcement'; b.fields[0].value = 'another draft';
     await ui.saving(a, async () => { a.fields[0].value = ''; ui.clean(a); });
     assert.equal(ui.dirty(a), false);
     assert.equal(ui.dirty(b), true);
-    assert.equal(notice.hidden, false);
+    assert.equal(bar.classList.contains('is-open'), true);
     assert.equal(unload().prevented, true);
 });
 

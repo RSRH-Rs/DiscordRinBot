@@ -27,7 +27,8 @@
     "save": "保存",
     "saving": "保存中…",
     "blocked": "先保存或重置哦",
-    "save_failed": "没保存上：{reason}"
+    "save_failed": "没保存上：{reason}",
+    "leave_confirm": "这一页还有未保存的更改。切换后会暂时保留，但刷新或离开控制台会丢失。仍要切换吗？"
   },
   "audit": {
     "module_toggled": "{module}已{state}"
@@ -40,6 +41,7 @@
     "load_failed": "读取失败了，点重试再来一次。",
     "count": "{n} 个",
     "enabled": "开启",
-    "disabled": "关闭"
+    "disabled": "关闭",
+    "remove_item": "移除「{item}」"
   }
 }
