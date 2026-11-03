@@ -13,7 +13,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" onload="this.rel='stylesheet'">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/console.css') }}?v=20261103a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/console.css') }}?v=20261103b">
     {% block head %}{% endblock %}
 </head>
 <body data-current-guild="{{ current_guild.name if current_guild else '' }}">
@@ -104,10 +104,10 @@
 <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 {% block palette %}{% endblock %}
 <script type="application/json" id="console-strings">{{ console_strings()|tojson }}</script>
-<script src="{{ url_for('static', filename='js/theme.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/server-switcher.js') }}?v=20261103a"></script>
+<script src="{{ url_for('static', filename='js/theme.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/server-switcher.js') }}?v=20261103b"></script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

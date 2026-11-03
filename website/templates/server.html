@@ -37,7 +37,7 @@
 
 {% block content %}
 <h1 class="sr-only" id="page-title">{{ tr('nav.overview') }}</h1>
-<section class="page page--wide" id="pg-overview" data-slug="overview" data-group="" data-title="{{ tr('nav.overview') }}">
+<section class="page" id="pg-overview" data-slug="overview" data-group="" data-title="{{ tr('nav.overview') }}">
     <div class="hero">
         <img src="{{ url_for('static', filename='images/rin/manage-480.webp') }}" alt="" width="120" height="120">
         <div class="hero-text">
@@ -86,7 +86,7 @@
     </div>
 </section>
 
-<section class="page page--wide" id="pg-welcome" data-slug="welcome" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.welcome') }}" data-draft>
+<section class="page page--editor" id="pg-welcome" data-slug="welcome" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.welcome') }}" data-draft>
     {{ page_head(tr('nav.module.welcome'), tr('welcome.intro'), 'w-enabled', tr('welcome.enabled')) }}
     {{ tabs('welcome', [('message', tr('welcome.tab.message')), ('appearance', tr('welcome.tab.appearance')), ('farewell', tr('welcome.tab.farewell')), ('autoroles', tr('welcome.tab.autoroles'))]) }}
     <div class="editor">
@@ -136,7 +136,7 @@
     </div>
 </section>
 
-<section class="page page--wide" id="pg-roles" data-slug="roles" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.roles') }}" data-draft data-draft-inline>
+<section class="page page--editor" id="pg-roles" data-slug="roles" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.roles') }}" data-draft data-draft-inline>
     {{ page_head(tr('nav.module.roles'), tr('roles.intro')) }}
     <div class="editor">
         <div class="editor-form">
@@ -368,17 +368,17 @@
 
 {% block scripts %}
 <script>window.GID = "{{ guild.id }}";</script>
-<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/command-palette.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/welcome.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/roles.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/music.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/automod.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/moderation.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/giveaway.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/leveling.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/utility.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/modules/logs.js') }}?v=20261103a"></script>
-<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20261103a"></script>
+<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/command-palette.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/welcome.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/roles.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/music.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/automod.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/moderation.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/giveaway.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/leveling.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/utility.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/modules/logs.js') }}?v=20261103b"></script>
+<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20261103b"></script>
 {% endblock %}

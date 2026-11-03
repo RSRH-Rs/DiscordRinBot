@@ -175,12 +175,6 @@ class DashboardTemplateTests(unittest.TestCase):
         html,_=self.render('server.html')
         self.assertEqual(re.findall(r'<details class="fold[^"]*"',html),['<details class="fold sent-panels"'])
 
-    def test_wide_pages(self):
-        html,_=self.render('server.html')
-        wide=re.findall(r'<section class="page page--wide" id="pg-([a-z]+)"',html)
-        self.assertEqual(sorted(wide),['overview','roles','welcome'])
-        self.assertEqual(len(re.findall(r'<section class="page[" ]',html)),12)
-
     def test_shell_has_switcher_and_no_rail(self):
         for name in ['dashboard.html','server.html','settings.html']:
             html,p=self.render(name)
@@ -221,7 +215,7 @@ class DashboardTemplateTests(unittest.TestCase):
             html,_=self.render(name)
             for value in ['light','','dark']:
                 self.assertEqual(html.count(f'data-theme-set="{value}"'),1,f'{name} {value!r}')
-            self.assertIn('js/theme.js?v=20261103a',html)
+            self.assertIn('js/theme.js?v=20261103b',html)
 
     def test_login_gate_sits_on_a_blurred_console_backdrop(self):
         html,_=self.render('login_gate.html')
@@ -299,5 +293,48 @@ class DashboardTemplateTests(unittest.TestCase):
     def test_only_warning_dots_show_in_the_sidebar(self):
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
         self.assertRegex(css,r'\.nav-dot:not\(\.nav-dot--warn\)\s*\{\s*display:\s*none;?\s*\}')
+
+    def test_pages_share_one_left_edge(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        page=re.search(r'\n\.page\s*\{([^}]*)\}',css).group(1)
+        self.assertIn('max-width: 680px',page); self.assertNotIn('auto',page)
+        self.assertNotIn('.page--wide',css); self.assertNotIn('.content--page',css)
+        self.assertIn('max-width: 1032px',re.search(r'\.page--editor\s*\{([^}]*)\}',css).group(1))
+        self.assertIn('padding: 40px 48px',re.search(r'\n\.content\s*\{([^}]*)\}',css).group(1))
+        for name in ['dashboard.html','settings.html','server.html']:
+            html,_=self.render(name)
+            self.assertNotIn('content--page',html,name); self.assertNotIn('page--wide',html,name)
+
+    def test_editor_pages(self):
+        html,_=self.render('server.html')
+        self.assertEqual(sorted(re.findall(r'<section class="page page--editor" id="pg-([a-z]+)"',html)),['roles','welcome'])
+        self.assertEqual(len(re.findall(r'<section class="page[" ]',html)),12)
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('minmax(0, 680px) 320px',re.search(r'\n\.editor\s*\{([^}]*)\}',css).group(1))
+        self.assertRegex(css[css.index('@media (max-width: 1199px)'):],r'\.editor\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)')
+
+    def test_sticky_preview_scrolls_inside_itself(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        body=re.search(r'\n\.message-preview\s*\{([^}]*)\}',css).group(1)
+        for part in ['position: sticky','top: 24px','max-height: calc(100dvh - 48px)','overflow-y: auto']:self.assertIn(part,body)
+        for gone in ['background','border:']:self.assertNotIn(gone,body)
+
+    def test_lists_are_flat(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        lst=re.search(r'\n\.list\s*\{([^}]*)\}',css).group(1)
+        for gone in ['background','border-radius','box-shadow']:self.assertNotIn(gone,lst)
+        self.assertIn('border-block: 1px solid var(--line)',lst)
+        self.assertIn('padding: 14px 0',re.search(r'\n\.row\s*\{([^}]*)\}',css).group(1))
+        hint=re.search(r'\n\.master-hint\s*\{([^}]*)\}',css).group(1)
+        self.assertNotIn('background',hint); self.assertIn('color: var(--warn)',hint)
+        for block in ['.case','.lb-list','.cmd-card','.item','.fold > summary']:
+            body=re.search(r'\n'+re.escape(block)+r'\s*\{([^}]*)\}',css).group(1)
+            self.assertNotIn('background: var(--panel)',body,block)
+            self.assertNotIn('border-radius',body,block)
+
+    def test_fields_use_the_field_colour(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        body=re.search(r'\n\.input, \.select, \.textarea, \.num, \.select-trigger\s*\{([^}]*)\}',css).group(1)
+        self.assertIn('background: var(--field)',body)
 
 if __name__=='__main__':unittest.main()
