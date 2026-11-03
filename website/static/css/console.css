@@ -462,6 +462,16 @@ a.server-card:hover { border-color: var(--chip-bg); background: var(--bg); }
 .ep-item img { width: 22px; height: 22px; }
 .ep-empty { grid-column: 1 / -1; padding: 24px 8px; text-align: center; color: var(--muted); font-size: 13px; }
 
+/* Pages: automod, moderation */
+.duration-field { display: flex; flex-direction: column; align-items: flex-start; }
+.case-list { display: flex; flex-direction: column; gap: 8px; }
+.case { padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.case-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; margin-bottom: 4px; }
+.case-body { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+.chip--warn, .chip--mute { background: var(--warn-bg); color: var(--warn); }
+.chip--kick, .chip--ban, .chip--tempban { background: var(--bad-bg); color: var(--bad); }
+.chip--unban, .chip--unmute { background: var(--ok-bg); color: var(--ok); }
+
 /* Page: global settings */
 .settings-panel[hidden] { display: none; }
 .section-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
@@ -509,6 +519,8 @@ a.server-card:hover { border-color: var(--chip-bg); background: var(--bg); }
     .row--switch { flex-direction: row; align-items: center; }
     .duty-card img { width: 88px; height: 88px; margin: -12px 0 -8px; }
     .rr-row { grid-template-columns: 44px minmax(0, 1fr) 36px; }
+    .seg { display: flex; width: 100%; }
+    .seg-option { flex: 1 0 auto; }
     .duty-text h2 { font-size: 17px; }
     .unsaved-bar { left: 0; right: 0; bottom: 0; width: auto; border-radius: 0; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
 }

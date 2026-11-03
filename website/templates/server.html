@@ -174,115 +174,82 @@
     </div>
 </section>
 
-<!-- ═══════ 自动审核 ═══════ -->
-<div class="page mod-page" id="pg-automod" data-slug="automod" data-title="{{ tr('nav.module.automod') }}">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="shield-check" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>自动审核</h2><p>自动拦截违规内容和刷屏行为，保护服务器环境</p></div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 总开关 & 日志</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">启用自动审核</div><div class="cfg-row-hint">开启/关闭整个审核系统</div></div>
-            <label class="cfg-tog"><input type="checkbox" id="am-enabled"><span class="track"></span><span class="thumb"></span></label>
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">审核操作记录发送到此频道</div></div>
-            <select class="cfg-select" id="am-log" style="max-width:220px;"><option value="0">#</option></select>
+<section class="page" id="pg-automod" data-slug="automod" data-title="{{ tr('nav.module.automod') }}" data-draft>
+    <div class="page-head"><h2>{{ tr('nav.module.automod') }}</h2><p>{{ tr('automod.intro') }}</p></div>
+    <div class="section">
+        <div class="list">
+            {% call row(tr('automod.enabled'), tr('automod.enabled_hint'), 'am-enabled', cls='row--switch') %}{{ toggle('am-enabled', tr('automod.enabled')) }}{% endcall %}
+            {% call row(tr('automod.log'), tr('automod.log_hint'), 'am-log', depends='am-enabled') %}<select class="select" id="am-log" data-search="{{ tr('automod.log') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
         </div>
     </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="shield" style="width:15px;height:15px;" aria-hidden="true"></i> 反刷屏</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">启用反刷屏</div><div class="cfg-row-hint">短时间内发大量消息自动禁言</div></div>
-            <label class="cfg-tog"><input type="checkbox" id="am-spam"><span class="track"></span><span class="thumb"></span></label>
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">触发阈值</div><div class="cfg-row-hint">几秒内发送几条消息触发</div></div>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <input class="cfg-num" type="number" id="am-st" value="5" min="2" max="20"> <span style="font-size:.82rem;color:var(--text-muted);">条 /</span>
-                <input class="cfg-num" type="number" id="am-si" value="5" min="2" max="30"> <span style="font-size:.82rem;color:var(--text-muted);">秒</span>
-            </div>
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">禁言时长 (秒)</div></div>
-            <input class="cfg-num" type="number" id="am-mute" value="300" min="60" max="86400">
+    <div class="section">
+        <h3 class="section-title">{{ tr('automod.spam') }}</h3>
+        <div class="list">
+            {% call row(tr('automod.spam_on'), tr('automod.spam_hint'), 'am-spam', depends='am-enabled', cls='row--switch') %}{{ toggle('am-spam', tr('automod.spam_on')) }}{% endcall %}
+            {% call row(tr('automod.spam_threshold'), tr('automod.spam_threshold_hint'), 'am-st', depends='am-spam') %}
+            <input class="num" type="number" id="am-st" min="2" max="20" value="5"><span class="unit">{{ tr('automod.messages_per') }}</span>
+            <input class="num" type="number" id="am-si" min="2" max="30" value="5" aria-label="{{ tr('automod.seconds_label') }}"><span class="unit">{{ tr('automod.seconds') }}</span>
+            {% endcall %}
+            {% call row(tr('automod.mute'), tr('automod.mute_hint'), None, depends='am-spam', block=True) %}
+            <div class="duration-field"><div class="seg" data-duration data-for="am-mute" role="group" aria-label="{{ tr('automod.mute') }}"></div><input type="number" id="am-mute" min="60" max="86400" value="300" hidden></div>
+            {% endcall %}
         </div>
     </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="message-circle" style="width:15px;height:15px;" aria-hidden="true"></i> 违禁词过滤</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">启用违禁词过滤</div></div>
-            <label class="cfg-tog"><input type="checkbox" id="am-bw"><span class="track"></span><span class="thumb"></span></label>
-        </div>
-        <div style="padding-top:10px;">
-            <div class="cfg-row-label">违禁词列表</div>
-            <div class="tag-list" id="am-bw-tags"></div>
-            <div class="tag-add"><input class="cfg-input" id="am-bw-new" placeholder="输入违禁词…" onkeydown="if(event.key==='Enter'){addTag('am-bw');event.preventDefault();}"><button class="tag-add-btn" onclick="addTag('am-bw')">添加</button></div>
+    <div class="section">
+        <h3 class="section-title">{{ tr('automod.badwords') }}</h3>
+        <div class="list">
+            {% call row(tr('automod.badwords_on'), tr('automod.badwords_hint'), 'am-bw', depends='am-enabled', cls='row--switch') %}{{ toggle('am-bw', tr('automod.badwords_on')) }}{% endcall %}
+            {% call row(tr('automod.badwords_list'), None, 'am-bw-new', depends='am-bw', block=True) %}
+            <div class="chip-list" id="am-bw-tags" data-tags></div>
+            <div class="chip-add"><input class="input" id="am-bw-new" placeholder="{{ tr('automod.badwords_placeholder') }}" data-draft-ignore><button type="button" class="btn btn--secondary" id="am-bw-add">{{ tr('automod.add') }}</button></div>
+            {% endcall %}
         </div>
     </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="link" style="width:15px;height:15px;" aria-hidden="true"></i> 链接过滤</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">启用链接过滤</div><div class="cfg-row-hint">自动删除非白名单域名的链接</div></div>
-            <label class="cfg-tog"><input type="checkbox" id="am-link"><span class="track"></span><span class="thumb"></span></label>
-        </div>
-        <div style="padding-top:10px;">
-            <div class="cfg-row-label">白名单域名</div>
-            <div class="tag-list" id="am-wl-tags"></div>
-            <div class="tag-add"><input class="cfg-input" id="am-wl-new" placeholder="如 youtube.com" onkeydown="if(event.key==='Enter'){addTag('am-wl');event.preventDefault();}"><button class="tag-add-btn" onclick="addTag('am-wl')">添加</button></div>
+    <div class="section">
+        <h3 class="section-title">{{ tr('automod.links') }}</h3>
+        <div class="list">
+            {% call row(tr('automod.links_on'), tr('automod.links_hint'), 'am-link', depends='am-enabled', cls='row--switch') %}{{ toggle('am-link', tr('automod.links_on')) }}{% endcall %}
+            {% call row(tr('automod.whitelist'), None, 'am-wl-new', depends='am-link', block=True) %}
+            <div class="chip-list" id="am-wl-tags" data-tags></div>
+            <div class="chip-add"><input class="input" id="am-wl-new" placeholder="{{ tr('automod.whitelist_placeholder') }}" data-draft-ignore><button type="button" class="btn btn--secondary" id="am-wl-add">{{ tr('automod.add') }}</button></div>
+            {% endcall %}
         </div>
     </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="sliders-horizontal" style="width:15px;height:15px;" aria-hidden="true"></i> 其他</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">大写轰炸过滤</div><div class="cfg-row-hint">超过阈值百分比的大写字母</div></div>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <input class="cfg-num" type="number" id="am-ct" value="70" min="50" max="100"><span style="font-size:.82rem;color:var(--text-muted);">%</span>
-                <label class="cfg-tog"><input type="checkbox" id="am-caps"><span class="track"></span><span class="thumb"></span></label>
-            </div>
-        </div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">重复消息过滤</div><div class="cfg-row-hint">连续发送相同消息达到次数触发</div></div>
-            <div style="display:flex;align-items:center;gap:6px;">
-                <input class="cfg-num" type="number" id="am-rt" value="3" min="2" max="10"><span style="font-size:.82rem;color:var(--text-muted);">次</span>
-                <label class="cfg-tog"><input type="checkbox" id="am-repeat"><span class="track"></span><span class="thumb"></span></label>
-            </div>
+    <div class="section">
+        <h3 class="section-title">{{ tr('automod.other') }}</h3>
+        <div class="list">
+            {% call row(tr('automod.caps'), tr('automod.caps_hint'), 'am-caps', depends='am-enabled', cls='row--switch') %}{{ toggle('am-caps', tr('automod.caps')) }}{% endcall %}
+            {% call row(tr('automod.caps_threshold'), None, 'am-ct', depends='am-caps') %}<input class="num" type="number" id="am-ct" min="50" max="100" value="70"><span class="unit">%</span>{% endcall %}
+            {% call row(tr('automod.repeat'), tr('automod.repeat_hint'), 'am-repeat', depends='am-enabled', cls='row--switch') %}{{ toggle('am-repeat', tr('automod.repeat')) }}{% endcall %}
+            {% call row(tr('automod.repeat_threshold'), None, 'am-rt', depends='am-repeat') %}<input class="num" type="number" id="am-rt" min="2" max="10" value="3"><span class="unit">{{ tr('automod.times') }}</span>{% endcall %}
         </div>
     </div>
+</section>
 
-    <div class="save-bar" id="am-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="am-save" onclick="saveAutoMod()">保存设置</button></div>
-</div>
-
-<!-- ═══════ 管理模块 ═══════ -->
-<div class="page mod-page" id="pg-moderation" data-slug="moderation" data-title="{{ tr('nav.module.moderation') }}">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="gavel" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>管理模块</h2><p>kick / ban / tempban / mute / warn / purge / lock — 全套管理指令</p></div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 管理日志频道</div>
-        <div class="cfg-row">
-            <div class="cfg-row-info"><div class="cfg-row-label">日志频道</div><div class="cfg-row-hint">所有 kick/ban/warn/mute 操作自动记录到此频道</div></div>
-            <select class="cfg-select" id="mod-log" style="max-width:220px;"><option value="0">#</option></select>
+<section class="page" id="pg-moderation" data-slug="moderation" data-title="{{ tr('nav.module.moderation') }}" data-draft>
+    <div class="page-head"><h2>{{ tr('nav.module.moderation') }}</h2><p>{{ tr('moderation.intro') }}</p></div>
+    <div class="section">
+        <div class="list">
+            {% call row(tr('moderation.log'), tr('moderation.log_hint'), 'mod-log') %}<select class="select" id="mod-log" data-search="{{ tr('moderation.log') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
         </div>
     </div>
-
-    <div class="cfg-section">
-        <div class="cfg-section-title"><i data-lucide="shield" style="width:15px;height:15px;" aria-hidden="true"></i> 警告自动处罚阈值</div>
-        <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">🔇 自动禁言</div><div class="cfg-row-hint">达到几次警告自动禁言 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-mt" value="3" min="0" max="50"></div>
-        <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">⏱ 禁言时长 (秒)</div></div><input class="cfg-num" type="number" id="mod-md" value="600" min="60" max="86400"></div>
-        <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">👢 自动踢出</div><div class="cfg-row-hint">达到几次警告自动踢出 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-kt" value="0" min="0" max="50"></div>
-        <div class="cfg-row"><div class="cfg-row-info"><div class="cfg-row-label">🔨 自动封禁</div><div class="cfg-row-hint">达到几次警告自动封禁 (0=禁用)</div></div><input class="cfg-num" type="number" id="mod-bt" value="0" min="0" max="50"></div>
+    <div class="section">
+        <h3 class="section-title">{{ tr('moderation.thresholds') }}</h3>
+        <p class="section-hint">{{ tr('moderation.zero_off') }}</p>
+        <div class="list">
+            {% call row(tr('moderation.mute_at'), None, 'mod-mt') %}<input class="num" type="number" id="mod-mt" min="0" max="50" value="3"><span class="unit">{{ tr('moderation.warnings') }}</span>{% endcall %}
+            {% call row(tr('moderation.mute_for'), None, None, block=True) %}
+            <div class="duration-field"><div class="seg" data-duration data-for="mod-md" role="group" aria-label="{{ tr('moderation.mute_for') }}"></div><input type="number" id="mod-md" min="60" max="86400" value="600" hidden></div>
+            {% endcall %}
+            {% call row(tr('moderation.kick_at'), None, 'mod-kt') %}<input class="num" type="number" id="mod-kt" min="0" max="50" value="0"><span class="unit">{{ tr('moderation.warnings') }}</span>{% endcall %}
+            {% call row(tr('moderation.ban_at'), None, 'mod-bt') %}<input class="num" type="number" id="mod-bt" min="0" max="50" value="0"><span class="unit">{{ tr('moderation.warnings') }}</span>{% endcall %}
+        </div>
     </div>
-
-    <div class="save-bar" id="mod-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="mod-save" onclick="saveModeration()">保存设置</button></div>
-
-    <div class="cfg-section" style="margin-top:52px;">
-        <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 最近管理操作</div>
-        <div id="mod-cases"><div class="empty-state-sm">加载中…</div></div>
+    <div class="section">
+        <h3 class="section-title">{{ tr('moderation.recent') }}</h3>
+        <div class="case-list" id="mod-cases"></div>
     </div>
-</div>
+</section>
 
 <!-- ═══════ 抽奖 ═══════ -->
 <div class="page mod-page" id="pg-giveaway" data-slug="giveaway" data-title="{{ tr('nav.module.giveaway') }}" data-draft-hint="填好活动内容后，点「建立」才会创建抽奖哦。">
@@ -451,6 +418,8 @@
 <script src="{{ url_for('static', filename='js/modules/welcome.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/modules/roles.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/modules/music.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/automod.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/moderation.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20261102a"></script>
 <script src="{{ url_for('static', filename='js/server.js') }}?v=20261102a"></script>
 {% endblock %}

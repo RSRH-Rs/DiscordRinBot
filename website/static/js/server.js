@@ -3,7 +3,6 @@ let _ch = null, _roles = null, _chPromise = null, _rolesPromise = null;
 /* ── Navigation ── */
 /* Legacy module pages, driven by Console's router until each page is rebuilt. */
 const legacyLoaders = {
-    automod: () => loadAutoMod(), moderation: () => loadModeration(),
     giveaway: () => { loadGiveaways(); loadGiveawayPage(); }, leveling: () => loadLeaderboard(), utility: () => loadUtility(),
     botlog: () => loadBotLog(), serverlog: () => loadServerLog(),
 };
@@ -13,7 +12,6 @@ document.addEventListener('console:page', e => {
 });
 window.legacyInvalidate = slug => {
     if (DashboardUI.dirty('pg-' + slug)) return;
-    if (slug === 'automod') _amLoaded = false;
     if (slug === 'botlog') _blLoaded = false;
     if (slug === 'serverlog') _slLoaded = false;
 };
@@ -89,93 +87,6 @@ function chOpts(sel, channels, selected) {
         channels.map(c => `<option value="${c.id}" ${String(c.id)===String(selected)?'selected':''}># ${escapeHtml(c.name)}</option>`).join('');
 }
 
-/* ── AutoMod ── */
-let _amLoaded = false;
-async function loadAutoMod() {
-    if (_amLoaded) return; _amLoaded = true;
-    try {
-        const [cfg, ch] = await Promise.all([api('/automod'), getCh()]);
-    chOpts('am-log', ch, cfg.log_channel);
-    document.getElementById('am-enabled').checked = !!cfg.enabled;
-    document.getElementById('am-spam').checked = !!cfg.anti_spam;
-    document.getElementById('am-st').value = cfg.spam_threshold || 5;
-    document.getElementById('am-si').value = cfg.spam_interval || 5;
-    document.getElementById('am-mute').value = cfg.mute_duration || 300;
-    document.getElementById('am-bw').checked = !!cfg.anti_badword;
-    document.getElementById('am-link').checked = !!cfg.anti_link;
-    document.getElementById('am-caps').checked = !!cfg.anti_caps;
-    document.getElementById('am-ct').value = cfg.caps_threshold || 70;
-    document.getElementById('am-repeat').checked = !!cfg.anti_repeat;
-    document.getElementById('am-rt').value = cfg.repeat_threshold || 3;
-    renderTags('am-bw-tags', cfg.badwords || []);
-    renderTags('am-wl-tags', cfg.link_whitelist || []);
-    // Dirty listeners
-    document.querySelectorAll('#am-enabled,#am-spam,#am-bw,#am-link,#am-caps,#am-repeat,#am-log,#am-st,#am-si,#am-mute,#am-ct,#am-rt').forEach(el => el.addEventListener('change', () => markDirty('am-savebar')));
-    } catch(e) { _amLoaded=false; throw e; }
-}
-async function saveAutoMod() {
-    const btn = document.getElementById('am-save'); btn.disabled = true; btn.textContent = '保存中…';
-    try {
-    await api('/automod', 'POST', {
-        enabled: document.getElementById('am-enabled').checked ? 1 : 0,
-        log_channel: document.getElementById('am-log').value,
-        anti_spam: document.getElementById('am-spam').checked ? 1 : 0,
-        spam_threshold: +document.getElementById('am-st').value,
-        spam_interval: +document.getElementById('am-si').value,
-        anti_badword: document.getElementById('am-bw').checked ? 1 : 0,
-        badwords: collectTags('am-bw-tags'),
-        anti_link: document.getElementById('am-link').checked ? 1 : 0,
-        link_whitelist: collectTags('am-wl-tags'),
-        anti_caps: document.getElementById('am-caps').checked ? 1 : 0,
-        caps_threshold: +document.getElementById('am-ct').value,
-        anti_repeat: document.getElementById('am-repeat').checked ? 1 : 0,
-        repeat_threshold: +document.getElementById('am-rt').value,
-        mute_duration: +document.getElementById('am-mute').value,
-    });
-    btn.textContent = '✅ 已保存！'; showToast('✅ 审核配置已保存！'); markClean('am-savebar');
-    } catch(e) { showToast('❌ 保存失败，输入已保留，可重试：' + e.message); }
-    finally { btn.disabled = false; btn.textContent = '保存设置'; }
-}
-
-/* ── Moderation ── */
-let _modLoaded = false;
-async function loadModeration() {
-    if (_modLoaded) return; _modLoaded = true;
-    showSkeleton('mod-cases', 4);
-    try {
-        const [cfg, ch, cases] = await Promise.all([api('/moderation'), getCh(), api('/moderation/cases')]);
-    chOpts('mod-log', ch, cfg.log_channel);
-    document.getElementById('mod-mt').value = cfg.warn_mute_threshold || 3;
-    document.getElementById('mod-md').value = cfg.warn_mute_duration || 600;
-    document.getElementById('mod-kt').value = cfg.warn_kick_threshold || 0;
-    document.getElementById('mod-bt').value = cfg.warn_ban_threshold || 0;
-    const el = document.getElementById('mod-cases');
-    if (!cases || cases.length === 0) { el.innerHTML = '<div class="empty-state-sm">暂无管理记录</div>'; }
-    const colors = {kick:'#E8899A',ban:'#E24B4A',tempban:'#E24B4A',mute:'#EF9F27',warn:'#FFD166',unban:'#5A9E6F',unmute:'#5A9E6F',purge:'#85B7EB'};
-    if(cases?.length) el.innerHTML = cases.map(c => {
-        const d = new Date(c.created_at * 1000);
-        const ts = d.toLocaleDateString('zh-CN') + ' ' + d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-        return `<div class="case-item"><div class="case-head"><span class="case-action" style="color:${colors[c.action]||'var(--text)'}">#${c.case_no ?? c.id} ${c.action}</span><span class="case-time">${ts}</span></div><div class="case-body">${escapeHtml(c.user_name || c.user_id)} · 管理员: ${escapeHtml(c.mod_name || c.mod_id)} · 原因: ${escapeHtml(c.reason)}${c.duration?' · 时长: '+c.duration:''}</div></div>`;
-    }).join('');
-    // Dirty listeners
-    document.querySelectorAll('#mod-log,#mod-mt,#mod-md,#mod-kt,#mod-bt').forEach(el => el.addEventListener('change', () => markDirty('mod-savebar')));
-    } catch(e) { _modLoaded=false; throw e; }
-}
-async function saveModeration() {
-    const btn = document.getElementById('mod-save'); btn.disabled = true; btn.textContent = '保存中…';
-    try {
-        await api('/moderation', 'POST', {
-            log_channel: document.getElementById('mod-log').value,
-            warn_mute_threshold: +document.getElementById('mod-mt').value,
-            warn_mute_duration: +document.getElementById('mod-md').value,
-            warn_kick_threshold: +document.getElementById('mod-kt').value,
-            warn_ban_threshold: +document.getElementById('mod-bt').value,
-        });
-        btn.textContent = '✅ 已保存！'; showToast('✅ 管理配置已保存！'); markClean('mod-savebar');
-    } catch(e) { showToast('❌ 保存失败: ' + e.message); }
-    setTimeout(() => { btn.disabled = false; btn.textContent = '保存设置'; }, 1500);
-}
-
 /* ── Giveaway list ── */
 async function loadGiveaways() {
     showSkeleton('gw-list', 2);
@@ -202,24 +113,6 @@ async function loadLeaderboard() {
             `<div class="case-item"><div style="display:flex;align-items:center;gap:12px;"><span style="font-size:1rem;width:24px;text-align:center;">${medals[i]||'#'+(i+1)}</span><span style="font-weight:700;flex:1;">${escapeHtml(u.username)}</span><span style="font-size:.82rem;color:var(--text-muted);">Lv.${u.level} · ${u.xp.toLocaleString()} XP</span></div></div>`
         ).join('');
     } catch(e) { showError('lb-list', '加载失败: ' + e.message); }
-}
-
-/* ── Tag helpers ── */
-function renderTags(id, arr) {
-    document.getElementById(id).innerHTML = arr.map(w =>
-        `<span class="tag-chip">${escapeHtml(w)}<button type="button" class="tag-rm" aria-label="移除此项" onclick="removeTag(this)">×</button></span>`
-    ).join('');
-}
-function addTag(prefix) {
-    const inp = document.getElementById(prefix + '-new');
-    const w = inp.value.trim(); if (!w) return; inp.value = '';
-    document.getElementById(prefix + '-tags').insertAdjacentHTML('beforeend',
-        `<span class="tag-chip">${escapeHtml(w)}<button type="button" class="tag-rm" aria-label="移除此项" onclick="removeTag(this)">×</button></span>`);
-    DashboardUI.changed('pg-automod');
-}
-function removeTag(button){button.parentElement.remove();DashboardUI.changed('pg-automod');}
-function collectTags(id) {
-    return [...document.querySelectorAll('#' + id + ' .tag-chip')].map(t => t.firstChild.textContent.trim());
 }
 
 /* ── Utility (Command Toggle) ── */
@@ -475,12 +368,10 @@ function guardedLoader(mod, original, loaded){
     };
     return wrapped;
 }
-loadAutoMod=guardedLoader('automod',loadAutoMod,()=>_amLoaded);
-loadModeration=guardedLoader('moderation',loadModeration,()=>_modLoaded);
 loadBotLog=guardedLoader('botlog',loadBotLog,()=>_blLoaded);
 loadServerLog=guardedLoader('serverlog',loadServerLog,()=>_slLoaded);
 loadGiveawayPage=guardedLoader('giveaway',loadGiveawayPage,()=>_gwPageLoaded);
-for(const [name,mod] of Object.entries({saveAutoMod:'automod',saveModeration:'moderation',saveBotLog:'botlog',saveServerLog:'serverlog',createGiveaway:'giveaway'})){
+for(const [name,mod] of Object.entries({saveBotLog:'botlog',saveServerLog:'serverlog',createGiveaway:'giveaway'})){
     const original=window[name];
     window[name]=(...args)=>DashboardUI.saving('pg-'+mod,()=>original(...args));
 }
