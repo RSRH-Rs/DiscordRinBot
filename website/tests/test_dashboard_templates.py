@@ -92,4 +92,15 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn("details[open]>summary::before { transform:rotate(90deg);background-color:",css)
         self.assertIn(".nav-group[open]>summary::before { background-color:",css)
 
+    def test_icon_sprite_has_every_used_icon(self):
+        import re
+        sprite=(ROOT/'static/icons.svg').read_text(encoding='utf-8')
+        symbols=set(re.findall(r'<symbol id="i-([a-z-]+)"',sprite))
+        self.assertGreaterEqual(len(symbols),25)
+        used=set()
+        for path in list((ROOT/'templates').glob('*.html'))+list((ROOT/'static/js').rglob('*.js')):
+            text=path.read_text(encoding='utf-8')
+            used|=set(re.findall(r"icon\('([a-z-]+)'",text))|set(re.findall(r'#i-([a-z-]+)',text))
+        self.assertEqual(used-symbols,set())
+
 if __name__=='__main__':unittest.main()
