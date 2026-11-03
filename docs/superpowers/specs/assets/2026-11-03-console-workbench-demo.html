@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小凛控制台 · 试装实例</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap">
+<style>
+:root {
+    --bg: #F7F7F8; --panel: #FFFFFF; --side: #F0F0F2; --line: #E4E4E8; --field: #FFFFFF; --field-line: #D4D4D8;
+    --text: #18181B; --muted: #5F5F68; --accent: #D6336C; --accent-hover: #C42A60; --on-accent: #FFFFFF;
+    --accent-soft: #FDECF2; --accent-text: #B32457; --ok: #1F8A4C; --ok-soft: #E7F5EC; --warn: #A15C00; --warn-soft: #FFF4E0;
+    --cur: #FFFFFF; --hover: #E7E7EA; --bar: #18181B; --bar-text: #FAFAFA; --scrim: rgba(24, 24, 27, .4);
+    --shadow-sm: 0 1px 2px rgba(24, 24, 27, .06), 0 1px 1px rgba(24, 24, 27, .04);
+    --shadow-pop: 0 12px 32px rgba(24, 24, 27, .16), 0 2px 6px rgba(24, 24, 27, .06);
+    --font: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --display: "Fredoka", var(--font);
+    color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #17171B; --panel: #1F1F24; --side: #121215; --line: #2C2C33; --field: #17171B; --field-line: #3A3A42;
+        --text: #EDEDF0; --muted: #9A9AA5; --accent: #FF6FA3; --accent-hover: #FF8DB7; --on-accent: #2A0A17;
+        --accent-soft: #3A1A28; --accent-text: #FF8DB7; --ok: #3DD68C; --ok-soft: #13291D; --warn: #F5B94A; --warn-soft: #33270F;
+        --cur: #26262C; --hover: #1E1E23; --bar: #EDEDF0; --bar-text: #18181B; --scrim: rgba(0, 0, 0, .55);
+        --shadow-sm: none; --shadow-pop: 0 16px 40px rgba(0, 0, 0, .5); color-scheme: dark;
+    }
+}
+:root[data-theme="dark"] {
+    --bg: #17171B; --panel: #1F1F24; --side: #121215; --line: #2C2C33; --field: #17171B; --field-line: #3A3A42;
+    --text: #EDEDF0; --muted: #9A9AA5; --accent: #FF6FA3; --accent-hover: #FF8DB7; --on-accent: #2A0A17;
+    --accent-soft: #3A1A28; --accent-text: #FF8DB7; --ok: #3DD68C; --ok-soft: #13291D; --warn: #F5B94A; --warn-soft: #33270F;
+    --cur: #26262C; --hover: #1E1E23; --bar: #EDEDF0; --bar-text: #18181B; --scrim: rgba(0, 0, 0, .55);
+    --shadow-sm: none; --shadow-pop: 0 16px 40px rgba(0, 0, 0, .5); color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 14px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+h1, h2, h3, p { margin: 0; }
+a { color: inherit; text-decoration: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.icon { width: 18px; height: 18px; flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.icon--sm { width: 15px; height: 15px; }
+
+/* Shell */
+.shell { display: grid; grid-template-columns: 252px minmax(0, 1fr); height: 100dvh; }
+.side { display: flex; flex-direction: column; gap: 4px; min-height: 0; padding: 12px 10px; background: var(--side); border-right: 1px solid var(--line); }
+.switcher { position: relative; }
+.switch-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); box-shadow: var(--shadow-sm); cursor: pointer; text-align: left; }
+.switch-btn:hover { border-color: var(--field-line); }
+.guild-icon { display: grid; place-items: center; width: 32px; height: 32px; flex-shrink: 0; border-radius: 9px; background: var(--accent); color: var(--on-accent); font-weight: 600; }
+.guild-icon--muted { background: var(--side); color: var(--muted); border: 1px solid var(--line); }
+.switch-text { flex: 1; min-width: 0; }
+.switch-text b { display: block; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.switch-text small { display: block; color: var(--muted); font-size: 12px; }
+.popover { position: absolute; z-index: 60; top: calc(100% + 6px); left: 0; right: 0; padding: 6px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-pop); }
+.popover[hidden] { display: none; }
+.pop-search { width: 100%; padding: 7px 10px; margin-bottom: 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
+.pop-title { padding: 6px 8px 2px; font-size: 12px; color: var(--muted); }
+.pop-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 6px 8px; border: 0; border-radius: 8px; background: none; cursor: pointer; text-align: left; }
+.pop-item:hover { background: var(--side); }
+.pop-item .guild-icon { width: 26px; height: 26px; border-radius: 7px; font-size: 12px; }
+.pop-item span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pop-item em { font-style: normal; font-size: 12px; color: var(--accent-text); }
+.pop-item .icon { color: var(--accent); }
+
+.search-btn { display: flex; align-items: center; gap: 8px; width: 100%; margin: 6px 0 4px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--field); color: var(--muted); cursor: pointer; }
+.search-btn:hover { border-color: var(--field-line); color: var(--text); }
+kbd { margin-left: auto; padding: 0 6px; border: 1px solid var(--line); border-radius: 5px; font: 11.5px/1.6 var(--font); color: var(--muted); }
+.nav { flex: 1; min-height: 0; overflow-y: auto; margin: 0 -4px; padding: 0 4px; }
+.nav-group { display: block; padding: 14px 10px 4px; font-size: 12px; color: var(--muted); }
+.nav-item { display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 6px 10px; border-radius: 8px; color: var(--muted); }
+.nav-item:hover { background: var(--hover); color: var(--text); }
+.nav-item[aria-current="page"] { background: var(--cur); color: var(--text); font-weight: 600; box-shadow: var(--shadow-sm); }
+.nav-item span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dot { width: 7px; height: 7px; flex-shrink: 0; border-radius: 50%; border: 1.5px solid var(--field-line); }
+.dot--on { background: var(--ok); border-color: var(--ok); }
+.dot--warn { background: var(--warn); border-color: var(--warn); }
+.me { display: flex; align-items: center; gap: 10px; padding: 8px; border-top: 1px solid var(--line); margin-top: 4px; }
+.me img { width: 30px; height: 30px; border-radius: 50%; }
+.me b { flex: 1; min-width: 0; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.theme { display: inline-flex; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
+.theme button { display: grid; place-items: center; width: 26px; height: 24px; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; }
+.theme button[aria-pressed="true"] { background: var(--side); color: var(--text); }
+
+.main { min-width: 0; overflow-y: auto; }
+.topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 12px; height: 56px; padding: 0 32px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.crumbs { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.crumbs b { color: var(--text); font-weight: 600; }
+.bot-status { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); font-size: 12.5px; color: var(--muted); }
+.menu-btn { display: none; }
+.content { max-width: 1120px; margin: 0 auto; padding: 28px 32px 140px; }
+
+/* Overview */
+.hero { display: flex; align-items: center; gap: 20px; padding: 18px 24px 18px 12px; margin-bottom: 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); box-shadow: var(--shadow-sm); }
+.hero img { width: 112px; height: 112px; object-fit: contain; margin: -14px 0 -18px; }
+.hero h1 { font-family: var(--display); font-size: 24px; font-weight: 600; line-height: 1.3; }
+.facts { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 6px; color: var(--muted); }
+.facts b { color: var(--text); font-weight: 600; }
+.notice { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 26px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); }
+.notice span { flex: 1; }
+.notice a { font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.group-title { margin: 26px 0 10px; font-size: 15px; font-weight: 600; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.mod { display: flex; align-items: flex-start; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-sm); cursor: pointer; transition: border-color .15s; }
+.mod:hover { border-color: var(--field-line); }
+.mod-icon { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; border-radius: 10px; background: var(--side); color: var(--text); }
+.mod.is-on .mod-icon { background: var(--accent-soft); color: var(--accent-text); }
+.mod-text { flex: 1; min-width: 0; }
+.mod-text b { display: block; font-weight: 600; }
+.mod-text small { display: block; margin-top: 2px; color: var(--muted); font-size: 12.5px; line-height: 1.5; }
+.mod-text small.is-warn { color: var(--warn); }
+.mod-go { margin-top: 8px; color: var(--muted); }
+
+/* Controls */
+.tog { position: relative; display: inline-flex; align-items: center; gap: 10px; flex-shrink: 0; cursor: pointer; user-select: none; }
+.tog input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.tog-track { width: 36px; height: 20px; border-radius: 10px; background: var(--field-line); position: relative; transition: background .15s; }
+.tog-track::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0, 0, 0, .2); transition: transform .15s; }
+.tog input:checked + .tog-track { background: var(--accent); }
+.tog input:checked + .tog-track::after { transform: translateX(16px); }
+.tog input:focus-visible + .tog-track { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tog-label { color: var(--muted); font-size: 13px; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 14px; border: 1px solid transparent; border-radius: 9px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.btn--primary { background: var(--accent); color: var(--on-accent); }
+.btn--primary:hover { background: var(--accent-hover); }
+.btn--secondary { border-color: var(--line); background: var(--panel); }
+.btn--secondary:hover { border-color: var(--field-line); }
+.btn--ghost { background: none; color: inherit; }
+.input, .select, .textarea { width: 100%; padding: 7px 10px; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field); }
+.input:focus, .select:focus, .textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+.textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
+.select { max-width: 260px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border: 0; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 12.5px; cursor: pointer; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg { display: inline-flex; border: 1px solid var(--field-line); border-radius: 8px; overflow: hidden; }
+.seg button { padding: 5px 12px; border: 0; border-left: 1px solid var(--field-line); background: var(--field); cursor: pointer; }
+.seg button:first-child { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+
+/* Module pages */
+.page-head { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 18px; }
+.page-head div { flex: 1; min-width: 0; }
+.page-head h1 { font-size: 22px; font-weight: 600; line-height: 1.35; }
+.page-head p { margin-top: 4px; color: var(--muted); }
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tab { padding: 8px 12px; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--muted); white-space: nowrap; }
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { border-color: var(--accent); color: var(--text); font-weight: 600; }
+.editor { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 20px; align-items: start; }
+.stack { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.stack[hidden] { display: none; }
+.card { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-sm); }
+.card-head { padding: 14px 16px 0; }
+.card-head h3 { font-size: 15px; font-weight: 600; }
+.card-head p { margin-top: 2px; color: var(--muted); font-size: 13px; }
+.card-body { padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.setting { display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-top: 1px solid var(--line); }
+.card > .setting:first-child { border-top: 0; }
+.setting-text { flex: 1; min-width: 0; }
+.setting-text b { display: block; font-weight: 600; }
+.setting-text small { display: block; color: var(--muted); font-size: 12.5px; }
+.setting .select { width: 220px; }
+.num { width: 64px; padding: 5px 8px; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field); text-align: center; }
+.inline { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 13px; }
+.preview { position: sticky; top: 76px; }
+.preview-label { margin-bottom: 8px; font-size: 13px; color: var(--muted); }
+.discord { padding: 14px; border-radius: 12px; background: #313338; color: #DBDEE1; font-size: 14px; }
+.msg { display: flex; gap: 12px; }
+.msg img.ava { width: 38px; height: 38px; border-radius: 50%; }
+.msg-name { color: #F2F3F5; font-weight: 600; }
+.msg-name em { margin-left: 4px; padding: 0 4px; border-radius: 3px; background: #5865F2; color: #FFFFFF; font: 600 10px/16px var(--font); font-style: normal; vertical-align: 1px; }
+.msg-name time { margin-left: 6px; color: #949BA4; font-size: 12px; font-weight: 400; }
+.msg-text { margin-top: 2px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.msg-text .mention { padding: 0 2px; border-radius: 3px; background: rgba(88, 101, 242, .3); color: #C9CDFB; }
+.welcome-card { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 12px; border-radius: 10px; background: linear-gradient(120deg, #F7A6BE, #B39DDB); color: #FFFFFF; }
+.welcome-card img { width: 56px; height: 56px; object-fit: contain; }
+.welcome-card b { display: block; font-size: 15px; }
+.preview-note { margin-top: 8px; color: var(--muted); font-size: 12.5px; }
+.empty { padding: 36px 20px; text-align: center; color: var(--muted); }
+
+/* Unsaved bar, toast, command palette */
+.unsaved { position: fixed; z-index: 50; left: calc(252px + 50% - 126px); bottom: 20px; display: flex; align-items: center; gap: 12px; width: min(620px, calc(100vw - 300px)); padding: 8px 8px 8px 18px; border-radius: 12px; background: var(--bar); color: var(--bar-text); box-shadow: var(--shadow-pop); transform: translate(-50%, 140%); transition: transform .25s cubic-bezier(.3, 1.3, .6, 1); }
+.unsaved.is-open { transform: translate(-50%, 0); }
+.unsaved.is-shaking { animation: shake .35s; }
+.unsaved span { flex: 1; }
+.unsaved .btn--ghost { color: var(--bar-text); opacity: .8; }
+@keyframes shake { 25% { transform: translate(calc(-50% - 6px), 0); } 75% { transform: translate(calc(-50% + 6px), 0); } }
+.toast { position: fixed; z-index: 90; left: 50%; top: 16px; padding: 8px 16px; border-radius: 999px; background: var(--bar); color: var(--bar-text); box-shadow: var(--shadow-pop); transform: translate(-50%, -160%); transition: transform .2s; }
+.toast.is-open { transform: translate(-50%, 0); }
+.palette-scrim { position: fixed; z-index: 100; inset: 0; display: flex; align-items: flex-start; justify-content: center; padding: 12vh 16px 16px; background: var(--scrim); }
+.palette-scrim[hidden] { display: none; }
+.palette { width: min(560px, 100%); max-height: 420px; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); box-shadow: var(--shadow-pop); overflow: hidden; }
+.palette-input { display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-bottom: 1px solid var(--line); color: var(--muted); }
+.palette-input input { flex: 1; border: 0; outline: none; background: none; font-size: 15px; color: var(--text); }
+.palette-list { overflow-y: auto; padding: 6px; }
+.palette-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.palette-item small { margin-left: auto; color: var(--muted); font-size: 12px; }
+.palette-item[aria-selected="true"] { background: var(--accent-soft); color: var(--accent-text); }
+.palette-item[aria-selected="true"] small { color: var(--accent-text); }
+.demo-tag { position: fixed; z-index: 95; right: 14px; bottom: 14px; padding: 4px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 12px; }
+
+@media (max-width: 1080px) {
+    .editor { grid-template-columns: minmax(0, 1fr); }
+    .preview { position: static; order: -1; }
+}
+@media (max-width: 860px) {
+    .shell { grid-template-columns: minmax(0, 1fr); }
+    .side { position: fixed; z-index: 80; inset: 0 auto 0 0; width: 280px; transform: translateX(-100%); transition: transform .2s; }
+    .shell.is-drawer .side { transform: none; box-shadow: var(--shadow-pop); }
+    .menu-btn { display: grid; place-items: center; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); cursor: pointer; }
+    .topbar { padding: 0 16px; }
+    .content { padding: 20px 16px 140px; }
+    .hero { padding: 14px; }
+    .hero img { width: 76px; height: 76px; margin: -6px 0; }
+    .hero h1 { font-size: 19px; }
+    .setting { flex-wrap: wrap; }
+    .setting .select { width: 100%; }
+    .unsaved { left: 50%; width: calc(100vw - 24px); bottom: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none; animation: none; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/></symbol>
+    <symbol id="i-smile" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2M9 9.5h.01M15 9.5h.01"/></symbol>
+    <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V3h9l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.2"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM7 6H4a3 3 0 0 0 3 4M17 6h3a3 3 0 0 1-3 4"/></symbol>
+    <symbol id="i-gift" viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M5 12v9h14v-9M12 8S11 3 8 3a2.5 2.5 0 0 0 0 5M12 8s1-5 4-5a2.5 2.5 0 0 1 0 5"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="i-gavel" viewBox="0 0 24 24"><path d="m14 13-7.5 7.5a2.1 2.1 0 0 1-3-3L11 10M16 16l6-6M8 8l6-6M9 7l8 8M21 11l-8-8"/></symbol>
+    <symbol id="i-scroll" viewBox="0 0 24 24"><path d="M8 21h11a2 2 0 0 0 2-2v-1H10v1a2 2 0 0 1-4 0V5a2 2 0 0 0-2-2h12a2 2 0 0 1 2 2v13M10 8h5M10 12h5"/></symbol>
+    <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l3 2"/></symbol>
+    <symbol id="i-music" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></symbol>
+    <symbol id="i-wrench" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.8-3.8a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></symbol>
+    <symbol id="i-updown" viewBox="0 0 24 24"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+    <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></symbol>
+</svg>
+
+<div class="shell" id="shell">
+    <aside class="side">
+        <div class="switcher">
+            <button class="switch-btn" id="switch-btn" aria-haspopup="true" aria-expanded="false">
+                <span class="guild-icon" id="guild-icon">凛</span>
+                <span class="switch-text"><b id="guild-name">小凛的家</b><small>12,873 位成员</small></span>
+                <svg class="icon icon--sm"><use href="#i-updown"/></svg>
+            </button>
+            <div class="popover" id="switch-pop" hidden>
+                <input class="pop-search" id="pop-search" placeholder="搜索服务器">
+                <div id="pop-list"></div>
+            </div>
+        </div>
+        <button class="search-btn" id="search-btn"><svg class="icon icon--sm"><use href="#i-search"/></svg>搜索设置<kbd>Ctrl K</kbd></button>
+        <nav class="nav" id="nav"></nav>
+        <div class="me">
+            <img src="/files/rin-avatar.webp" alt="">
+            <b>Jack</b>
+            <span class="theme" role="group" aria-label="外观">
+                <button data-theme-set="light" title="白天"><svg class="icon icon--sm"><use href="#i-sun"/></svg></button>
+                <button data-theme-set="" title="跟随系统"><svg class="icon icon--sm"><use href="#i-monitor"/></svg></button>
+                <button data-theme-set="dark" title="夜间"><svg class="icon icon--sm"><use href="#i-moon"/></svg></button>
+            </span>
+        </div>
+    </aside>
+    <div class="main" id="main">
+        <header class="topbar">
+            <button class="menu-btn" id="menu-btn" aria-label="打开菜单"><svg class="icon"><use href="#i-menu"/></svg></button>
+            <div class="crumbs" id="crumbs"></div>
+            <span class="bot-status"><span class="dot dot--on"></span>小凛在线</span>
+        </header>
+        <main class="content" id="content"></main>
+    </div>
+</div>
+
+<div class="unsaved" id="unsaved" role="status">
+    <span>还有修改没保存</span>
+    <button class="btn btn--ghost" id="undo">撤销</button>
+    <button class="btn btn--primary" id="save">保存更改</button>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<div class="palette-scrim" id="palette" hidden>
+    <div class="palette" role="dialog" aria-label="搜索设置">
+        <label class="palette-input"><svg class="icon"><use href="#i-search"/></svg><input id="palette-input" placeholder="想改什么？比如「违禁词」「欢迎消息」"></label>
+        <div class="palette-list" id="palette-list" role="listbox"></div>
+    </div>
+</div>
+<span class="demo-tag">试装实例 · 假数据</span>
+
+<script>
+const MODULES = [
+    {slug: 'welcome', group: '社区互动', name: '欢迎新成员', icon: 'smile', toggle: true, on: true, sum: '发到 #welcome，自动给「新人」身份组', desc: '新成员加入时，小凛在指定频道打招呼，还可以自动给身份组。'},
+    {slug: 'roles', group: '社区互动', name: '领取身份组', icon: 'tag', sum: '2 个领取面板', desc: '成员点 emoji 自己领取身份组。'},
+    {slug: 'leveling', group: '社区互动', name: '等级系统', icon: 'trophy', sum: '升级通知发到 #大厅', desc: '聊天得经验，升级时发等级卡片。'},
+    {slug: 'giveaway', group: '社区互动', name: '抽奖', icon: 'gift', sum: '1 个抽奖进行中', desc: '倒计时结束自动开奖。'},
+    {slug: 'automod', group: '管理与安全', name: '自动审核', icon: 'shield', toggle: true, on: false, sum: '3 条规则待命，打开后生效', desc: '自动处理刷屏、违禁词、乱发链接和大写轰炸。'},
+    {slug: 'moderation', group: '管理与安全', name: '管理模块', icon: 'gavel', sum: '处罚记录到 #mod-log', desc: '踢出、封禁、禁言、警告，以及警告累计后的自动处罚。'},
+    {slug: 'botlog', group: '管理与安全', name: '机器人运行日志', icon: 'scroll', toggle: true, on: true, sum: '发到 #mod-log', desc: '把小凛自己的报错和警告发到一个频道。'},
+    {slug: 'serverlog', group: '管理与安全', name: '服务器事件日志', icon: 'history', toggle: true, on: true, warn: true, sum: '还没选发送频道', desc: '记录消息删除、成员进出、身份组变化等服务器事件。'},
+    {slug: 'music', group: '音乐与工具', name: '音乐', icon: 'music', sum: 'DJ 身份组：DJ', desc: '播放、队列、循环和投票跳过。'},
+    {slug: 'utility', group: '音乐与工具', name: '指令管理', icon: 'sliders', sum: '开启了 42 / 45 个指令', desc: '按需打开或关闭每一个指令。'},
+    {slug: 'general', group: '音乐与工具', name: '通用工具', icon: 'wrench', sum: 'status、avatar、roll 等', desc: '一些随手用的小指令。'},
+];
+const SERVERS = [{name: '小凛的家', letter: '凛', joined: true}, {name: 'Gaming Hub', letter: 'G', joined: true}, {name: '🌸 樱花茶室', letter: '樱', joined: true},
+    {name: '学习群', letter: '学', joined: false}, {name: 'Minecraft 服务器', letter: 'M', joined: false}];
+const CHANNELS = ['welcome', '大厅', '公告', 'mod-log', 'bot-commands'];
+const bySlug = Object.fromEntries(MODULES.map(m => [m.slug, m]));
+const $ = id => document.getElementById(id);
+const icon = (name, cls = '') => `<svg class="icon ${cls}"><use href="#i-${name}"/></svg>`;
+const esc = s => s.replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const toggle = (checked, label = '', attrs = '') => `<label class="tog">${label ? `<span class="tog-label">${label}</span>` : ''}<input type="checkbox" ${checked ? 'checked' : ''} ${attrs}><span class="tog-track"></span></label>`;
+const channelSelect = (current, none = false) => `<select class="select">${none ? '<option>不发送</option>' : ''}${CHANNELS.map(c => `<option ${c === current ? 'selected' : ''}># ${c}</option>`).join('')}</select>`;
+const setting = (title, help, control) => `<div class="setting"><div class="setting-text"><b>${title}</b>${help ? `<small>${help}</small>` : ''}</div>${control}</div>`;
+
+const PAGES = {
+    welcome: {
+        tabs: [
+            {id: 'message', name: '欢迎消息', html: () => `
+                <div class="card">${setting('发送到哪个频道', '新成员加入后，小凛在这里打招呼', channelSelect('welcome'))}</div>
+                <div class="card"><div class="card-head"><h3>消息内容</h3><p>点下面的标签插入变量，右边会实时预览</p></div>
+                    <div class="card-body"><textarea class="textarea" id="welcome-text">欢迎 %member% 加入 %server%！先去 #公告 看看规则吧 🎉</textarea>
+                    <div class="chips"><button class="chip" data-insert="%member%">%member% 新成员</button><button class="chip" data-insert="%server%">%server% 服务器名</button><button class="chip" data-insert="%count%">%count% 第几位成员</button></div></div></div>`},
+            {id: 'card', name: '欢迎图卡', html: () => `
+                <div class="card">${setting('附带欢迎图卡', '消息下面附一张带新成员头像的图片', toggle(true))}${setting('背景图片', '建议 1024×450，不传就用默认樱花背景', '<button class="btn btn--secondary">上传图片</button>')}${setting('文字颜色', '', '<span class="seg"><button aria-pressed="true">白色</button><button>深色</button></span>')}</div>`},
+            {id: 'farewell', name: '道别消息', html: () => `
+                <div class="card">${setting('发送道别消息', '成员离开时说一声再见', toggle(false))}${setting('发送到哪个频道', '', channelSelect('', true))}</div>`},
+            {id: 'roles', name: '自动身份组', html: () => `
+                <div class="card"><div class="card-head"><h3>新成员自动获得</h3><p>小凛的身份组要排在这些身份组上面才能发放</p></div>
+                <div class="card-body"><div class="chips"><span class="chip">新人 ×</span></div><select class="select"><option>+ 添加身份组</option><option>成员</option><option>VIP</option></select></div></div>`},
+        ],
+        preview: true,
+    },
+    automod: {
+        tabs: [
+            {id: 'rules', name: '规则', html: () => `
+                <div class="card">
+                    ${setting('反刷屏', '短时间内发太多消息时禁言', `<span class="inline"><input class="num" value="5"> 条 / <input class="num" value="5"> 秒</span>${toggle(true)}`)}
+                    ${setting('违禁词过滤', '删掉含有违禁词的消息', toggle(true))}
+                    ${setting('链接过滤', '只允许白名单里的网站', toggle(true))}
+                    ${setting('大写轰炸', '英文大写超过一定比例时删除', `<span class="inline">超过 <input class="num" value="70"> %</span>${toggle(false)}`)}
+                    ${setting('重复消息', '同一句话连续发很多次', toggle(false))}
+                </div>`},
+            {id: 'words', name: '违禁词', html: () => `
+                <div class="card"><div class="card-head"><h3>违禁词</h3><p>回车添加，点 × 删除；不区分大小写</p></div>
+                <div class="card-body"><input class="input" placeholder="输入一个词，按回车"><div class="chips"><span class="chip">badword ×</span><span class="chip">广告 ×</span><span class="chip">加群 ×</span></div></div></div>`},
+            {id: 'links', name: '链接白名单', html: () => `
+                <div class="card"><div class="card-head"><h3>允许的网站</h3><p>其他链接会被删除</p></div>
+                <div class="card-body"><input class="input" placeholder="例如 youtube.com"><div class="chips"><span class="chip">youtube.com ×</span><span class="chip">bilibili.com ×</span></div></div></div>`},
+            {id: 'punish', name: '处罚与记录', html: () => `
+                <div class="card">${setting('记录到哪个频道', '每次处理都会在这里留一条记录', channelSelect('mod-log'))}${setting('自动禁言多久', '', '<span class="seg"><button>1 分钟</button><button aria-pressed="true">5 分钟</button><button>1 小时</button><button>自定义</button></span>')}</div>`},
+        ],
+    },
+    serverlog: {
+        tabs: [{id: 'main', name: '设置', html: () => `
+            <div class="card">${setting('发送到哪个频道', '还没选：现在事件不会被记录', channelSelect('', true))}</div>
+            <div class="card">${['消息删除和编辑', '成员加入和离开', '身份组变化', '频道变化', '封禁和解封'].map((t, i) => setting(t, '', toggle(i < 2))).join('')}</div>`}],
+    },
+};
+
+let dirty = false, currentHash = '';
+
+function renderNav(slug) {
+    let html = `<a class="nav-item" href="#overview" ${slug === 'overview' ? 'aria-current="page"' : ''}>${icon('home', 'icon--sm')}<span>概览</span></a>`;
+    let group = '';
+    for (const m of MODULES) {
+        if (m.group !== group) { group = m.group; html += `<span class="nav-group">${group}</span>`; }
+        const dot = m.warn ? 'dot--warn' : (m.toggle && !m.on ? '' : 'dot--on');
+        html += `<a class="nav-item" href="#${m.slug}" ${slug === m.slug ? 'aria-current="page"' : ''}>${icon(m.icon, 'icon--sm')}<span>${m.name}</span><i class="dot ${dot}"></i></a>`;
+    }
+    $('nav').innerHTML = html;
+}
+
+function overview() {
+    let html = `<section class="hero"><img src="/files/rin-manage.webp" alt=""><div><h1>小凛在这里值班 1 年 8 个月了</h1>
+        <p class="facts"><span><b>12,873</b> 位成员</span><span><b>1,043</b> 人在线</span><span>开启了 <b>${MODULES.filter(m => !m.toggle || m.on).length} / ${MODULES.length}</b> 个功能</span></p></div></section>
+        <div class="notice">${icon('alert')}<span>服务器事件日志还没选发送频道，事件现在不会被记录。</span><a href="#serverlog">去选频道</a></div>`;
+    let group = '';
+    for (const m of MODULES) {
+        if (m.group !== group) { html += `${group ? '</div>' : ''}<h2 class="group-title">${m.group}</h2><div class="cards">`; group = m.group; }
+        html += `<div class="mod ${!m.toggle || m.on ? 'is-on' : ''}" data-go="${m.slug}" tabindex="0" role="link"><span class="mod-icon">${icon(m.icon)}</span>
+            <span class="mod-text"><b>${m.name}</b><small class="${m.warn ? 'is-warn' : ''}">${m.toggle && !m.on ? '已关闭' : m.sum}</small></span>
+            ${m.toggle ? toggle(m.on, '', `data-quick="${m.slug}" aria-label="${m.name}"`) : `<span class="mod-go">${icon('right', 'icon--sm')}</span>`}</div>`;
+    }
+    return html + '</div>';
+}
+
+function modulePage(m, tabId) {
+    const page = PAGES[m.slug];
+    const head = `<div class="page-head"><div><h1>${m.name}</h1><p>${m.desc}</p></div>${m.toggle ? toggle(m.on, m.on ? '已开启' : '已关闭', 'data-master') : ''}</div>`;
+    if (!page) return head + `<div class="card"><div class="empty">试装实例里这一页先省略了。正式版会沿用同样的卡片和设置行。</div></div>`;
+    const tabs = page.tabs.length > 1 ? `<div class="tabs" role="tablist">${page.tabs.map(t => `<a class="tab" role="tab" href="#${m.slug}/${t.id}" data-tab="${t.id}">${t.name}</a>`).join('')}</div>` : '';
+    const body = `<div>${page.tabs.map(t => `<div class="stack" data-panel="${t.id}">${t.html()}</div>`).join('')}</div>`;
+    if (!page.preview) return head + tabs + body;
+    return head + tabs + `<div class="editor">${body}<aside class="preview"><p class="preview-label">在 Discord 里会是这样</p><div class="discord"><div class="msg">
+        <img class="ava" src="/files/rin-avatar.webp" alt=""><div><div class="msg-name">小凛 Rin<em>BOT</em><time>今天 14:02</time></div>
+        <div class="msg-text" id="preview-text"></div><div class="welcome-card"><img src="/files/rin-welcome.webp" alt=""><div><b>欢迎 新朋友！</b>你是第 12,874 位成员</div></div></div></div></div>
+        <p class="preview-note">预览里的新成员是假的，变量会换成真实名字。</p></aside></div>`;
+}
+
+function updatePreview() {
+    const text = $('welcome-text'), out = $('preview-text');
+    if (!text || !out) return;
+    out.innerHTML = esc(text.value).replaceAll('%member%', '<span class="mention">@新朋友</span>').replaceAll('%server%', esc($('guild-name').textContent)).replaceAll('%count%', '12,874');
+}
+
+// Tabs keep every panel in the page, so switching tabs never loses edits.
+function showTab(tabId) {
+    const panels = [...document.querySelectorAll('[data-panel]')];
+    if (!panels.length) return;
+    const active = panels.find(p => p.dataset.panel === tabId) || panels[0];
+    panels.forEach(p => { p.hidden = p !== active; });
+    document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.tab === active.dataset.panel));
+}
+
+function route(force = false) {
+    const [slug = 'overview', tab] = location.hash.slice(1).split('/');
+    if (!force && slug === currentHash.slice(1).split('/')[0] && PAGES[slug]) { currentHash = location.hash; showTab(tab); return; }
+    if (!force && dirty && location.hash !== currentHash) {
+        history.replaceState(null, '', currentHash);
+        shakeBar();
+        return;
+    }
+    currentHash = location.hash || '#overview';
+    const m = bySlug[slug];
+    renderNav(m ? slug : 'overview');
+    $('crumbs').innerHTML = m ? `<a href="#overview">概览</a>${icon('right', 'icon--sm')}<span>${m.group}</span>${icon('right', 'icon--sm')}<b>${m.name}</b>` : '<b>概览</b>';
+    $('content').innerHTML = m ? modulePage(m, tab) : overview();
+    showTab(tab);
+    updatePreview();
+    $('shell').classList.remove('is-drawer');
+    $('main').scrollTop = 0;
+}
+
+function setDirty(value) { dirty = value; $('unsaved').classList.toggle('is-open', value); }
+function shakeBar() { const bar = $('unsaved'); bar.classList.remove('is-shaking'); void bar.offsetWidth; bar.classList.add('is-shaking'); toast('先保存或撤销修改，再离开这一页'); }
+let toastTimer;
+function toast(text) { const t = $('toast'); t.textContent = text; t.classList.add('is-open'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('is-open'), 2200); }
+
+$('content').addEventListener('click', e => {
+    const insert = e.target.closest('[data-insert]');
+    if (insert) {
+        const text = $('welcome-text'); const at = text.selectionStart ?? text.value.length;
+        text.value = text.value.slice(0, at) + insert.dataset.insert + text.value.slice(text.selectionEnd ?? at);
+        text.focus(); updatePreview(); setDirty(true); return;
+    }
+    const seg = e.target.closest('.seg button');
+    if (seg) { seg.parentElement.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b === seg)); setDirty(true); return; }
+    if (e.target.closest('.tog')) return;
+    const card = e.target.closest('[data-go]');
+    if (card) location.hash = card.dataset.go;
+});
+$('content').addEventListener('keydown', e => { const card = e.target.closest('[data-go]'); if (card && e.key === 'Enter') location.hash = card.dataset.go; });
+$('content').addEventListener('input', e => { if (e.target.id === 'welcome-text') updatePreview(); if (!e.target.dataset.quick) setDirty(true); });
+$('content').addEventListener('change', e => {
+    const quick = e.target.dataset.quick;
+    if (quick) {
+        const m = bySlug[quick]; m.on = e.target.checked;
+        toast(`${m.name}${m.on ? '已开启' : '已关闭'}`); route(true); return;
+    }
+    if (e.target.hasAttribute('data-master')) e.target.previousElementSibling.textContent = e.target.checked ? '已开启' : '已关闭';
+    setDirty(true);
+});
+$('undo').addEventListener('click', () => { setDirty(false); route(true); toast('已撤销修改'); });
+$('save').addEventListener('click', () => {
+    const master = document.querySelector('[data-master]');
+    const slug = currentHash.slice(1).split('/')[0];
+    if (master && bySlug[slug]) bySlug[slug].on = master.checked;
+    setDirty(false); renderNav(slug); toast('已保存');
+});
+
+// Server switcher
+function renderServers(filter = '') {
+    const list = SERVERS.filter(s => s.name.toLowerCase().includes(filter.toLowerCase()));
+    const joined = list.filter(s => s.joined), other = list.filter(s => !s.joined);
+    $('pop-list').innerHTML = (joined.length ? '<div class="pop-title">小凛已加入</div>' : '') + joined.map(s => `<button class="pop-item" data-server="${esc(s.name)}"><span class="guild-icon">${s.letter}</span><span>${esc(s.name)}</span></button>`).join('')
+        + (other.length ? '<div class="pop-title">还没邀请小凛</div>' : '') + other.map(s => `<button class="pop-item" data-invite="${esc(s.name)}"><span class="guild-icon guild-icon--muted">${s.letter}</span><span>${esc(s.name)}</span><em>邀请</em></button>`).join('')
+        + '<button class="pop-item" data-invite="new">' + icon('plus', 'icon--sm') + '<span>把小凛加到其他服务器</span></button>';
+}
+function openSwitcher(open) { $('switch-pop').hidden = !open; $('switch-btn').setAttribute('aria-expanded', open); if (open) { renderServers(); $('pop-search').value = ''; $('pop-search').focus(); } }
+$('switch-btn').addEventListener('click', e => { e.stopPropagation(); openSwitcher($('switch-pop').hidden); });
+$('pop-search').addEventListener('input', e => renderServers(e.target.value));
+$('switch-pop').addEventListener('click', e => {
+    e.stopPropagation();
+    const pick = e.target.closest('[data-server]'), invite = e.target.closest('[data-invite]');
+    if (pick) {
+        if (dirty) { shakeBar(); return; }
+        const s = SERVERS.find(x => x.name === pick.dataset.server);
+        $('guild-name').textContent = s.name; $('guild-icon').textContent = s.letter;
+        openSwitcher(false); route(true); toast(`已切换到 ${s.name}（试装实例里数据一样）`);
+    } else if (invite) { openSwitcher(false); toast('正式版会打开 Discord 的邀请页面'); }
+});
+document.addEventListener('click', () => openSwitcher(false));
+
+// Command palette
+const ENTRIES = [{label: '概览', hash: '#overview', where: '页面'}].concat(...MODULES.map(m => [{label: m.name, hash: '#' + m.slug, where: m.group}]
+    .concat((PAGES[m.slug]?.tabs || []).filter((t, i, all) => all.length > 1).map(t => ({label: `${m.name} › ${t.name}`, hash: `#${m.slug}/${t.id}`, where: m.group})))));
+ENTRIES.push({label: '外观：切换到夜间', action: () => setTheme('dark'), where: '外观'}, {label: '外观：切换到白天', action: () => setTheme('light'), where: '外观'});
+let paletteIndex = 0, paletteItems = [];
+function renderPalette() {
+    const q = $('palette-input').value.trim().toLowerCase();
+    paletteItems = ENTRIES.filter(e => !q || e.label.toLowerCase().includes(q) || e.where.includes(q)).slice(0, 12);
+    paletteIndex = Math.min(paletteIndex, Math.max(0, paletteItems.length - 1));
+    $('palette-list').innerHTML = paletteItems.length ? paletteItems.map((e, i) => `<div class="palette-item" role="option" data-i="${i}" aria-selected="${i === paletteIndex}">${esc(e.label)}<small>${e.where}</small></div>`).join('') : '<div class="empty">没有找到，换个词试试</div>';
+}
+function openPalette(open) { $('palette').hidden = !open; if (open) { $('palette-input').value = ''; paletteIndex = 0; renderPalette(); $('palette-input').focus(); } }
+function runPalette(i) { const e = paletteItems[i]; if (!e) return; openPalette(false); if (e.action) e.action(); else location.hash = e.hash; }
+$('search-btn').addEventListener('click', () => openPalette(true));
+$('palette-input').addEventListener('input', () => { paletteIndex = 0; renderPalette(); });
+$('palette').addEventListener('click', e => { const item = e.target.closest('[data-i]'); if (item) runPalette(+item.dataset.i); else if (e.target === $('palette')) openPalette(false); });
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); openPalette($('palette').hidden); return; }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's' && dirty) { e.preventDefault(); $('save').click(); return; }
+    if ($('palette').hidden) { if (e.key === 'Escape') openSwitcher(false); return; }
+    if (e.key === 'Escape') openPalette(false);
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); paletteIndex = (paletteIndex + (e.key === 'ArrowDown' ? 1 : -1) + paletteItems.length) % Math.max(1, paletteItems.length); renderPalette(); }
+    else if (e.key === 'Enter') runPalette(paletteIndex);
+});
+
+// Theme: light / follow system / dark
+function setTheme(value) {
+    if (value) document.documentElement.dataset.theme = value; else delete document.documentElement.dataset.theme;
+    document.querySelectorAll('[data-theme-set]').forEach(b => b.setAttribute('aria-pressed', b.dataset.themeSet === value));
+    try { localStorage.setItem('rin-theme', value); } catch { /* private mode */ }
+}
+document.querySelectorAll('[data-theme-set]').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.themeSet)));
+let saved = '';
+try { saved = localStorage.getItem('rin-theme') || ''; } catch { /* private mode */ }
+setTheme(saved);
+
+$('menu-btn').addEventListener('click', e => { e.stopPropagation(); $('shell').classList.toggle('is-drawer'); });
+$('main').addEventListener('click', e => { if (!e.target.closest('#menu-btn')) $('shell').classList.remove('is-drawer'); });
+window.addEventListener('hashchange', () => route());
+route();
+</script>
+</body>
+</html>
