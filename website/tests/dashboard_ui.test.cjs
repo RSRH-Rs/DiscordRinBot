@@ -219,7 +219,7 @@ test('saving one section never clears another section; cleared fields are the ne
 
 test('unread settings stay inert after failure; retry establishes a clean baseline', async () => {
     const {ui, a, nodes} = fixture();
-    a.classList.toggle('mod-page', true);
+    a.classList.toggle('page', true);
     const retry = () => ui.loading('a', async () => { a.fields[0].value = 'loaded'; }, retry);
     await ui.loading('a', async () => { throw Error('network'); }, retry);
     assert.equal(a.inert, true);

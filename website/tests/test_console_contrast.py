@@ -8,7 +8,7 @@ PAIRS = [
     ('text', 'bg'), ('text', 'panel'), ('muted', 'bg'), ('muted', 'panel'), ('#FFFFFF', 'rin'),
     ('#FFFFFF', 'rin-hover'), ('chip-text', 'chip-bg'), ('side-text', 'chan'), ('side-text', 'rail'),
     ('text', 'active'), ('ok', 'ok-bg'), ('warn', 'warn-bg'), ('bad', 'bad-bg'),
-    ('bar-text', 'bar'), ('bar-reset', 'bar'),
+    ('bar-text', 'bar'), ('bar-reset', 'bar'), ('#FFFFFF', '#4752C4'),
 ]
 
 

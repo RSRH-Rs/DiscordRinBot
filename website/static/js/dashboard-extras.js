@@ -182,28 +182,11 @@ window.DashboardExtras = (() => {
         update();
     }
     document.addEventListener('DOMContentLoaded',()=>{
-        const names={'mu-dj':'DJ 身份组','mu-ch':'音乐通知频道','w-ch':'欢迎频道','w-fch':'道别频道','am-log':'审核日志频道','mod-log':'管理日志频道','rr-ch':'面板发送频道','gw-ch':'抽奖频道','gw-role':'参与身份组','bl-ch':'机器人日志频道','sl-ch':'服务器事件频道'};
-        Object.entries(names).forEach(([id,name])=>{const el=document.getElementById(id);if(el)el.dataset.search=name;});
         enhanceSelects(); setupSettings();rememberDetails();
         document.addEventListener('pointerdown',e=>{if(activeSelect&&!e.target.closest('.search-select'))closeSelects();});
         document.addEventListener('scroll',()=>activeSelect?.position(),true);
         window.addEventListener('resize',()=>activeSelect?.position());
         document.addEventListener('keydown',e=>{if(!e.isComposing&&e.key==='Escape'&&activeSelect){e.stopPropagation();activeSelect.close(true);}});
-        const topbar=document.querySelector('.topbar');
-        if(topbar&&typeof ResizeObserver!=='undefined')new ResizeObserver(()=>{
-            document.documentElement.style.setProperty('--dashboard-header-height',topbar.getBoundingClientRect().height+'px');
-        }).observe(topbar);
-        const roles=document.getElementById('w-roles');
-        if(roles){
-            const input=document.createElement('input');input.type='search';input.className='cfg-input';
-            input.placeholder='搜索新成员身份组…';input.setAttribute('aria-label','搜索新成员身份组');input.setAttribute('data-draft-ignore','');
-            const result=document.createElement('p');result.className='search-feedback';result.setAttribute('role','status');
-            roles.before(input,result);
-            const filter=()=>{let count=0;roles.querySelectorAll('.role-opt').forEach(label=>{label.hidden=!matches(label.textContent,input.value);if(!label.hidden)count++;});result.textContent=input.value?'找到 '+count+' 项，已勾选的身份组不会改变':'';};
-            input.addEventListener('input',filter);new MutationObserver(filter).observe(roles,{childList:true});
-        }
-        const dynamic=document.getElementById('rr-roles-list');
-        if(dynamic)new MutationObserver(()=>enhanceSelects(dynamic)).observe(dynamic,{childList:true});
     });
     return {matches,filterOptions,selectMatches,preference,rememberDetails,createHashRouter,enhanceSelects,refreshSelects,closeSelects};
 })();

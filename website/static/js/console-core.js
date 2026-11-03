@@ -149,7 +149,6 @@ window.Console = (() => {
     function invalidate(slug) {
         const state = modules.get(slug);
         if (state && !DashboardUI.dirty('pg-' + slug)) state.loaded = false;
-        window.legacyInvalidate?.(slug);
     }
     let router = null;
     function show(slug, initial) {

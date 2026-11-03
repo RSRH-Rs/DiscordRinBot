@@ -533,5 +533,22 @@
     "test_sent": "测试消息已发送",
     "test_failed": "没发出去：{reason}",
     "audit_note": "想查「谁删的消息、谁封的人」，需要给小凛开「查看审计日志」权限。要忽略某个频道，用 /serverlog ignore。"
+  },
+  "gate": {
+    "title": "登录",
+    "heading": "小凛还不认识你哦",
+    "body": "先用 Discord 账号登录，小凛才能认出你是哪些服务器的管理员。",
+    "login": "使用 Discord 登录",
+    "home": "回到小凛主页",
+    "note_guilds": "只读取你的服务器列表",
+    "note_data": "不保存个人数据",
+    "note_revoke": "随时可以撤销授权"
+  },
+  "error": {
+    "title": "出错了",
+    "heading": "刚才没能打开这个页面",
+    "body": "可以先回首页看看，或者重新登录后再试一次。",
+    "home": "返回首页",
+    "login": "重新登录"
   }
 }

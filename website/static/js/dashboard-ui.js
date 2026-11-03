@@ -153,7 +153,7 @@ window.DashboardUI = (() => {
         catch (e) {
             const feedback = document.createElement('div');
             feedback.id = feedbackId; feedback.className = 'load-feedback'; feedback.setAttribute('role', 'alert');
-            if (root.classList.contains('mod-page') || root.classList.contains('page')) { feedback.dataset.forModule = root.id; feedback.hidden = !root.classList.contains('active') && !root.classList.contains('is-active'); }
+            if (root.classList.contains('page')) { feedback.dataset.forModule = root.id; feedback.hidden = !root.classList.contains('is-active'); }
             feedback.append(document.createTextNode(tr('common.load_failed')));
             const button = document.createElement('button'); button.type = 'button'; button.className = 'btn btn--secondary';
             button.textContent = tr('common.retry'); button.onclick = retry;
@@ -202,10 +202,6 @@ window.DashboardUI = (() => {
         if (root) refresh(root);
     });
     document.addEventListener('DOMContentLoaded', () => {
-        // Legacy module pages (until every page is rebuilt) keep their implicit drafts.
-        document.querySelectorAll('.mod-page').forEach(root => {
-            if (!['pg-overview', 'pg-utility', 'pg-leveling', 'pg-general'].includes(root.id)) root.setAttribute('data-draft', '');
-        });
         document.querySelectorAll('[data-draft]').forEach(register);
         for (const event of ['input', 'change']) document.addEventListener(event, e => {
             const root = e.target.closest('[data-draft]'); if (root) refresh(root);

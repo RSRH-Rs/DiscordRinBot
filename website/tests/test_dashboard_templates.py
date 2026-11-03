@@ -97,13 +97,35 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertEqual(html.count("title: '小凛Rinbot'"),2)
         self.assertIn('document.title = t.title;',html)
 
-    def test_disclosure_arrow_uses_centered_lucide_svg(self):
-        css=(ROOT/'static/css/dashboard-extras.css').read_text(encoding='utf-8')
-        self.assertIn("background-image:url(\"data:image/svg+xml",css)
-        self.assertIn("%3Cpath d='m9 18 6-6-6-6'",css)
-        self.assertNotIn("content:'›'",css)
-        self.assertIn("details[open]>summary::before { transform:rotate(90deg);background-color:",css)
-        self.assertIn(".nav-group[open]>summary::before { background-color:",css)
+    def render_all(self):
+        for name in ['dashboard.html','server.html','settings.html','login_gate.html','error.html']:
+            yield name,self.render(name)[0]
+
+    def test_no_inline_styles_or_cdn(self):
+        for name,html in self.render_all():
+            for banned in ['style="','unpkg.com','@latest','Noto+Sans+SC','Nunito','lucide']:
+                self.assertNotIn(banned,html,f'{name} contains {banned}')
+
+    def test_every_tr_key_exists(self):
+        keys=set(i18n.console_strings())
+        used=set()
+        for path in (ROOT/'templates').glob('*.html'):
+            used|=set(re.findall(r"tr\('([a-z_][A-Za-z0-9_.]*)'",path.read_text(encoding='utf-8')))
+        for path in (ROOT/'static/js').rglob('*.js'):
+            used|=set(re.findall(r"tr\('([a-z_][A-Za-z0-9_.]*)'",path.read_text(encoding='utf-8')))
+        used={k for k in used if not k.endswith('.')}
+        self.assertEqual(sorted(used-keys),[])
+
+    def test_static_assets_exist_and_versioned(self):
+        for name,html in self.render_all():
+            for ref in re.findall(r'(?:src|href)="/static/([^"?#]+)(\?[^"]*)?"',html):
+                path,query=ref
+                self.assertTrue((ROOT/'static'/path).is_file(),f'{name}: missing {path}')
+                if path.endswith(('.css','.js')):self.assertIn('v=20261102',query,f'{name}: {path} not versioned')
+
+    def test_legacy_assets_are_gone(self):
+        for old in ['css/dashboard.css','css/dashboard-ui.css','css/server.css','css/dashboard-extras.css','js/server.js','js/dashboard.js']:
+            self.assertFalse((ROOT/'static'/old).exists(),old)
 
     def test_icon_sprite_has_every_used_icon(self):
         import re

@@ -513,6 +513,20 @@ a.server-card:hover { border-color: var(--chip-bg); background: var(--bg); }
 .draft-hint { margin-top: 8px; font-size: 12.5px; color: var(--chip-text); }
 .draft-hint:empty { display: none; }
 
+/* Login gate and error page */
+.gate-body { display: flex; align-items: center; justify-content: center; min-height: 100dvh; padding: 24px 16px; }
+.gate { width: 100%; max-width: 440px; padding: 32px 28px; border: 1px solid var(--line); border-radius: 20px; background: var(--panel); text-align: center; }
+.gate-art { width: 160px; height: 160px; object-fit: contain; margin: -8px auto 8px; display: block; }
+.gate h1 { font-size: 22px; margin-bottom: 8px; }
+.gate p { color: var(--muted); }
+.gate-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 22px; }
+.btn--discord { background: #4752C4; color: #FFFFFF; }
+.btn--discord:hover { background: #3C45A5; }
+.gate-notes { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 14px; margin-top: 18px; font-size: 12.5px; color: var(--muted); }
+.gate-notes li { display: inline-flex; align-items: center; gap: 4px; }
+.gate-notes .icon { color: var(--ok); }
+.gate-error { margin: 18px 0 0; padding: 12px 14px; border-radius: 10px; background: var(--bad-bg); color: var(--bad); font: 12.5px/1.6 ui-monospace, monospace; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; }
+
 /* ── Responsive ─────────────────────────────────────── */
 @media (max-width: 1099px) {
     .editor { grid-template-columns: minmax(0, 1fr); }
