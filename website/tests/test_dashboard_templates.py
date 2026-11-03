@@ -119,10 +119,17 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn('background: var(--bg);',body)
         self.assertLess(body.index('background: var(--bg);'),body.index('color-mix('))
 
-    def test_overview_cards(self):
+    def test_overview_module_rows(self):
         html,_=self.render('server.html')
         start=html.index('id="pg-overview"');ov=html[start:html.index('</section>',start)]
-        self.assertEqual(ov.count('class="mod-card"'),11)
+        self.assertEqual(ov.count('class="mod-row"'),11)
+        self.assertEqual(len(re.findall(r'<div class="list">\s*<div class="mod-row"',ov)),3)
+        self.assertNotIn('mod-card',ov); self.assertNotIn('mod-grid',ov)
+        self.assertEqual(ov.count('class="mod-go"'),11)
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertNotIn('.mod-card',css); self.assertNotIn('.mod-grid',css)
+        hero=re.search(r'(?:^|\n)\.hero\s*\{([^}]*)\}',css).group(1)
+        for gone in ['border:','background','box-shadow']:self.assertNotIn(gone,hero)
         self.assertEqual(len(re.findall(r'<input type="checkbox" role="switch" data-toggle="[a-z]+" data-draft-ignore disabled',ov)),4)
         for id_ in ['ov-attention','ov-modules','ov-error','ov-retry']:self.assertIn(f'id="{id_}"',ov)
         self.assertIn('aria-busy="true"',ov)

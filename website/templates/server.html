@@ -39,9 +39,9 @@
 <h1 class="sr-only" id="page-title">{{ tr('nav.overview') }}</h1>
 <section class="page" id="pg-overview" data-slug="overview" data-group="" data-title="{{ tr('nav.overview') }}">
     <div class="hero">
-        <img src="{{ url_for('static', filename='images/rin/manage-480.webp') }}" alt="" width="120" height="120">
+        <img src="{{ url_for('static', filename='images/rin/manage-480.webp') }}" alt="" width="88" height="88">
         <div class="hero-text">
-            <h2 class="display" id="ov-headline">{{ tr('overview.hero_default') }}</h2>
+            <h2 id="ov-headline">{{ tr('overview.hero_default') }}</h2>
             <p id="ov-facts"></p>
         </div>
         <span class="bot-status" data-bot-status data-state="unknown" role="status">{{ tr('status.unknown') }}</span>
@@ -53,25 +53,26 @@
     </div>
     <div class="ov-modules" id="ov-modules" aria-busy="true">
         {%- for group, items in module_groups %}
-        <h3 class="section-title">{{ tr('nav.group.' ~ group) }}</h3>
-        <div class="mod-grid">
-            {%- for slug, icon_name in items %}
-            <div class="mod-card" data-row="{{ slug }}">
-                <a class="mod-card-link" href="#{{ slug }}" data-mod="{{ slug }}">
-                    <span class="mod-icon">{{ icon(icon_name, 18) }}</span>
-                    <span class="mod-text">
-                        <span class="mod-name">{{ tr('nav.module.' ~ slug) }}</span>
-                        <span class="mod-summary" data-summary data-blurb="{{ tr('module.' ~ slug ~ '.desc') }}">{{ tr('module.' ~ slug ~ '.desc') }}</span>
-                        <span class="sr-only" data-state></span>
-                    </span>
-                </a>
-                {%- if slug in toggle_slugs %}
-                <label class="tog"><input type="checkbox" role="switch" data-toggle="{{ slug }}" data-draft-ignore disabled aria-label="{{ tr('overview.toggle_label', module=tr('nav.module.' ~ slug)) }}"><span class="tog-track"></span></label>
-                {%- else %}
-                <span class="mod-go">{{ icon('chevron-right') }}</span>
-                {%- endif %}
+        <div class="section">
+            <h3 class="section-title">{{ tr('nav.group.' ~ group) }}</h3>
+            <div class="list">
+                {%- for slug, icon_name in items %}
+                <div class="mod-row" data-row="{{ slug }}">
+                    <a class="mod-row-link" href="#{{ slug }}" data-mod="{{ slug }}">
+                        <span class="mod-icon">{{ icon(icon_name, 18) }}</span>
+                        <span class="mod-text">
+                            <span class="mod-name">{{ tr('nav.module.' ~ slug) }}</span>
+                            <span class="mod-summary" data-summary data-blurb="{{ tr('module.' ~ slug ~ '.desc') }}" title="{{ tr('module.' ~ slug ~ '.desc') }}">{{ tr('module.' ~ slug ~ '.desc') }}</span>
+                            <span class="sr-only" data-state></span>
+                        </span>
+                    </a>
+                    {%- if slug in toggle_slugs %}
+                    <label class="tog"><input type="checkbox" role="switch" data-toggle="{{ slug }}" data-draft-ignore disabled aria-label="{{ tr('overview.toggle_label', module=tr('nav.module.' ~ slug)) }}"><span class="tog-track"></span></label>
+                    {%- endif %}
+                    <span class="mod-go" aria-hidden="true">{{ icon('chevron-right') }}</span>
+                </div>
+                {%- endfor %}
             </div>
-            {%- endfor %}
         </div>
         {%- endfor %}
         <p class="section-hint">{{ tr('overview.runtime_note') }}</p>

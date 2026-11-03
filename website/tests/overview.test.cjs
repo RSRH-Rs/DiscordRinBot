@@ -142,6 +142,15 @@ test('switches stay disabled until the first render, then follow data', async ()
     assert.equal(cards[1].classList.contains('is-on'), true);
 });
 
+test('module summaries carry their full text as a tooltip', async () => {
+    const {nodes, cards} = overviewPage();
+    const {Overview} = overview({nodes, cards});
+    await Overview.render(modulesData(1));
+    const summary = cards[0].parts.summary;
+    assert.ok(summary.textContent);
+    assert.equal(summary.title, summary.textContent);
+});
+
 test('a toggle in flight is not overwritten by render', async () => {
     const {nodes, cards} = overviewPage();
     const {Overview} = overview({nodes, cards});

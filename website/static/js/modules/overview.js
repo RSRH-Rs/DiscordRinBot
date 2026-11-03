@@ -129,6 +129,7 @@ window.Overview = (() => {
             const node = row.querySelector('[data-summary]');
             const summary = summaryText(m.slug, m.summary, list);
             node.textContent = summary ? summary.text : node.dataset.blurb;
+            node.title = node.textContent;
             node.classList.toggle('is-warn', !!summary?.warn);
             const input = row.querySelector('input[data-toggle]');
             if (input && !input.dataset.busy) {
