@@ -1,0 +1,42 @@
+{
+  "nav": {
+    "servers": "我的服务器",
+    "overview": "概览",
+    "settings": "全局设置",
+    "owner_only": "仅主人",
+    "logout": "退出登录",
+    "invite": "邀请小凛",
+    "home": "回到我的服务器",
+    "menu": "打开菜单",
+    "group": {
+      "community": "社区互动",
+      "safety": "管理与安全",
+      "tools": "音乐与工具"
+    }
+  },
+  "status": {
+    "online": "小凛在线",
+    "offline": "小凛暂时离线",
+    "stale": "运行状态已过期",
+    "unknown": "运行状态未知",
+    "not_joined": "小凛未加入"
+  },
+  "bar": {
+    "unsaved": "有未保存的更改",
+    "reset": "重置",
+    "save": "保存",
+    "saving": "保存中…",
+    "blocked": "先保存或重置哦",
+    "save_failed": "没保存上：{reason}"
+  },
+  "toast": {
+    "saved": "已保存"
+  },
+  "common": {
+    "retry": "重试",
+    "load_failed": "读取失败了，点重试再来一次。",
+    "count": "{n} 个",
+    "enabled": "开启",
+    "disabled": "关闭"
+  }
+}

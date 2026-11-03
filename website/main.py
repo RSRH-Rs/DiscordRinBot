@@ -4,6 +4,7 @@ from quart import Quart, request
 from quart_discord import DiscordOAuth2Session
 from config import Config
 from routes import setup_routes
+import i18n
 
 
 def _env_bool(name: str, default: bool) -> bool:
@@ -15,6 +16,7 @@ def _env_bool(name: str, default: bool) -> bool:
 
 app = Quart(__name__)
 app.config.from_object(Config)
+app.jinja_env.globals.update(tr=i18n.tr, console_strings=i18n.console_strings)
 app.config["MAX_CONTENT_LENGTH"] = int(
     os.getenv("RINBOT_MAX_CONTENT_LENGTH", str(8 * 1024 * 1024))
 )
