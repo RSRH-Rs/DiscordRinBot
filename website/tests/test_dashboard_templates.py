@@ -101,6 +101,19 @@ class DashboardTemplateTests(unittest.TestCase):
         for name in ['dashboard.html','server.html','settings.html','login_gate.html','error.html']:
             yield name,self.render(name)[0]
 
+    def test_every_page_boots_theme_before_styles(self):
+        for name,html in self.render_all():
+            boot=html.find("localStorage.getItem('rin-theme')")
+            self.assertGreater(boot,-1,name)
+            self.assertLess(boot,html.index('css/console.css'),name)
+
+    def test_console_pages_have_three_theme_buttons(self):
+        for name in ['dashboard.html','server.html','settings.html']:
+            html,_=self.render(name)
+            for value in ['light','','dark']:
+                self.assertEqual(html.count(f'data-theme-set="{value}"'),1,f'{name} {value!r}')
+            self.assertIn('js/theme.js?v=20261103a',html)
+
     def test_login_gate_sits_on_a_blurred_console_backdrop(self):
         html,_=self.render('login_gate.html')
         backdrop=re.search(r'<div class="gate-backdrop" aria-hidden="true">(.*?)</div>\s*<main class="gate',html,re.S)

@@ -203,7 +203,11 @@ img { max-width: 100%; }
 .nav-dot--warn { background: var(--warn); border-color: var(--warn); }
 .nav-dot--unknown { background: var(--field-line); border-color: var(--field-line); }
 
-.user-card { display: flex; align-items: center; gap: 10px; margin: 8px; padding: 8px; border-radius: 10px; background: var(--hover); }
+.user-row { display: flex; align-items: center; gap: 8px; margin: 4px 8px 8px; padding: 10px 4px 2px; border-top: 1px solid var(--line); }
+.theme-switch { display: inline-flex; flex-shrink: 0; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
+.theme-switch button { display: grid; place-items: center; width: 26px; height: 24px; padding: 0; border: 0; border-radius: 6px; background: none; color: var(--muted); cursor: pointer; }
+.theme-switch button:hover { color: var(--text); }
+.theme-switch button[aria-pressed="true"] { background: var(--hover); color: var(--text); }
 .user-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
 .user-name { flex: 1; min-width: 0; color: var(--text); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .user-logout { display: flex; padding: 6px; border-radius: 6px; color: var(--muted); }
