@@ -32,17 +32,17 @@
     </script>
     <title>小凛Rinbot</title>
     <meta name="description" content="小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。">
-    <meta name="theme-color" content="#EFE2E7">
+    <meta name="theme-color" content="#F8F6F7">
     <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
     :root {
-        /* 雾粉：底色压到中间调，面板和对话窗口比底色亮，整页不刺眼 */
-        --bg: #EFE2E7;
-        --panel: #FBF6F8;
-        --panel-line: #E9D2DB;
+        /* 柔和白：内容区是带一点暖意的浅白，粉色集中在侧栏、按钮和小凛身上 */
+        --bg: #F8F6F7;
+        --panel: #FFFFFF;
+        --panel-line: #EDE5E9;
         --text: #3A2433;
         --muted: #6E5565;
         --rin: #B0335A;
@@ -78,8 +78,8 @@
         font-family: var(--font); font-size: 16px; line-height: 1.7;
         background:
             var(--grain),
-            radial-gradient(900px 620px at 85% -8%, rgba(255, 190, 207, .45), transparent 62%),
-            radial-gradient(760px 560px at -8% 30%, rgba(255, 214, 170, .25), transparent 60%),
+            radial-gradient(900px 620px at 85% -8%, rgba(255, 190, 207, .28), transparent 62%),
+            radial-gradient(760px 560px at -8% 30%, rgba(255, 214, 170, .12), transparent 60%),
             var(--bg);
         background-size: 180px 180px, auto, auto, auto;
         color: var(--text);
@@ -112,7 +112,7 @@
     /* ── 导航 ── */
     .nav {
         position: sticky; top: 0; z-index: 50;
-        background: rgba(239, 226, 231, .88); backdrop-filter: blur(14px);
+        background: rgba(248, 246, 247, .88); backdrop-filter: blur(14px);
         border-bottom: 1px solid transparent; transition: border-color .2s;
     }
     .nav.scrolled { border-bottom-color: var(--panel-line); }
@@ -256,7 +256,7 @@
     .sec { padding: 20px 0; }
     .panel {
         position: relative; overflow: hidden;
-        background: linear-gradient(180deg, var(--panel) 0%, #F6EBEF 100%);
+        background: linear-gradient(180deg, var(--panel) 0%, #FBF8F9 100%);
         border: 1px solid var(--panel-line); border-radius: 20px;
         box-shadow: 0 30px 70px -45px rgba(201, 63, 105, .45);
         display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
