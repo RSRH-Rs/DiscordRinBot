@@ -49,58 +49,25 @@ async function validateWelcomeImageFile(file) {
 }
 
 /* ── Navigation ── */
-function toggleSidebar() {
-    DashboardUI.toggleSidebar();
-}
-function closeSidebar() {
-    DashboardUI.closeSidebar(false);
-}
-// 让键盘用户能用 Enter/空格 触发导航项（它们是 <a> 无 href，靠 onclick）
-document.addEventListener('keydown', (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.nav-link[role="button"]')) {
-        e.preventDefault();
-        e.target.click();
-    }
-});
-let moduleRouter;
-function go(mod) {
-    if(moduleRouter?.current()===mod){closeSidebar();return true;}
-    return moduleRouter?.navigate(mod) || false;
-}
-function showModule(mod, initial=false) {
+/* Legacy module pages, driven by Console's router until each page is rebuilt. */
+const legacyLoaders = {
+    welcome: () => loadWelcome(), automod: () => loadAutoMod(), moderation: () => loadModeration(),
+    giveaway: () => { loadGiveaways(); loadGiveawayPage(); }, leveling: () => loadLeaderboard(),
+    music: () => loadMusicSelects(), roles: () => loadRolesPage(), utility: () => loadUtility(),
+    botlog: () => loadBotLog(), serverlog: () => loadServerLog(),
+};
+document.addEventListener('console:page', e => {
     closeEmojiPicker();
-    window.DashboardExtras?.closeSelects();
-    closeSidebar();
-    document.querySelectorAll('.mod-page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('#side-modules .nav-link').forEach(l => {l.classList.remove('active');l.removeAttribute('aria-current');});
-    const pg = document.getElementById('pg-' + mod);
-    const nl = document.querySelector(`[data-mod="${mod}"]`);
-    if (pg) pg.classList.add('active');
-    document.querySelectorAll('[data-for-module]').forEach(el=>{el.hidden=el.dataset.forModule!=='pg-'+mod;});
-    if (nl) {nl.classList.add('active');nl.setAttribute('aria-current','page');const group=nl.closest('details');if(group)group.open=true;}
-    const title=pg?.querySelector('h2');
-    const name=mod==='overview'?'概览':title?.textContent || '设置';
-    document.getElementById('page-sub').textContent=mod==='overview'?'':' / '+name;
-    document.title=name+' · '+document.getElementById('page-title').textContent+' · 小凛 Rin';
-    if(title&&!initial){title.tabIndex=-1;title.focus({preventScroll:true});}
-    document.querySelector('.main-content').scrollTo(0, 0);
-    // lazy load data
-    if (mod === 'welcome') loadWelcome();
-    if (mod === 'automod') loadAutoMod();
-    if (mod === 'moderation') loadModeration();
-    if (mod === 'giveaway') loadGiveaways();
-    if (mod === 'leveling') loadLeaderboard();
-    if (mod === 'music') loadMusicSelects();
-    if (mod === 'personalizer') loadPersonalizer();
-    if (mod === 'roles') loadRolesPage();
-    if (mod === 'giveaway') loadGiveawayPage();
-    if (mod === 'utility') loadUtility();
-    if (mod === 'botlog') loadBotLog();
-    if (mod === 'serverlog') loadServerLog();
-    // Re-render Lucide icons for newly visible content
-    if (window.lucide) lucide.createIcons();
+    legacyLoaders[e.detail.slug]?.();
     window.DashboardPreview?.refresh();
-}
+});
+window.legacyInvalidate = slug => {
+    if (DashboardUI.dirty('pg-' + slug)) return;
+    if (slug === 'welcome') _wLoaded = false;
+    if (slug === 'automod') _amLoaded = false;
+    if (slug === 'botlog') _blLoaded = false;
+    if (slug === 'serverlog') _slLoaded = false;
+};
 
 /* ── API helper with error handling ── */
 async function api(path, method='GET', body=null) {
@@ -160,7 +127,7 @@ function markDirty(barId) {
 function markClean(barId) {
     const bar = document.getElementById(barId);
     if (bar) DashboardUI.clean(bar.closest('.mod-page'));
-    loadModules();
+    Console.refreshModules();
 }
 
 function escapeHtml(s) {
@@ -459,24 +426,6 @@ async function getCommands(){
     return _cmdPromise;
 }
 
-async function loadOverviewStats() {
-    try {
-        const cmds = await getCommands();
-        _cmdData = cmds;
-        const total = cmds.length;
-        const enabled = cmds.filter(c => c.enabled).length;
-        const disabled = total - enabled;
-        const ov1 = document.getElementById('ov-enabled');
-        const ov2 = document.getElementById('ov-disabled');
-        if (ov1) ov1.innerHTML = `${enabled} <span class="accent">/ ${total}</span>`;
-        if (ov2) ov2.textContent = disabled > 0 ? disabled : '0';
-    } catch(e) {
-        console.error('Overview stats failed:', e);
-        const ov1 = document.getElementById('ov-enabled');
-        if (ov1) ov1.innerHTML = '— <span class="accent">/ —</span>';
-    }
-}
-
 let _cmdSaving=false;
 window.addEventListener('beforeunload',e=>{if(_cmdSaving){e.preventDefault();e.returnValue='';}});
 function matchingCommands(){
@@ -590,7 +539,6 @@ async function loadRolesPage() {
         showError('rr-existing', '加载失败，请重新打开此页面重试: ' + e.message);
         showToast('❌ 加载身份组配置失败: ' + e.message);
     }
-    if (window.lucide) lucide.createIcons();
 }
 function addRoleRow() {
     if (_rrRoleCount >= 20) { showToast('最多 20 个身份组'); return; }
@@ -872,76 +820,18 @@ async function savePersonalizer() {
 }
 
 /* ── Toast ── */
-let _tt;
-function showToast(msg, type) {
-    const el = document.getElementById('toast');
-    if (!type) {
-        if (msg.startsWith('✅')) type = 'success';
-        else if (msg.startsWith('❌')) type = 'error';
-        else if (msg.startsWith('⚠')) type = 'warning';
-        else type = 'info';
-    }
-    const icons = { info:'i', success:'✓', error:'✕', warning:'!' };
-    const text = msg.replace(/^[❌✅⚠️ℹ️]+\s*/u, '').trim();
-    el.className = 'toast toast--' + type;
-    el.innerHTML = `<span class="toast-icon">${icons[type]}</span><span>${escapeHtml(text)}</span>`;
-    requestAnimationFrame(() => el.classList.add('show'));
-    clearTimeout(_tt);
-    _tt = setTimeout(() => el.classList.remove('show'), 2800);
+function showToast(msg) {
+    const kind = msg.startsWith('✅') ? 'ok' : msg.startsWith('❌') ? 'bad' : 'info';
+    Console.toast(msg.replace(/^[❌✅⚠️ℹ️]+\s*/u, '').trim(), kind);
 }
 
-// Initialize Lucide icons
 document.addEventListener('DOMContentLoaded', () => {
-    document.querySelector('.main-content').addEventListener('scroll',positionEmojiPicker,{passive:true});
+    document.querySelector('.main').addEventListener('scroll',positionEmojiPicker,{passive:true});
     window.addEventListener('resize',positionEmojiPicker);
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('emoji-picker').style.display!=='none'){e.preventDefault();closeEmojiPicker(true);}});
-    const ids=[...document.querySelectorAll('.mod-page')].map(p=>p.id.slice(3)).filter(id=>id!=='personalizer');
-    moduleRouter=DashboardExtras.createHashRouter({ids,fallback:'overview',show:showModule,canLeave:id=>{
-        if(id==='utility'&&_cmdSaving){showToast('指令开关正在保存，稍等一下哦。');return false;}
-        return DashboardUI.confirmSwitch('pg-'+id);
-    }});
-    document.addEventListener('click',e=>{
-        const link=e.target.closest('a[data-mod]');
-        if(!link || e.button || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey)return;
-        e.preventDefault();go(link.dataset.mod);
-    });
     document.getElementById('command-search').addEventListener('input',renderUtility);
     document.getElementById('command-filter').addEventListener('change',renderUtility);
-    if (window.lucide) lucide.createIcons();
-    loadOverviewStats();
-    loadModules();
-    loadGuildInfo();
 });
-
-async function loadGuildInfo() {
-    try {
-        const info = await api('/info');
-        const m = document.getElementById('ov-members');
-        const o = document.getElementById('ov-online');
-        const t = document.getElementById('ov-text-ch');
-        const v = document.getElementById('ov-voice-ch');
-        const j = document.getElementById('ov-joined');
-        if (m) m.textContent = (info.member_count || 0).toLocaleString();
-        if (o) o.textContent = (info.online_count || 0).toLocaleString();
-        if (t) t.textContent = info.text_channels || 0;
-        if (v) v.textContent = info.voice_channels || 0;
-        if (j) j.textContent = info.bot_joined_at ? formatJoinDuration(info.bot_joined_at) : '—';
-    } catch(e) {
-        console.error('loadGuildInfo', e);
-    }
-}
-
-function formatJoinDuration(iso) {
-    const joined = new Date(iso);
-    const now = new Date();
-    const days = Math.floor((now - joined) / 86400000);
-    if (days < 1) return '今天';
-    if (days < 30) return `${days} 天`;
-    if (days < 365) return `${Math.floor(days / 30)} 个月`;
-    const years = Math.floor(days / 365);
-    const remMonths = Math.floor((days % 365) / 30);
-    return remMonths > 0 ? `${years} 年 ${remMonths} 个月` : `${years} 年`;
-}
 
 /* ── Bot Log ── */
 let _blLoaded = false;
@@ -1025,119 +915,6 @@ async function testServerLog() {
     setTimeout(() => { btn.disabled = false; btn.textContent = '📤 发送测试'; }, 1500);
 }
 
-let _modulesSignature = null;
-async function loadModules() {
-    try {
-        const data = await api('/modules');
-        const mods = data.modules;
-        updateBotStatus(data.bot_state);
-        const signature=JSON.stringify(mods);
-        // Polling unchanged status must not replace the user's focused navigation.
-        if(signature!==_modulesSignature){
-            renderSidebar(mods);
-            renderOverviewCards(mods);
-            renderSetupChecklist(mods);
-            _modulesSignature=signature;
-        }
-        const note=document.getElementById('runtime-note');
-        note.textContent='配置保存后，状态可能稍后更新。';
-        if (window.lucide) lucide.createIcons();
-    } catch(e) {
-        _modulesSignature=null;
-        updateBotStatus('unknown');
-        document.querySelectorAll('.nav-status').forEach(el=>{el.className='nav-status pending';el.title='运行状态未知';el.setAttribute('aria-label','运行状态未知');});
-        console.error('loadModules', e);
-        document.getElementById('ov-modules').innerHTML = '<div class="error-state">模块状态读取失败 <button type="button" class="tag-add-btn" onclick="loadModules()">重试</button></div>';
-        document.getElementById('ov-more-modules').replaceChildren();
-        document.getElementById('setup-checklist').textContent='暂时没读到配置，可以用常用功能区的重试按钮再试一次。';
-        showToast('❌ 模块列表加载失败: ' + e.message);
-    }
-}
-
-function updateBotStatus(state){
-    const labels={online:'小凛在线',offline:'小凛暂时离线',stale:'运行状态已过期',unknown:'运行状态未知',not_joined:'小凛未加入'};
-    document.querySelectorAll('[data-bot-status]').forEach(el=>{
-        el.dataset.state=state;
-        el.querySelector('.status-label').textContent=labels[state]||labels.unknown;
-    });
-}
-function moduleLabel(m){
-    if(m.loaded===false)return '模块未加载';
-    if(m.loaded!==true)return '运行状态未知';
-    return ({enabled:'已开启',disabled:'未开启',unconfigured:'未配置',configured:'已配置',default:'默认设置',available:'模块可用',unknown:'配置读取失败'})[m.config_state]||'模块可用';
-}
-function moduleStatusClass(m){
-    if(m.loaded!==true)return m.loaded===false?'off':'pending';
-    if(m.config_state==='unknown')return 'pending';
-    return ['disabled','unconfigured'].includes(m.config_state)?'off':'on';
-}
-
-function renderSidebar(mods) {
-    const sb = document.getElementById('side-modules');
-    const focused=sb.contains(document.activeElement)?document.activeElement.dataset.mod:null;
-    const focusedGroup=sb.contains(document.activeElement)?document.activeElement.dataset.navSummary:null;
-    const openGroups=new Map([...sb.querySelectorAll('details')].map(group=>[group.dataset.remember,group.open]));
-    const overviewLi = sb.querySelector('li');
-    sb.innerHTML = '';
-    sb.appendChild(overviewLi);
-    const groups=[['社区互动',['welcome','roles','leveling','giveaway']],['管理与安全',['automod','moderation','botlog','serverlog']],['音乐与工具',['music','utility','general']]];
-    for (const [group,slugs] of groups) {
-        const container=document.createElement('li'),details=document.createElement('details'),heading=document.createElement('summary'),list=document.createElement('ul');
-        const key='nav-'+slugs[0];details.className='nav-group';details.dataset.remember=key;details.open=slugs[0]==='welcome';
-        heading.dataset.navSummary=key;heading.textContent=group;details.append(heading,list);container.append(details);sb.append(container);
-        for (const slug of slugs) {
-        const m=mods.find(item=>item.slug===slug);if(!m)continue;
-        const li = document.createElement('li');
-        li.innerHTML = `<a class="nav-link" href="#${m.slug}" data-mod="${m.slug}">
-            <i data-lucide="${m.icon}" style="width:16px;height:16px;"></i> ${escapeHtml(moduleDisplayName(m))}
-            <span class="nav-status ${moduleStatusClass(m)}" title="${moduleLabel(m)}" aria-label="${moduleLabel(m)}"></span>
-        </a>`;
-        list.appendChild(li);
-        }
-        DashboardExtras.rememberDetails(container);
-        if(openGroups.has(key))details.open=openGroups.get(key);
-    }
-    const active=document.querySelector('.mod-page.active')?.id.replace('pg-','');
-    sb.querySelectorAll('[data-mod]').forEach(el=>{const selected=el.dataset.mod===active;el.classList.toggle('active',selected);if(selected)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
-    const activeGroup=sb.querySelector('[aria-current="page"]')?.closest('details');
-    if(activeGroup&&!openGroups.has(activeGroup.dataset.remember))activeGroup.open=true;
-    if(focused)sb.querySelector(`[data-mod="${focused}"]`)?.focus({preventScroll:true});
-    if(focusedGroup)sb.querySelector(`[data-nav-summary="${focusedGroup}"]`)?.focus({preventScroll:true});
-}
-
-function renderSetupChecklist(mods){
-    const items=[['welcome','欢迎新朋友','选个欢迎频道'],['music','一起听歌','按需选择 DJ 身份组'],['serverlog','留下管理记录','选择服务器事件频道']];
-    const labels={enabled:'已开启',configured:'已配置',disabled:'暂未开启',unconfigured:'还没配置',default:'使用默认设置',unknown:'暂时读不到配置'};
-    document.getElementById('setup-checklist').innerHTML=items.map(([slug,title,hint])=>{
-        const m=mods.find(m=>m.slug===slug);
-        return `<a href="#${slug}" data-mod="${slug}" class="setup-item"><span><strong>${title}</strong><small>${hint}</small></span><span>${labels[m?.config_state]||'查看设置'} <span aria-hidden="true">›</span></span></a>`;
-    }).join('');
-}
-
-function moduleDisplayName(m){
-    return ({botlog:'机器人运行日志',serverlog:'服务器事件日志'})[m.slug]||m.name;
-}
-function overviewGroups(mods){
-    const common=['welcome','roles','music','automod'];
-    return [common.map(slug=>mods.find(m=>m.slug===slug)).filter(Boolean),mods.filter(m=>!common.includes(m.slug))];
-}
-function renderOverviewCards(mods) {
-    const groups=overviewGroups(mods);
-    ['ov-modules','ov-more-modules'].forEach((id,index)=>{
-    document.getElementById(id).innerHTML = groups[index].map(m => `
-        <button type="button" class="mod-card ${m.loaded===true ? '' : 'mod-card--off'}" onclick="go('${m.slug}')">
-            <div class="mod-card-head">
-                <div class="mod-card-icon"><i data-lucide="${m.icon}" style="width:22px;height:22px;"></i></div>
-                <div class="mod-card-name">${escapeHtml(moduleDisplayName(m))}</div>
-                <span class="mod-status-badge ${m.loaded===true && !['disabled','unconfigured','unknown'].includes(m.config_state) ? '' : 'mod-status-badge--off'}">${moduleLabel(m)}</span>
-            </div>
-            <div class="mod-card-desc">${escapeHtml(m.desc)}</div>
-            <div class="mod-card-btn">查看设置</div>
-        </button>
-    `).join('');
-    });
-}
-
 // Loaded defaults must not overwrite drafts; failed loads are explicitly retryable.
 function guardedLoader(mod, original, loaded){
     let pending=null;
@@ -1166,4 +943,3 @@ for(const [name,mod] of Object.entries({saveWelcome:'welcome',saveAutoMod:'autom
     const original=window[name];
     window[name]=(...args)=>DashboardUI.saving('pg-'+mod,()=>original(...args));
 }
-setInterval(()=>{if(!document.hidden)loadModules();},30000);

@@ -347,25 +347,30 @@ def _row_summary(*fields):
     return lambda row: {name: int(row[column] or 0) for name, column in fields}
 
 
+def _with_enabled(build):
+    """快捷开关要知道真实的 enabled；老库可能没有这一列，按默认开启处理。"""
+    return lambda row: build(row) | {"enabled": int(row["enabled"]) if "enabled" in row.keys() else 1}
+
+
 _AUTOMOD_RULES = ("anti_spam", "anti_badword", "anti_link", "anti_caps", "anti_repeat")
 # slug → (DB 常量名, SQL, 行 → 摘要)；DB 常量在调用时读取，测试可以替换
 _SUMMARY_SPECS = {
     "welcome": ("DB_WELCOME", "SELECT * FROM welcome_config WHERE guild_id=?",
-                lambda row: {"welcome_channel": int(row["welcome_channel"] or 0),
+                _with_enabled(lambda row: {"welcome_channel": int(row["welcome_channel"] or 0),
                              "farewell_channel": int(row["farewell_channel"] or 0),
-                             "auto_roles_count": len([x for x in str(row["auto_roles"] or "").split(",") if x])}),
+                             "auto_roles_count": len([x for x in str(row["auto_roles"] or "").split(",") if x])})),
     "automod": ("DB_AUTOMOD", "SELECT * FROM automod_config WHERE guild_id=?",
-                lambda row: {"log_channel": int(row["log_channel"] or 0),
-                             "rules_on": sum(1 for rule in _AUTOMOD_RULES if row[rule])}),
+                _with_enabled(lambda row: {"log_channel": int(row["log_channel"] or 0),
+                                           "rules_on": sum(1 for rule in _AUTOMOD_RULES if row[rule])})),
     "moderation": ("DB_MODERATION", "SELECT * FROM mod_config WHERE guild_id=?",
                    _row_summary(("log_channel", "log_channel"), ("mute_at", "warn_mute_threshold"),
                                 ("kick_at", "warn_kick_threshold"), ("ban_at", "warn_ban_threshold"))),
     "music": ("DB_MUSIC", "SELECT * FROM music_config WHERE guild_id=?",
               _row_summary(("notify_channel", "notify_channel"), ("dj_role", "dj_role"))),
     "botlog": ("DB_BOTLOG", "SELECT * FROM botlog_config WHERE guild_id=?",
-               _row_summary(("channel_id", "channel_id"))),
+               _with_enabled(_row_summary(("channel_id", "channel_id")))),
     "serverlog": ("DB_SERVERLOG", "SELECT * FROM serverlog_config WHERE guild_id=?",
-                  _row_summary(("channel_id", "channel_id"))),
+                  _with_enabled(_row_summary(("channel_id", "channel_id")))),
     "roles": ("DB_RR", "SELECT COUNT(*) AS n FROM rr_panels WHERE guild_id=?",
               lambda row: {"panels": int(row["n"])}),
     "giveaway": ("DB_GIVEAWAY", "SELECT COUNT(*) AS n FROM giveaways WHERE guild_id=? AND ended=0",

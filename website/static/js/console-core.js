@@ -37,6 +37,7 @@ window.Console = (() => {
     }
     const channels = cached('channels', '/channels');
     const roles = cached('roles', '/roles');
+    const commands = cached('commands', '/commands');
     const channelName = (id, list) => list.find(c => String(c.id) === String(id))?.name ?? null;
     function channelOptions(select, list, selected, emptyKey = 'common.not_set') {
         select.replaceChildren(new Option(tr(emptyKey), '0'), ...list.map(c => new Option('# ' + c.name, c.id, false, String(c.id) === String(selected))));
@@ -148,6 +149,7 @@ window.Console = (() => {
     function invalidate(slug) {
         const state = modules.get(slug);
         if (state && !DashboardUI.dirty('pg-' + slug)) state.loaded = false;
+        window.legacyInvalidate?.(slug);
     }
     let router = null;
     function show(slug, initial) {
@@ -268,6 +270,6 @@ window.Console = (() => {
         }
     });
 
-    return {tr, api, apiGlobal, toast, escapeHtml, channels, roles, channelName, channelOptions, roleOptions,
+    return {tr, api, apiGlobal, toast, escapeHtml, channels, roles, commands, channelName, channelOptions, roleOptions,
         duration, dependencies, module, load, invalidate, go, railClick, refreshModules, stateLabel, dotState};
 })();

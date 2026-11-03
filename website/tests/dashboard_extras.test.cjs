@@ -71,16 +71,6 @@ test('navigation preferences are UI-only and tolerate unavailable storage',()=>{
     values.set('rin:ui:v1:nav-music','open');assert.equal(ui.preference('nav-music'),true);
 });
 
-test('overview keeps all modules exactly once and surfaces four common tasks',()=>{
-    const source=read('server.js'),ctx=vm.createContext({});
-    vm.runInContext(source.slice(source.indexOf('function moduleDisplayName('),source.indexOf('function renderOverviewCards(')),ctx);
-    const mods=['music','welcome','roles','automod','moderation','giveaway','leveling','utility','botlog','serverlog','general'].map(slug=>({slug,name:slug}));
-    const groups=ctx.overviewGroups(mods);
-    assert.deepEqual(Array.from(groups[0],m=>m.slug),['welcome','roles','music','automod']);
-    assert.equal(groups.flat().length,11);assert.equal(new Set(groups.flat().map(m=>m.slug)).size,11);
-    assert.equal(ctx.moduleDisplayName(mods[8]),'机器人运行日志');assert.equal(ctx.moduleDisplayName(mods[9]),'服务器事件日志');
-});
-
 test('saving welcome retains optional fields even when their sections are collapsed',async()=>{
     const values={'w-ch':'111','w-fch':'222','w-msg':'欢迎','w-fmsg':'再见','w-title':'标题','w-thumb':'%avatar%','w-image':'https://example.com/a.png'};
     const elements=Object.fromEntries(Object.entries(values).map(([id,value])=>[id,{value}]));
@@ -143,7 +133,7 @@ test('pending toggle blocks duplicates; application errors do not update local s
 test('overview and direct command links share one request and do not replace edited state',async()=>{
     const source=read('server.js');let finish,calls=0;
     const ctx=vm.createContext({api:()=>new Promise(resolve=>{calls++;finish=resolve;})});
-    vm.runInContext(source.slice(source.indexOf('let _cmdData = null'),source.indexOf('async function loadOverviewStats()')),ctx);
+    vm.runInContext(source.slice(source.indexOf('let _cmdData = null'),source.indexOf('let _cmdSaving=false;')),ctx);
     const first=ctx.getCommands(),second=ctx.getCommands();assert.equal(calls,1);
     finish([{name:'play',enabled:true}]);const [a,b]=await Promise.all([first,second]);assert.equal(a,b);
     a[0].enabled=false;assert.equal((await ctx.getCommands())[0].enabled,false);assert.equal(calls,1);

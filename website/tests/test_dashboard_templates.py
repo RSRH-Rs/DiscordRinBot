@@ -4,6 +4,7 @@ from pathlib import Path
 import unittest
 from urllib.parse import parse_qs, urlsplit
 from jinja2 import Environment, FileSystemLoader
+import re
 import sys
 
 ROOT=Path(__file__).resolve().parents[1]
@@ -38,18 +39,11 @@ class DashboardTemplateTests(unittest.TestCase):
             html,p=self.render(name)
             self.assertEqual(len(p.ids),len(set(p.ids)),name)
             self.assertNotIn('储存设定',html)
-        for name in ['dashboard.html','settings.html']:
+        for name in ['dashboard.html','settings.html','server.html']:
             html,p=self.render(name)
             self.assertIn('console.css?v=20261102',html)
             self.assertIn('dashboard-ui.js?v=20261102',html)
             self.assertIn('console-core.js?v=20261102',html)
-        for name in ['server.html']:
-            html,p=self.render(name)
-            self.assertIn('dashboard-extras.js?v=20260826c',html)
-            self.assertIn('dashboard-extras.css?v=20260831d',html)
-            self.assertIn('dashboard-ui.js?v=20260826c',html)
-            self.assertIn('dashboard-ui.css?v=20260826d',html)
-            self.assertNotIn('储存设定',html)
     def test_invites_do_not_request_administrator_and_match_homepage(self):
         html,p=self.render('dashboard.html')
         invites=[link for link in p.links if link.startswith('https://discord.com/oauth2/authorize')]
@@ -85,17 +79,17 @@ class DashboardTemplateTests(unittest.TestCase):
         for name in ['welcome-appearance','welcome-farewell','welcome-autoroles']:
             self.assertIn(f'<details class="cfg-section optional-section" id="{name}">',html)
         self.assertIn('最大 5 MB、4096×4096',html)
-        self.assertIn('message-preview.js?v=20260830a',html)
-        self.assertIn('server.js?v=20260830a',html)
+        self.assertIn('message-preview.js?v=20261102',html)
 
-    def test_overview_shows_server_stats_first_then_common_actions(self):
+    def test_overview_lists_every_module_once_with_toggles_for_four(self):
         html,p=self.render('server.html')
-        self.assertLess(p.ids.index('ov-members'),p.ids.index('ov-modules'))
-        self.assertLess(p.ids.index('ov-modules'),p.ids.index('ov-more-modules'))
-        self.assertLess(p.ids.index('ov-modules'),p.ids.index('setup-checklist'))
-        self.assertNotIn('data-remember="server-stats"',html)
+        rows=re.findall(r'data-row="([a-z]+)"',html)
+        self.assertEqual(sorted(rows),sorted(['welcome','roles','leveling','giveaway','automod','moderation','botlog','serverlog','music','utility','general']))
+        self.assertEqual(re.findall(r'data-toggle="([a-z]+)"',html),['welcome','automod','botlog','serverlog'])
+        self.assertLess(p.ids.index('ov-headline'),html.count('data-row'))
         self.assertIn('机器人运行日志',html)
         self.assertIn('服务器事件日志',html)
+        self.assertNotIn('pg-personalizer',html)
 
     def test_homepage_tab_title_stays_short_in_both_languages(self):
         html=(ROOT/'templates/index.html').read_text(encoding='utf-8')

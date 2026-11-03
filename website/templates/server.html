@@ -1,105 +1,68 @@
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ guild.name }} · 小凛 Rin</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/server.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-ui.css') }}?v=20260826d">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard-extras.css') }}?v=20260831d">
-</head>
-<body>
-    <button class="mobile-menu-btn" id="menuBtn" onclick="toggleSidebar()" aria-label="打开菜单" aria-controls="sideNav" aria-expanded="false">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <aside class="sidebar" id="sideNav">
-        <div class="sidebar-inner">
-            <a href="/" class="brand"><span class="brand-dot"></span>小凛 Rin</a>
-            <nav class="side-nav">
-                <span class="nav-label">导航</span>
-                <ul>
-                    <li><a href="/dashboard" class="nav-link">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
-                        我的服务器
-                    </a></li>
-                </ul>
-                <span class="nav-label" style="margin-top:18px;">{{ guild.name }}</span>
-                <ul id="side-modules">
-                    <li><a href="#overview" class="nav-link active" data-mod="overview"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> 概览</a></li>
-                </ul>
-            </nav>
-            <div class="user-card">
-                <img src="{{ user.avatar_url }}" alt="头像" class="user-avatar">
-                <div class="user-info">
-                    <div class="user-name">{{ user.name }}</div>
-                    <a href="/logout" class="logout-link">退出登录</a>
-                </div>
-            </div>
-        </div>
-    </aside>
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
+{%- extends '_console_base.html' -%}
+{%- from '_console_macros.html' import icon, nav_item -%}
+{%- set active_guild_id = guild.id -%}
+{%- set module_groups = [
+    ('community', [('welcome', 'smile-plus'), ('roles', 'tags'), ('leveling', 'trophy'), ('giveaway', 'gift')]),
+    ('safety', [('automod', 'shield-check'), ('moderation', 'gavel'), ('botlog', 'scroll-text'), ('serverlog', 'history')]),
+    ('tools', [('music', 'music'), ('utility', 'sliders-horizontal'), ('general', 'wrench')]),
+] -%}
+{%- set toggle_slugs = ['welcome', 'automod', 'botlog', 'serverlog'] -%}
 
-    <main class="main-content">
-        <header class="topbar">
-            <div>
-                <h1 class="page-title" id="page-title">{{ guild.name }}</h1>
-                <nav class="page-sub page-trail" aria-label="当前位置"><a href="/dashboard">我的服务器</a><span aria-hidden="true">/</span><a href="#overview" data-mod="overview">概览</a><span id="page-sub" aria-current="page"></span></nav>
-            </div>
-            <div class="bot-online-badge" data-bot-status data-state="unknown" role="status"><span class="pip"></span><span class="status-label">正在读取状态…</span></div>
-        </header>
+{% block title %}{{ tr('nav.overview') }} · {{ guild.name }}{% endblock %}
+{% block nav_head %}{{ guild.name }}{% endblock %}
 
-        <div class="content-area">
-            <div class="draft-notice" id="draft-notice" hidden role="status">有未保存的更改，离开前记得保存哦。</div>
+{% block nav %}
+{{ nav_item('#overview', 'layout-grid', tr('nav.overview'), 'overview') }}
+{%- for group, items in module_groups %}
+<span class="nav-group-title">{{ tr('nav.group.' ~ group) }}</span>
+{%- for slug, icon_name in items %}
+{{ nav_item('#' ~ slug, icon_name, tr('nav.module.' ~ slug), slug, dot=True) }}
+{%- endfor %}
+{%- endfor %}
+{% endblock %}
 
-<!-- ═══════ 概览 ═══════ -->
-<div class="mod-page active" id="pg-overview">
-    <section class="overview-stats" aria-labelledby="server-stats-title">
-    <h2 class="overview-title" id="server-stats-title">服务器资料与统计</h2>
-    <!-- Server header -->
-    <div class="server-summary" style="display:flex;align-items:center;gap:18px;background:var(--card);border:1px solid var(--border-light);border-radius:20px;padding:20px 24px;margin-bottom:24px;">
-        {% if guild.icon_url %}
-            <img src="{{ guild.icon_url }}" style="width:64px;height:64px;border-radius:16px;object-fit:cover;box-shadow:0 4px 16px rgba(90,74,66,.1);">
-        {% else %}
-            <div style="width:64px;height:64px;border-radius:16px;background:var(--pink-bg);border:1px solid var(--pink-border);display:flex;align-items:center;justify-content:center;font-size:1.8rem;font-weight:800;color:var(--pink);">{{ guild.name[0]|upper }}</div>
-        {% endif %}
-        <div class="server-summary-info">
-            <div style="font-size:1.25rem;font-weight:800;letter-spacing:-.3px;margin-bottom:4px;">{{ guild.name }}</div>
-            <div style="font-size:.79rem;color:var(--text-muted);font-weight:600;display:flex;gap:14px;flex-wrap:wrap;">
-                <span style="display:flex;align-items:center;gap:5px;"><i data-lucide="user" style="width:12px;height:12px;"></i> 管理员：{{ user.name }}</span>
-                <span style="display:flex;align-items:center;gap:5px;"><i data-lucide="hash" style="width:12px;height:12px;"></i> ID: {{ guild.id }}</span>
-            </div>
+{% block topbar %}
+<h1 class="page-title" id="page-title">{{ tr('nav.overview') }}</h1>
+<nav class="crumbs" id="crumbs" aria-label="{{ tr('nav.crumbs') }}" hidden><a href="/dashboard">{{ tr('nav.servers') }}</a><span aria-hidden="true">/</span><span id="crumb-current" aria-current="page"></span></nav>
+{% endblock %}
+{% block topbar_end %}<span class="bot-status" data-bot-status data-state="unknown" role="status">{{ tr('status.unknown') }}</span>{% endblock %}
+
+{% block content %}
+<section class="page" id="pg-overview" data-slug="overview" data-title="{{ tr('nav.overview') }}">
+    <div class="duty-card">
+        <img src="{{ url_for('static', filename='images/rin/manage-480.webp') }}" alt="" width="120" height="120">
+        <div class="duty-text">
+            <h2 class="display" id="ov-headline">{{ tr('overview.hero_default') }}</h2>
+            <p id="ov-facts"></p>
         </div>
     </div>
-    <div class="ov-grid">
-        <div class="ov-card"><div class="ov-label">成员数</div><div class="ov-val" id="ov-members">—</div></div>
-        <div class="ov-card"><div class="ov-label">在线成员</div><div class="ov-val" id="ov-online" style="color:var(--green);">—</div></div>
-        <div class="ov-card"><div class="ov-label">文字频道</div><div class="ov-val" id="ov-text-ch">—</div></div>
-        <div class="ov-card"><div class="ov-label">语音频道</div><div class="ov-val" id="ov-voice-ch">—</div></div>
-        <div class="ov-card"><div class="ov-label">小凛已驻守</div><div class="ov-val" id="ov-joined" style="font-size:1rem;">—</div></div>
-        <div class="ov-card"><div class="ov-label">已启用指令</div><div class="ov-val" id="ov-enabled">— <span class="accent">/ —</span></div></div>
+    {%- for group, items in module_groups %}
+    <div class="section">
+        <h3 class="section-title">{{ tr('nav.group.' ~ group) }}</h3>
+        <div class="list">
+            {%- for slug, icon_name in items %}
+            <div class="mod-row" data-row="{{ slug }}">
+                <a class="mod-link" href="#{{ slug }}" data-mod="{{ slug }}">
+                    <span class="mod-icon">{{ icon(icon_name, 18) }}</span>
+                    <span class="mod-text">
+                        <span class="mod-name">{{ tr('nav.module.' ~ slug) }} <span class="mod-state" data-state></span></span>
+                        <span class="mod-summary" data-summary data-blurb="{{ tr('module.' ~ slug ~ '.desc') }}">{{ tr('module.' ~ slug ~ '.desc') }}</span>
+                    </span>
+                    {{ icon('chevron-right') }}
+                </a>
+                {%- if slug in toggle_slugs %}
+                <label class="tog"><input type="checkbox" role="switch" data-toggle="{{ slug }}" data-draft-ignore aria-label="{{ tr('overview.toggle_label', module=tr('nav.module.' ~ slug)) }}"><span class="tog-track"></span></label>
+                {%- endif %}
+            </div>
+            {%- endfor %}
+        </div>
     </div>
-    </section>
-    <h2 class="overview-title">今天想让小凛帮什么忙？</h2>
-    <p class="overview-intro">常用的都在这里，其他功能在菜单里哦。</p>
-    <div class="mod-grid quick-modules" id="ov-modules"><div class="skel skel-block"></div></div>
-    <details class="overview-fold" data-remember="more-modules">
-        <summary>其他功能 <span class="fold-hint">等级、抽奖、日志与工具</span></summary>
-        <div class="mod-grid" id="ov-more-modules"></div>
-    </details>
-    <details class="setup-guide overview-fold" data-remember="setup-guide" aria-label="配置起步清单">
-        <summary>第一次设置？看看起步清单</summary>
-        <p>按需选择，不用一口气配完哦。</p><div id="setup-checklist">正在读取配置…</div>
-        <p class="setup-note">身份组位置和权限需在 Discord 中检查。</p>
-    </details>
-    <p class="runtime-note" id="runtime-note">模块状态以最近一次运行报告为准；配置保存后可能需要稍等片刻生效。</p>
-</div>
+    {%- endfor %}
+    <p class="section-hint">{{ tr('overview.runtime_note') }}</p>
+</section>
 
 <!-- ═══════ 音乐 ═══════ -->
-<div class="mod-page" id="pg-music">
+<div class="page mod-page" id="pg-music" data-slug="music" data-title="{{ tr('nav.module.music') }}">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="music" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>音乐系统</h2><p>完整播放器：队列、循环、音量、洗牌、投票跳过</p></div>
     <div class="cfg-section">
         <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 基本设定</div>
@@ -116,7 +79,7 @@
 </div>
 
 <!-- ═══════ 欢迎新成员 ═══════ -->
-<div class="mod-page" id="pg-welcome">
+<div class="page mod-page" id="pg-welcome" data-slug="welcome" data-title="{{ tr('nav.module.welcome') }}">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="smile-plus" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>欢迎新成员</h2><p>选个频道，写一句欢迎吧</p></div>
 
     <div class="cfg-section">
@@ -205,7 +168,7 @@
 </div>
 
 <!-- ═══════ 领取身份组 ═══════ -->
-<div class="mod-page" id="pg-roles" data-draft-hint="检查好后，再发到频道哦。">
+<div class="page mod-page" id="pg-roles" data-slug="roles" data-title="{{ tr('nav.module.roles') }}" data-draft-hint="检查好后，再发到频道哦。">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="tags" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>领取身份组讯息</h2><p>点一下按钮，找到和自己合拍的身份组吧</p></div>
 
     <div class="cfg-section" id="rr-message-section">
@@ -249,7 +212,7 @@
 </div>
 
 <!-- ═══════ 自动审核 ═══════ -->
-<div class="mod-page" id="pg-automod">
+<div class="page mod-page" id="pg-automod" data-slug="automod" data-title="{{ tr('nav.module.automod') }}">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="shield-check" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>自动审核</h2><p>自动拦截违规内容和刷屏行为，保护服务器环境</p></div>
 
     <div class="cfg-section">
@@ -331,7 +294,7 @@
 </div>
 
 <!-- ═══════ 管理模块 ═══════ -->
-<div class="mod-page" id="pg-moderation">
+<div class="page mod-page" id="pg-moderation" data-slug="moderation" data-title="{{ tr('nav.module.moderation') }}">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="gavel" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>管理模块</h2><p>kick / ban / tempban / mute / warn / purge / lock — 全套管理指令</p></div>
 
     <div class="cfg-section">
@@ -359,7 +322,7 @@
 </div>
 
 <!-- ═══════ 抽奖 ═══════ -->
-<div class="mod-page" id="pg-giveaway" data-draft-hint="填好活动内容后，点「建立」才会创建抽奖哦。">
+<div class="page mod-page" id="pg-giveaway" data-slug="giveaway" data-title="{{ tr('nav.module.giveaway') }}" data-draft-hint="填好活动内容后，点「建立」才会创建抽奖哦。">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="gift" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>抽奖管理</h2><p>机器人帮你管理，让你可以专注在奖品丰厚的抽奖活动</p></div>
 
     <div class="cfg-section">
@@ -397,7 +360,7 @@
 </div>
 
 <!-- ═══════ 等级 ═══════ -->
-<div class="mod-page" id="pg-leveling">
+<div class="page mod-page" id="pg-leveling" data-slug="leveling" data-title="{{ tr('nav.module.leveling') }}">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="trophy" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>等级系统</h2><p>小凛独家经验算法，发言即积累经验</p></div>
     <div class="cfg-section">
         <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 排行榜</div>
@@ -406,7 +369,7 @@
 </div>
 
 <!-- ═══════ 通用 ═══════ -->
-<div class="mod-page" id="pg-general">
+<div class="page mod-page" id="pg-general" data-slug="general" data-title="{{ tr('nav.module.general') }}">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="wrench" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>通用工具</h2><p>开箱即用的实用指令，无需额外配置</p></div>
     <div class="cfg-section">
         <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 可用指令</div>
@@ -421,117 +384,8 @@
     </div>
 </div>
 
-<!-- ═══════ Bot 个性化 ═══════ -->
-<div class="mod-page" id="pg-personalizer">
-    <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="palette" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>Bot 个性化</h2><p>修改小凛的名字、头像、状态和活动，让她成为你的专属机器人</p></div>
-
-    <div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;">
-        <!-- Left: settings -->
-        <div>
-            <div class="cfg-section">
-                <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 头像</div>
-                <div style="display:flex;align-items:center;gap:20px;">
-                    <div id="bp-av-preview" style="width:80px;height:80px;border-radius:20px;background:var(--bg);border:2px dashed var(--border);display:flex;align-items:center;justify-content:center;font-size:2rem;overflow:hidden;cursor:pointer;flex-shrink:0;" onclick="document.getElementById('bp-av-file').click()">
-                        <img id="bp-av-img" src="" style="width:100%;height:100%;object-fit:cover;display:none;">
-                        <span id="bp-av-placeholder">🎨</span>
-                    </div>
-                    <div>
-                        <div class="cfg-row-label">点击左侧上传新头像</div>
-                        <div class="cfg-row-hint">支持 PNG / JPG，建议 256×256 以上</div>
-                        <button class="tag-add-btn" style="margin-top:8px;" onclick="uploadAvatar()" id="bp-av-btn">上传头像</button>
-                    </div>
-                    <input type="file" id="bp-av-file" accept="image/png,image/jpeg,image/gif,image/webp" style="display:none;" onchange="previewAvatar(this)">
-                </div>
-            </div>
-
-            <div class="cfg-section">
-                <div class="cfg-section-title">📝 Bot 名称</div>
-                <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">用户名</div><div class="cfg-row-hint">Discord 限制：每小时最多修改 2 次</div></div>
-                    <div style="display:flex;gap:8px;align-items:center;">
-                        <input class="cfg-input" id="bp-name" style="max-width:200px;" placeholder="小凛 Rin">
-                        <button class="tag-add-btn" onclick="changeName()">修改</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="cfg-section">
-                <div class="cfg-section-title">🟢 Bot 状态</div>
-                <div class="cfg-row">
-                    <div class="cfg-row-info"><div class="cfg-row-label">在线状态</div></div>
-                    <select class="cfg-select" id="bp-status" style="max-width:200px;">
-                        <option value="online">🟢 Online 在线</option>
-                        <option value="idle">🌙 Idle 闲置</option>
-                        <option value="dnd">⛔ Do Not Disturb 请勿打扰</option>
-                        <option value="invisible">⚫ Invisible 隐身</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="cfg-section">
-                <div class="cfg-section-title"><i data-lucide="settings" style="width:15px;height:15px;" aria-hidden="true"></i> 活动</div>
-                <div class="cfg-columns">
-                    <div>
-                        <div class="cfg-row-label">Activity Type 活动类型</div>
-                        <select class="cfg-select" id="bp-atype" style="margin-top:6px;max-width:280px;" onchange="updatePreview()">
-                            <option value="watching">👀 Watching 观看中</option>
-                            <option value="playing">🎮 Playing 游玩中</option>
-                            <option value="listening">🎧 Listening to 收听中</option>
-                            <option value="competing">🏆 Competing in 竞争中</option>
-                            <option value="custom">💬 Custom 自定义</option>
-                            <option value="none">— 无活动 —</option>
-                        </select>
-                    </div>
-                    <div>
-                        <div class="cfg-row-label">Status text 状态文字</div>
-                        <input class="cfg-input" id="bp-atext" style="margin-top:6px;max-width:280px;" placeholder="/help" onkeyup="updatePreview()">
-                    </div>
-                </div>
-            </div>
-
-            <div class="save-bar" style="margin:-18px -28px -40px;"><span class="save-hint">修改后 30 秒内自动生效</span><button class="btn-save" id="bp-save" onclick="savePersonalizer()">保存设置</button></div>
-        </div>
-
-        <!-- Right: preview -->
-        <div style="position:sticky;top:90px;">
-            <div class="cfg-section" style="text-align:center;">
-                <div class="cfg-section-title" style="justify-content:center;">📋 成员列表预览</div>
-                <div style="background:#2B2D31;border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:10px;">
-                    <div style="position:relative;">
-                        <img id="prev-av-1" src="" style="width:36px;height:36px;border-radius:50%;background:#36393F;display:none;">
-                        <div id="prev-av-1-ph" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--pink),#D8758A);display:flex;align-items:center;justify-content:center;font-size:.9rem;">🌸</div>
-                        <div style="position:absolute;bottom:-1px;right:-1px;width:12px;height:12px;border-radius:50%;border:2px solid #2B2D31;" id="prev-dot" class="prev-dot-online"></div>
-                    </div>
-                    <div style="text-align:left;">
-                        <div style="color:#F2F3F5;font-size:.85rem;font-weight:600;" id="prev-name">小凛 Rin</div>
-                        <div style="color:#B5BAC1;font-size:.72rem;" id="prev-act">观看中 /help</div>
-                    </div>
-                    <span style="margin-left:auto;font-size:.55rem;padding:2px 5px;border-radius:3px;background:#5865F2;color:#fff;font-weight:700;">APP</span>
-                </div>
-            </div>
-            <div class="cfg-section" style="text-align:center;margin-top:14px;">
-                <div class="cfg-section-title" style="justify-content:center;">👤 资料预览</div>
-                <div style="background:#232428;border-radius:12px;overflow:hidden;">
-                    <div style="height:60px;background:linear-gradient(135deg,#E8899A,#D8758A);"></div>
-                    <div style="padding:0 16px 16px;text-align:left;position:relative;">
-                        <div style="position:relative;margin-top:-24px;margin-bottom:10px;">
-                            <img id="prev-av-2" src="" style="width:56px;height:56px;border-radius:50%;border:4px solid #232428;background:#36393F;display:none;">
-                            <div id="prev-av-2-ph" style="width:56px;height:56px;border-radius:50%;border:4px solid #232428;background:linear-gradient(135deg,var(--pink),#D8758A);display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🌸</div>
-                        </div>
-                        <div style="color:#F2F3F5;font-size:.95rem;font-weight:700;" id="prev-name2">小凛 Rin</div>
-                        <div style="color:#B5BAC1;font-size:.72rem;margin-bottom:10px;">rinbot</div>
-                        <div style="background:#2B2D31;border-radius:8px;padding:8px 10px;margin-top:6px;">
-                            <div style="color:#B5BAC1;font-size:.72rem;" id="prev-act2">👀 观看中 /help</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- ═══════ Utility (指令开关) ═══════ -->
-<div class="mod-page" id="pg-utility">
+<div class="page mod-page" id="pg-utility" data-slug="utility" data-title="{{ tr('nav.module.utility') }}">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="sliders-horizontal" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>指令管理</h2><p>按需启用或禁用每个指令，完全掌控你的服务器</p></div>
     <div class="util-tip"><i data-lucide="info" style="width:16px;height:16px;flex-shrink:0;"></i> 开关会立即保存，不用再点保存哦。批量操作只影响当前筛选结果，不会改到隐藏的指令。</div>
     <div class="search-toolbar command-search"><label for="command-search">查找指令</label><input type="search" id="command-search" class="cfg-input" data-draft-ignore placeholder="指令名称、说明或分类…"><label class="sr-only" for="command-filter">指令状态</label><select id="command-filter" class="cfg-select" data-draft-ignore><option value="all">全部状态</option><option value="enabled">已开启</option><option value="disabled">已关闭</option></select><span id="util-search-status" role="status"></span></div>
@@ -540,7 +394,7 @@
 </div>
 
 <!-- ═══════ Bot Log (系统日志) ═══════ -->
-<div class="mod-page" id="pg-botlog">
+<div class="page mod-page" id="pg-botlog" data-slug="botlog" data-title="{{ tr('nav.module.botlog') }}">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="scroll-text" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>机器人运行日志</h2><p>查看小凛的运行、报错和配置记录</p></div>
 
     <div class="cfg-section">
@@ -580,7 +434,7 @@
 </div>
 
 <!-- ═══════ Server Log (审计日志) ═══════ -->
-<div class="mod-page" id="pg-serverlog">
+<div class="page mod-page" id="pg-serverlog" data-slug="serverlog" data-title="{{ tr('nav.module.serverlog') }}">
     <div class="mod-banner"><div class="mod-banner-icon"><i data-lucide="history" style="width:28px;height:28px;color:#FAF0F4;"></i></div><h2>服务器事件日志</h2><p>记录消息、成员、频道和身份组的变化</p></div>
 
     <div class="cfg-section">
@@ -625,12 +479,9 @@
     <div class="save-bar" id="sl-savebar"><span class="save-hint">修改后记得保存哦~</span><button class="btn-save" id="sl-save" onclick="saveServerLog()">保存设置</button></div>
 </div>
 
-        </div><!-- content-area -->
-    </main>
+{% endblock %}
 
-    <!-- Toast -->
-    <div id="toast" class="toast toast--info" role="status" aria-live="polite" aria-atomic="true"></div>
-
+{% block scripts %}
     <!-- Emoji Picker (单例) -->
     <div id="emoji-picker" class="emoji-picker" style="display:none;">
         <input id="ep-search" placeholder="搜索 emoji…" oninput="filterEmojis()">
@@ -642,9 +493,8 @@
     </div>
 
 <script>window.GID = "{{ guild.id }}";</script>
-<script src="{{ url_for('static', filename='js/dashboard-ui.js') }}?v=20260826c"></script>
-<script src="{{ url_for('static', filename='js/dashboard-extras.js') }}?v=20260826c"></script>
-<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20260830a"></script>
-<script src="{{ url_for('static', filename='js/server.js') }}?v=20260830a"></script>
-</body>
-</html>
+<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20261102a"></script>
+<script src="{{ url_for('static', filename='js/server.js') }}?v=20261102a"></script>
+{% endblock %}

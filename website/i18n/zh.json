@@ -12,6 +12,20 @@
       "community": "社区互动",
       "safety": "管理与安全",
       "tools": "音乐与工具"
+    },
+    "crumbs": "当前位置",
+    "module": {
+      "welcome": "欢迎新成员",
+      "roles": "领取身份组",
+      "leveling": "等级系统",
+      "giveaway": "抽奖",
+      "automod": "自动审核",
+      "moderation": "管理模块",
+      "botlog": "机器人运行日志",
+      "serverlog": "服务器事件日志",
+      "music": "音乐",
+      "utility": "指令管理",
+      "general": "通用工具"
     }
   },
   "status": {
@@ -156,6 +170,93 @@
       "blacklist_id": "用户 ID",
       "blacklist_reason": "原因（可选）",
       "blacklist_add": "加入黑名单"
+    }
+  },
+  "module": {
+    "welcome": {
+      "desc": "欢迎图卡、自动身份组、道别消息"
+    },
+    "roles": {
+      "desc": "成员点按钮自助领取身份组"
+    },
+    "leveling": {
+      "desc": "聊天攒经验，看等级卡和排行榜"
+    },
+    "giveaway": {
+      "desc": "定好奖品和时间，到点自动开奖"
+    },
+    "automod": {
+      "desc": "反刷屏、违禁词、链接和大写过滤"
+    },
+    "moderation": {
+      "desc": "踢出、封禁、禁言、警告和自动处罚"
+    },
+    "botlog": {
+      "desc": "把小凛的运行和报错记录发到频道"
+    },
+    "serverlog": {
+      "desc": "记录消息、成员、频道和身份组的变化"
+    },
+    "music": {
+      "desc": "队列、循环、音量、投票跳过"
+    },
+    "utility": {
+      "desc": "按需开关每一条指令"
+    },
+    "general": {
+      "desc": "/status、/avatar、/roll 等实用指令"
+    }
+  },
+  "overview": {
+    "hero_default": "小凛在这里值班",
+    "hero": "小凛在这里值班 {time} 了",
+    "toggle_label": "开关{module}",
+    "toggle_blocked": "这一页还有未保存的更改，先去保存或重置哦。",
+    "toggle_failed": "没切换成功：{reason}",
+    "runtime_note": "状态以小凛最近一次上报为准，改完配置后可能要等一会儿才更新。",
+    "sends_to": "发到 #{channel}",
+    "logs_to": "记录到 #{channel}",
+    "channel_deleted": "选的频道已经不在了，去重新选一个",
+    "welcome": {
+      "unset": "还没选欢迎频道",
+      "roles": "自动给 {n} 个身份组",
+      "farewell": "道别发到 #{channel}"
+    },
+    "fact": {
+      "members": "{n} 位成员",
+      "online": "{n} 在线",
+      "text": "{n} 个文字频道",
+      "commands": "已开启 {on}/{total} 条指令"
+    },
+    "duration": {
+      "today": "不到一天",
+      "days": "{n} 天",
+      "months": "{n} 个月",
+      "years": "{n} 年",
+      "years_months": "{y} 年 {m} 个月"
+    },
+    "log": {
+      "unset": "还没选日志频道"
+    },
+    "automod": {
+      "rules": "开着 {n} 条规则"
+    },
+    "moderation": {
+      "no_log": "还没选日志频道",
+      "mute_at": "警告 {n} 次自动禁言"
+    },
+    "music": {
+      "notify": "播放通知发到 #{channel}",
+      "default": "使用默认设置",
+      "dj": "限定 DJ 身份组"
+    },
+    "roles": {
+      "panels": "已发出 {n} 个面板",
+      "none": "还没发过面板"
+    },
+    "giveaway": {
+      "active": "进行中 {n} 场",
+      "none": "没有进行中的抽奖"
     }
   }
 }

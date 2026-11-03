@@ -85,13 +85,18 @@ class DashboardStatusTests(unittest.IsolatedAsyncioTestCase):
     async def test_summary_welcome(self):
         path=self.make_db('welcome.db','CREATE TABLE welcome_config (guild_id INTEGER, welcome_channel INTEGER, farewell_channel INTEGER, auto_roles TEXT)',[(123,777,0,'1,2,')])
         with patch.object(routes,'DB_WELCOME',path):
-            self.assertEqual(await routes._guild_module_summary('welcome',123),{'welcome_channel':777,'farewell_channel':0,'auto_roles_count':2})
+            self.assertEqual(await routes._guild_module_summary('welcome',123),{'welcome_channel':777,'farewell_channel':0,'auto_roles_count':2,'enabled':1})
             self.assertIsNone(await routes._guild_module_summary('welcome',999))
 
     async def test_summary_automod_counts_rules(self):
         path=self.make_db('automod.db','CREATE TABLE automod_config (guild_id INTEGER, log_channel INTEGER, anti_spam INTEGER, anti_badword INTEGER, anti_link INTEGER, anti_caps INTEGER, anti_repeat INTEGER)',[(123,5,1,0,1,0,1)])
         with patch.object(routes,'DB_AUTOMOD',path):
-            self.assertEqual(await routes._guild_module_summary('automod',123),{'log_channel':5,'rules_on':3})
+            self.assertEqual(await routes._guild_module_summary('automod',123),{'log_channel':5,'rules_on':3,'enabled':1})
+
+    async def test_summary_reports_real_enabled_flag(self):
+        path=self.make_db('botlog.db','CREATE TABLE botlog_config (guild_id INTEGER, channel_id INTEGER, enabled INTEGER)',[(123,0,0)])
+        with patch.object(routes,'DB_BOTLOG',path):
+            self.assertEqual(await routes._guild_module_summary('botlog',123),{'channel_id':0,'enabled':0})
 
     async def test_summary_counts_panels_and_active_giveaways(self):
         rr=self.make_db('rr.db','CREATE TABLE rr_panels (message_id INTEGER, guild_id INTEGER)',[(1,123),(2,123),(3,456)])

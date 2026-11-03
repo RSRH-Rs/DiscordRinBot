@@ -1,0 +1,122 @@
+/* Server overview: Rin's duty card, per-module config summaries and quick switches. */
+window.Overview = (() => {
+    const {tr} = Console;
+    const TOGGLE_SLUGS = ['welcome', 'automod', 'botlog', 'serverlog'];
+    const el = id => document.getElementById(id);
+
+    // Returns {text, warn} built from this server's saved config, or null to fall back to the module blurb.
+    function summaryText(slug, summary, channels) {
+        if (!summary) return null;
+        let deleted = false;
+        const channel = id => {
+            const name = Console.channelName(id, channels);
+            if (name === null) deleted = true;
+            return name;
+        };
+        const parts = [];
+        let warn = null;
+        if (slug === 'welcome') {
+            if (!summary.welcome_channel && !summary.farewell_channel && !summary.auto_roles_count) warn = 'overview.welcome.unset';
+            if (summary.welcome_channel) parts.push(tr('overview.sends_to', {channel: channel(summary.welcome_channel)}));
+            if (summary.auto_roles_count) parts.push(tr('overview.welcome.roles', {n: summary.auto_roles_count}));
+            if (summary.farewell_channel) parts.push(tr('overview.welcome.farewell', {channel: channel(summary.farewell_channel)}));
+        } else if (slug === 'botlog' || slug === 'serverlog') {
+            if (!summary.channel_id) warn = 'overview.log.unset';
+            else parts.push(tr('overview.sends_to', {channel: channel(summary.channel_id)}));
+        } else if (slug === 'automod') {
+            parts.push(tr('overview.automod.rules', {n: summary.rules_on}));
+            if (summary.log_channel) parts.push(tr('overview.logs_to', {channel: channel(summary.log_channel)}));
+        } else if (slug === 'moderation') {
+            parts.push(summary.log_channel ? tr('overview.logs_to', {channel: channel(summary.log_channel)}) : tr('overview.moderation.no_log'));
+            if (summary.mute_at) parts.push(tr('overview.moderation.mute_at', {n: summary.mute_at}));
+        } else if (slug === 'music') {
+            parts.push(summary.notify_channel ? tr('overview.music.notify', {channel: channel(summary.notify_channel)}) : tr('overview.music.default'));
+            if (summary.dj_role) parts.push(tr('overview.music.dj'));
+        } else if (slug === 'roles') {
+            parts.push(summary.panels ? tr('overview.roles.panels', {n: summary.panels}) : tr('overview.roles.none'));
+        } else if (slug === 'giveaway') {
+            parts.push(summary.active ? tr('overview.giveaway.active', {n: summary.active}) : tr('overview.giveaway.none'));
+        } else {
+            return null;
+        }
+        if (deleted) return {text: tr('overview.channel_deleted'), warn: true};
+        if (warn) return {text: tr(warn), warn: true};
+        return {text: parts.join(' · '), warn: false};
+    }
+
+    async function toggle(slug, enabled, input) {
+        const holder = input.closest('.tog');
+        if (DashboardUI.dirty('pg-' + slug)) {
+            input.checked = !enabled;
+            Console.toast(tr('overview.toggle_blocked'), 'bad');
+            return false;
+        }
+        input.disabled = true;
+        holder?.setAttribute('aria-busy', 'true');
+        try {
+            await Console.api(`/modules/${slug}/enabled`, 'POST', {enabled});
+            Console.invalidate(slug);
+            Console.refreshModules();
+            return true;
+        } catch (e) {
+            input.checked = !enabled;
+            Console.toast(tr('overview.toggle_failed', {reason: e.message}), 'bad');
+            return false;
+        } finally {
+            input.disabled = false;
+            holder?.removeAttribute('aria-busy');
+        }
+    }
+
+    function joinDuration(iso) {
+        const days = Math.floor((Date.now() - new Date(iso)) / 86400000);
+        if (days < 1) return tr('overview.duration.today');
+        if (days < 30) return tr('overview.duration.days', {n: days});
+        if (days < 365) return tr('overview.duration.months', {n: Math.floor(days / 30)});
+        const y = Math.floor(days / 365), m = Math.floor((days % 365) / 30);
+        return m ? tr('overview.duration.years_months', {y, m}) : tr('overview.duration.years', {n: y});
+    }
+
+    async function loadInfo() {
+        const facts = [];
+        try {
+            const info = await Console.api('/info');
+            if (info.bot_joined_at) el('ov-headline').textContent = tr('overview.hero', {time: joinDuration(info.bot_joined_at)});
+            if (info.member_count) facts.push(tr('overview.fact.members', {n: info.member_count.toLocaleString()}));
+            if (info.online_count) facts.push(tr('overview.fact.online', {n: info.online_count.toLocaleString()}));
+            if (info.text_channels) facts.push(tr('overview.fact.text', {n: info.text_channels}));
+        } catch { /* the card keeps its default line */ }
+        try {
+            const commands = await Console.commands();
+            facts.push(tr('overview.fact.commands', {on: commands.filter(c => c.enabled).length, total: commands.length}));
+        } catch { /* optional */ }
+        el('ov-facts').textContent = facts.join(' · ');
+    }
+
+    async function render(data) {
+        let list = [];
+        try { list = await Console.channels(); } catch { /* summaries fall back to blurbs */ }
+        for (const m of data.modules) {
+            const row = document.querySelector(`[data-row="${m.slug}"]`);
+            if (!row) continue;
+            const node = row.querySelector('[data-summary]');
+            const summary = summaryText(m.slug, m.summary, list);
+            node.textContent = summary ? summary.text : node.dataset.blurb;
+            node.classList.toggle('is-warn', !!summary?.warn);
+            const input = row.querySelector('input[data-toggle]');
+            if (input && !input.disabled) input.checked = m.summary ? !!m.summary.enabled : m.config_state !== 'disabled';
+            row.querySelector('[data-state]').textContent = Console.stateLabel(m);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        if (!el('pg-overview')) return;
+        document.addEventListener('console:modules', e => render(e.detail));
+        document.querySelectorAll('input[data-toggle]').forEach(input => {
+            input.addEventListener('change', () => toggle(input.dataset.toggle, input.checked, input));
+        });
+        loadInfo();
+    });
+
+    return {TOGGLE_SLUGS, summaryText, toggle, joinDuration, render};
+})();
