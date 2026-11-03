@@ -101,6 +101,15 @@ class DashboardTemplateTests(unittest.TestCase):
         for name in ['dashboard.html','server.html','settings.html','login_gate.html','error.html']:
             yield name,self.render(name)[0]
 
+    def test_login_gate_sits_on_a_blurred_console_backdrop(self):
+        html,_=self.render('login_gate.html')
+        backdrop=re.search(r'<div class="gate-backdrop" aria-hidden="true">(.*?)</div>\s*<main class="gate',html,re.S)
+        self.assertIsNotNone(backdrop)
+        for part in ['fake-rail','fake-nav','fake-main']:self.assertIn(part,backdrop.group(1))
+        self.assertNotIn('<a ',backdrop.group(1))
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertRegex(css,r'\.gate-backdrop\s*\{[^}]*filter:\s*blur\(')
+
     def test_no_inline_styles_or_cdn(self):
         for name,html in self.render_all():
             for banned in ['style="','unpkg.com','@latest','Noto+Sans+SC','Nunito','lucide']:

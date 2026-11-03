@@ -8,9 +8,35 @@
     <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600&display=swap" onload="this.rel='stylesheet'">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/console.css') }}?v=20261102a">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/console.css') }}?v=20261102b">
 </head>
 <body class="gate-body">
+<div class="gate-backdrop" aria-hidden="true">
+    <div class="fake-rail">
+        <span class="fake-orb fake-orb--home"></span>
+        <span class="fake-sep"></span>
+        {%- for _ in range(4) %}<span class="fake-orb"></span>{% endfor %}
+    </div>
+    <div class="fake-nav">
+        <span class="fake-line fake-line--head"></span>
+        {%- for group in [3, 4, 2] %}{% set first_group = loop.first %}
+        <span class="fake-line fake-line--group"></span>
+        {%- for _ in range(group) %}<span class="fake-item{{ ' is-current' if first_group and loop.first else '' }}"><span class="fake-dot"></span><span class="fake-line"></span></span>{% endfor %}
+        {%- endfor %}
+    </div>
+    <div class="fake-main">
+        <div class="fake-topbar"><span class="fake-line fake-line--title"></span></div>
+        <div class="fake-content">
+            <div class="fake-duty"><span class="fake-avatar"></span><span class="fake-lines"><span class="fake-line fake-line--title"></span><span class="fake-line"></span></span></div>
+            {%- for rows in [4, 3] %}
+            <span class="fake-line fake-line--group"></span>
+            <div class="fake-list">
+                {%- for _ in range(rows) %}<div class="fake-row"><span class="fake-lines"><span class="fake-line fake-line--title"></span><span class="fake-line"></span></span><span class="fake-switch{{ ' is-on' if loop.index is odd else '' }}"></span></div>{% endfor %}
+            </div>
+            {%- endfor %}
+        </div>
+    </div>
+</div>
 <main class="gate">
     <img class="gate-art" src="{{ url_for('static', filename='images/rin/confused-480.webp') }}" alt="" width="160" height="160">
     <h1 class="display">{{ tr('gate.heading') }}</h1>
