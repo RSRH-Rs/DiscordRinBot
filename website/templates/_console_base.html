@@ -64,15 +64,18 @@
         </div>
         {% block side_search %}{% endblock %}
         <nav class="nav-body" id="side-modules">{% block nav %}{% endblock %}</nav>
-        <div class="user-row">
-            <img src="{{ user.avatar_url }}" alt="" class="user-avatar" width="32" height="32">
-            <span class="user-name" title="{{ user.name }}">{{ user.name }}</span>
+        <div class="theme-row">
+            <span class="theme-label">{{ tr('theme.label') }}</span>
             <span class="theme-switch" role="group" aria-label="{{ tr('theme.label') }}">
                 {%- for value, name in [('light', 'sun'), ('', 'monitor'), ('dark', 'moon')] %}
                 {%- set label = tr('theme.' ~ (value or 'system')) %}
                 <button type="button" data-theme-set="{{ value }}" title="{{ label }}" aria-label="{{ label }}" aria-pressed="false">{{ icon(name) }}</button>
                 {%- endfor %}
             </span>
+        </div>
+        <div class="user-row">
+            <img src="{{ user.avatar_url }}" alt="" class="user-avatar" width="32" height="32">
+            <span class="user-name" title="{{ user.name }}">{{ user.name }}</span>
             <a class="user-logout" href="/logout" title="{{ tr('nav.logout') }}" aria-label="{{ tr('nav.logout') }}">{{ icon('log-out') }}</a>
         </div>
     </aside>
