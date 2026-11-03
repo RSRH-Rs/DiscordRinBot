@@ -5,6 +5,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch, AsyncMock
 from quart import Quart
 from test_bot_avatar import routes
@@ -70,6 +71,13 @@ class DashboardStatusTests(unittest.IsolatedAsyncioTestCase):
     async def test_status_requires_guild_access(self):
         with patch.object(routes,'check_guild_access',AsyncMock(return_value=False)):
             self.assertEqual((await self.client.get('/api/guild/123/modules')).status_code,401)
+
+    def test_manageable_guilds_filters_and_orders(self):
+        guilds=[SimpleNamespace(id='1',permissions=0x20),SimpleNamespace(id='2',owner=True,permissions=0),
+                SimpleNamespace(id='3',permissions=0x8),SimpleNamespace(id='4',permissions=0)]
+        result=routes.manageable_guilds(guilds,{2})
+        self.assertEqual([g.id for g in result],['2','1','3'])
+        self.assertEqual([g.bot_joined for g in result],[True,False,False])
 
     async def test_not_joined_and_no_private_guild_list_leak(self):
         self.heartbeat(guild_ids=['456'])

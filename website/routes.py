@@ -525,6 +525,16 @@ def has_manage_permission(guild) -> bool:
         return False
 
 
+def manageable_guilds(all_guilds, bot_guild_ids) -> list:
+    """可管理的服务器，已加入小凛的排在前面，组内保持 Discord 返回的顺序。"""
+    result = []
+    for g in all_guilds:
+        if has_manage_permission(g):
+            g.bot_joined = int(g.id) in bot_guild_ids
+            result.append(g)
+    return sorted(result, key=lambda g: not g.bot_joined)
+
+
 _BOT_GUILDS_TTL = 60  # 秒
 _bot_guilds_cache = (0.0, set())  # (时间戳, guild id 集合)
 
@@ -848,16 +858,11 @@ def setup_routes(app, discord):
                 return await render_template("login_gate.html")
             user = await discord.fetch_user()
             all_guilds = await discord.fetch_guilds()
-            bot_guild_ids = await fetch_bot_guild_ids()
-            manageable = []
-            for g in all_guilds:
-                if has_manage_permission(g):
-                    g.bot_joined = int(g.id) in bot_guild_ids
-                    manageable.append(g)
+            guilds = manageable_guilds(all_guilds, await fetch_bot_guild_ids())
             return await render_template(
                 "dashboard.html",
                 user=user,
-                guilds=manageable,
+                guilds=guilds,
                 is_owner=await is_owner(discord),
             )
         except Exception as e:
@@ -876,7 +881,12 @@ def setup_routes(app, discord):
                     403,
                 )
             user = await discord.fetch_user()
-            return await render_template("settings.html", user=user)
+            guilds = manageable_guilds(
+                await discord.fetch_guilds(), await fetch_bot_guild_ids()
+            )
+            return await render_template(
+                "settings.html", user=user, guilds=guilds, is_owner=True
+            )
         except Exception as e:
             return await render_template("error.html", error=str(e)), 500
 
@@ -895,7 +905,10 @@ def setup_routes(app, discord):
                     ),
                     404,
                 )
-            return await render_template("server.html", user=user, guild=current)
+            guilds = manageable_guilds(all_guilds, await fetch_bot_guild_ids())
+            return await render_template(
+                "server.html", user=user, guild=current, guilds=guilds
+            )
         except Exception as e:
             return await render_template("error.html", error=str(e)), 500
 
