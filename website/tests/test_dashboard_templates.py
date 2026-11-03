@@ -80,10 +80,9 @@ class DashboardTemplateTests(unittest.TestCase):
 
     def test_homepage_tab_title_stays_short_in_both_languages(self):
         html=(ROOT/'templates/index.html').read_text(encoding='utf-8')
-        self.assertIn('<title id="pg-title">小凛Rinbot</title>',html)
-        self.assertIn("lang:'English', title:'小凛Rinbot'",html)
-        self.assertIn("lang:'中文', title:'小凛Rinbot'",html)
-        self.assertIn('document.title=t.title;',html)
+        self.assertIn('<title>小凛Rinbot</title>',html)
+        self.assertEqual(html.count("title: '小凛Rinbot'"),2)
+        self.assertIn('document.title = t.title;',html)
 
     def test_disclosure_arrow_uses_centered_lucide_svg(self):
         css=(ROOT/'static/css/dashboard-extras.css').read_text(encoding='utf-8')
