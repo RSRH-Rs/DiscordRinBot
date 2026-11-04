@@ -85,7 +85,7 @@
 
 ### 4.3 长度上限
 
-模板按 Discord 的上限截断，超出部分用"…"结尾：标题 256 字，正文 4096 字，字段名 256 字，字段值 1024 字，页脚 2048 字，作者行 256 字，字段最多 25 个。全部文字加起来超过 6000 字时，再截正文。值为空的字段直接跳过。
+模板按 Discord 的上限截断，超出部分用"…"结尾：标题 256 字，正文 4096 字，字段名 256 字，字段值 1024 字，页脚 2048 字，作者行 256 字，字段最多 25 个。全部文字加起来超过 6000 字时，再截正文；正文截完还超，就从最后一个字段开始删。值为空的字段直接跳过。
 
 ### 4.4 代码结构
 
@@ -93,7 +93,7 @@
   - 五种颜色常量和 `COLORS` 表。
   - `build(kind, title=None, description=None, fields=(), footer=None, author=None, timestamp=None, ...) -> dict`：按第 4.2、4.3 节的规则生成 Discord embed 的 JSON，`kind` 不是五种之一时报错。
   - `event_kind(event) -> kind`：第 4.1 节日志分色表。
-  - `giveaway(...) -> dict`：抽奖消息，机器人和网页共用（第 5.3 节）。
+  - `giveaway_running(...) -> dict`、`giveaway_ended(...) -> dict`：抽奖消息，机器人和网页共用（第 5.3 节）。
   - `LOG_LEVELS`：系统日志级别的颜色和中文名，`botlog.py` 和 `routes.py` 都从这里读。
 - **`rinbot/cogs/_messages.py`**（新，机器人专用，沿用 `_botlog_helper.py` 的放法）：
   - `embed(kind, title=None, description=None, **kw) -> discord.Embed`：把 `build()` 的结果转成 `discord.Embed`，调用方之后仍可设缩略图、大图。
@@ -146,7 +146,7 @@
 
 ### 5.3 抽奖消息
 
-`rincore.embeds.giveaway()` 生成三种状态，机器人 `/giveaway start`、网页创建、机器人开奖都调用它：
+`rincore.embeds` 的 `giveaway_running()` 生成进行中的消息、`giveaway_ended()` 生成后两种，机器人 `/giveaway start`、网页创建、机器人开奖都调用它：
 
 - **进行中**（信息）：标题"抽奖：{奖品}"；字段"中奖人数 {n} 人"、"结束时间 {相对时间}（{具体时间}）"、"发起人 {@发起人}"（网页创建时没有发起人就不显示）、"参加条件 需要 {@身份组}"（有限制时）；页脚"点下方按钮参加"。
 - **已开奖**（成功）：标题"抽奖结束：{奖品}"；字段"中奖者 {@…}"；页脚"抽奖 #{id}"。
