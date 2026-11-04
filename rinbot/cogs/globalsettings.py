@@ -10,6 +10,7 @@ import time
 from typing import NamedTuple
 
 from _messages import block_notice, embed, send_notice
+from rincore import legacy
 
 try:
     from config import OWNER_ID
@@ -19,6 +20,17 @@ except ImportError:
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "globalsettings.db"
 )
+
+
+async def migrate_global_rows(db) -> None:
+    """全局停用记录里的旧指令名换成新名字（幂等）。"""
+    cur = await db.execute("SELECT name FROM global_disabled_cmds")
+    names = {row[0] for row in await cur.fetchall()}
+    migrated = legacy.migrate_disabled(names)
+    if migrated != names:
+        await db.execute("DELETE FROM global_disabled_cmds")
+        await db.executemany("INSERT INTO global_disabled_cmds (name) VALUES (?)", [(n,) for n in sorted(migrated)])
+    await db.commit()
 
 
 class Block(NamedTuple):
@@ -85,6 +97,7 @@ class GlobalSettings(commands.Cog):
                 "CREATE TABLE IF NOT EXISTS global_disabled_cmds (name TEXT PRIMARY KEY)"
             )
             await db.commit()
+            await migrate_global_rows(db)
 
     async def _reload(self):
         async with aiosqlite.connect(DB_PATH) as db:

@@ -113,7 +113,8 @@ def test_no_bare_permission_checks():
     assert bad == []
 
 
-def test_groups_cover_subcommand_permissions():
+def test_subcommands_check_at_least_the_group_permissions():
+    # 能用子指令的人一定看得到组；斜杠子指令不跑组上的检查，所以每个子指令自己也要检查组要求的权限
     bad = []
     for path in COGS:
         funcs = [n for n in ast.walk(_tree(path)) if isinstance(n, ast.AsyncFunctionDef)]
@@ -127,12 +128,19 @@ def test_groups_cover_subcommand_permissions():
                 if not (isinstance(node, ast.Attribute) and node.attr == "command" and isinstance(node.value, ast.Name)):
                     continue
                 group = groups.get(node.value.id)
-                needed = _require_perms(f)
-                if group is None or not needed:
+                group_perms = _require_perms(group) if group is not None else None
+                if not group_perms:
                     continue
-                if not needed <= (_require_perms(group) or set()):
+                if not group_perms <= (_require_perms(f) or set()):
                     bad.append((os.path.basename(path), group.name, f.name))
     assert bad == []
+
+
+def test_giveaway_list_checks_manage_guild():
+    from cogs import giveaway
+
+    checks = giveaway.Giveaway.giveaway_group.get_command("list").checks
+    assert any("has_permissions" in c.__qualname__ for c in checks)
 
 
 def test_owner_commands_use_owner_only():

@@ -10,7 +10,7 @@ import traceback
 import uuid
 
 from _inputs import BadDuration, DurationTooLong
-from _messages import Notice, send_notice
+from _messages import Notice, send_moved, send_notice
 from rincore.durations import label
 
 
@@ -154,6 +154,11 @@ class ErrorHandler(commands.Cog):
         if (ctx.command and ctx.command.has_error_handler()) or (
             ctx.cog and ctx.cog.has_error_handler()
         ):
+            return
+        if isinstance(error, commands.CommandNotFound):
+            # 删掉的设置指令告诉用户去控制台；其他找不到的指令照旧不回复
+            if ctx.invoked_with:
+                await send_moved(ctx, ctx.invoked_with.lower())
             return
         notice = notice_for(error, command=ctx.command, slash=ctx.interaction is not None)
         if notice is None:

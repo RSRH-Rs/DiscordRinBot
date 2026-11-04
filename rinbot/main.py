@@ -1,11 +1,12 @@
 # main.py
+import copy
 import discord
 from discord.ext import commands
 import os
 import sys
 import time
 from config import TOKEN
-from rincore import storage, sync
+from rincore import legacy, storage, sync
 from rincore.command_i18n import CommandTranslator
 
 # cogs/ 里的辅助模块（如 _botlog_helper）用绝对导入，需把 cogs 目录加进 sys.path
@@ -29,6 +30,16 @@ class HybridBot(commands.Bot):
         )
         self.start_time = time.time()
         self.change_watcher = sync.ChangeWatcher()
+
+    async def get_context(self, origin, /, *, cls=commands.Context):
+        # 旧前缀名（r!warns 等）在解析前改写成新指令，权限、停用和报错都照常生效；
+        # 改的是消息的副本，自动审核等监听器读到的仍是原文
+        if isinstance(origin, discord.Message):
+            rewritten = legacy.rewrite(origin.content)
+            if rewritten != origin.content:
+                origin = copy.copy(origin)
+                origin.content = rewritten
+        return await super().get_context(origin, cls=cls)
 
     async def setup_hook(self):
         await storage.enable_wal()

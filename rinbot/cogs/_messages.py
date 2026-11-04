@@ -5,7 +5,7 @@ from typing import NamedTuple, Optional
 
 import discord
 
-from rincore import embeds
+from rincore import embeds, legacy
 
 PREFIX_PRIVATE_SECONDS = 15  # 前缀指令没法私密回复，提示过这么久自动删除
 
@@ -69,6 +69,27 @@ async def send(target, embed: discord.Embed, *, private: bool = False, view=None
 async def send_notice(target, notice: Notice) -> None:
     """私密发出一条提示（报错、拦截、冷却等）。"""
     await send(target, embed(notice.kind, notice.title, notice.description), private=True)
+
+
+def link_view(label: str, url: str) -> discord.ui.View:
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(label=label, url=url))
+    return view
+
+
+async def send_moved(ctx, key: str) -> bool:
+    """key 是删掉的设置指令时，私密提示去控制台的哪个页面改，并返回 True。"""
+    page = legacy.REMOVED.get(key)
+    if page is None or ctx.guild is None:
+        return False
+    slug, name = page
+    await send(
+        ctx,
+        embed("info", "这项设置已移到控制台", f"在控制台的「{name}」里修改。"),
+        private=True,
+        view=link_view("打开控制台", legacy.dashboard_url(ctx.guild.id, slug)),
+    )
+    return True
 
 
 def block_notice(block, *, component: bool = False) -> Optional[Notice]:

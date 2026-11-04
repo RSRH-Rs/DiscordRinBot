@@ -14,6 +14,7 @@ import os
 from _botlog_helper import audit
 from _perms import require
 from _messages import embed
+from rincore import legacy
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -34,6 +35,23 @@ PROTECTED_COMMANDS = {
 }
 
 
+async def migrate_rows(db) -> None:
+    """停用记录里的旧指令名换成新名字（幂等，每次加载跑一遍也没关系）。"""
+    cur = await db.execute("SELECT guild_id, command_name FROM disabled_commands")
+    by_guild: dict[int, set[str]] = {}
+    for guild_id, name in await cur.fetchall():
+        by_guild.setdefault(guild_id, set()).add(name)
+    for guild_id, names in by_guild.items():
+        migrated = legacy.migrate_disabled(names)
+        if migrated != names:
+            await db.execute("DELETE FROM disabled_commands WHERE guild_id = ?", (guild_id,))
+            await db.executemany(
+                "INSERT INTO disabled_commands (guild_id, command_name) VALUES (?, ?)",
+                [(guild_id, name) for name in sorted(migrated)],
+            )
+    await db.commit()
+
+
 class CommandToggle(commands.Cog):
     """指令管理 — 按服务器启用/禁用指令"""
 
@@ -52,6 +70,7 @@ class CommandToggle(commands.Cog):
                 PRIMARY KEY (guild_id, command_name)
             )""")
             await db.commit()
+            await migrate_rows(db)
 
         await self._refresh_cache()
 

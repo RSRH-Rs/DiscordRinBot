@@ -476,6 +476,7 @@ class Giveaway(commands.Cog):
 
     @giveaway_group.command(name="list", description="查看当前活跃的抽奖活动")
     @commands.guild_only()
+    @require(manage_guild=True)
     async def gw_list(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
