@@ -2,11 +2,9 @@
 import discord
 from discord.ext import commands
 from _perms import owner_only
+from _messages import embed
 import aiosqlite
-import platform
-import psutil
 import time
-import datetime
 import random
 import os
 from typing import Literal
@@ -21,44 +19,20 @@ class General(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_command(
-        name="status", aliases=["stat", "info"], description="显示服务器详细状态"
+        name="status", aliases=["stat", "info"], description="查看小凛的运行状态"
     )
     async def status(self, ctx):
-        # 获取 main.py 里 bot 实例的数据
-        latency = round(self.bot.latency * 1000, 2)
-        current_time = time.time()
-
-        # 确保 bot 有 start_time 属性
-        if hasattr(self.bot, "start_time"):
-            uptime_seconds = int(current_time - self.bot.start_time)
-            uptime = str(datetime.timedelta(seconds=uptime_seconds))
-        else:
-            uptime = "未知"
-
-        cpu_usage = psutil.cpu_percent()
-        memory = psutil.virtual_memory()
-        disk = psutil.disk_usage("/")
-        os_info = f"{platform.system()} {platform.release()}"
-
-        embed = discord.Embed(title="📊 服务器状态监控", color=discord.Color.random())
-        embed.add_field(name="📶 延迟 (Ping)", value=f"`{latency} ms`", inline=True)
-        embed.add_field(name="⏱️ 运行时间", value=f"`{uptime}`", inline=True)
-        embed.add_field(
-            name="🌐 服务群组", value=f"`{len(self.bot.guilds)} 个服务器`", inline=True
+        # 只给机器人自己的状态；主机的 CPU、内存、磁盘不对外公开
+        card = embed(
+            "info",
+            "小凛的运行状态",
+            fields=[
+                ("延迟", f"{round(self.bot.latency * 1000)} 毫秒"),
+                ("上次启动", f"<t:{int(self.bot.start_time)}:R>"),
+                ("服务器", f"{len(self.bot.guilds)} 个"),
+            ],
         )
-        embed.add_field(name="💻 CPU 使用率", value=f"`{cpu_usage}%`", inline=True)
-        embed.add_field(
-            name="🧠 内存使用",
-            value=f"`{memory.percent}%` ({round(memory.used/1024/1024/1024, 1)}GB / {round(memory.total/1024/1024/1024, 1)}GB)",
-            inline=True,
-        )
-        embed.add_field(name="💾 磁盘使用", value=f"`{disk.percent}%`", inline=True)
-        embed.add_field(name="🖥️ 操作系统", value=f"`{os_info}`", inline=False)
-        embed.set_footer(
-            text=f"请求者: {ctx.author.name}", icon_url=ctx.author.display_avatar.url
-        )
-
-        await ctx.send(embed=embed)
+        await ctx.send(embed=card)
 
     @commands.hybrid_command(
         name="roll", aliases=["dice", "touzi"], description="投掷骰子 (默认6面)"
@@ -75,18 +49,14 @@ class General(commands.Cog):
     )
     async def avatar(self, ctx, member: discord.Member = None):
         target = member or ctx.author
-        embed = discord.Embed(
-            title=f"{target.name} 的头像", color=discord.Color.random()
-        )
-        embed.set_image(url=target.display_avatar.url)
+        card = embed("info", f"{target.name} 的头像")
+        card.set_image(url=target.display_avatar.url)
 
-        button = discord.ui.Button(
-            label="Full size", url=target.display_avatar.url, emoji="🖼️"
-        )
+        button = discord.ui.Button(label="查看原图", url=target.display_avatar.url)
         view = discord.ui.View()
         view.add_item(button)
 
-        await ctx.send(embed=embed, view=view)
+        await ctx.send(embed=card, view=view)
 
     @commands.hybrid_command(
         name="setstatus", description="[Owner] 修改机器人的活动状态"
@@ -167,10 +137,7 @@ class General(commands.Cog):
             # 修改 Application 的 description
             await self.bot.application.edit(description=text)
 
-            embed = discord.Embed(
-                title="✅ 简介更新成功", description=text, color=discord.Color.green()
-            )
-            await ctx.send(embed=embed)
+            await ctx.send(embed=embed("success", "简介已更新", text))
 
         except discord.HTTPException as e:
             await ctx.send(f"❌ 更新失败: {e}")

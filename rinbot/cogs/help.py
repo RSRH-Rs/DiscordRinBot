@@ -1,6 +1,11 @@
+from typing import Optional
+
 import discord
 from discord.ext import commands
 from discord.ui import Select, View
+
+from _messages import Notice, embed, send_notice
+from _perms import is_owner_only, required_permissions
 
 # Cog 元数据(emoji + 描述)— 没列在这的 cog 会被隐藏
 COG_META = {
@@ -67,15 +72,25 @@ def _command_is_disabled(bot, guild_id, cmd) -> bool:
     return bool(toggle and toggle.is_disabled(guild_id, root_name))
 
 
-def _collect_commands(cog, bot, guild_id=None) -> list:
-    """收集 cog 下所有可见命令(展开 hybrid group 的子命令)"""
+def visible(command, perms: Optional[discord.Permissions]) -> bool:
+    """这个人能不能看到这条指令：主人指令谁都不列；需要权限的指令要有全部这些权限（私信里一律不列）。"""
+    if is_owner_only(command):
+        return False
+    required = required_permissions(command)
+    if required is None:
+        return True
+    return perms is not None and perms >= required
+
+
+def _collect_commands(cog, bot, guild_id=None, perms=None) -> list:
+    """收集 cog 下这个人能用的命令(展开 hybrid group 的子命令)"""
     lines = []
     for cmd in cog.get_commands():
-        if cmd.hidden or _command_is_disabled(bot, guild_id, cmd):
+        if cmd.hidden or _command_is_disabled(bot, guild_id, cmd) or not visible(cmd, perms):
             continue
         if isinstance(cmd, commands.HybridGroup) or isinstance(cmd, commands.Group):
             for sub in cmd.commands:
-                if not sub.hidden:
+                if not sub.hidden and visible(sub, perms):
                     lines.append(_format_command(sub))
         else:
             lines.append(_format_command(cmd))
@@ -83,9 +98,10 @@ def _collect_commands(cog, bot, guild_id=None) -> list:
 
 
 class HelpDropdown(Select):
-    def __init__(self, bot, guild_id=None):
+    def __init__(self, bot, guild_id=None, perms=None):
         self.bot = bot
         self.guild_id = guild_id
+        self.perms = perms
         options = [
             discord.SelectOption(
                 label="🏠 首页", description="回到功能概览", value="home"
@@ -98,7 +114,7 @@ class HelpDropdown(Select):
             cog = bot.get_cog(cog_name)
             if not cog:
                 continue
-            if not _collect_commands(cog, bot, guild_id):
+            if not _collect_commands(cog, bot, guild_id, perms):
                 continue
             options.append(
                 discord.SelectOption(
@@ -120,66 +136,61 @@ class HelpDropdown(Select):
         value = self.values[0]
 
         if value == "home":
-            embed = _build_home_embed(self.bot, interaction.guild_id)
+            card = _build_home_embed(self.bot, interaction.guild_id, self.perms)
         else:
             cog = self.bot.get_cog(value)
+            if not cog:
+                await send_notice(interaction, Notice("error", "找不到这个模块"))
+                return
             meta = COG_META.get(value, {"emoji": "📂", "label": value, "desc": ""})
-            if cog:
-                lines = _collect_commands(cog, self.bot, interaction.guild_id)
-                embed = discord.Embed(
-                    title=f"{meta['emoji']} {meta['label']}",
-                    description=(
-                        meta["desc"] + "\n\n" + "\n".join(lines)
-                        if lines
-                        else "该模块暂时没有可用指令。"
-                    ),
-                    color=discord.Color.pink(),
-                )
-                embed.set_footer(text=f"共 {len(lines)} 个指令")
-            else:
-                embed = discord.Embed(
-                    title="❌ 错误",
-                    description="找不到该模块。",
-                    color=discord.Color.red(),
-                )
+            lines = _collect_commands(cog, self.bot, interaction.guild_id, self.perms)
+            card = embed(
+                "info",
+                meta["label"],
+                meta["desc"] + "\n\n" + "\n".join(lines) if lines else "该模块暂时没有可用指令。",
+                footer=f"共 {len(lines)} 个指令",
+            )
 
-        await interaction.response.edit_message(embed=embed)
+        await interaction.response.edit_message(embed=card)
 
 
-def _build_home_embed(bot, guild_id=None):
-    embed = discord.Embed(
-        title="✨ 小凛 RinBot 指令中心",
-        description=(
-            "你的全能 Discord 小助手 (´• ω •`)ﾉ\n" "下方菜单选择模块查看详细指令。\n"
-        ),
-        color=discord.Color.pink(),
-    )
-    if bot.user:
-        embed.set_thumbnail(url=bot.user.display_avatar.url)
-
+def _build_home_embed(bot, guild_id=None, perms=None):
     available = []
     for cog_name, meta in COG_META.items():
         if cog_name in HIDDEN_COGS:
             continue
         cog = bot.get_cog(cog_name)
-        if cog and _collect_commands(cog, bot, guild_id):
-            available.append(f"{meta['emoji']} **{meta['label']}** — *{meta['desc']}*")
+        if cog and _collect_commands(cog, bot, guild_id, perms):
+            available.append(f"**{meta['label']}** — {meta['desc']}")
 
-    if available:
-        embed.add_field(
-            name="📦 已加载的模块",
-            value="\n".join(available),
-            inline=False,
-        )
-
-    embed.set_footer(text=f"共 {len(available)} 个模块 · 菜单 120 秒后失效")
-    return embed
+    card = embed(
+        "info",
+        "小凛 RinBot 指令中心",
+        "你的全能 Discord 小助手 (´• ω •`)ﾉ\n下方菜单选择模块查看详细指令。",
+        fields=[("已加载的模块", "\n".join(available), False)],
+        footer="菜单 2 分钟后失效",
+    )
+    if bot.user:
+        card.set_thumbnail(url=bot.user.display_avatar.url)
+    return card
 
 
 class HelpView(View):
-    def __init__(self, bot, guild_id=None):
+    def __init__(self, bot, guild_id=None, perms=None, owner_id=None, owner_name=""):
         super().__init__(timeout=120)
-        self.add_item(HelpDropdown(bot, guild_id))
+        self.owner_id = owner_id
+        self.owner_name = owner_name
+        self.add_item(HelpDropdown(bot, guild_id, perms))
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        # 前缀调用的菜单发在频道里，只让打开它的人操作
+        if self.owner_id is not None and interaction.user.id != self.owner_id:
+            await send_notice(
+                interaction,
+                Notice("warning", f"这个菜单是 {self.owner_name} 打开的", "你可以自己输入 /help。"),
+            )
+            return False
+        return True
 
 
 class Help(commands.Cog):
@@ -189,9 +200,10 @@ class Help(commands.Cog):
     @commands.hybrid_command(name="help", description="打开交互式指令菜单")
     async def help(self, ctx):
         guild_id = ctx.guild.id if ctx.guild else None
-        embed = _build_home_embed(self.bot, guild_id)
-        view = HelpView(self.bot, guild_id)
-        await ctx.send(embed=embed, view=view)
+        perms = ctx.author.guild_permissions if ctx.guild else None
+        card = _build_home_embed(self.bot, guild_id, perms)
+        view = HelpView(self.bot, guild_id, perms, ctx.author.id, ctx.author.display_name)
+        await ctx.send(embed=card, view=view, ephemeral=True)
 
 
 async def setup(bot):

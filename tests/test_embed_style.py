@@ -7,8 +7,8 @@ import re
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-# 所有 cog（新加的自动受约束）；网易云模块不进仓库，_messages 本身负责转换，general/help 在 Task 8 改
-PENDING = {"netease.py", "_messages.py", "general.py", "help.py"}
+# 所有 cog（新加的自动受约束）；网易云模块不进仓库，_messages 本身负责转换
+PENDING = {"netease.py", "_messages.py"}
 MIGRATED = sorted(
     os.path.relpath(path, ROOT).replace(os.sep, "/")
     for path in glob.glob(os.path.join(ROOT, "rinbot", "cogs", "*.py"))
