@@ -297,7 +297,7 @@ class DashboardTemplateTests(unittest.TestCase):
         for name in ['dashboard.html','server.html','settings.html']:
             html,_=self.render(name)
             side=html[html.index('id="sideNav"'):html.index('id="switcher"')]
-            self.assertRegex(side,r'<a class="brand-row" href="/" aria-label="回到主页"',name)
+            self.assertRegex(side,r'<a class="brand-row" href="/">',name)
 
     def test_no_crumbs_and_titles_live_in_content(self):
         for name in ['dashboard.html','server.html','settings.html']:
@@ -486,5 +486,21 @@ class DashboardTemplateTests(unittest.TestCase):
             for id_ in ids:self.assertIn(f'<label class="btn btn--secondary" for="{id_}">',html)
             self.assertEqual(len(re.findall(r'type="file"',html)),len(ids),name)
         self.assertNotIn('file-selector-button',(ROOT/'static/css/console.css').read_text(encoding='utf-8'))
+
+    def test_empty_lists_drop_their_hairlines(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertRegex(css,r':is\(\.list, \.case-list, \.lb-list, \.item-list, \.cmd-grid\):has\(> \.empty:only-child\)\s*\{[^}]*border-block: 0')
+        self.assertNotIn('.lb-list:has(.empty)',css)
+
+    def test_brand_row_is_named_by_its_text(self):
+        html,_=self.render('server.html')
+        link=re.search(r'<a class="brand-row" href="/"[^>]*>(.*?)</a>',html,re.S)
+        self.assertNotIn('aria-label',link.group(0).split('>')[0]);self.assertIn('alt=""',link.group(1))
+        self.assertIn('小凛 RinBot',link.group(1));self.assertIn('主页',link.group(1))
+        self.assertNotIn('homepage_label',json.loads((ROOT/'i18n/zh.json').read_text(encoding='utf-8'))['nav'])
+
+    def test_emoji_trigger_uses_the_field_colour(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('background: var(--field)',re.search(r'\n\.emoji-trigger\s*\{([^}]*)\}',css).group(1))
 
 if __name__=='__main__':unittest.main()

@@ -189,7 +189,7 @@ window.DashboardUI = (() => {
         menuOpener = el('menuBtn');
         root.classList.add('is-drawer-open');
         menuOpener?.setAttribute('aria-expanded', 'true');
-        root.querySelector('.sidebar a[href],.sidebar button')?.focus();
+        (el('switcher-btn') || root.querySelector('.sidebar a[href],.sidebar button'))?.focus();
     }
     document.addEventListener('keydown', e => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {

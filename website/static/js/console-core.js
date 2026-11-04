@@ -200,10 +200,11 @@ window.Console = (() => {
             });
         });
     }
-    // Switching server or going back to the homepage obeys the same draft guard as in-page links; invites open a new tab and need none.
+    // Switching server or going back to the homepage obeys the same draft guard as in-page links; invites and
+    // Ctrl/Cmd/Shift-clicks open a new tab or window, leave this page's drafts alone and need none.
     function leaveClick(event) {
         const link = event.target.closest?.('#switcher-pop a') || event.target.closest?.('a.brand-row');
-        if (!link || link.target === '_blank') return;
+        if (!link || link.target === '_blank' || event.ctrlKey || event.metaKey || event.shiftKey) return;
         if (!DashboardUI.confirmLeave([...document.querySelectorAll('[data-draft]')])) { event.preventDefault(); return; }
         if (router && link.dataset.guild) link.href = '/dashboard/server/' + link.dataset.guild + '#' + router.current();
     }

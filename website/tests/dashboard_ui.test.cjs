@@ -277,3 +277,16 @@ test('reset and clean clear every tab', () => {
     ui.clean(a);
     assert.equal(ui.changedWithin(a, second), false);
 });
+
+test('opening the drawer focuses the server switcher', () => {
+    const {ui, ctx, nodes} = fixture();
+    const focused = [], classes = new Set();
+    nodes.set('switcher-btn', {id: 'switcher-btn', focus() { focused.push('switcher'); }});
+    nodes.set('menuBtn', {setAttribute() {}, focus() {}});
+    const brand = {focus() { focused.push('brand'); }};
+    const shell = {classList: {add: c => classes.add(c), remove: c => classes.delete(c), contains: c => classes.has(c)}, querySelector: () => brand};
+    ctx.document.querySelector = selector => (selector === '.shell' ? shell : null);
+    ui.toggleSidebar();
+    assert.ok(classes.has('is-drawer-open'));
+    assert.deepEqual(focused, ['switcher']);
+});

@@ -421,6 +421,8 @@ img { max-width: 100%; }
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; text-align: center; color: var(--muted); }
 .empty img { width: 96px; height: 96px; object-fit: contain; }
+/* A list showing only its empty state draws no hairlines, whichever list it is. */
+:is(.list, .case-list, .lb-list, .item-list, .cmd-grid):has(> .empty:only-child) { border-block: 0; }
 .load-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; padding: 8px 12px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); }
 
 .tabs { display: flex; gap: 24px; margin: 0 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
@@ -534,7 +536,7 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .rr-list:empty { display: none; }
 .rr-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 36px; align-items: center; gap: 8px; }
 .rr-row .search-select { width: 100%; }
-.emoji-trigger { width: 44px; height: var(--control-h); display: flex; align-items: center; justify-content: center; border: 1px solid var(--field-line); border-radius: 8px; background: var(--panel); font-size: 16px; cursor: pointer; }
+.emoji-trigger { width: 44px; height: var(--control-h); display: flex; align-items: center; justify-content: center; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field); font-size: 16px; cursor: pointer; }
 .emoji-trigger:hover { border-color: var(--accent); background: var(--accent-soft); }
 .emoji-trigger img { width: 22px; height: 22px; }
 .ep-placeholder { opacity: .4; }
@@ -563,7 +565,6 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 /* Pages: giveaway, leveling, general, commands */
 #gw-end { width: 240px; margin-top: 8px; }
 .lb-list { display: flex; flex-direction: column; border-block: 1px solid var(--line); }
-.lb-list:has(.empty) { border: 0; }
 .lb-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
 .lb-row:first-child { border-top: 0; }
 .lb-rank { width: 32px; flex-shrink: 0; text-align: center; color: var(--muted); }

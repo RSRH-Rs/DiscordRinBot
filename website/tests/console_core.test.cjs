@@ -173,3 +173,14 @@ test('duration options carry their label so segments can reserve the bold width'
     for (const option of options) assert.equal(option.dataset.label, option.textContent);
     assert.deepEqual(options.map(o => o.dataset.label), ['1 分钟', '5 分钟', '1 小时', '1 天', '自定义']);
 });
+
+test('modifier clicks on the brand row and switcher open a new tab without the draft check', () => {
+    for (const modifier of ['ctrlKey', 'metaKey', 'shiftKey']) {
+        const blocked = core({dirty: true});
+        const link = {dataset: {guild: '456'}, href: '/dashboard/server/456'};
+        const event = {target: {closest: () => link}, [modifier]: true, prevented: false, preventDefault() { this.prevented = true; }};
+        blocked.Console.leaveClick(event);
+        assert.equal(event.prevented, false, modifier);
+        assert.equal(blocked.calls.confirm, undefined, modifier);
+    }
+});
