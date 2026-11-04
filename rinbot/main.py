@@ -6,6 +6,7 @@ import sys
 import time
 from config import TOKEN
 from rincore import storage, sync
+from rincore.command_i18n import CommandTranslator
 
 # cogs/ 里的辅助模块（如 _botlog_helper）用绝对导入，需把 cogs 目录加进 sys.path
 COGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cogs")
@@ -31,6 +32,8 @@ class HybridBot(commands.Bot):
 
     async def setup_hook(self):
         await storage.enable_wal()
+        # 中文客户端看到中文的指令说明和参数；同步指令时生效
+        await self.tree.set_translator(CommandTranslator())
         await self.change_watcher.start()  # 必须在加载 cog 之前（cog 在 cog_load 里注册回调）
         print("--- 开始加载插件 ---")
         for filename in os.listdir(COGS_DIR):

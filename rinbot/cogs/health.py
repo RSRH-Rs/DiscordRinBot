@@ -5,6 +5,7 @@
 import discord
 from discord.ext import commands, tasks
 from _perms import is_owner_only
+from rincore import command_i18n
 import json
 import os
 import time
@@ -39,7 +40,7 @@ class Health(commands.Cog):
             result.append(
                 {
                     "name": command.name,
-                    "desc": command.description or "暂无介绍",
+                    "desc": command_i18n.zh_description(command.name) or command.description or "暂无介绍",
                     "cog": cog_labels.get(cog_name, cog_name),
                 }
             )

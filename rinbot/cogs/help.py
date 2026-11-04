@@ -6,6 +6,7 @@ from discord.ui import Select, View
 
 from _messages import Notice, embed, send_notice
 from _perms import is_owner_only, required_permissions
+from rincore import command_i18n
 
 # Cog 元数据(emoji + 描述)— 没列在这的 cog 会被隐藏
 COG_META = {
@@ -60,7 +61,7 @@ HIDDEN_COGS = {"Help", "Dev", "BotConfig", "MusicConfig"}
 
 
 def _format_command(cmd) -> str:
-    desc = cmd.description or "暂无介绍"
+    desc = command_i18n.zh_description(cmd.qualified_name) or cmd.description or "暂无介绍"
     return f"**`/{cmd.qualified_name}`** — {desc}"
 
 
