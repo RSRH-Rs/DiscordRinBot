@@ -25,6 +25,7 @@ def _ytdl_run(query: str, opts: dict):
 from config import YTDL_OPTIONS, FFMPEG_OPTIONS
 from _botlog_helper import check_component
 from _messages import embed
+from _inputs import choices, is_zh
 
 try:
     from config import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
@@ -850,10 +851,10 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="play",
         aliases=["p"],
-        description="播放音乐（歌名/链接/歌单/Spotify），支持队列",
+        description="Play a song, link, playlist or Spotify link, or add it to the queue",
     )
     @commands.guild_only()
-    @discord.app_commands.describe(query="歌名、歌曲链接或歌单链接")
+    @discord.app_commands.describe(query="A song name, song link or playlist link")
     async def play(self, ctx, *, query: str):
         await ctx.defer()
         # 关键词走选择菜单（避免选错），链接/歌单直接播
@@ -928,9 +929,9 @@ class Music(commands.Cog):
         if is_list:
             await ctx.send(f"📋 已将歌单中 **{len(songs)}** 首歌加入播放！")
 
-    @commands.hybrid_command(name="search", aliases=["sc"], description="搜索歌曲并从结果中选择播放")
+    @commands.hybrid_command(name="search", aliases=["sc"], description="Search for songs and pick one to play")
     @commands.guild_only()
-    @discord.app_commands.describe(query="要搜索的歌曲名或歌手")
+    @discord.app_commands.describe(query="A song name or artist to search for")
     async def search(self, ctx, *, query: str):
         await ctx.defer()
         await self._show_picker(ctx, query)
@@ -1054,7 +1055,7 @@ class Music(commands.Cog):
     # ─── 指令：skip ───
 
     @commands.hybrid_command(
-        name="skip", aliases=["s", "next"], description="跳过当前歌曲（或投票跳过）"
+        name="skip", aliases=["s", "next"], description="Skip the current song, or vote to skip it"
     )
     @commands.guild_only()
     async def skip(self, ctx):
@@ -1064,7 +1065,7 @@ class Music(commands.Cog):
 
     # ─── 指令：pause / resume ───
 
-    @commands.hybrid_command(name="pause", description="暂停播放")
+    @commands.hybrid_command(name="pause", description="Pause the music")
     @commands.guild_only()
     async def pause(self, ctx):
         if not await self._require_voice_control(ctx):
@@ -1076,7 +1077,7 @@ class Music(commands.Cog):
         else:
             await ctx.send("❌ 当前没有在播放。")
 
-    @commands.hybrid_command(name="resume", aliases=["unpause"], description="恢复播放")
+    @commands.hybrid_command(name="resume", aliases=["unpause"], description="Resume the music")
     @commands.guild_only()
     async def resume(self, ctx):
         if not await self._require_voice_control(ctx):
@@ -1093,7 +1094,7 @@ class Music(commands.Cog):
     @commands.hybrid_command(
         name="stop",
         aliases=["dc", "disconnect", "leave"],
-        description="停止播放、清空队列并离开",
+        description="Stop the music, clear the queue and leave the voice channel",
     )
     @commands.guild_only()
     async def stop(self, ctx):
@@ -1112,7 +1113,7 @@ class Music(commands.Cog):
     # ─── 指令：nowplaying ───
 
     @commands.hybrid_command(
-        name="nowplaying", aliases=["np"], description="查看正在播放的歌曲"
+        name="nowplaying", aliases=["np"], description="Show the song that is playing"
     )
     @commands.guild_only()
     async def nowplaying(self, ctx):
@@ -1131,11 +1132,11 @@ class Music(commands.Cog):
     # ─── 指令：queue ───
 
     @commands.hybrid_command(
-        name="queue", aliases=["q", "list"], description="查看播放队列"
+        name="queue", aliases=["q", "list"], description="Show the queue"
     )
     @commands.guild_only()
-    @discord.app_commands.describe(page="队列页码，默认第 1 页")
-    async def queue(self, ctx, page: int = 1):
+    @discord.app_commands.describe(page="Which page of the queue to show")
+    async def queue(self, ctx, page: commands.Range[int, 1, None] = 1):
         state = self._get_state(ctx.guild.id)
 
         if not state.current and not state.queue:
@@ -1185,9 +1186,10 @@ class Music(commands.Cog):
     # ─── 指令：remove ───
 
     @commands.hybrid_command(
-        name="remove", aliases=["rm"], description="从队列中移除指定位置的歌曲"
+        name="remove", aliases=["rm"], description="Remove a song from the queue"
     )
     @commands.guild_only()
+    @discord.app_commands.describe(position="The song to remove; pick from the queue")
     async def remove(self, ctx, position: int):
         if not await self._require_voice_control(ctx):
             return
@@ -1202,7 +1204,7 @@ class Music(commands.Cog):
     # ─── 指令：clear ───
 
     @commands.hybrid_command(
-        name="clear", aliases=["cls"], description="清空播放队列（不影响当前播放）"
+        name="clear", aliases=["cls"], description="Clear the queue without stopping the current song"
     )
     @commands.guild_only()
     async def clear_queue(self, ctx):
@@ -1215,7 +1217,7 @@ class Music(commands.Cog):
 
     # ─── 指令：shuffle ───
 
-    @commands.hybrid_command(name="shuffle", description="随机打乱队列顺序")
+    @commands.hybrid_command(name="shuffle", description="Shuffle the queue")
     @commands.guild_only()
     async def shuffle(self, ctx):
         if not await self._require_voice_control(ctx):
@@ -1232,9 +1234,17 @@ class Music(commands.Cog):
     # ─── 指令：loop ───
 
     @commands.hybrid_command(
-        name="loop", aliases=["repeat"], description="设置循环模式"
+        name="loop", aliases=["repeat"], description="Set the loop mode; leave empty to switch to the next mode"
     )
     @commands.guild_only()
+    @discord.app_commands.describe(mode="Off, repeat this song, or repeat the whole queue")
+    @discord.app_commands.choices(
+        mode=[
+            discord.app_commands.Choice(name="Off", value="off"),
+            discord.app_commands.Choice(name="Single track", value="single"),
+            discord.app_commands.Choice(name="Whole queue", value="queue"),
+        ]
+    )
     async def loop(self, ctx, mode: Literal["off", "single", "queue"] = None):
         if not await self._require_voice_control(ctx):
             return
@@ -1251,19 +1261,16 @@ class Music(commands.Cog):
     # ─── 指令：volume ───
 
     @commands.hybrid_command(
-        name="volume", aliases=["vol"], description="调整音量 (0-100，最高可放大到 150)"
+        name="volume", aliases=["vol"], description="Show or set the volume, 0-150"
     )
     @commands.guild_only()
-    @discord.app_commands.describe(level="音量百分比，建议 30–100")
-    async def volume(self, ctx, level: int = None):
+    @discord.app_commands.describe(level="Volume in percent; 30-100 sounds best; leave empty to show it")
+    async def volume(self, ctx, level: commands.Range[int, 0, 150] = None):
         state = self._get_state(ctx.guild.id)
         if level is None:
             await ctx.send(f"🔊 当前音量: **{int(state.volume * 100)}%**")
             return
         if not await self._require_voice_control(ctx):
-            return
-        if level < 0 or level > 150:
-            await ctx.send("❌ 音量范围是 0–150；建议日常使用 30–100。")
             return
         self._set_volume(ctx.guild, state, level)
         warning = "（超过 100% 可能产生失真）" if level > 100 else ""
@@ -1271,8 +1278,9 @@ class Music(commands.Cog):
 
     # ─── 指令：move ───
 
-    @commands.hybrid_command(name="move", description="移动队列中的歌曲位置")
+    @commands.hybrid_command(name="move", description="Move a song to another place in the queue")
     @commands.guild_only()
+    @discord.app_commands.describe(from_pos="The song to move; pick from the queue", to_pos="Where to put it")
     async def move(self, ctx, from_pos: int, to_pos: int):
         if not await self._require_voice_control(ctx):
             return
@@ -1289,10 +1297,15 @@ class Music(commands.Cog):
 
     # ─── 指令：队列存档 ───
 
-    @commands.hybrid_command(
-        name="saveq", aliases=["savequeue"], description="保存当前队列为存档（可命名）"
-    )
+    @commands.hybrid_group(name="playlist", description="Save, load and delete saved queues")
     @commands.guild_only()
+    async def playlist_group(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send("用法：`r!playlist save [名字]`、`r!playlist load [名字]`、`r!playlist list`、`r!playlist delete <名字>`")
+
+    @playlist_group.command(name="save", description="Save the current queue under a name")
+    @commands.guild_only()
+    @discord.app_commands.describe(name="A name for the saved queue; default is default")
     async def saveq(self, ctx, *, name: str = "default"):
         state = self._get_state(ctx.guild.id)
         songs = ([state.current] if state.current else []) + list(state.queue)
@@ -1323,10 +1336,9 @@ class Music(commands.Cog):
             await db.commit()
         await ctx.send(f"💾 已保存队列存档 **{name}**（{len(songs)} 首）。")
 
-    @commands.hybrid_command(
-        name="loadq", aliases=["loadqueue"], description="载入已保存的队列存档"
-    )
+    @playlist_group.command(name="load", description="Add a saved queue to the queue")
     @commands.guild_only()
+    @discord.app_commands.describe(name="The saved queue to load; pick from the list")
     async def loadq(self, ctx, *, name: str = "default"):
         if not await self._require_dj(ctx):
             return
@@ -1338,7 +1350,7 @@ class Music(commands.Cog):
             )
             row = await cur.fetchone()
         if not row:
-            await ctx.send(f"❌ 找不到名为 **{name}** 的存档，用 `/queues` 查看列表。")
+            await ctx.send(f"❌ 找不到名为 **{name}** 的存档，用 `/playlist list` 查看列表。")
             return
         try:
             items = json.loads(row[0])
@@ -1367,9 +1379,7 @@ class Music(commands.Cog):
         await ctx.send(f"💿 正在载入存档 **{name}**（{len(songs)} 首）…")
         await self._play_next(ctx.guild.id)
 
-    @commands.hybrid_command(
-        name="queues", aliases=["savedqueues", "qlist"], description="查看已保存的队列存档"
-    )
+    @playlist_group.command(name="list", description="List the saved queues")
     @commands.guild_only()
     async def queues(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
@@ -1379,7 +1389,7 @@ class Music(commands.Cog):
             )
             rows = await cur.fetchall()
         if not rows:
-            await ctx.send("📭 还没有保存任何队列存档。用 `/saveq` 保存当前队列。")
+            await ctx.send("📭 还没有保存任何队列存档。用 `/playlist save` 保存当前队列。")
             return
         fields = []
         for name, sj, _ in rows[:25]:
@@ -1390,8 +1400,9 @@ class Music(commands.Cog):
             fields.append((name, f"{n} 首"))
         await ctx.send(embed=embed("info", "已保存的队列", fields=fields))
 
-    @commands.hybrid_command(name="delqueue", aliases=["delq"], description="删除一个队列存档")
+    @playlist_group.command(name="delete", description="Delete a saved queue")
     @commands.guild_only()
+    @discord.app_commands.describe(name="The saved queue to delete; pick from the list")
     async def delqueue(self, ctx, *, name: str):
         if not await self._require_dj(ctx):
             return
@@ -1409,8 +1420,43 @@ class Music(commands.Cog):
 
     # ─── 指令：join ───
 
+    @remove.autocomplete("position")
+    @move.autocomplete("from_pos")
+    @move.autocomplete("to_pos")
+    async def _position_autocomplete(self, interaction: discord.Interaction, current: str):
+        state = self._states.get(interaction.guild.id) if interaction.guild else None
+        if state is None:
+            return []
+        items = [(f"{i}. {song.title[:80]}", i) for i, song in enumerate(state.queue, start=1)]
+        return choices(items, current)
+
+    @loadq.autocomplete("name")
+    @delqueue.autocomplete("name")
+    async def _playlist_autocomplete(self, interaction: discord.Interaction, current: str):
+        if interaction.guild is None:
+            return []
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                cur = await db.execute(
+                    "SELECT name, songs_json FROM saved_queues WHERE guild_id = ? ORDER BY name",
+                    (interaction.guild.id,),
+                )
+                rows = await cur.fetchall()
+        except Exception:
+            return []
+        zh = is_zh(interaction)
+        items = []
+        for name, songs_json in rows:
+            try:
+                count = len(json.loads(songs_json))
+            except Exception:
+                count = 0
+            label = f"{name}（{count} 首）" if zh else f"{name} ({count} songs)"
+            items.append((label, name))
+        return choices(items, current)
+
     @commands.hybrid_command(
-        name="join", aliases=["j", "connect"], description="让机器人加入你的语音频道"
+        name="join", aliases=["j", "connect"], description="Have the bot join your voice channel"
     )
     @commands.guild_only()
     async def join(self, ctx):

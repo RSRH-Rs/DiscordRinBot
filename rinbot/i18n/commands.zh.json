@@ -89,6 +89,18 @@
         "/case view 12"
       ]
     },
+    "clear": {
+      "description": "清空播放队列，当前这首继续播",
+      "examples": [
+        "/clear"
+      ]
+    },
+    "join": {
+      "description": "让机器人加入你所在的语音频道",
+      "examples": [
+        "/join"
+      ]
+    },
     "kick": {
       "description": "把一名成员踢出服务器",
       "params": {
@@ -122,6 +134,35 @@
         "/lock #公告 维护中"
       ]
     },
+    "loop": {
+      "description": "设置循环模式，不填就切到下一种",
+      "params": {
+        "mode": {
+          "name": "模式",
+          "description": "关闭、单曲循环或整个队列循环"
+        }
+      },
+      "examples": [
+        "/loop single",
+        "/loop"
+      ]
+    },
+    "move": {
+      "description": "把队列里的一首歌挪到别的位置",
+      "params": {
+        "from_pos": {
+          "name": "歌曲",
+          "description": "要挪的歌，可以从队列里选"
+        },
+        "to_pos": {
+          "name": "新位置",
+          "description": "挪到第几位"
+        }
+      },
+      "examples": [
+        "/move 5 1"
+      ]
+    },
     "mute": {
       "description": "禁言一名成员（Discord 超时）",
       "params": {
@@ -142,6 +183,76 @@
         "/mute @小明 1h 刷屏"
       ]
     },
+    "nowplaying": {
+      "description": "查看正在播放的歌曲",
+      "examples": [
+        "/nowplaying"
+      ]
+    },
+    "pause": {
+      "description": "暂停播放",
+      "examples": [
+        "/pause"
+      ]
+    },
+    "play": {
+      "description": "播放歌曲、链接、歌单或 Spotify 链接，正在播放时加入队列",
+      "params": {
+        "query": {
+          "name": "歌曲",
+          "description": "歌名、歌曲链接或歌单链接"
+        }
+      },
+      "examples": [
+        "/play 晴天 周杰伦",
+        "/play https://youtu.be/..."
+      ]
+    },
+    "playlist": {
+      "description": "保存、载入和删除队列存档"
+    },
+    "playlist delete": {
+      "description": "删除一个存档",
+      "params": {
+        "name": {
+          "name": "名字",
+          "description": "要删除的存档，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/playlist delete 周末歌单"
+      ]
+    },
+    "playlist list": {
+      "description": "查看已保存的存档",
+      "examples": [
+        "/playlist list"
+      ]
+    },
+    "playlist load": {
+      "description": "把一个存档加进播放队列",
+      "params": {
+        "name": {
+          "name": "名字",
+          "description": "要载入的存档，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/playlist load 周末歌单"
+      ]
+    },
+    "playlist save": {
+      "description": "把当前队列存成存档",
+      "params": {
+        "name": {
+          "name": "名字",
+          "description": "存档的名字，默认 default"
+        }
+      },
+      "examples": [
+        "/playlist save 周末歌单"
+      ]
+    },
     "purge": {
       "description": "批量删除这个频道最近的消息",
       "params": {
@@ -159,6 +270,61 @@
         "/purge 100 @小明"
       ]
     },
+    "queue": {
+      "description": "查看播放队列",
+      "params": {
+        "page": {
+          "name": "页码",
+          "description": "看第几页"
+        }
+      },
+      "examples": [
+        "/queue",
+        "/queue 2"
+      ]
+    },
+    "remove": {
+      "description": "从队列里移除一首歌",
+      "params": {
+        "position": {
+          "name": "歌曲",
+          "description": "要移除的歌，可以从队列里选"
+        }
+      },
+      "examples": [
+        "/remove 3"
+      ]
+    },
+    "resume": {
+      "description": "继续播放",
+      "examples": [
+        "/resume"
+      ]
+    },
+    "search": {
+      "description": "搜索歌曲，从结果里选一首播放",
+      "params": {
+        "query": {
+          "name": "关键词",
+          "description": "要搜索的歌名或歌手"
+        }
+      },
+      "examples": [
+        "/search 七里香"
+      ]
+    },
+    "shuffle": {
+      "description": "随机打乱队列顺序",
+      "examples": [
+        "/shuffle"
+      ]
+    },
+    "skip": {
+      "description": "跳过当前歌曲，人多时发起投票",
+      "examples": [
+        "/skip"
+      ]
+    },
     "slowmode": {
       "description": "设置这个频道的慢速模式",
       "params": {
@@ -170,6 +336,12 @@
       "examples": [
         "/slowmode 30s",
         "/slowmode 0"
+      ]
+    },
+    "stop": {
+      "description": "停止播放、清空队列并离开语音频道",
+      "examples": [
+        "/stop"
       ]
     },
     "unban": {
@@ -214,6 +386,18 @@
       },
       "examples": [
         "/unmute @小明"
+      ]
+    },
+    "volume": {
+      "description": "查看或调整音量，0–150",
+      "params": {
+        "level": {
+          "name": "音量",
+          "description": "音量百分比，30–100 效果最好；不填就显示当前音量"
+        }
+      },
+      "examples": [
+        "/volume 60"
       ]
     },
     "warn": {
@@ -272,5 +456,9 @@
       ]
     }
   },
-  "choices": {}
+  "choices": {
+    "off": "关闭",
+    "queue": "队列循环",
+    "single": "单曲循环"
+  }
 }

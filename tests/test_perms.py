@@ -143,11 +143,20 @@ def test_giveaway_list_checks_manage_guild():
     assert any("has_permissions" in c.__qualname__ for c in checks)
 
 
+def _is_top_level(fn):
+    """@commands.hybrid_command / @commands.command，而不是挂在某个组下面的子指令。"""
+    for d in fn.decorator_list:
+        node = d.func if isinstance(d, ast.Call) else d
+        if isinstance(node, ast.Attribute) and node.attr in ("hybrid_command", "command"):
+            return isinstance(node.value, ast.Name) and node.value.id == "commands"
+    return False
+
+
 def test_owner_commands_use_owner_only():
     found = {}
     for path in COGS:
         for f in ast.walk(_tree(path)):
-            if isinstance(f, ast.AsyncFunctionDef) and _command_name(f) in OWNER_COMMANDS:
+            if isinstance(f, ast.AsyncFunctionDef) and _is_top_level(f) and _command_name(f) in OWNER_COMMANDS:
                 found[_command_name(f)] = any(
                     isinstance(d, ast.Call) and _call_name(d) == "owner_only" for d in f.decorator_list
                 )

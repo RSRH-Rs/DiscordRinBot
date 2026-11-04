@@ -31,6 +31,9 @@ DONE: set[str] = {
     "ban", "unban", "kick", "mute", "unmute", "warn", "purge", "slowmode", "lock", "unlock", "warnings",
     # Task 5
     "case",
+    # Task 6
+    "play", "search", "skip", "pause", "resume", "stop", "nowplaying", "queue",
+    "remove", "clear", "shuffle", "loop", "volume", "move", "join", "playlist",
 }
 
 
