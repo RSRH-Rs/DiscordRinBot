@@ -25,20 +25,8 @@ TABLE = {
     "choices": {"off": "关闭", "single": "单曲"},
 }
 
-# 已经整理过、必须完整翻译的顶层指令；后面的任务逐个加进来，最后一个任务改成全部
-DONE: set[str] = {
-    # Task 4
-    "ban", "unban", "kick", "mute", "unmute", "warn", "purge", "slowmode", "lock", "unlock", "warnings",
-    # Task 5
-    "case",
-    # Task 6
-    "play", "search", "skip", "pause", "resume", "stop", "nowplaying", "queue",
-    "remove", "clear", "shuffle", "loop", "volume", "move", "join", "playlist",
-    # Task 7
-    "giveaway", "status", "roll", "avatar", "help", "rank", "leaderboard",
-    # Task 8
-    "welcome", "automod", "commands",
-}
+# 所有顶层斜杠指令都必须完整翻译（新加的指令自动受约束）
+DONE: set[str] = {cmd.name for cmd in top_level_app_commands()}
 
 
 @commands.hybrid_command(name="t", description="Test command")

@@ -741,7 +741,7 @@
             <div class="scene-text">
                 <h2 id="moderation-title">{{ t('自动审核和日志', 'AutoMod and logs') }}</h2>
                 <p>{{ t('开哪些检测、多严、哪些频道不管，都由你设。被拦下的消息和处罚会记到日志频道，警告攒够次数会自动禁言。', 'You choose which checks run, how strict they are and which channels to skip. Blocked messages and punishments go to your log channel, and enough warnings lead to a timeout.') }}</p>
-                {{ chips(['/warn', '/mute', '/tempban', '/lock', '/automod', '/serverlog']) }}
+                {{ chips(['/warn', '/mute', '/ban', '/lock', '/automod', '/case']) }}
             </div>
             <div class="stage">
                 <div class="stk stk-blink" aria-hidden="true">
