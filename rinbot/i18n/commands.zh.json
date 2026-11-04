@@ -90,7 +90,7 @@
       "description": "添加一个违禁词",
       "params": {
         "word": {
-          "name": "词",
+          "name": "违禁词",
           "description": "要禁止的词"
         }
       },
@@ -108,7 +108,7 @@
       "description": "移除一个违禁词",
       "params": {
         "word": {
-          "name": "词",
+          "name": "违禁词",
           "description": "要移除的词，可以从列表里选"
         }
       },
@@ -750,7 +750,7 @@
   },
   "choices": {
     "off": "关闭",
-    "queue": "队列循环",
-    "single": "单曲循环"
+    "queue": "队列",
+    "single": "单曲"
   }
 }

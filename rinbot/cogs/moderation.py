@@ -979,7 +979,19 @@ class Moderation(commands.Cog):
         )
         await send_notice(ctx, Notice("success", f"案件 #{case} 将在 <t:{int(new_until.timestamp())}:R> 解除"))
 
-    case_duration.autocomplete("duration")(duration_autocomplete("mute"))
+    @case_duration.autocomplete("duration")
+    async def _case_length_autocomplete(self, interaction: discord.Interaction, current: str):
+        """时长候选跟着选中的案件走：临时封禁用封禁的常用值和上限，其他用禁言的。"""
+        kind = "mute"
+        case_no = getattr(getattr(interaction, "namespace", None), "case", None)
+        if interaction.guild is not None and isinstance(case_no, int):
+            try:
+                case = await self._get_case(interaction.guild.id, case_no)
+            except Exception:
+                case = None
+            if case and case["action"] == "tempban":
+                kind = "ban"
+        return await duration_autocomplete(kind)(interaction, current)
 
     @case_view.autocomplete("case")
     @case_reason.autocomplete("case")

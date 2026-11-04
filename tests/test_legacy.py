@@ -58,10 +58,10 @@ def test_migrate_disabled():
 
 
 def test_get_context_rewrites_a_copy():
-    with open(os.path.join(ROOT, "rinbot", "main.py"), encoding="utf-8") as f:
+    with open(os.path.join(ROOT, "rinbot", "rincore", "legacy_context.py"), encoding="utf-8") as f:
         tree = ast.parse(f.read())
-    bot = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "HybridBot")
-    method = next(n for n in bot.body if isinstance(n, ast.AsyncFunctionDef) and n.name == "get_context")
+    mixin = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "LegacyNamesMixin")
+    method = next(n for n in mixin.body if isinstance(n, ast.AsyncFunctionDef) and n.name == "get_context")
     calls = {ast.unparse(n.func) for n in ast.walk(method) if isinstance(n, ast.Call)}
     assert {"copy.copy", "legacy.rewrite_named"} <= calls
 

@@ -1,13 +1,13 @@
 # main.py
-import copy
 import discord
 from discord.ext import commands
 import os
 import sys
 import time
 from config import TOKEN
-from rincore import legacy, storage, sync
+from rincore import storage, sync
 from rincore.command_i18n import CommandTranslator
+from rincore.legacy_context import LegacyNamesMixin
 
 # cogs/ 里的辅助模块（如 _botlog_helper）用绝对导入，需把 cogs 目录加进 sys.path
 COGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "cogs")
@@ -15,7 +15,7 @@ if COGS_DIR not in sys.path:
     sys.path.insert(0, COGS_DIR)
 
 
-class HybridBot(commands.Bot):
+class HybridBot(LegacyNamesMixin, commands.Bot):
     def __init__(self):
         intents = discord.Intents.default()
         intents.message_content = True
@@ -30,19 +30,6 @@ class HybridBot(commands.Bot):
         )
         self.start_time = time.time()
         self.change_watcher = sync.ChangeWatcher()
-
-    async def get_context(self, origin, /, *, cls=commands.Context):
-        # 旧前缀名（r!warns 等）在解析前改写成新指令，权限、停用和报错都照常生效；
-        # 改的是消息的副本，自动审核等监听器读到的仍是原文
-        old_name = None
-        if isinstance(origin, discord.Message):
-            rewritten, old_name = legacy.rewrite_named(origin.content)
-            if old_name:
-                origin = copy.copy(origin)
-                origin.content = rewritten
-        ctx = await super().get_context(origin, cls=cls)
-        ctx.rinbot_legacy = old_name  # 指令里需要知道用户打的是哪个旧名字（如 r!tempban 必须填时长）
-        return ctx
 
     async def setup_hook(self):
         await storage.enable_wal()

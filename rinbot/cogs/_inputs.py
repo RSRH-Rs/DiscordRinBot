@@ -111,6 +111,8 @@ def choices(items: Iterable[tuple[str, object]], current: str, limit: int = 25) 
         name = str(name)
         if needle and needle not in name.lower():
             continue
+        if not isinstance(value, int) and len(str(value)) > 100:
+            continue  # Discord 会因为一个超长的值拒收整张候选列表
         result.append(app_commands.Choice(name=name[:100], value=value if isinstance(value, int) else str(value)))
         if len(result) >= limit:
             break

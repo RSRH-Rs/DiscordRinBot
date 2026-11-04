@@ -64,7 +64,7 @@ def test_rewrite_reports_the_old_name():
 
 
 def test_get_context_remembers_the_old_name():
-    with open(os.path.join(ROOT, "rinbot", "main.py"), encoding="utf-8") as f:
+    with open(os.path.join(ROOT, "rinbot", "rincore", "legacy_context.py"), encoding="utf-8") as f:
         tree = ast.parse(f.read())
     method = next(n for n in ast.walk(tree) if isinstance(n, ast.AsyncFunctionDef) and n.name == "get_context")
     targets = [ast.unparse(t) for n in ast.walk(method) if isinstance(n, ast.Assign) for t in n.targets]

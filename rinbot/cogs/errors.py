@@ -51,6 +51,9 @@ def notice_for(error, *, command=None, slash: bool = False, now: float | None = 
         error = error.original
     if isinstance(error, commands.CommandNotFound):
         return None
+    if isinstance(error, (app_commands.CommandNotFound, app_commands.CommandSignatureMismatch)):
+        # 指令改名或改了参数后、同步之前，客户端还拿着旧的指令
+        return Notice("warning", "这条指令已经更新了", "指令列表正在更新，稍等一会儿再从 / 列表里重新选一次。")
     if isinstance(error, (commands.MissingPermissions, app_commands.MissingPermissions)):
         return Notice("error", "你没有权限使用这条指令", f"需要{permission_list(error.missing_permissions)}权限。")
     if isinstance(error, (commands.BotMissingPermissions, app_commands.BotMissingPermissions)):
@@ -97,6 +100,14 @@ def unexpected_notice(error_id: str) -> Notice:
     )
 
 
+def _blocked(ctx) -> bool:
+    """黑名单、维护中或停用时为真（找不到指令时全局检查不会跑，这里补上）。"""
+    bot = getattr(ctx, "bot", None)
+    settings = bot.get_cog("GlobalSettings") if bot is not None else None
+    author = getattr(ctx, "author", None)
+    return bool(settings and author is not None and settings.blocked_reason(author.id) is not None)
+
+
 class ErrorHandler(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -133,8 +144,8 @@ class ErrorHandler(commands.Cog):
         ):
             return
         if isinstance(error, commands.CommandNotFound):
-            # 删掉的设置指令告诉用户去控制台；其他找不到的指令照旧不回复
-            if ctx.invoked_with:
+            # 删掉的设置指令告诉用户去控制台；其他找不到的指令、以及被拦下的用户照旧不回复
+            if ctx.invoked_with and not _blocked(ctx):
                 await send_moved(ctx, ctx.invoked_with.lower())
             return
         notice = notice_for(error, command=ctx.command, slash=ctx.interaction is not None)

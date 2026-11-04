@@ -158,7 +158,11 @@ class CommandToggle(commands.Cog):
     # ── Discord 指令 ──
 
     async def _set(self, ctx, command: str, enabled: bool) -> None:
-        name = command.strip().lstrip("/").split()[0] if command.strip() else ""
+        words = command.strip().lstrip("/").split()
+        if len(words) > 1:
+            await send_notice(ctx, Notice("error", "只能停用整条指令", f"填 {words[0]} 会停用整个 /{words[0]}。"))
+            return
+        name = words[0] if words else ""
         if name in PROTECTED_COMMANDS:
             await send_notice(ctx, Notice("error", "这条指令不能停用"))
             return
