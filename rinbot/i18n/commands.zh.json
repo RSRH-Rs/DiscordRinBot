@@ -1,4 +1,212 @@
 {
-  "commands": {},
+  "commands": {
+    "ban": {
+      "description": "封禁一名成员，填了时长就是临时封禁",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "要封禁的成员，也可以填用户 ID"
+        },
+        "duration": {
+          "name": "时长",
+          "description": "封禁多久，如 1d、7d；不填就是永久"
+        },
+        "delete_days": {
+          "name": "清理天数",
+          "description": "同时删除他最近几天发的消息，0–7 天"
+        },
+        "reason": {
+          "name": "原因",
+          "description": "封禁的原因，会私信告诉对方"
+        }
+      },
+      "examples": [
+        "/ban @小明 7d 刷屏",
+        "/ban 123456789012345678 发广告"
+      ]
+    },
+    "kick": {
+      "description": "把一名成员踢出服务器",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "要踢出的成员"
+        },
+        "reason": {
+          "name": "原因",
+          "description": "踢出的原因，会私信告诉对方"
+        }
+      },
+      "examples": [
+        "/kick @小明 多次刷屏"
+      ]
+    },
+    "lock": {
+      "description": "锁定频道，普通成员不能发言",
+      "params": {
+        "channel": {
+          "name": "频道",
+          "description": "要锁定的频道，默认当前频道"
+        },
+        "reason": {
+          "name": "原因",
+          "description": "锁定的原因"
+        }
+      },
+      "examples": [
+        "/lock",
+        "/lock #公告 维护中"
+      ]
+    },
+    "mute": {
+      "description": "禁言一名成员（Discord 超时）",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "要禁言的成员"
+        },
+        "duration": {
+          "name": "时长",
+          "description": "禁言多久，最长 28 天，默认 10 分钟"
+        },
+        "reason": {
+          "name": "原因",
+          "description": "禁言的原因"
+        }
+      },
+      "examples": [
+        "/mute @小明 1h 刷屏"
+      ]
+    },
+    "purge": {
+      "description": "批量删除这个频道最近的消息",
+      "params": {
+        "amount": {
+          "name": "条数",
+          "description": "删除多少条，1–500"
+        },
+        "member": {
+          "name": "成员",
+          "description": "只删除这个成员的消息（可选）"
+        }
+      },
+      "examples": [
+        "/purge 50",
+        "/purge 100 @小明"
+      ]
+    },
+    "slowmode": {
+      "description": "设置这个频道的慢速模式",
+      "params": {
+        "duration": {
+          "name": "间隔",
+          "description": "每条消息之间至少隔多久，最长 6 小时；填 0 关闭"
+        }
+      },
+      "examples": [
+        "/slowmode 30s",
+        "/slowmode 0"
+      ]
+    },
+    "unban": {
+      "description": "解除封禁",
+      "params": {
+        "user": {
+          "name": "用户",
+          "description": "要解封的人，可以从封禁名单里选，也可以填用户 ID"
+        },
+        "reason": {
+          "name": "原因",
+          "description": "解封的原因"
+        }
+      },
+      "examples": [
+        "/unban 小明"
+      ]
+    },
+    "unlock": {
+      "description": "解锁频道，恢复普通成员发言",
+      "params": {
+        "channel": {
+          "name": "频道",
+          "description": "要解锁的频道，默认当前频道"
+        }
+      },
+      "examples": [
+        "/unlock"
+      ]
+    },
+    "unmute": {
+      "description": "解除成员的禁言",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "要解除禁言的成员"
+        },
+        "reason": {
+          "name": "原因",
+          "description": "解除的原因"
+        }
+      },
+      "examples": [
+        "/unmute @小明"
+      ]
+    },
+    "warn": {
+      "description": "警告一名成员，警告次数够了会自动处罚",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "要警告的成员"
+        },
+        "reason": {
+          "name": "原因",
+          "description": "警告的原因，会私信告诉对方"
+        }
+      },
+      "examples": [
+        "/warn @小明 请不要刷屏"
+      ]
+    },
+    "warnings": {
+      "description": "查看和管理警告"
+    },
+    "warnings clear": {
+      "description": "清空一名成员的所有警告",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "要清空警告的成员"
+        }
+      },
+      "examples": [
+        "/warnings clear @小明"
+      ]
+    },
+    "warnings list": {
+      "description": "查看一名成员的警告记录",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "要查看的成员"
+        }
+      },
+      "examples": [
+        "/warnings list @小明"
+      ]
+    },
+    "warnings remove": {
+      "description": "删除一条警告",
+      "params": {
+        "warning": {
+          "name": "警告",
+          "description": "要删除的警告，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/warnings remove 12"
+      ]
+    }
+  },
   "choices": {}
 }

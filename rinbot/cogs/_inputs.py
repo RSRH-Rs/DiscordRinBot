@@ -48,6 +48,39 @@ def Duration(kind: str) -> type[commands.Converter]:
     return _Duration
 
 
+def SlashRange(low: int, high: int) -> type:
+    """可选整数参数：斜杠指令里是带范围的整数选项；前缀指令里看不懂或超范围的词会被跳过，留给后面的参数。
+    （hybrid 指令里 Optional[commands.Range] 会变成文字选项，app_commands.Range 前缀又不认识，所以两边都实现。）"""
+
+    class _SlashRange(commands.Converter, app_commands.Transformer):
+        @property
+        def type(self) -> discord.AppCommandOptionType:
+            return discord.AppCommandOptionType.integer
+
+        @property
+        def min_value(self) -> int:
+            return low
+
+        @property
+        def max_value(self) -> int:
+            return high
+
+        async def transform(self, interaction, value) -> int:
+            return int(value)
+
+        async def convert(self, ctx, argument: str) -> int:
+            try:
+                number = int(argument)
+            except ValueError:
+                raise commands.BadArgument(argument) from None
+            if not low <= number <= high:
+                raise commands.BadArgument(argument)
+            return number
+
+    _SlashRange.__name__ = f"SlashRange_{low}_{high}"
+    return _SlashRange
+
+
 def duration_autocomplete(kind: str):
     """时长参数的补全：常用值、纯数字铺开、能解析的放第一个；文字按客户端语言显示。"""
 

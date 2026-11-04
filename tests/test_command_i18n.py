@@ -26,7 +26,10 @@ TABLE = {
 }
 
 # 已经整理过、必须完整翻译的顶层指令；后面的任务逐个加进来，最后一个任务改成全部
-DONE: set[str] = set()
+DONE: set[str] = {
+    # Task 4
+    "ban", "unban", "kick", "mute", "unmute", "warn", "purge", "slowmode", "lock", "unlock", "warnings",
+}
 
 
 @commands.hybrid_command(name="t", description="Test command")
