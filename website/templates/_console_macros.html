@@ -12,6 +12,11 @@
 </div>
 {%- endmacro -%}
 
+{#- A number with its unit inside the field; clicks on the unit fall through to the number, and the unit is read as its description. -#}
+{%- macro num(id, unit, min, max, value, label=None) -%}
+<span class="num-field"><input class="num" type="number" inputmode="numeric" id="{{ id }}" min="{{ min }}" max="{{ max }}" value="{{ value }}" aria-describedby="{{ id }}-unit"{% if label %} aria-label="{{ label }}"{% endif %}><span class="num-unit" id="{{ id }}-unit">{{ unit }}</span></span>
+{%- endmacro -%}
+
 {%- macro toggle(id, label, checked=False) -%}
 <label class="tog"><input type="checkbox" role="switch" id="{{ id }}" aria-label="{{ label }}"{{ ' checked' if checked }}><span class="tog-track"></span></label>
 {%- endmacro -%}

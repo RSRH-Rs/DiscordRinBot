@@ -265,7 +265,12 @@ img { max-width: 100%; }
 .input:focus, .select:focus, .textarea:focus, .num:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
 .input--full, .row--block .input, .row--block .select, .row--block .textarea, .row--block .select-trigger { width: 100%; }
 .textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
-.num { width: 88px; text-align: center; }
+.num { width: 120px; text-align: left; appearance: textfield; -moz-appearance: textfield; }
+.num::-webkit-inner-spin-button, .num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.num-field { display: inline-grid; flex-shrink: 0; width: 120px; }
+.num-field > * { grid-area: 1 / 1; }
+.num-field .num { width: 100%; padding-right: calc(3em + 16px); }
+.num-unit { align-self: center; justify-self: end; margin-right: 12px; pointer-events: none; color: var(--muted); font-size: 14px; white-space: nowrap; }
 .unit { font-size: 13px; color: var(--muted); }
 input[type="file"] { max-width: 100%; font-size: 13px; color: var(--muted); }
 input[type="file"]::file-selector-button { margin-right: 8px; padding: 8px 12px; border: 0; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); font-weight: 600; cursor: pointer; }
@@ -324,7 +329,7 @@ input[type="file"]::file-selector-button { margin-right: 8px; padding: 8px 12px;
 .seg-option { padding: 6px 12px; border: 0; border-left: 1px solid var(--line); background: none; cursor: pointer; white-space: nowrap; }
 .seg-option:first-child { border-left: 0; }
 .seg-option[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
-.seg-custom { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+.seg-custom { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .seg-custom .select { width: 96px; }
 
 .note { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 13px; overflow-wrap: anywhere; }

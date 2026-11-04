@@ -71,7 +71,7 @@ window.Console = (() => {
             custom.type = 'button'; custom.className = 'seg-option'; custom.textContent = tr('duration.custom');
             const box = document.createElement('div'); box.className = 'seg-custom'; box.hidden = true;
             const amount = document.createElement('input');
-            amount.type = 'number'; amount.className = 'num'; amount.min = '1'; amount.setAttribute('data-draft-ignore', '');
+            amount.type = 'number'; amount.inputMode = 'numeric'; amount.className = 'num'; amount.min = '1'; amount.setAttribute('data-draft-ignore', '');
             amount.setAttribute('aria-label', tr('duration.amount'));
             const unit = document.createElement('select');
             unit.className = 'select'; unit.setAttribute('data-draft-ignore', ''); unit.setAttribute('aria-label', tr('duration.unit'));

@@ -1,6 +1,7 @@
 """Template wiring checks with fake context; no app startup or server writes."""
 from html.parser import HTMLParser
 from pathlib import Path
+import json
 import unittest
 from urllib.parse import parse_qs, urlsplit
 from jinja2 import Environment, FileSystemLoader
@@ -405,5 +406,26 @@ class DashboardTemplateTests(unittest.TestCase):
         for sel in [r'\.nav-item',r'\.btn--icon',r'\.menu-btn',r'\.user-logout']:self.assertRegex(narrow,sel+r'\s*\{[^}]*min-height: 44px')
         self.assertRegex(narrow,r'\.theme-switch button\s*\{[^}]*width: 44px;[^}]*height: 36px')
         self.assertRegex(narrow,r'\.theme-switch button::after\s*\{[^}]*inset: -4px 0')
+
+    def test_number_fields_read_left_with_units_inside(self):
+        html,_=self.render('server.html')
+        for id_,unit in [('am-si','秒'),('am-st','条'),('am-ct','%'),('am-rt','次'),('mod-mt','次警告'),('mod-kt','次警告'),('mod-bt','次警告')]:
+            self.assertRegex(html,rf'<span class="num-field"><input class="num" type="number" inputmode="numeric" id="{id_}"[^>]*aria-describedby="{id_}-unit"[^>]*><span class="num-unit" id="{id_}-unit">{re.escape(unit)}</span></span>')
+        self.assertNotIn('class="unit">条 /',html)
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        num=re.search(r'\n\.num\s*\{([^}]*)\}',css).group(1)
+        for part in ['width: 120px','text-align: left','appearance: textfield']:self.assertIn(part,num)
+        self.assertIn('::-webkit-inner-spin-button',css)
+        self.assertIn('width: 120px',re.search(r'\n\.num-field\s*\{([^}]*)\}',css).group(1))
+        self.assertIn('pointer-events: none',re.search(r'\n\.num-unit\s*\{([^}]*)\}',css).group(1))
+
+    def test_spam_trigger_reads_seconds_then_messages(self):
+        html,_=self.render('server.html')
+        self.assertLess(html.index('id="am-si"'),html.index('>内发<'));self.assertLess(html.index('>内发<'),html.index('id="am-st"'))
+        self.assertIn('<label class="row-title" for="am-si">触发条件</label>',html)
+        self.assertRegex(html,r'id="am-st"[^>]*aria-label="消息条数"')
+        zh=json.loads((ROOT/'i18n/zh.json').read_text(encoding='utf-8'))
+        for key in ['messages_per','seconds_label']:self.assertNotIn(key,zh['automod'])
+        self.assertEqual((zh['automod']['within'],zh['automod']['messages']),('内发','条'))
 
 if __name__=='__main__':unittest.main()
