@@ -350,6 +350,7 @@
     "send_failed": "没发出去：{reason}",
     "send_failed_plain": "发送失败",
     "sent_panels": "已发送的面板",
+    "edit_hint": "要修改已发的面板，在 Discord 里用 /roles：加减身份组、切换单选或删除。",
     "no_panels": "还没有发过面板",
     "panel_meta": "{n} 个身份组",
     "need_channel": "先选一个发送频道",

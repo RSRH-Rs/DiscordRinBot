@@ -10,7 +10,7 @@ PROTECTED_COMMANDS = frozenset({
     "hot_update", "sync", "load", "unload", "extensions", "eval", "setstatus", "resetstatus", "setbio",
 })
 
-# 38 条顶层斜杠指令和它们在控制台里的分组
+# 40 条顶层斜杠指令和它们在控制台里的分组
 COMMANDS = [
     *[(name, "Moderation") for name in (
         "ban", "unban", "kick", "mute", "unmute", "warn", "purge", "slowmode", "lock", "unlock", "warnings", "case",
@@ -22,6 +22,7 @@ COMMANDS = [
     *[(name, "General") for name in ("status", "roll", "avatar")],
     ("rank", "Leveling"), ("leaderboard", "Leveling"),
     ("giveaway", "Giveaway"), ("welcome", "Welcome"), ("automod", "AutoMod"),
+    ("roles", "ReactionRoles"), ("serverlog", "ServerLog"),
     ("commands", "System"), ("help", "System"),
 ]
 

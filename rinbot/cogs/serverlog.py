@@ -1,17 +1,18 @@
 # cogs/serverlog.py
 # RinBot — 服务器审计日志
 # 监听 Discord 服务器事件并转发到日志频道（区别于 botlog 的 bot 内部日志）
+# 开关、日志频道和事件分类在控制台的「服务器事件日志」里改；/serverlog ignore | unignore 管跳过的频道（控制台做不到）
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 import aiosqlite
 import os
 from datetime import datetime, timezone
-from typing import Literal, Optional
 
 from _botlog_helper import audit
 from _perms import require
-from _messages import embed
+from _messages import embed, send, send_moved
 from rincore.embeds import event_kind
 
 DB_PATH = os.path.join(
@@ -107,32 +108,6 @@ class ServerLog(commands.Cog):
             guild_id,
             {"channel_id": 0, "enabled": False, "categories": set(), "ignored": set()},
         )
-
-    async def _save(self, guild_id: int):
-        cfg = self._cache[guild_id]
-        async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute(
-                "INSERT OR REPLACE INTO serverlog_config "
-                "(guild_id, channel_id, enabled, categories, ignored_channels) VALUES (?, ?, ?, ?, ?)",
-                (
-                    guild_id,
-                    cfg["channel_id"],
-                    int(cfg["enabled"]),
-                    ",".join(sorted(cfg["categories"])),
-                    ",".join(str(x) for x in cfg["ignored"]),
-                ),
-            )
-            await db.commit()
-
-    def _ensure(self, guild_id: int) -> dict:
-        if guild_id not in self._cache:
-            self._cache[guild_id] = {
-                "channel_id": 0,
-                "enabled": True,
-                "categories": set(DEFAULT_CATEGORIES),
-                "ignored": set(),
-            }
-        return self._cache[guild_id]
 
     # ─── 发送核心 ───
 
@@ -485,6 +460,80 @@ class ServerLog(commands.Cog):
             text = f"{member.mention}: {before.channel.mention} → {after.channel.mention}"
         card = embed(kind, title, text, footer=f"用户 ID: {member.id}")
         await self._send(member.guild.id, "voice", card)
+
+    # ───────────── 配置指令：忽略的频道 ─────────────
+
+    def _ignored_field(self, guild_id: int) -> tuple:
+        ignored = sorted(self.get_config(guild_id)["ignored"])
+        return ("现在忽略的频道", " ".join(f"<#{c}>" for c in ignored) or "没有", False)
+
+    async def _current_ignored(self, guild_id: int) -> set[int]:
+        # 先从数据库重读：控制台刚保存、重载通知还没到时，缓存可能是旧的
+        await self.reload_guild(guild_id)
+        return set(self.get_config(guild_id)["ignored"])
+
+    async def _save_ignored(self, guild_id: int, ignored: set[int]):
+        """只写忽略列表这一列，控制台存的开关、频道和分类不会被盖掉；还没有配置时按默认值新建。"""
+        async with aiosqlite.connect(DB_PATH) as db:
+            await db.execute(
+                "INSERT INTO serverlog_config (guild_id, channel_id, enabled, categories, ignored_channels) "
+                "VALUES (?, 0, 1, ?, ?) ON CONFLICT(guild_id) DO UPDATE SET ignored_channels = excluded.ignored_channels",
+                (guild_id, ",".join(sorted(DEFAULT_CATEGORIES)), ",".join(str(c) for c in sorted(ignored))),
+            )
+            await db.commit()
+        await self.reload_guild(guild_id)
+
+    @commands.hybrid_group(name="serverlog", aliases=["slog"], description="Server event log: channels to skip")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def serverlog_group(self, ctx):
+        if ctx.invoked_subcommand is None:
+            # 旧的 r!serverlog channel 之类：开关、频道和分类已经移到控制台
+            if ctx.subcommand_passed and await send_moved(ctx, f"serverlog {ctx.subcommand_passed}"):
+                return
+            ignored = sorted(await self._current_ignored(ctx.guild.id))
+            text = " ".join(f"<#{c}>" for c in ignored) or "没有忽略任何频道。"
+            await send(ctx, embed("info", "审计日志忽略的频道", text), private=True)
+
+    @serverlog_group.command(name="ignore", description="Stop logging messages in a channel")
+    @app_commands.describe(channel="The channel to skip")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def sl_ignore(self, ctx, channel: discord.TextChannel):
+        ignored = await self._current_ignored(ctx.guild.id)
+        if channel.id in ignored:
+            card = embed("info", f"#{channel.name} 已经在忽略列表里了", fields=[self._ignored_field(ctx.guild.id)])
+            await send(ctx, card, private=True)
+            return
+        await self._save_ignored(ctx.guild.id, ignored | {channel.id})
+        card = embed(
+            "success", f"已忽略 #{channel.name}", "这个频道里删除和编辑的消息不会再记进日志。",
+            fields=[self._ignored_field(ctx.guild.id)],
+        )
+        await send(ctx, card, private=True)
+        await audit(
+            self.bot, ctx.guild.id, "忽略审计日志频道", **{"操作者": ctx.author.mention, "频道": channel.mention}
+        )
+
+    @serverlog_group.command(name="unignore", description="Log messages in a skipped channel again")
+    @app_commands.describe(channel="The channel to log again")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def sl_unignore(self, ctx, channel: discord.TextChannel):
+        ignored = await self._current_ignored(ctx.guild.id)
+        if channel.id not in ignored:
+            card = embed("info", f"#{channel.name} 本来就没有被忽略", fields=[self._ignored_field(ctx.guild.id)])
+            await send(ctx, card, private=True)
+            return
+        await self._save_ignored(ctx.guild.id, ignored - {channel.id})
+        card = embed(
+            "success", f"已恢复记录 #{channel.name}", "这个频道里删除和编辑的消息会照常记进日志。",
+            fields=[self._ignored_field(ctx.guild.id)],
+        )
+        await send(ctx, card, private=True)
+        await audit(
+            self.bot, ctx.guild.id, "恢复审计日志频道", **{"操作者": ctx.author.mention, "频道": channel.mention}
+        )
 
 
 async def setup(bot):

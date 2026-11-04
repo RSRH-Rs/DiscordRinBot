@@ -23,6 +23,11 @@ RENAMED = {
     "qlist": "playlist list",
     "delqueue": "playlist delete",
     "delq": "playlist delete",
+    "rr_add": "roles add",
+    "rr_remove": "roles remove",
+    "rr_list": "roles list",
+    "rr_exclusive": "roles exclusive",
+    "rr_delete": "roles delete",
     "toggle": "commands toggle",
     "togglelist": "commands list",
     "welcome_setup": "welcome setup",
@@ -44,10 +49,10 @@ REMOVED = {
         "welcome_message", "welcome_toggle", "welcome_image", "welcome_title", "welcome_icon",
         "welcome_thumbnail", "welcome_thumb", "welcome_card", "welcome_disable",
     )},
-    **{name: _ROLES for name in ("rr_create", "rr_add", "rr_remove", "rr_list", "rr_exclusive", "rr_delete")},
+    "rr_create": _ROLES,  # 编辑已发的面板控制台做不到，rr_add 等改名成了 /roles 的子指令
     **{f"automod {sub}": _AUTOMOD for sub in ("enable", "disable", "toggle", "log", "mute_duration", "spam_config")},
-    "serverlog": _SERVERLOG,
-    "slog": _SERVERLOG,
+    # 忽略频道控制台做不到，留成了 /serverlog ignore | unignore
+    **{f"serverlog {sub}": _SERVERLOG for sub in ("channel", "toggle", "enable", "disable", "status")},
     "modlog_channel": _MODERATION,
     "warn_config": _MODERATION,
 }

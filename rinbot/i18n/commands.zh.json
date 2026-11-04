@@ -559,6 +559,79 @@
         "/resume"
       ]
     },
+    "roles": {
+      "description": "编辑已经发出去的身份组面板"
+    },
+    "roles add": {
+      "description": "给面板加一个身份组按钮",
+      "params": {
+        "panel": {
+          "name": "面板",
+          "description": "要改的面板，可以从列表里选"
+        },
+        "emoji": {
+          "name": "表情",
+          "description": "按钮上的 emoji，比如 🎮"
+        },
+        "role": {
+          "name": "身份组",
+          "description": "成员点按钮领到的身份组"
+        }
+      },
+      "examples": [
+        "/roles add 游戏身份组 🎮 @游戏"
+      ]
+    },
+    "roles delete": {
+      "description": "删除一个身份组面板和它的消息",
+      "params": {
+        "panel": {
+          "name": "面板",
+          "description": "要删除的面板，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/roles delete 游戏身份组"
+      ]
+    },
+    "roles exclusive": {
+      "description": "把面板切换成单选或多选",
+      "params": {
+        "panel": {
+          "name": "面板",
+          "description": "要改的面板，可以从列表里选"
+        },
+        "enabled": {
+          "name": "单选",
+          "description": "选 True 就只能领一个，选 False 就能领多个"
+        }
+      },
+      "examples": [
+        "/roles exclusive 颜色 True"
+      ]
+    },
+    "roles list": {
+      "description": "列出这个服务器的身份组面板",
+      "examples": [
+        "/roles list"
+      ]
+    },
+    "roles remove": {
+      "description": "从面板上去掉一个身份组按钮",
+      "params": {
+        "panel": {
+          "name": "面板",
+          "description": "要改的面板，可以从列表里选"
+        },
+        "role": {
+          "name": "身份组",
+          "description": "要去掉的身份组，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/roles remove 游戏身份组 🎮"
+      ]
+    },
     "roll": {
       "description": "掷一个骰子",
       "params": {
@@ -582,6 +655,33 @@
       },
       "examples": [
         "/search 七里香"
+      ]
+    },
+    "serverlog": {
+      "description": "设置审计日志跳过的频道"
+    },
+    "serverlog ignore": {
+      "description": "不再记录一个频道里的消息",
+      "params": {
+        "channel": {
+          "name": "频道",
+          "description": "要忽略的频道"
+        }
+      },
+      "examples": [
+        "/serverlog ignore #机器人频道"
+      ]
+    },
+    "serverlog unignore": {
+      "description": "恢复记录一个频道里的消息",
+      "params": {
+        "channel": {
+          "name": "频道",
+          "description": "要恢复记录的频道"
+        }
+      },
+      "examples": [
+        "/serverlog unignore #机器人频道"
       ]
     },
     "shuffle": {

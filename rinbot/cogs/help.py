@@ -31,7 +31,7 @@ COG_META = {
     "ReactionRoles": {
         "emoji": "🏷️",
         "label": "领取身份组",
-        "desc": "成员点按钮自助拿角色",
+        "desc": "成员点按钮自助领身份组；/roles 编辑已发的面板",
     },
     "AutoMod": {"emoji": "🛡️", "label": "自动审核", "desc": "反刷屏、违禁词、链接过滤"},
     "Moderation": {
@@ -49,7 +49,7 @@ COG_META = {
     "ServerLog": {
         "emoji": "🗃️",
         "label": "审计日志",
-        "desc": "消息/成员/频道/身份组/封禁记录",
+        "desc": "消息/成员/频道/身份组/封禁记录；/serverlog 设置跳过的频道",
     },
     "General": {
         "emoji": "🛠️",

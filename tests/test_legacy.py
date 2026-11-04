@@ -12,10 +12,11 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SPEC_REMOVED = {
     "welcome_message", "welcome_toggle", "welcome_image", "welcome_title", "welcome_icon",
     "welcome_thumbnail", "welcome_card", "welcome_disable",
-    "rr_create", "rr_add", "rr_remove", "rr_list", "rr_exclusive", "rr_delete",
+    "rr_create",
     "automod enable", "automod disable", "automod toggle", "automod log", "automod mute_duration", "automod spam_config",
-    "serverlog", "modlog_channel", "warn_config",
-}
+    "serverlog channel", "serverlog toggle", "serverlog enable", "serverlog disable", "serverlog status",
+    "modlog_channel", "warn_config",
+}  # 编辑已发的身份组面板（rr_add 等）和忽略频道控制台做不到，留成了 /roles 和 /serverlog ignore|unignore
 
 
 def test_rewrite_renamed_names():
@@ -38,7 +39,7 @@ def test_rewrite_keeps_line_breaks_in_arguments():
 
 def test_every_removed_name_has_a_page():
     assert SPEC_REMOVED <= set(legacy.REMOVED)
-    assert set(legacy.REMOVED) - SPEC_REMOVED == {"slog", "welcome_thumb"}
+    assert set(legacy.REMOVED) - SPEC_REMOVED == {"welcome_thumb"}
     pages = {"welcome": "欢迎新成员", "roles": "领取身份组", "automod": "自动审核", "serverlog": "服务器事件日志", "moderation": "管理模块"}
     for slug, name in legacy.REMOVED.values():
         assert pages[slug] == name
@@ -50,7 +51,7 @@ def test_dashboard_url():
 
 def test_migrate_disabled():
     assert legacy.migrate_disabled({"warns", "clearwarns", "play"}) == {"warnings", "play"}
-    assert legacy.migrate_disabled({"tempban", "welcome_image", "rr_add", "serverlog"}) == set()
+    assert legacy.migrate_disabled({"tempban", "welcome_image", "rr_create"}) == set()
     assert legacy.migrate_disabled({"togglelist"}) == {"commands"}
     once = legacy.migrate_disabled({"saveq", "modlog", "kick"})
     assert once == {"playlist", "case", "kick"}
@@ -111,7 +112,7 @@ async def test_toggle_migration_rewrites_rows(tmp_path):
         await db.commit()
         await migrate_rows(db)
         cur = await db.execute("SELECT guild_id, command_name FROM disabled_commands ORDER BY guild_id, command_name")
-        assert await cur.fetchall() == [(1, "play"), (1, "warnings"), (3, "kick")]
+        assert await cur.fetchall() == [(1, "play"), (1, "warnings"), (2, "roles"), (3, "kick")]
 
 
 async def test_global_migration_rewrites_rows(tmp_path):

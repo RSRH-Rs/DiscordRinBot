@@ -1,4 +1,4 @@
-"""最终的指令表：38 条顶层斜杠指令，删掉的不再出现，旧前缀名都能找到新指令。"""
+"""最终的指令表：40 条顶层斜杠指令，删掉的不再出现，旧前缀名都能找到新指令。"""
 import os
 
 import discord
@@ -14,7 +14,7 @@ EXPECTED = {
     "play", "search", "skip", "pause", "resume", "stop", "nowplaying", "queue",
     "remove", "clear", "shuffle", "loop", "volume", "move", "join", "playlist",
     "status", "roll", "avatar", "help", "rank", "leaderboard",
-    "giveaway", "welcome", "automod", "commands",
+    "giveaway", "welcome", "automod", "commands", "roles", "serverlog",
 }
 
 
@@ -27,9 +27,9 @@ def _bot():
     return bot
 
 
-def test_top_level_commands_are_the_38():
+def test_top_level_commands_are_the_40():
     names = {cmd.name for cmd in top_level_app_commands()}
-    assert len(EXPECTED) == 38
+    assert len(EXPECTED) == 40
     assert names == EXPECTED
 
 

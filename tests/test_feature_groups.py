@@ -39,9 +39,8 @@ def test_welcome_group():
     assert {c.name for c in tops["welcome"].commands} == {"setup", "test"}
 
 
-def test_reaction_roles_and_serverlog_have_no_commands():
-    assert _tops(ReactionRoles) == {} and _tops(ServerLog) == {}
-    assert ReactionRoles.__cog_commands__ == [] and ServerLog.__cog_commands__ == []
+def test_reaction_roles_and_serverlog_keep_their_listeners():
+    # 指令组本身在 test_roles_serverlog_commands 里测
     for name in ("on_interaction", "on_raw_reaction_add", "on_raw_reaction_remove", "_rebuild_panel"):
         assert hasattr(ReactionRoles, name)
     for name in ("on_message_delete", "on_member_join", "on_voice_state_update", "_send"):
