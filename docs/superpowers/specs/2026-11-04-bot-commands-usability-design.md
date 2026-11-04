@@ -38,8 +38,9 @@
 
 **要改：**
 - `rinbot/cogs/` 下除 `netease.py`、开发和主人指令之外的所有指令：名字、分组、参数、说明、自动补全。
-- 新增 `/case`、`/help 指令`，新增一个兼容旧前缀名的模块。
+- 新增 `/case`、`/help 指令`。
 - 停用指令的记录迁移（每个服务器的和全局的）。
+- 旧前缀名的改写表和"已移到控制台"的提示。
 - 控制台：指令说明的来源、写死旧指令名的文案。
 
 **保持不变：**
@@ -115,7 +116,12 @@
 
 ### 4.3 兼容旧用法
 
-- **改了名的指令保留旧前缀名。** 新建 `cogs/legacy.py`，用隐藏的纯前缀指令转给新指令，参数顺序和以前一样：`r!tempban`（转 `/ban`，时长必填）、`r!warns`、`r!delwarn`、`r!clearwarns`、`r!modlog`、`r!saveq`、`r!loadq`、`r!queues`、`r!delqueue`、`r!toggle`（停用和启用来回切换，和以前一样）、`r!togglelist`、`r!welcome_setup`、`r!welcome_test`、`r!automod_words`、`r!automod_whitelist`、`r!automod_ignore`（第一个参数是 add / remove / list）。这些指令不进斜杠列表，也不占 100 条的名额。转发前先跑新指令的全部检查（权限、每个服务器的停用状态、全局停用和维护），不通过时的提示和直接用新指令一样；不能用 `ctx.invoke` 直接转，因为它会跳过这些检查。
+- **改了名的指令保留旧前缀名。** 机器人在解析前缀指令之前，把旧名字改写成新的指令路径，例如 `r!warns @小明` 改写成 `r!warnings list @小明`，之后照常解析。所以权限、每个服务器的停用状态、全局停用、维护、冷却和报错，都和直接用新指令完全一样。参数顺序不变。改写表放在 `rincore/legacy.py`：
+  - `tempban` → `ban`（时长必填）；`warns` → `warnings list`；`delwarn` → `warnings remove`；`clearwarns` → `warnings clear`；`modlog` → `case list`；
+  - `saveq`、`loadq`、`queues`、`delqueue` → `playlist save`、`load`、`list`、`delete`；
+  - `toggle` → `commands toggle`（隐藏的前缀子指令，停用和启用来回切换，和以前一样）；`togglelist` → `commands list`；
+  - `welcome_setup`、`welcome_test` → `welcome setup`、`welcome test`；`automod_words`、`automod_whitelist`、`automod_ignore` → `automod words`、`automod whitelist`、`automod ignore`（原来的第一个参数 add / remove / list 正好成了子指令名）。
+  - 只改写紧跟在前缀后面、而且后面是空格或结尾的完整指令名，不区分大小写；`r!warnsx` 这种不改写。改写后的前缀指令不进斜杠列表，也不占 100 条的名额。
 - **删掉的指令回复去向。** 有人打 4.2 表里的旧名字时，`errors.py` 在"找不到指令"的分支里认出它，私密回复 `("info", "这项设置已移到控制台", "在控制台的「{页面名}」里修改。")`，附一个链接按钮"打开控制台"，指向 `https://rin-bot.com/dashboard/server/{服务器 ID}#{页面}`。不在表里的名字照旧不回复。
 - **停用记录迁移。** 机器人加载时把每个服务器的停用记录和全局停用记录里的旧名字换成新名字，并且只迁移一次：
   - `warns`、`delwarn`、`clearwarns` → `warnings`；`modlog` → `case`；`saveq`、`loadq`、`queues`、`delqueue` → `playlist`；`toggle`、`togglelist` → `commands`；`welcome_setup`、`welcome_test` → `welcome`；`automod_words`、`automod_whitelist`、`automod_ignore` → `automod`。
