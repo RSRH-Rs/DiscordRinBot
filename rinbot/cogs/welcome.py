@@ -3,11 +3,12 @@
 # 功能：
 #   • 新成员加入时自动发送欢迎图卡 + 分配基础身分组
 #   • 成员离开时发送道别消息
-#   • /welcome_setup — 配置欢迎频道、身分组、道别频道
-#   • /welcome_test — 测试欢迎图卡效果
+#   • /welcome setup — 配置欢迎频道、身分组、道别频道（其余外观设置在控制台）
+#   • /welcome test — 测试欢迎图卡效果
 
 import asyncio
 import discord
+from discord import app_commands
 from discord.ext import commands
 from discord.ui import View, Select, ChannelSelect, RoleSelect
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
@@ -521,9 +522,14 @@ class Welcome(commands.Cog):
 
     # ─── 配置指令 ───
 
-    @commands.hybrid_command(
-        name="welcome_setup", description="[管理] 配置迎新 & 道别系统"
-    )
+    @commands.hybrid_group(name="welcome", description="Set up and preview welcome messages")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def welcome_group(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send("用法：`r!welcome setup`、`r!welcome test`；消息和图片在控制台的「欢迎新成员」里改。")
+
+    @welcome_group.command(name="setup", description="Pick the welcome and farewell channels and the auto roles")
     @commands.guild_only()
     @require(manage_guild=True)
     async def welcome_setup(self, ctx):
@@ -538,32 +544,7 @@ class Welcome(commands.Cog):
         view = WelcomeSetupView(self, ctx.guild.id)
         await ctx.send(embed=card, view=view, ephemeral=True)
 
-    @commands.hybrid_command(
-        name="welcome_message", description="[管理] 自定义欢迎/道别消息"
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def welcome_message(self, ctx, msg_type: str, *, text: str):
-        """
-        msg_type: welcome 或 farewell
-        text: 消息模板，可用 {member} 和 {server}
-        """
-        if msg_type not in ("welcome", "farewell"):
-            await ctx.send("❌ 类型只能是 `welcome` 或 `farewell`")
-            return
-        key = f"{msg_type}_msg"
-        await self._set_config(ctx.guild.id, key, text)
-        label = "欢迎消息" if msg_type == "welcome" else "道别消息"
-        await audit(
-            self.bot,
-            ctx.guild.id,
-            f"修改{label}模板",
-            **{"操作者": ctx.author.mention, "内容": text[:200]},
-        )
-        preview = self._fmt_text(text, ctx.author)
-        await ctx.send(f"✅ 已更新 {msg_type} 消息！\n预览: {preview}")
-
-    @commands.hybrid_command(name="welcome_test", description="[管理] 预览欢迎卡片效果")
+    @welcome_group.command(name="test", description="Preview the welcome message with yourself as the new member")
     @commands.guild_only()
     @require(manage_guild=True)
     async def welcome_test(self, ctx):
@@ -584,122 +565,6 @@ class Welcome(commands.Cog):
             files.append(banner)
             card.set_image(url="attachment://welcome.png")
         await ctx.send(embed=card, files=files)
-
-    @commands.hybrid_command(
-        name="welcome_toggle", description="[管理] 开启/关闭欢迎讯息"
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def welcome_toggle(self, ctx, enabled: bool):
-        await self._set_config(ctx.guild.id, "enabled", 1 if enabled else 0)
-        await ctx.send(
-            f"✅ 欢迎讯息已{'开启' if enabled else '关闭'}。", ephemeral=True
-        )
-
-    @commands.hybrid_command(
-        name="welcome_image",
-        description="[管理] 自定义大图（留空关闭；支持 %avatar% / %server_avatar%）",
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def welcome_image(self, ctx, url: str = ""):
-        url = url.strip()
-        if (
-            url
-            and url not in ("%avatar%", "%server_avatar%")
-            and not url.lower().startswith(("http://", "https://"))
-        ):
-            await ctx.send(
-                "❌ 请提供有效链接，或 %avatar% / %server_avatar%，或留空关闭。",
-                ephemeral=True,
-            )
-            return
-        await self._set_config(ctx.guild.id, "image_url", url)
-        await ctx.send(
-            "✅ 已关闭大图。" if not url else "✅ 大图已更新。", ephemeral=True
-        )
-
-    @commands.hybrid_command(
-        name="welcome_title", description="[管理] 自定义欢迎卡标题"
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def welcome_title(self, ctx, *, text: str):
-        await self._set_config(ctx.guild.id, "welcome_title", text[:200])
-        await ctx.send(f"✅ 欢迎卡标题已设为：{text[:200]}", ephemeral=True)
-
-    @commands.hybrid_command(
-        name="welcome_icon", description="[管理] 自定义标题小图标（留空恢复服务器头像）"
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def welcome_icon(self, ctx, url: str = ""):
-        url = url.strip()
-        if url and not url.lower().startswith(("http://", "https://")):
-            await ctx.send(
-                "❌ 请提供有效图片链接（http/https），或留空恢复默认。", ephemeral=True
-            )
-            return
-        await self._set_config(ctx.guild.id, "author_icon", url)
-        await ctx.send(
-            "✅ 已恢复默认（服务器头像）。" if not url else "✅ 标题图标已更新。",
-            ephemeral=True,
-        )
-
-    @commands.hybrid_command(
-        name="welcome_thumbnail",
-        aliases=["welcome_thumb"],
-        description="[管理] 自定义右侧缩略图（留空恢复用户头像）",
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def welcome_thumbnail(self, ctx, url: str = ""):
-        url = url.strip()
-        if (
-            url
-            and url not in ("%avatar%", "%server_avatar%")
-            and not url.lower().startswith(("http://", "https://"))
-        ):
-            await ctx.send(
-                "❌ 请提供有效图片链接，或 %avatar% / %server_avatar%，或留空恢复默认。",
-                ephemeral=True,
-            )
-            return
-        await self._set_config(ctx.guild.id, "thumbnail_url", url)
-        await ctx.send(
-            "✅ 已恢复默认（用户头像）。" if not url else "✅ 缩略图已更新。",
-            ephemeral=True,
-        )
-
-    @commands.hybrid_command(
-        name="welcome_card", description="[管理] 是否附带图片横幅卡面"
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def welcome_card(self, ctx, enabled: bool):
-        await self._set_config(ctx.guild.id, "show_card", 1 if enabled else 0)
-        await ctx.send(
-            f"✅ 图片横幅已{'开启' if enabled else '关闭'}。", ephemeral=True
-        )
-
-    @commands.hybrid_command(
-        name="welcome_disable", description="[管理] 禁用迎新/道别系统"
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def welcome_disable(self, ctx):
-        async with aiosqlite.connect(DB_PATH) as db:
-            await db.execute(
-                "DELETE FROM welcome_config WHERE guild_id = ?", (ctx.guild.id,)
-            )
-            await db.commit()
-        await audit(
-            self.bot,
-            ctx.guild.id,
-            "禁用迎新 & 道别系统",
-            **{"操作者": ctx.author.mention},
-        )
-        await ctx.send("✅ 已禁用迎新 & 道别系统。")
 
 
 async def setup(bot):

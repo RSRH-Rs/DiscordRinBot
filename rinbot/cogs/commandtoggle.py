@@ -2,7 +2,7 @@
 # RinBot — 指令开关模块 (指令管理)
 # 功能：
 #   • 管理员可按服务器禁用/启用任意指令
-#   • Web 仪表盘和 /toggle 指令都能操作
+#   • Web 仪表盘和 /commands 指令都能操作
 #   • 全局 before_invoke 钩子自动拦截被禁用的指令
 #   • Web 修改后经变更日志回调重载该服务器缓存，即时生效
 
@@ -13,7 +13,11 @@ import os
 
 from _botlog_helper import audit
 from _perms import require
-from _messages import embed
+from _messages import Notice, embed, send_notice
+from _inputs import choices
+from _perms import is_owner_only
+from rincore import command_i18n
+from discord import app_commands
 from rincore import legacy
 
 DB_PATH = os.path.join(
@@ -23,14 +27,16 @@ DB_PATH = os.path.join(
 
 # 这些指令永远不能被禁用
 PROTECTED_COMMANDS = {
-    "toggle",
-    "togglelist",
+    "commands",
     "hot_update",
     "sync",
     "load",
     "unload",
     "extensions",
     "eval",
+    "setstatus",
+    "resetstatus",
+    "setbio",
     "help",
 }
 
@@ -160,44 +166,59 @@ class CommandToggle(commands.Cog):
 
     # ── Discord 指令 ──
 
-    @commands.hybrid_command(name="toggle", description="[管理] 启用/禁用指定指令")
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def toggle_cmd(self, ctx, command_name: str):
-        """command_name: 要切换的指令名 (如 play, kick, roll)"""
-        if command_name in PROTECTED_COMMANDS:
-            await ctx.send(
-                f"⚠️ `{command_name}` 是核心指令，不能被禁用。", ephemeral=True
-            )
+    async def _set(self, ctx, command: str, enabled: bool) -> None:
+        name = command.strip().lstrip("/").split()[0] if command.strip() else ""
+        if name in PROTECTED_COMMANDS:
+            await send_notice(ctx, Notice("error", "这条指令不能停用"))
             return
-
-        cmd = self.bot.get_command(command_name)
-        if not cmd:
-            await ctx.send(f"❌ 找不到指令 `{command_name}`。", ephemeral=True)
+        if not name or self.bot.get_command(name) is None:
+            await send_notice(ctx, Notice("error", "找不到这条指令"))
             return
-
-        currently_disabled = self.is_disabled(ctx.guild.id, command_name)
-        await self.set_command(ctx.guild.id, command_name, enabled=currently_disabled)
-
-        action = "启用" if currently_disabled else "禁用"
+        await self.set_command(ctx.guild.id, name, enabled=enabled)
         await audit(
             self.bot,
             ctx.guild.id,
-            f"{action}了指令",
-            **{"操作者": ctx.author.mention, "指令": f"/{command_name}"},
+            f"{'启用' if enabled else '停用'}了指令",
+            **{"操作者": ctx.author.mention, "指令": f"/{name}"},
         )
-
-        if currently_disabled:
-            await ctx.send(f"✅ `/{command_name}` 已**启用**。", ephemeral=True)
+        if enabled:
+            await ctx.send(f"✅ `/{name}` 已**启用**。", ephemeral=True)
         else:
-            await ctx.send(f"⏹ `/{command_name}` 已**禁用**。", ephemeral=True)
+            await ctx.send(f"⏹ `/{name}` 已**停用**。", ephemeral=True)
 
-    @commands.hybrid_command(
-        name="togglelist", description="[管理] 查看所有已禁用的指令"
-    )
+    @commands.hybrid_group(name="commands", description="Turn commands on or off for this server")
     @commands.guild_only()
     @require(manage_guild=True)
-    async def toggle_list(self, ctx):
+    async def commands_group(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send("用法：`r!commands disable <指令>`、`r!commands enable <指令>`、`r!commands list`")
+
+    @commands_group.command(name="disable", description="Turn a command off for this server")
+    @app_commands.describe(command="The command to turn off; pick from the list")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def commands_disable(self, ctx, command: str):
+        await self._set(ctx, command, enabled=False)
+
+    @commands_group.command(name="enable", description="Turn a command back on")
+    @app_commands.describe(command="The command to turn on; pick from the list")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def commands_enable(self, ctx, command: str):
+        await self._set(ctx, command, enabled=True)
+
+    @commands_group.command(name="toggle", with_app_command=False, hidden=True)
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def commands_toggle(self, ctx, command: str):
+        """旧的 r!toggle：停用和启用来回切换"""
+        name = command.strip().lstrip("/").split()[0] if command.strip() else ""
+        await self._set(ctx, command, enabled=self.is_disabled(ctx.guild.id, name))
+
+    @commands_group.command(name="list", description="Show the commands turned off here")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def commands_list(self, ctx):
         disabled = self._disabled.get(ctx.guild.id, set())
         if not disabled:
             await ctx.send("✅ 当前所有指令都处于启用状态。", ephemeral=True)
@@ -208,10 +229,34 @@ class CommandToggle(commands.Cog):
             "info",
             "已停用的指令",
             "\n".join(lines),
-            footer=f"共 {len(disabled)} 个指令被禁用 | 使用 /toggle <指令名> 恢复",
+            footer=f"共 {len(disabled)} 个指令被禁用 | 使用 /commands enable <指令> 恢复",
         )
         await ctx.send(embed=card, ephemeral=True)
 
+    @commands_disable.autocomplete("command")
+    async def _disable_autocomplete(self, interaction: discord.Interaction, current: str):
+        if interaction.guild is None:
+            return []
+        disabled = self._disabled.get(interaction.guild.id, set())
+        items = []
+        for cmd in sorted(self.bot.commands, key=lambda c: c.name):
+            if cmd.hidden or cmd.name in PROTECTED_COMMANDS or cmd.name in disabled or is_owner_only(cmd):
+                continue
+            if getattr(cmd, "app_command", None) is None:
+                continue
+            text = command_i18n.zh_description(cmd.name) or cmd.description
+            items.append((f"{cmd.name} {text[:50]}", cmd.name))
+        return choices(items, current)
+
+    @commands_enable.autocomplete("command")
+    async def _enable_autocomplete(self, interaction: discord.Interaction, current: str):
+        if interaction.guild is None:
+            return []
+        items = []
+        for name in sorted(self._disabled.get(interaction.guild.id, set())):
+            text = command_i18n.zh_description(name) or ""
+            items.append((f"{name} {text[:50]}".strip(), name))
+        return choices(items, current)
 
 async def setup(bot):
     await bot.add_cog(CommandToggle(bot))

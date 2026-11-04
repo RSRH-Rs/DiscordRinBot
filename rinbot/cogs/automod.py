@@ -11,7 +11,9 @@ from discord.ext import tasks
 
 from _botlog_helper import audit
 from _perms import require
-from _messages import embed
+from _messages import embed, send_moved
+from _inputs import choices
+from discord import app_commands
 from rincore.embeds import event_kind
 from rincore.textmatch import find_badword, find_links, host_of, is_whitelisted
 
@@ -465,110 +467,52 @@ class AutoMod(commands.Cog):
                     await self._log_action(message.guild, e)
                     return
 
-    # ─── 配置指令 ───
+    # ─── 配置指令（开关和参数在控制台的「自动审核」里改）───
 
-    @commands.hybrid_group(name="automod", description="自动审核管理")
+    async def _show_status(self, ctx):
+        cfg = await self._get_config(ctx.guild.id)
+        if not cfg:
+            await ctx.send("⚠️ 自动审核尚未启用。在控制台的「自动审核」里开启。")
+            return
+
+        status_emoji = lambda v: "🟢" if v else "🔴"
+        log_ch = ctx.guild.get_channel(cfg.get("log_channel", 0))
+        e = embed(
+            "info",
+            "自动审核设置",
+            fields=[
+                ("总开关", status_emoji(cfg["enabled"])),
+                ("反刷屏", f"{status_emoji(cfg['anti_spam'])} ({cfg['spam_threshold']}条/{cfg['spam_interval']}秒)"),
+                ("违禁词", f"{status_emoji(cfg['anti_badword'])} ({len(json.loads(cfg.get('badwords','[]')))}个词)"),
+                ("链接过滤", status_emoji(cfg["anti_link"])),
+                ("大写过滤", f"{status_emoji(cfg['anti_caps'])} (>{cfg['caps_threshold']}%)"),
+                ("重复消息", f"{status_emoji(cfg['anti_repeat'])} ({cfg['repeat_threshold']}次触发)"),
+                ("日志频道", log_ch.mention if log_ch else "未设置"),
+                ("禁言时长", f"{cfg.get('mute_duration', 300) // 60} 分钟"),
+            ],
+            footer="开关和参数在控制台的「自动审核」里修改",
+        )
+        await ctx.send(embed=e)
+
+    @commands.hybrid_group(name="automod", description="Automatic moderation: status and lists")
     @commands.guild_only()
     @require(manage_guild=True)
     async def automod_group(self, ctx):
         if ctx.invoked_subcommand is None:
-            cfg = await self._get_config(ctx.guild.id)
-            if not cfg:
-                await ctx.send("⚠️ 自动审核尚未启用。使用 `/automod enable` 启用。")
+            # 旧的 r!automod enable 之类：开关和参数已经移到控制台
+            if ctx.subcommand_passed and await send_moved(ctx, f"automod {ctx.subcommand_passed}"):
                 return
+            await self._show_status(ctx)
 
-            status_emoji = lambda v: "🟢" if v else "🔴"
-            log_ch = ctx.guild.get_channel(cfg.get("log_channel", 0))
-            e = embed(
-                "info",
-                "自动审核设置",
-                fields=[
-                    ("总开关", status_emoji(cfg["enabled"])),
-                    ("反刷屏", f"{status_emoji(cfg['anti_spam'])} ({cfg['spam_threshold']}条/{cfg['spam_interval']}秒)"),
-                    ("违禁词", f"{status_emoji(cfg['anti_badword'])} ({len(json.loads(cfg.get('badwords','[]')))}个词)"),
-                    ("链接过滤", status_emoji(cfg["anti_link"])),
-                    ("大写过滤", f"{status_emoji(cfg['anti_caps'])} (>{cfg['caps_threshold']}%)"),
-                    ("重复消息", f"{status_emoji(cfg['anti_repeat'])} ({cfg['repeat_threshold']}次触发)"),
-                    ("日志频道", log_ch.mention if log_ch else "未设置"),
-                    ("禁言时长", f"{cfg.get('mute_duration', 300) // 60} 分钟"),
-                ],
-                footer="使用 /automod enable|disable|toggle 子指令来配置",
-            )
-            await ctx.send(embed=e)
-
-    @automod_group.command(name="enable", description="启用自动审核系统")
+    @automod_group.command(name="status", description="Show the automatic moderation settings")
     @commands.guild_only()
     @require(manage_guild=True)
-    async def am_enable(self, ctx):
-        await self._update_config(ctx.guild.id, enabled=1)
-        await ctx.send("✅ 自动审核已启用！小凛开始值班了。", ephemeral=True)
-
-    @automod_group.command(name="disable", description="禁用自动审核系统")
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def am_disable(self, ctx):
-        await self._update_config(ctx.guild.id, enabled=0)
-        await ctx.send("✅ 自动审核已禁用。", ephemeral=True)
-
-    @automod_group.command(name="toggle", description="开关指定功能")
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def am_toggle(
-        self, ctx, feature: Literal["spam", "badword", "link", "caps", "repeat"]
-    ):
-        key_map = {
-            "spam": "anti_spam",
-            "badword": "anti_badword",
-            "link": "anti_link",
-            "caps": "anti_caps",
-            "repeat": "anti_repeat",
-        }
-        key = key_map[feature]
-        cfg = await self._get_config(ctx.guild.id) or {}
-        new_val = 0 if cfg.get(key, 1) else 1
-        await self._update_config(ctx.guild.id, **{key: new_val})
-        status = "开启" if new_val else "关闭"
-        await ctx.send(f"✅ **{feature}** 功能已{status}。", ephemeral=True)
-
-    @automod_group.command(name="log", description="设置审核日志频道")
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def am_log(self, ctx, channel: discord.TextChannel):
-        await self._update_config(ctx.guild.id, log_channel=channel.id)
-        await ctx.send(f"✅ 审核日志将发送到 {channel.mention}", ephemeral=True)
-
-    @automod_group.command(name="mute_duration", description="设置刷屏禁言时长（分钟）")
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def am_mute_dur(self, ctx, minutes: int):
-        if minutes < 1 or minutes > 1440:
-            await ctx.send("❌ 禁言时长范围: 1-1440 分钟")
-            return
-        await self._update_config(ctx.guild.id, mute_duration=minutes * 60)
-        await ctx.send(f"✅ 刷屏禁言时长已设为 {minutes} 分钟。", ephemeral=True)
-
-    @automod_group.command(name="spam_config", description="配置反刷屏参数")
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def am_spam_cfg(self, ctx, threshold: int = 5, interval: int = 5):
-        """
-        threshold: 触发阈值（条数）
-        interval: 检测窗口（秒）
-        """
-        await self._update_config(
-            ctx.guild.id, spam_threshold=threshold, spam_interval=interval
-        )
-        await ctx.send(
-            f"✅ 反刷屏配置: {interval} 秒内发送 {threshold} 条消息触发。",
-            ephemeral=True,
-        )
+    async def am_status(self, ctx):
+        await self._show_status(ctx)
 
     # ─── 违禁词管理 ───
 
-    @commands.hybrid_command(name="automod_words", description="[管理] 管理违禁词列表")
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def am_words(
+    async def _words(
         self, ctx, action: Literal["add", "remove", "list"], *, word: str = ""
     ):
         cfg = await self._get_config(ctx.guild.id)
@@ -631,12 +575,7 @@ class AutoMod(commands.Cog):
 
     # ─── 链接白名单管理 ───
 
-    @commands.hybrid_command(
-        name="automod_whitelist", description="[管理] 管理链接白名单"
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def am_whitelist(
+    async def _whitelist(
         self, ctx, action: Literal["add", "remove", "list"], domain: str = ""
     ):
         cfg = await self._get_config(ctx.guild.id)
@@ -696,12 +635,7 @@ class AutoMod(commands.Cog):
 
     # ─── 忽略频道/身份组 ───
 
-    @commands.hybrid_command(
-        name="automod_ignore", description="[管理] 添加/移除审核忽略的频道或身份组"
-    )
-    @commands.guild_only()
-    @require(manage_guild=True)
-    async def am_ignore(
+    async def _ignore(
         self,
         ctx,
         action: Literal["add", "remove", "list"],
@@ -753,6 +687,116 @@ class AutoMod(commands.Cog):
                 f"{verb}审核忽略对象",
                 **{"操作者": ctx.author.mention, "对象": target},
             )
+
+    # ─── 违禁词 / 链接白名单 / 忽略列表：/automod words|whitelist|ignore add|remove|list ───
+
+    @automod_group.group(name="words", description="Manage the banned word list")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_words(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await self._words(ctx, "list")
+
+    @am_words.command(name="add", description="Add a banned word")
+    @app_commands.describe(word="The word to ban")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_words_add(self, ctx, *, word: str):
+        await self._words(ctx, "add", word=word)
+
+    @am_words.command(name="remove", description="Remove a banned word")
+    @app_commands.describe(word="The word to remove; pick from the list")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_words_remove(self, ctx, *, word: str):
+        await self._words(ctx, "remove", word=word)
+
+    @am_words.command(name="list", description="Show the banned words")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_words_list(self, ctx):
+        await self._words(ctx, "list")
+
+    @automod_group.group(name="whitelist", description="Manage the domains links may point to")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_whitelist(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await self._whitelist(ctx, "list")
+
+    @am_whitelist.command(name="add", description="Allow links to a domain")
+    @app_commands.describe(domain="A domain such as youtube.com")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_whitelist_add(self, ctx, domain: str):
+        await self._whitelist(ctx, "add", domain)
+
+    @am_whitelist.command(name="remove", description="Stop allowing links to a domain")
+    @app_commands.describe(domain="The domain to remove; pick from the list")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_whitelist_remove(self, ctx, domain: str):
+        await self._whitelist(ctx, "remove", domain)
+
+    @am_whitelist.command(name="list", description="Show the allowed domains")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_whitelist_list(self, ctx):
+        await self._whitelist(ctx, "list")
+
+    @automod_group.group(name="ignore", description="Manage channels and roles automatic moderation skips")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_ignore(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await self._ignore(ctx, "list")
+
+    @am_ignore.command(name="add", description="Skip a channel or role")
+    @app_commands.describe(channel="A channel to skip", role="A role to skip")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_ignore_add(self, ctx, channel: discord.TextChannel = None, role: discord.Role = None):
+        await self._ignore(ctx, "add", channel, role)
+
+    @am_ignore.command(name="remove", description="Stop skipping a channel or role")
+    @app_commands.describe(channel="The channel to stop skipping", role="The role to stop skipping")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_ignore_remove(self, ctx, channel: discord.TextChannel = None, role: discord.Role = None):
+        await self._ignore(ctx, "remove", channel, role)
+
+    @am_ignore.command(name="list", description="Show the skipped channels and roles")
+    @commands.guild_only()
+    @require(manage_guild=True)
+    async def am_ignore_list(self, ctx):
+        await self._ignore(ctx, "list")
+
+    async def _config_list(self, guild, key: str) -> list[str]:
+        cfg = await self._get_config(guild.id) or {}
+        try:
+            return list(json.loads(cfg.get(key, "[]")))
+        except (TypeError, json.JSONDecodeError):
+            return []
+
+    @am_words_remove.autocomplete("word")
+    async def _word_autocomplete(self, interaction: discord.Interaction, current: str):
+        if interaction.guild is None:
+            return []
+        try:
+            words = await self._config_list(interaction.guild, "badwords")
+        except Exception:
+            return []
+        return choices([(w, w) for w in words], current)
+
+    @am_whitelist_remove.autocomplete("domain")
+    async def _domain_autocomplete(self, interaction: discord.Interaction, current: str):
+        if interaction.guild is None:
+            return []
+        try:
+            domains = await self._config_list(interaction.guild, "link_whitelist")
+        except Exception:
+            return []
+        return choices([(d, d) for d in domains], current)
 
 
 async def setup(bot):

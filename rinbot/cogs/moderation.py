@@ -2,21 +2,18 @@
 # RinBot — 管理模块 (Moderation)
 # 功能：
 #   • /kick        — 踢出成员
-#   • /ban         — 永久封禁
-#   • /tempban     — 临时封禁 (到期自动解封)
-#   • /unban       — 解除封禁
+#   • /ban         — 封禁；填了时长就是临时封禁 (到期自动解封)
+#   • /unban       — 解除封禁（从封禁名单里选）
 #   • /mute        — 禁言 (Discord Timeout)
 #   • /unmute      — 解除禁言
 #   • /warn        — 警告成员
-#   • /warns       — 查看成员的警告记录
-#   • /clearwarns  — 清除成员的所有警告
-#   • /delwarn     — 删除指定警告
+#   • /warnings    — list / remove / clear 警告记录
 #   • /purge       — 批量清理消息
 #   • /slowmode    — 设置频道慢速模式
 #   • /lock        — 锁定频道 (禁止发言)
 #   • /unlock      — 解锁频道
-#   • /modlog      — 查看管理操作日志
-#   • /modlog_channel — 设置管理日志频道
+#   • /case        — list / view / reason / duration 管理案件
+#   • 日志频道和警告阈值在控制台的「管理模块」里设置
 #   • 警告达到阈值自动处罚 (可配置)
 
 import discord

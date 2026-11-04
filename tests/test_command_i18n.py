@@ -36,6 +36,8 @@ DONE: set[str] = {
     "remove", "clear", "shuffle", "loop", "volume", "move", "join", "playlist",
     # Task 7
     "giveaway", "status", "roll", "avatar", "help", "rank", "leaderboard",
+    # Task 8
+    "welcome", "automod", "commands",
 }
 
 

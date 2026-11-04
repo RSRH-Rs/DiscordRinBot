@@ -1,5 +1,121 @@
 {
   "commands": {
+    "automod": {
+      "description": "自动审核：查看设置和管理名单"
+    },
+    "automod ignore": {
+      "description": "管理自动审核跳过的频道和身份组"
+    },
+    "automod ignore add": {
+      "description": "让自动审核跳过一个频道或身份组",
+      "params": {
+        "channel": {
+          "name": "频道",
+          "description": "要跳过的频道"
+        },
+        "role": {
+          "name": "身份组",
+          "description": "要跳过的身份组"
+        }
+      },
+      "examples": [
+        "/automod ignore add #管理员频道"
+      ]
+    },
+    "automod ignore list": {
+      "description": "查看跳过的频道和身份组",
+      "examples": [
+        "/automod ignore list"
+      ]
+    },
+    "automod ignore remove": {
+      "description": "不再跳过一个频道或身份组",
+      "params": {
+        "channel": {
+          "name": "频道",
+          "description": "不再跳过的频道"
+        },
+        "role": {
+          "name": "身份组",
+          "description": "不再跳过的身份组"
+        }
+      },
+      "examples": [
+        "/automod ignore remove @管理员"
+      ]
+    },
+    "automod status": {
+      "description": "查看自动审核的设置",
+      "examples": [
+        "/automod status"
+      ]
+    },
+    "automod whitelist": {
+      "description": "管理允许发送链接的域名"
+    },
+    "automod whitelist add": {
+      "description": "允许某个域名的链接",
+      "params": {
+        "domain": {
+          "name": "域名",
+          "description": "如 youtube.com"
+        }
+      },
+      "examples": [
+        "/automod whitelist add youtube.com"
+      ]
+    },
+    "automod whitelist list": {
+      "description": "查看允许的域名",
+      "examples": [
+        "/automod whitelist list"
+      ]
+    },
+    "automod whitelist remove": {
+      "description": "不再允许某个域名的链接",
+      "params": {
+        "domain": {
+          "name": "域名",
+          "description": "要移除的域名，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/automod whitelist remove youtube.com"
+      ]
+    },
+    "automod words": {
+      "description": "管理违禁词"
+    },
+    "automod words add": {
+      "description": "添加一个违禁词",
+      "params": {
+        "word": {
+          "name": "词",
+          "description": "要禁止的词"
+        }
+      },
+      "examples": [
+        "/automod words add 广告"
+      ]
+    },
+    "automod words list": {
+      "description": "查看违禁词",
+      "examples": [
+        "/automod words list"
+      ]
+    },
+    "automod words remove": {
+      "description": "移除一个违禁词",
+      "params": {
+        "word": {
+          "name": "词",
+          "description": "要移除的词，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/automod words remove 广告"
+      ]
+    },
     "avatar": {
       "description": "查看某人的大图头像",
       "params": {
@@ -105,6 +221,39 @@
       "description": "清空播放队列，当前这首继续播",
       "examples": [
         "/clear"
+      ]
+    },
+    "commands": {
+      "description": "在这个服务器开关指令"
+    },
+    "commands disable": {
+      "description": "在这个服务器停用一条指令",
+      "params": {
+        "command": {
+          "name": "指令",
+          "description": "要停用的指令，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/commands disable roll"
+      ]
+    },
+    "commands enable": {
+      "description": "重新启用一条指令",
+      "params": {
+        "command": {
+          "name": "指令",
+          "description": "要启用的指令，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/commands enable roll"
+      ]
+    },
+    "commands list": {
+      "description": "查看这个服务器停用了哪些指令",
+      "examples": [
+        "/commands list"
       ]
     },
     "giveaway": {
@@ -581,6 +730,21 @@
       },
       "examples": [
         "/warnings remove 12"
+      ]
+    },
+    "welcome": {
+      "description": "设置和预览欢迎消息"
+    },
+    "welcome setup": {
+      "description": "选择欢迎频道、道别频道和新成员的自动身份组",
+      "examples": [
+        "/welcome setup"
+      ]
+    },
+    "welcome test": {
+      "description": "用你自己当新成员，预览欢迎消息",
+      "examples": [
+        "/welcome test"
       ]
     }
   },
