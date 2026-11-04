@@ -184,3 +184,22 @@ test('modifier clicks on the brand row and switcher open a new tab without the d
         assert.equal(blocked.calls.confirm, undefined, modifier);
     }
 });
+
+test('modifier clicks on a switcher server keep the current page in the new tab', () => {
+    const handlers = {};
+    const ctx = vm.createContext({
+        document: {addEventListener: (type, fn) => { (handlers[type] ||= []).push(fn); },
+            querySelectorAll: selector => (selector === '.page[data-slug]' ? [{dataset: {slug: 'overview'}}] : []), getElementById: () => null},
+        DashboardUI: {tr: key => key, dirty: () => true, confirmLeave: () => false},
+        DashboardExtras: {createHashRouter: () => ({current: () => 'automod/rules', navigate() {}})},
+        fetch: async () => ({ok: true, json: async () => []}),
+    });
+    ctx.window = ctx;
+    vm.runInContext(source, ctx);
+    handlers.DOMContentLoaded.forEach(fn => fn());
+    const link = {dataset: {guild: '456'}, href: '/dashboard/server/456'};
+    const event = {target: {closest: () => link}, ctrlKey: true, prevented: false, preventDefault() { this.prevented = true; }};
+    ctx.Console.leaveClick(event);
+    assert.equal(event.prevented, false);
+    assert.equal(link.href, '/dashboard/server/456#automod/rules');
+});

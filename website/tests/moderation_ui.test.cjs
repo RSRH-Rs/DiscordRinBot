@@ -39,3 +39,8 @@ test('cases show their type in Chinese', async () => {
     assert.match(html, /class="chip chip--static chip--other">#2 其他</);
     assert.doesNotMatch(html, />#1 warn</);
 });
+
+test('cleared warnings keep their own label', async () => {
+    const html = await render([{case_no: 3, action: 'clearwarns', user_name: 'A', mod_name: 'B', reason: 'x', created_at: 1793750000}]);
+    assert.match(html, /class="chip chip--static chip--clearwarns">#3 清除警告</);
+});

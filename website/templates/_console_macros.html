@@ -28,10 +28,10 @@
 
 {%- macro upload(kind) -%}
 <div class="row row--block">
-    <div class="row-text"><label class="row-title" for="w-{{ kind }}-file">{{ tr('welcome.image.' ~ kind ~ '_title') }}</label><span class="row-hint">{{ tr('welcome.image.hint') }}</span></div>
+    <div class="row-text"><label class="row-title" for="w-{{ kind }}-file">{{ tr('welcome.image.' ~ kind ~ '_title') }}</label><span class="row-hint" id="w-{{ kind }}-image-hint">{{ tr('welcome.image.hint') }}</span></div>
     <div class="actions">
         <label class="btn btn--secondary" for="w-{{ kind }}-file">{{ tr('welcome.image.pick') }}</label>
-        <input class="sr-only" type="file" id="w-{{ kind }}-file" accept="image/png,image/jpeg,image/gif,image/webp" data-draft-ignore>
+        <input class="sr-only" type="file" id="w-{{ kind }}-file" accept="image/png,image/jpeg,image/gif,image/webp" aria-describedby="w-{{ kind }}-image-hint w-{{ kind }}-image-state" data-draft-ignore>
         <button type="button" class="btn btn--secondary" id="w-{{ kind }}-upload">{{ tr('welcome.image.upload') }}</button>
         <button type="button" class="btn btn--text" id="w-{{ kind }}-clear" hidden>{{ tr('welcome.image.clear') }}</button>
         <span class="unit" id="w-{{ kind }}-image-state" role="status">{{ tr('welcome.image.none') }}</span>

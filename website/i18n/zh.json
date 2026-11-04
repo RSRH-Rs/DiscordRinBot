@@ -430,6 +430,7 @@
       "tempban": "临时封禁",
       "unban": "解除封禁",
       "purge": "清理消息",
+      "clearwarns": "清除警告",
       "other": "其他"
     },
     "case_user": "成员：{user}",

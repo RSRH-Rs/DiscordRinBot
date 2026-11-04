@@ -3,7 +3,7 @@
     const {tr, escapeHtml} = Console;
     const el = id => document.getElementById(id);
     const FIELDS = {'mod-mt': ['warn_mute_threshold', 3], 'mod-md': ['warn_mute_duration', 600], 'mod-kt': ['warn_kick_threshold', 0], 'mod-bt': ['warn_ban_threshold', 0]};
-    const ACTIONS = ['warn', 'mute', 'unmute', 'kick', 'ban', 'tempban', 'unban', 'purge'];
+    const ACTIONS = ['warn', 'mute', 'unmute', 'kick', 'ban', 'tempban', 'unban', 'purge', 'clearwarns'];
 
     function renderCases(cases) {
         const box = el('mod-cases');

@@ -499,6 +499,28 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn('小凛 RinBot',link.group(1));self.assertIn('主页',link.group(1))
         self.assertNotIn('homepage_label',json.loads((ROOT/'i18n/zh.json').read_text(encoding='utf-8'))['nav'])
 
+    def test_fixed_height_fields_do_not_shrink_in_popups(self):
+        # the select popup and emoji picker are column flex boxes that overflow; a fixed-height field must not be squashed
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('flex-shrink: 0',re.search(r'\n\.input, \.select, \.num, \.select-trigger\s*\{([^}]*)\}',css).group(1))
+        self.assertIn('flex-shrink: 0',re.search(r'\n\.seg\s*\{([^}]*)\}',css).group(1))
+        self.assertIn('align-self: stretch',re.search(r'\n\.ep-tabs\s*\{([^}]*)\}',css).group(1))
+
+    def test_hidden_file_inputs_show_focus_on_their_button(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertRegex(css,r'\n\.btn:has\(\+ \.sr-only:focus-visible\)\s*\{[^}]*outline: 2px solid var\(--accent\)')
+        html,_=self.render('server.html')
+        for kind in ['welcome','farewell']:
+            self.assertRegex(html,rf'<span class="row-hint" id="w-{kind}-image-hint">')
+            self.assertRegex(html,rf'<input class="sr-only" type="file" id="w-{kind}-file"[^>]*aria-describedby="w-{kind}-image-hint w-{kind}-image-state"')
+
+    def test_phone_layout_keeps_new_controls_inside_the_column(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8');narrow=css[css.index('@media (max-width: 859px)'):]
+        self.assertRegex(narrow,r'\.rr-row\s*\{[^}]*grid-template-columns: 44px minmax\(0, 1fr\) 44px')
+        unit=re.search(r'\n\.actions > \.unit\s*\{([^}]*)\}',css).group(1)
+        for part in ['min-width: 0','overflow-wrap: anywhere']:self.assertIn(part,unit)
+        for sel in [r'\.brand-row',r'\.search-btn',r'\.switcher-item']:self.assertRegex(narrow,sel+r'\s*\{[^}]*min-height: 44px')
+
     def test_emoji_trigger_uses_the_field_colour(self):
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
         self.assertIn('background: var(--field)',re.search(r'\n\.emoji-trigger\s*\{([^}]*)\}',css).group(1))
