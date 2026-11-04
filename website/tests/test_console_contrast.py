@@ -12,6 +12,15 @@ PAIRS = [
 NON_TEXT = [('field-line', 'field'), ('field-line', 'panel'), ('field-line', 'bg')]
 ALLOWED_SIZES = {12, 13, 14, 16, 22}
 EXEMPT = ('.preview', '.fake')
+# Spacing, radius and weight sets (spec 2026-11-03-console-alignment §4.7-4.9). The Discord mock and the login sketch copy Discord's sizes.
+SPACING = {0, 1, 4, 8, 12, 16, 24, 32, 40, 48}
+CONTROL_SPACING = SPACING | {2, 6}
+CONTROL_CLASSES = {'btn', 'input', 'select', 'select-trigger', 'search-select', 'search-btn', 'textarea', 'num', 'num-field', 'num-unit',
+                   'seg', 'seg-option', 'chip', 'chip-remove', 'check-chip', 'tog', 'tog-track', 'tog-on', 'tog-off', 'theme-switch',
+                   'nav-item', 'tab', 'palette-input'}
+RADII = {'0', '4px', '8px', '12px', '999px', '50%', 'var(--radius)'}
+LAYOUT_EXEMPT = ('.preview', '.discord-preview', '.fake')
+SPACING_PROPS = re.compile(r'(?:^|;)\s*((?:padding|margin)(?:-[a-z-]+)?|gap|row-gap|column-gap)\s*:\s*([^;]+)')
 
 
 def luminance(hex_color):
@@ -33,6 +42,26 @@ def block(css, selector):
 
 def declarations(body):
     return dict(re.findall(r'--([a-z-]+):\s*([^;]+);', body))
+
+
+def rules(css):
+    """(selector parts, body) for every rule, comments stripped; parts are comma-split and whitespace-normalised."""
+    css = re.sub(r'/\*.*?\*/', '', css, flags=re.S)
+    for selector, body in re.findall(r'([^{}]+)\{([^{}]*)\}', css):
+        yield [' '.join(part.split()) for part in selector.split(',')], body
+
+
+def first_class(part):
+    """'.btn--primary:hover' -> 'btn'; '.seg-option' -> 'seg-option'; 'input[type=file]' -> None."""
+    match = re.match(r'\.([a-z][a-z0-9-]*?)(?:--[a-z0-9-]+)?(?=$|[^a-z0-9-])', part)
+    return match.group(1) if match else None
+
+
+def rule(css, selector):
+    """Body of the rule whose selector is exactly `selector` at the start of a line."""
+    match = re.search(r'(?:^|\n)\s*' + re.escape(selector) + r'\s*\{([^}]*)\}', css)
+    assert match, f'missing rule {selector}'
+    return match.group(1)
 
 
 class ConsoleContrastTests(unittest.TestCase):
@@ -97,6 +126,47 @@ class ConsoleContrastTests(unittest.TestCase):
 
     def test_no_important(self):
         self.assertNotIn('!important', self.css)
+
+    def test_spacing_stays_on_the_grid(self):
+        bad = []
+        for parts, body in rules(self.css):
+            if all(part.startswith(LAYOUT_EXEMPT) for part in parts):
+                continue
+            allowed = CONTROL_SPACING if all(first_class(part) in CONTROL_CLASSES for part in parts) else SPACING
+            for prop, value in SPACING_PROPS.findall(body):
+                for number in re.findall(r'-?\d+(?:\.\d+)?px', value):
+                    size = abs(float(number[:-2]))
+                    if size == 140 and parts == ['.content']:
+                        continue
+                    if size not in allowed:
+                        bad.append((', '.join(parts), prop, number))
+        self.assertEqual(bad, [])
+
+    def test_radii_use_four_steps(self):
+        bad = []
+        for parts, body in rules(self.css):
+            if all(part.startswith(LAYOUT_EXEMPT) for part in parts):
+                continue
+            for value in re.findall(r'border(?:-[a-z]+)*-radius\s*:\s*([^;]+)', body):
+                for token in value.split():
+                    if token not in RADII and not (token == '6px' and parts == ['.theme-switch button']):
+                        bad.append((', '.join(parts), token))
+        self.assertEqual(bad, [])
+
+    def test_only_two_font_weights(self):
+        bad = []
+        for parts, body in rules(self.css):
+            if all(part.startswith(LAYOUT_EXEMPT) for part in parts):
+                continue
+            weights = re.findall(r'font-weight\s*:\s*([^;]+)', body) + re.findall(r'(?:^|;)\s*font\s*:\s*(\d{3})\s', body)
+            bad += [(', '.join(parts), w.strip()) for w in weights if w.strip() not in ('400', '600')]
+        self.assertEqual(bad, [])
+
+    def test_row_and_module_titles_are_regular(self):
+        for selector in ['.row-title', '.mod-name', '.server-name', '.lb-name', '.cmd-name', '.user-name']:
+            body = rule(self.css, selector)
+            self.assertNotIn('font-weight: 600', body, selector)
+            self.assertNotIn('font-weight: 500', body, selector)
 
 
 if __name__ == '__main__':

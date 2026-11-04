@@ -242,7 +242,7 @@ class DashboardTemplateTests(unittest.TestCase):
             html,_=self.render(name)
             for value in ['light','','dark']:
                 self.assertEqual(html.count(f'data-theme-set="{value}"'),1,f'{name} {value!r}')
-            self.assertIn('js/theme.js?v=20261103b',html)
+            self.assertIn('js/theme.js?v=20261103c',html)
 
     def test_login_gate_sits_on_a_blurred_console_backdrop(self):
         html,_=self.render('login_gate.html')
@@ -351,7 +351,7 @@ class DashboardTemplateTests(unittest.TestCase):
         lst=re.search(r'\n\.list\s*\{([^}]*)\}',css).group(1)
         for gone in ['background','border-radius','box-shadow']:self.assertNotIn(gone,lst)
         self.assertIn('border-block: 1px solid var(--line)',lst)
-        self.assertIn('padding: 14px 0',re.search(r'\n\.row\s*\{([^}]*)\}',css).group(1))
+        self.assertIn('padding: 12px 0',re.search(r'\n\.row\s*\{([^}]*)\}',css).group(1))
         hint=re.search(r'\n\.master-hint\s*\{([^}]*)\}',css).group(1)
         self.assertNotIn('background',hint); self.assertIn('color: var(--warn)',hint)
         for block in ['.case','.lb-list','.cmd-card','.item','.fold > summary']:
