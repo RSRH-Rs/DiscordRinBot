@@ -144,3 +144,32 @@ test('master hint shows while the master switch is off', () => {
     Console.dependencies(root);
     assert.equal(hint.hidden, true);
 });
+
+test('duration options carry their label so segments can reserve the bold width', () => {
+    const made = [];
+    const element = tag => {
+        const node = {tagName: tag, dataset: {}, children: [], listeners: {}, setAttribute(k, v) { this[k] = v; },
+            addEventListener(type, fn) { this.listeners[type] = fn; }, append(...kids) { this.children.push(...kids); }};
+        made.push(node);
+        return node;
+    };
+    const input = {value: '300', addEventListener() {}, dispatchEvent() {}};
+    const seg = {dataset: {for: 'am-mute'}, replaceChildren(...kids) { this.children = kids; }, after(node) { this.next = node; }};
+    const ctx = vm.createContext({
+        document: {addEventListener() {}, querySelectorAll: () => [], getElementById: id => (id === 'am-mute' ? input : null), createElement: element,
+            activeElement: null},
+        DashboardUI: {tr: key => ({'duration.preset_60': '1 分钟', 'duration.preset_300': '5 分钟', 'duration.preset_3600': '1 小时',
+            'duration.preset_86400': '1 天', 'duration.custom': '自定义'})[key] || key, dirty: () => false},
+        DashboardExtras: {},
+        Option: class { constructor(text, value) { this.text = text; this.value = value; } },
+        fetch: async () => ({ok: true, json: async () => []}),
+        GID: '123',
+    });
+    ctx.window = ctx;
+    vm.runInContext(source, ctx);
+    ctx.Console.duration.mount(seg);
+    const options = seg.children;
+    assert.equal(options.length, 5);
+    for (const option of options) assert.equal(option.dataset.label, option.textContent);
+    assert.deepEqual(options.map(o => o.dataset.label), ['1 分钟', '5 分钟', '1 小时', '1 天', '自定义']);
+});

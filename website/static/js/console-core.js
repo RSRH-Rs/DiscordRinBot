@@ -64,11 +64,11 @@ window.Console = (() => {
             const options = PRESETS.map(value => {
                 const b = document.createElement('button');
                 b.type = 'button'; b.className = 'seg-option'; b.dataset.value = value;
-                b.textContent = tr('duration.preset_' + value);
+                b.textContent = b.dataset.label = tr('duration.preset_' + value);
                 return b;
             });
             const custom = document.createElement('button');
-            custom.type = 'button'; custom.className = 'seg-option'; custom.textContent = tr('duration.custom');
+            custom.type = 'button'; custom.className = 'seg-option'; custom.textContent = custom.dataset.label = tr('duration.custom');
             const box = document.createElement('div'); box.className = 'seg-custom'; box.hidden = true;
             const amount = document.createElement('input');
             amount.type = 'number'; amount.inputMode = 'numeric'; amount.className = 'num'; amount.min = '1'; amount.setAttribute('data-draft-ignore', '');

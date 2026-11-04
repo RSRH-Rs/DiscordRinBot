@@ -428,4 +428,20 @@ class DashboardTemplateTests(unittest.TestCase):
         for key in ['messages_per','seconds_label']:self.assertNotIn(key,zh['automod'])
         self.assertEqual((zh['automod']['within'],zh['automod']['messages']),('内发','条'))
 
+    def test_segments_are_equal_width(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        seg=re.search(r'\n\.seg\s*\{([^}]*)\}',css).group(1)
+        for part in ['display: inline-grid','grid-auto-flow: column','grid-auto-columns: minmax(72px, 1fr)']:self.assertIn(part,seg)
+        self.assertNotIn('flex-wrap',seg)
+        after=re.search(r'\n\.seg-option::after\s*\{([^}]*)\}',css).group(1)
+        for part in ['content: attr(data-label)','height: 0','visibility: hidden','font-weight: 600']:self.assertIn(part,after)
+        narrow=css[css.index('@media (max-width: 859px)'):]
+        self.assertRegex(narrow,r'\.seg\s*\{[^}]*display: grid;[^}]*width: 100%;[^}]*grid-auto-columns: minmax\(0, 1fr\)')
+        # five options on a 320px phone leave 57px each; 4px side padding keeps a 3-character label inside its option
+        self.assertRegex(narrow,r'\.seg-option\s*\{[^}]*padding: 0 4px')
+        html,_=self.render('server.html')
+        found=re.findall(r'class="seg-option" data-end-in="[^"]+" data-label="([^"]+)" aria-pressed="[a-z]+">([^<]+)<',html)
+        self.assertEqual(len(found),4)
+        for label,text in found:self.assertEqual(label,text)
+
 if __name__=='__main__':unittest.main()

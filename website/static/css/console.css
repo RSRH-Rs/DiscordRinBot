@@ -325,9 +325,11 @@ input[type="file"]::file-selector-button { margin-right: 8px; padding: 8px 12px;
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
 .actions > .section-hint { margin: 0; }
 
-.seg { display: inline-flex; flex-wrap: wrap; height: var(--control-h); border: 1px solid var(--field-line); border-radius: 8px; overflow: hidden; background: var(--field); }
-.seg-option { padding: 6px 12px; border: 0; border-left: 1px solid var(--line); background: none; cursor: pointer; white-space: nowrap; }
+.seg { display: inline-grid; grid-auto-flow: column; grid-auto-columns: minmax(72px, 1fr); align-self: flex-start; height: var(--control-h); border: 1px solid var(--field-line); border-radius: 8px; overflow: hidden; background: var(--field); }
+.seg-option { padding: 0 12px; border: 0; border-left: 1px solid var(--line); background: none; cursor: pointer; white-space: nowrap; }
 .seg-option:first-child { border-left: 0; }
+/* Reserves the bold width of each label, so selecting an option never widens the equal columns. */
+.seg-option::after { content: attr(data-label); display: block; height: 0; overflow: hidden; visibility: hidden; font-weight: 600; }
 .seg-option[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
 .seg-custom { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
 .seg-custom .select { width: 96px; }
@@ -687,8 +689,8 @@ a.server-row:hover .server-name { color: var(--accent-text); }
     .hero img { width: 64px; height: 64px; margin: 0; }
     .hero .bot-status { grid-column: 2; justify-self: start; margin: 0; }
     .rr-row { grid-template-columns: 44px minmax(0, 1fr) 36px; }
-    .seg { display: flex; width: 100%; }
-    .seg-option { flex: 1 0 auto; }
+    .seg { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); }
+    .seg-option { padding: 0 4px; }
     .unsaved-bar { left: 0; right: 0; bottom: 0; width: auto; border-radius: 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); }
     .fake-side { display: none; }
     .fake-topbar, .fake-content { padding-left: 16px; padding-right: 16px; }

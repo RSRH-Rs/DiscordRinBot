@@ -286,10 +286,10 @@
             <div class="row row--block">
                 <div class="row-text"><span class="row-title" id="gw-end-label">{{ tr('giveaway.end') }}</span></div>
                 <div class="seg" role="group" aria-labelledby="gw-end-label">
-                    <button type="button" class="seg-option" data-end-in="1" aria-pressed="false">{{ tr('giveaway.in_hour') }}</button>
-                    <button type="button" class="seg-option" data-end-in="24" aria-pressed="true">{{ tr('giveaway.in_day') }}</button>
-                    <button type="button" class="seg-option" data-end-in="168" aria-pressed="false">{{ tr('giveaway.in_week') }}</button>
-                    <button type="button" class="seg-option" data-end-in="custom" aria-pressed="false">{{ tr('duration.custom') }}</button>
+                    <button type="button" class="seg-option" data-end-in="1" data-label="{{ tr('giveaway.in_hour') }}" aria-pressed="false">{{ tr('giveaway.in_hour') }}</button>
+                    <button type="button" class="seg-option" data-end-in="24" data-label="{{ tr('giveaway.in_day') }}" aria-pressed="true">{{ tr('giveaway.in_day') }}</button>
+                    <button type="button" class="seg-option" data-end-in="168" data-label="{{ tr('giveaway.in_week') }}" aria-pressed="false">{{ tr('giveaway.in_week') }}</button>
+                    <button type="button" class="seg-option" data-end-in="custom" data-label="{{ tr('duration.custom') }}" aria-pressed="false">{{ tr('duration.custom') }}</button>
                 </div>
                 <input class="input" type="datetime-local" id="gw-end" aria-labelledby="gw-end-label" hidden>
             </div>
