@@ -125,6 +125,46 @@
     const pages = [...document.querySelectorAll('.page[data-slug]')];
     const panels = [...document.querySelectorAll('[data-settings-panel]')];
     const skipped = [];
+    // Popups and added rows only exist after a click, so open them once at the end: a role row, its emoji picker and
+    // the channel picker. The added row is removed again afterwards; a popup that did not open is listed in `skipped`.
+    async function auditPopups() {
+        const page = document.getElementById('pg-roles');
+        location.hash = 'roles';
+        await sleep(400);
+        if (!page?.classList.contains('is-active')) { skipped.push('roles/popups'); return; }
+        const close = () => { document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', {key: 'Escape', bubbles: true})); page.querySelector('.page-head').click(); };
+        // Popups load and position themselves asynchronously; wait up to 2s for one to appear or to go away.
+        const until = async (find, want = true) => { for (let i = 0; i < 20; i++) { const found = find(); if (!!found === want) return found; await sleep(100); } return find(); };
+        const open = selector => [...document.querySelectorAll(selector)].find(shown);
+        document.getElementById('rr-add').click();
+        await sleep(200);
+        const row = page.querySelector('.rr-row');
+        if (row) {
+            audit(row, 'roles/role-row');
+            const last = row.lastElementChild;
+            if (!near(box(last).right, box(row).right)) add('F', 'roles/role-row', `${name(last)} ends at ${Math.round(box(last).right)}, row at ${Math.round(box(row).right)}`);
+            row.querySelector('.emoji-trigger')?.click();
+            const picker = await until(() => open('.emoji-picker'));
+            if (picker) {
+                audit(picker, 'roles/emoji-picker');
+                const tabs = picker.querySelector('.ep-tabs'), s = getComputedStyle(picker);
+                const inner = box(picker).width - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight) - parseFloat(s.borderLeftWidth) - parseFloat(s.borderRightWidth);
+                if (tabs && !near(box(tabs).width, inner)) add('S', 'roles/emoji-picker', `tabs ${Math.round(box(tabs).width)}px wide in a ${Math.round(inner)}px picker`);
+            } else skipped.push('roles/emoji-picker');
+            close();
+            await until(() => open('.emoji-picker'), false);
+        } else skipped.push('roles/role-row');
+        // The longest list is the one that overflows its popup, which is where a shrinking field shows.
+        const longest = [...page.querySelectorAll('.search-select')].sort((a, b) => (b.querySelector('select')?.options.length || 0) - (a.querySelector('select')?.options.length || 0))[0];
+        longest?.querySelector('.select-trigger')?.click();
+        const popup = await until(() => open('.select-popup'));
+        if (popup) audit(popup, 'roles/select-popup'); else skipped.push('roles/select-popup');
+        close();
+        await until(() => open('.select-popup'), false);
+        row?.lastElementChild.click();
+        document.getElementById('unsaved-reset')?.click();
+        await sleep(200);
+    }
     if (pages.length) {
         for (const page of pages) {
             const tabs = [...page.querySelectorAll('[role="tab"][data-tab]')].map(tab => tab.dataset.tab);
@@ -137,6 +177,7 @@
                 audit(page, where);
             }
         }
+        if (document.getElementById('rr-add')) await auditPopups();
     } else if (panels.length) {
         for (const panel of panels) {
             location.hash = panel.dataset.settingsPanel;
