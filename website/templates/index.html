@@ -30,11 +30,11 @@
         root.classList.add('js');
     })();
     </script>
-    <script>try{var t=localStorage.getItem('rin-theme');if(t==='light'||t==='dark')document.documentElement.dataset.theme=t}catch(e){}</script>
-    <title>小凛Rinbot</title>
-    <meta name="description" content="小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。">
     <meta name="theme-color" content="#F7F7F8" media="(prefers-color-scheme: light)">
     <meta name="theme-color" content="#17171B" media="(prefers-color-scheme: dark)">
+    <script>try{var t=localStorage.getItem('rin-theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;var c=t==='dark'?'#17171B':'#F7F7F8';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.content=c})}}catch(e){}</script>
+    <title>小凛Rinbot</title>
+    <meta name="description" content="小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。">
     <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -69,6 +69,7 @@
         /* Discord 浅色主题 */
         --dc-bg: #FFFFFF;
         --dc-deep: #F2F3F5;
+        --dc-gold: #8C5D00;
         --dc-line: #E3E5E8;
         --dc-text: #313338;
         --dc-muted: #5C5E66;
@@ -112,6 +113,7 @@
         /* Discord 深色主题 */
         --dc-bg: #313338;
         --dc-deep: #2B2D31;
+        --dc-gold: #F0B232;
         --dc-line: #3F4147;
         --dc-text: #DBDEE1;
         --dc-muted: #B5BAC1;
@@ -151,6 +153,7 @@
             /* Discord 深色主题 */
             --dc-bg: #313338;
             --dc-deep: #2B2D31;
+            --dc-gold: #F0B232;
             --dc-line: #3F4147;
             --dc-text: #DBDEE1;
             --dc-muted: #B5BAC1;
@@ -426,7 +429,7 @@
     .lb { list-style: none; margin-top: 10px; display: grid; gap: 6px; font-size: 14px; }
     .lb li { display: grid; grid-template-columns: 22px 26px minmax(0, 1fr) auto; gap: 8px; align-items: center; }
     .lb .pos { font-weight: 700; color: var(--dc-muted); }
-    .lb li:first-child .pos { color: #B7791F; }
+    .lb li:first-child .pos { color: var(--dc-gold); }
     .lb .crop { width: 26px; height: 26px; border-radius: 50%; overflow: hidden; }
     .lb .crop img { width: 100%; height: 100%; }
     .lb .crop .zoom { transform: scale(1.55); transform-origin: 60% 25%; }

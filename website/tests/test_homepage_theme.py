@@ -1,4 +1,5 @@
 """The homepage shares the console palette in both themes and boots the saved theme before styles."""
+import re
 import unittest
 from pathlib import Path
 
@@ -32,6 +33,14 @@ class HomepageThemeTests(unittest.TestCase):
 
     def test_theme_boots_before_styles(self):
         self.assertLess(self.html.index("localStorage.getItem('rin-theme')"), self.html.index('<style>'))
+
+    def test_manual_theme_sets_the_address_bar_colour(self):
+        # The metas come first so the boot script can point both at the saved palette's background.
+        head = self.html[:self.html.index('</head>')]
+        self.assertLess(head.index('name="theme-color"'), head.index("localStorage.getItem('rin-theme')"))
+        script = re.search(r"<script>try\{var t=localStorage\.getItem\('rin-theme'\).*?</script>", head).group(0)
+        for part in ['theme-color', '#17171B', '#F7F7F8']:
+            self.assertIn(part, script)
 
     def test_no_old_palette_left(self):
         for old in OLD:

@@ -171,6 +171,7 @@ TEXT_PAIRS = [
     ("on-accent", "accent"), ("accent-text", "accent-soft"),
     ("text", "side"), ("muted", "side"), ("text", "cur"), ("muted", "hover"),
     ("dc-text", "dc-bg"), ("dc-muted", "dc-bg"), ("dc-muted", "dc-deep"), ("accent-text", "dc-bg"), ("dc-text", "dc-deep"),
+    ("dc-gold", "dc-deep"),
 ]
 
 
