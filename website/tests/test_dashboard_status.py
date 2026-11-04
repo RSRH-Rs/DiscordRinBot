@@ -150,6 +150,16 @@ class DashboardStatusTests(unittest.IsolatedAsyncioTestCase):
         db.close()
         self.assertEqual(row,('默认',1))
 
+    async def test_serverlog_toggle_keeps_default_categories(self):
+        # 没保存过日志设置时，快捷开关新建的那行要带上默认的事件分类，否则之后什么都不记
+        path=self.make_db('serverlog.db',"CREATE TABLE serverlog_config (guild_id INTEGER PRIMARY KEY, channel_id INTEGER DEFAULT 0, enabled INTEGER DEFAULT 1, categories TEXT DEFAULT '', ignored_channels TEXT DEFAULT '')",[])
+        self.toggle_patches(path)
+        with patch.object(routes,'DB_SERVERLOG',path):
+            self.assertEqual((await self.client.post('/api/guild/123/modules/serverlog/enabled',json={'enabled':False})).status_code,200)
+            data=await (await self.client.get('/api/guild/123/serverlog')).get_json()
+        self.assertEqual(data['categories'],['message','member','ban','channel','role','server'])
+        self.assertFalse(data['enabled'])
+
     async def test_toggle_rejects(self):
         path=self.make_db('welcome.db','CREATE TABLE welcome_config (guild_id INTEGER PRIMARY KEY, enabled INTEGER DEFAULT 1)',[])
         self.toggle_patches(path,access=False)

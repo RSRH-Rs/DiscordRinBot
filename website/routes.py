@@ -1208,6 +1208,10 @@ def setup_routes(app, discord):
         db_name, table = _TOGGLE_TABLES[slug]
         try:
             async with aiosqlite.connect(globals()[db_name]) as db:
+                if slug == "serverlog":
+                    # 只写 guild_id 的话事件分类是空的，之后什么都不记；新建时带上和日志页一样的默认分类
+                    await db.execute(f"INSERT OR IGNORE INTO {table} (guild_id, categories) VALUES (?, ?)",
+                                     (g, ",".join(SERVERLOG_DEFAULT)))
                 await db.execute(f"INSERT OR IGNORE INTO {table} (guild_id) VALUES (?)", (g,))
                 await db.execute(f"UPDATE {table} SET enabled=? WHERE guild_id=?", (1 if d["enabled"] else 0, g))
                 await db.commit()
