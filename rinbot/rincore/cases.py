@@ -9,6 +9,20 @@ import sqlite3
 
 import aiosqlite
 
+# 处罚动作的中文名，与网站 i18n 的 moderation.action 保持一致
+ACTION_NAMES = {
+    "warn": "警告",
+    "mute": "禁言",
+    "unmute": "解除禁言",
+    "kick": "踢出",
+    "ban": "封禁",
+    "tempban": "临时封禁",
+    "unban": "解除封禁",
+    "purge": "清理消息",
+    "clearwarns": "清除警告",
+    "other": "其他",
+}
+
 
 async def _has_case_no(db: aiosqlite.Connection) -> bool:
     async with db.execute("PRAGMA table_info(mod_cases)") as cur:
