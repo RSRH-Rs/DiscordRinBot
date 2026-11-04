@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import _perms
 from _perms import owner_only
 import os
 import traceback
@@ -14,6 +15,32 @@ EVAL_ENABLED = os.getenv("RINBOT_ENABLE_EVAL", "0").strip().lower() in {
     "yes",
     "on",
 }
+
+
+async def sync_commands(tree, scope: str, guild, dev_guild_id: int) -> str:
+    """同步斜杠指令树。开发服务器只注册了开发指令，清它的副本会把开发指令一起清掉，所以永远跳过。"""
+    in_dev = guild is not None and dev_guild_id and guild.id == dev_guild_id
+    if scope == "clear_guild":
+        if guild is None:
+            return "只能在服务器里清除指令缓存。"
+        if in_dev:
+            return "开发服务器的指令不能清掉，改用 global。"
+        tree.clear_commands(guild=guild)
+        await tree.sync(guild=guild)
+        return "已清除本服务器的斜杠指令缓存。"
+
+    prefix = ""
+    if scope == "guild" and guild is not None and not in_dev:
+        # 清掉本服务器残留的旧副本，避免和全局指令重复显示
+        tree.clear_commands(guild=guild)
+        await tree.sync(guild=guild)
+        prefix = "已清理本服务器的旧指令，"
+    synced = await tree.sync()
+    result = f"{prefix}已同步 {len(synced)} 个全局指令"
+    if dev_guild_id:
+        dev_synced = await tree.sync(guild=discord.Object(dev_guild_id))
+        result += f"，开发服务器 {len(dev_synced)} 个"
+    return result
 
 
 # ─────────────────────────────────────────────
@@ -78,17 +105,8 @@ class Dev(commands.Cog):
 
         # ── 2. 同步（可选）──
         try:
-            if sync == "guild":
-                # 不再把全局指令复制成 guild 指令；两套同名命令会在客户端重复显示。
-                self.bot.tree.clear_commands(guild=ctx.guild)
-                await self.bot.tree.sync(guild=ctx.guild)
-                synced = await self.bot.tree.sync()
-                log.append(
-                    f"⚡ 已清理本服务器重复指令，并同步 {len(synced)} 个全局指令"
-                )
-            elif sync == "global":
-                synced = await self.bot.tree.sync()
-                log.append(f"🌎 指令已全球推送（{len(synced)} 个，最长 1 小时生效）")
+            if sync in ("guild", "global"):
+                log.append(await sync_commands(self.bot.tree, sync, ctx.guild, _perms.DEV_GUILD_ID))
             else:
                 log.append("⏩ 跳过指令同步")
         except Exception as e:
@@ -172,28 +190,8 @@ class Dev(commands.Cog):
         await ctx.defer(ephemeral=True)
 
         try:
-            if scope == "guild":
-                # 清除旧的 guild 覆盖后同步全局树，避免与全局命令重复显示。
-                self.bot.tree.clear_commands(guild=ctx.guild)
-                await self.bot.tree.sync(guild=ctx.guild)
-                synced = await self.bot.tree.sync()
-                await ctx.send(
-                    f"⚡ 已清理本服务器重复指令，并同步 **{len(synced)}** 个全局指令。",
-                    ephemeral=True,
-                )
-
-            elif scope == "global":
-                synced = await self.bot.tree.sync()
-                await ctx.send(
-                    f"🌎 已向全球推送 **{len(synced)}** 个指令（最长 1 小时生效）",
-                    ephemeral=True,
-                )
-
-            elif scope == "clear_guild":
-                self.bot.tree.clear_commands(guild=ctx.guild)
-                await self.bot.tree.sync(guild=ctx.guild)
-                await ctx.send("🗑 已清除本服务器的斜杠指令缓存。", ephemeral=True)
-
+            result = await sync_commands(self.bot.tree, scope, ctx.guild, _perms.DEV_GUILD_ID)
+            await ctx.send(result, ephemeral=True)
         except Exception as e:
             await ctx.send(f"❌ 同步失败：\n```\n{e}\n```", ephemeral=True)
 
