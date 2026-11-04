@@ -1,5 +1,6 @@
 import asyncio
 import discord
+from _messages import embed
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
 import io
@@ -335,17 +336,17 @@ class Leveling(commands.Cog):
                 f"{rank_icon} **{name}**\n" f"╰ Lv.{level} · {format_xp_number(xp)} XP"
             )
 
-        embed = discord.Embed(
-            title=f"🏆 {ctx.guild.name} 等级排行榜",
-            description="\n\n".join(lines),
-            color=discord.Color.gold(),
-        )
         total_pages = (total - 1) // per_page + 1
-        embed.set_footer(text=f"第 {page} / {total_pages} 页 · 共 {total} 位活跃成员")
+        card = embed(
+            "info",
+            f"{ctx.guild.name} 等级排行榜",
+            "\n\n".join(lines),
+            footer=f"第 {page} / {total_pages} 页 · 共 {total} 位活跃成员",
+        )
         if ctx.guild.icon:
-            embed.set_thumbnail(url=ctx.guild.icon.url)
+            card.set_thumbnail(url=ctx.guild.icon.url)
 
-        await ctx.send(embed=embed)
+        await ctx.send(embed=card)
 
 
 async def setup(bot):

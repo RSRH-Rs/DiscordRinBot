@@ -18,6 +18,8 @@ import os
 from typing import Optional
 from _botlog_helper import audit, check_component
 from _perms import require
+from _messages import embed
+from rincore.embeds import giveaway_ended, giveaway_running
 from rincore import durations
 from rincore.throttle import Debouncer
 
@@ -306,21 +308,8 @@ class Giveaway(commands.Cog):
         # 更新原消息
         try:
             msg = await channel.fetch_message(message_id)
-            if winners:
-                winner_mentions = ", ".join(f"<@{uid}>" for uid in winners)
-                embed = discord.Embed(
-                    title="🎊 抽奖结束！",
-                    description=f"**奖品:** {prize}\n**获奖者:** {winner_mentions}",
-                    color=discord.Color.gold(),
-                )
-            else:
-                embed = discord.Embed(
-                    title="🎊 抽奖结束",
-                    description=f"**奖品:** {prize}\n没有符合资格的参与者 😢",
-                    color=discord.Color.dark_grey(),
-                )
-            embed.set_footer(text=f"抽奖 ID: {giveaway_id} | 由 小凛 公正开奖")
-            await msg.edit(embed=embed, view=None)
+            card = discord.Embed.from_dict(giveaway_ended(prize, giveaway_id, winners))
+            await msg.edit(embed=card, view=None)
         except discord.NotFound:
             pass
 
@@ -389,21 +378,9 @@ class Giveaway(commands.Cog):
         end_time = time.time() + seconds
         end_ts = int(end_time)
 
-        embed = discord.Embed(
-            title="🎉 抽奖活动！",
-            description=(
-                f"**奖品:** {prize}\n"
-                f"**中奖名额:** {winners} 人\n"
-                f"**结束时间:** <t:{end_ts}:R> (<t:{end_ts}:f>)\n"
-                f"**发起者:** {ctx.author.mention}\n\n"
-                f"点击下方按钮参加抽奖！"
-            ),
-            color=discord.Color.green(),
-        )
-        embed.set_footer(text="小凛抽奖系统 | 公平公正公开")
-
+        card = discord.Embed.from_dict(giveaway_running(prize, winners, end_ts, host_id=ctx.author.id))
         view = GiveawayEntryButton()
-        msg = await ctx.send(embed=embed, view=view)
+        msg = await ctx.send(embed=card, view=view)
 
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
@@ -511,16 +488,15 @@ class Giveaway(commands.Cog):
             await ctx.send("📭 当前没有抽奖活动。")
             return
 
-        embed = discord.Embed(title="🎉 抽奖活动列表", color=discord.Color.green())
-        for gw_id, prize, wc, end_time, ended in rows:
-            status = "✅ 已结束" if ended else f"⏳ <t:{int(end_time)}:R>"
-            embed.add_field(
-                name=f"#{gw_id} — {prize}",
-                value=f"名额: {wc} | 状态: {status}",
-                inline=False,
+        fields = [
+            (
+                f"#{gw_id} — {prize}",
+                f"名额: {wc} | 状态: {'✅ 已结束' if ended else f'⏳ <t:{int(end_time)}:R>'}",
+                False,
             )
-
-        await ctx.send(embed=embed)
+            for gw_id, prize, wc, end_time, ended in rows
+        ]
+        await ctx.send(embed=embed("info", "最近的抽奖", fields=fields))
 
 
 async def setup(bot):

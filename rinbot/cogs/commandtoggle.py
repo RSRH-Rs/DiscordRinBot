@@ -13,6 +13,7 @@ import os
 
 from _botlog_helper import audit
 from _perms import require
+from _messages import embed
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -184,15 +185,13 @@ class CommandToggle(commands.Cog):
             return
 
         lines = [f"⏹ `/{cmd}`" for cmd in sorted(disabled)]
-        embed = discord.Embed(
-            title="🔒 已禁用的指令",
-            description="\n".join(lines),
-            color=discord.Color.orange(),
+        card = embed(
+            "info",
+            "已停用的指令",
+            "\n".join(lines),
+            footer=f"共 {len(disabled)} 个指令被禁用 | 使用 /toggle <指令名> 恢复",
         )
-        embed.set_footer(
-            text=f"共 {len(disabled)} 个指令被禁用 | 使用 /toggle <指令名> 恢复"
-        )
-        await ctx.send(embed=embed, ephemeral=True)
+        await ctx.send(embed=card, ephemeral=True)
 
 
 async def setup(bot):

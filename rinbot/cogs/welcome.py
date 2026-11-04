@@ -17,6 +17,7 @@ import re
 import aiosqlite
 from _botlog_helper import audit
 from _perms import require
+from _messages import embed
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "welcome.db"
@@ -340,13 +341,12 @@ class Welcome(commands.Cog):
         msg = self._fmt_text(
             config.get("welcome_msg") or "欢迎 %member% 加入 %server%！🎉", member
         )
-        embed = discord.Embed(description=msg, color=discord.Color.pink())
-        embed.set_author(name=title, icon_url=icon)
+        card = embed("info", description=msg, author=title, author_icon=icon)
         if thumb:
-            embed.set_thumbnail(url=thumb)
+            card.set_thumbnail(url=thumb)
         if big:
-            embed.set_image(url=big)
-        return embed
+            card.set_image(url=big)
+        return card
 
     async def _render_card_file(self, member):
         try:
@@ -448,22 +448,22 @@ class Welcome(commands.Cog):
         if not channel:
             return
 
-        embed = self._build_welcome_embed(member, config)
-        if embed is None:
+        card = self._build_welcome_embed(member, config)
+        if card is None:
             return
         files = []
         custom_image = self._custom_image_file(config, "welcome")
         if custom_image:
             custom_file, custom_filename = custom_image
             files.append(custom_file)
-            embed.set_image(url=f"attachment://{custom_filename}")
+            card.set_image(url=f"attachment://{custom_filename}")
         elif config.get("show_card", 0):
             card = await self._render_card_file(member)
             files.append(card)
-            embed.set_image(url="attachment://welcome.png")
+            card.set_image(url="attachment://welcome.png")
 
         try:
-            await channel.send(embed=embed, files=files)
+            await channel.send(embed=card, files=files)
         except (discord.Forbidden, discord.HTTPException) as e:
             print(f"欢迎消息发送失败 (guild {member.guild.id}): {e}")
 
@@ -498,24 +498,24 @@ class Welcome(commands.Cog):
         if not channel:
             return
 
-        embed = discord.Embed(
+        card = embed(
+            "log",
             description=self._fmt_text(
                 config["farewell_msg"] or "%member% 离开了我们... 👋",
                 member,
                 member_repr=f"**{member.display_name}**",
             ),
-            color=discord.Color.dark_grey(),
+            footer=f"现在有 {member.guild.member_count} 位成员",
         )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"当前成员数: {member.guild.member_count}")
+        card.set_thumbnail(url=member.display_avatar.url)
         files = []
         custom_image = self._custom_image_file(config, "farewell")
         if custom_image:
             custom_file, custom_filename = custom_image
             files.append(custom_file)
-            embed.set_image(url=f"attachment://{custom_filename}")
+            card.set_image(url=f"attachment://{custom_filename}")
         try:
-            await channel.send(embed=embed, files=files)
+            await channel.send(embed=card, files=files)
         except (discord.Forbidden, discord.HTTPException) as e:
             print(f"道别消息发送失败 (guild {member.guild.id}): {e}")
 
@@ -527,18 +527,16 @@ class Welcome(commands.Cog):
     @commands.guild_only()
     @require(manage_guild=True)
     async def welcome_setup(self, ctx):
-        embed = discord.Embed(
-            title="🎀 迎新 & 道别设置面板",
-            description=(
-                "使用下方的选择器来配置各项功能：\n\n"
-                "**📢 欢迎频道** — 新成员加入时发送欢迎图卡\n"
-                "**👋 道别频道** — 成员离开时发送道别消息\n"
-                "**🏷 自动身份组** — 新成员自动获得的身份组"
-            ),
-            color=discord.Color.pink(),
+        card = embed(
+            "info",
+            "迎新和道别设置",
+            "使用下方的选择器来配置各项功能：\n\n"
+            "**📢 欢迎频道** — 新成员加入时发送欢迎图卡\n"
+            "**👋 道别频道** — 成员离开时发送道别消息\n"
+            "**🏷 自动身份组** — 新成员自动获得的身份组",
         )
         view = WelcomeSetupView(self, ctx.guild.id)
-        await ctx.send(embed=embed, view=view, ephemeral=True)
+        await ctx.send(embed=card, view=view, ephemeral=True)
 
     @commands.hybrid_command(
         name="welcome_message", description="[管理] 自定义欢迎/道别消息"
@@ -571,8 +569,8 @@ class Welcome(commands.Cog):
     async def welcome_test(self, ctx):
         await ctx.defer()
         config = await self._get_config(ctx.guild.id) or {}
-        embed = self._build_welcome_embed(ctx.author, config)
-        if embed is None:
+        card = self._build_welcome_embed(ctx.author, config)
+        if card is None:
             await ctx.send("ℹ️ 欢迎讯息当前已停用。", ephemeral=True)
             return
         files = []
@@ -580,12 +578,12 @@ class Welcome(commands.Cog):
         if custom_image:
             custom_file, custom_filename = custom_image
             files.append(custom_file)
-            embed.set_image(url=f"attachment://{custom_filename}")
+            card.set_image(url=f"attachment://{custom_filename}")
         elif config.get("show_card", 0):
             card = await self._render_card_file(ctx.author)
             files.append(card)
-            embed.set_image(url="attachment://welcome.png")
-        await ctx.send(embed=embed, files=files)
+            card.set_image(url="attachment://welcome.png")
+        await ctx.send(embed=card, files=files)
 
     @commands.hybrid_command(
         name="welcome_toggle", description="[管理] 开启/关闭欢迎讯息"

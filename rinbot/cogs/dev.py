@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import _perms
 from _perms import owner_only
+from _messages import embed
 import os
 import traceback
 from typing import Literal, Optional
@@ -112,13 +113,11 @@ class Dev(commands.Cog):
         except Exception as e:
             log.append(f"❌ 同步失败：{e}")
 
-        embed = discord.Embed(
-            title="🔄 热更新完成",
-            description="\n".join(log),
-            color=discord.Color.green(),
-            timestamp=discord.utils.utcnow(),
-        )
-        await ctx.send(embed=embed, ephemeral=True)
+        if any(entry.startswith("❌") for entry in log):
+            card = embed("warning", "热更新完成，有模块失败", "\n".join(log))
+        else:
+            card = embed("success", "热更新完成", "\n".join(log))
+        await ctx.send(embed=card, ephemeral=True)
 
     # ──────────────── 指令：load ────────────────
 
@@ -171,14 +170,8 @@ class Dev(commands.Cog):
             else:
                 lines.append(f"🔴 `{short}` — 未加载")
 
-        embed = discord.Embed(
-            title="📦 扩展状态",
-            description="\n".join(lines) or "（无）",
-            color=discord.Color.blurple(),
-            timestamp=discord.utils.utcnow(),
-        )
-        embed.set_footer(text=f"共 {len(all_files)} 个 cog 文件")
-        await ctx.send(embed=embed, ephemeral=True)
+        card = embed("info", "扩展状态", "\n".join(lines) or "（无）", footer=f"共 {len(all_files)} 个 cog 文件")
+        await ctx.send(embed=card, ephemeral=True)
 
     # ──────────────── 指令：sync ────────────────
 
@@ -235,27 +228,14 @@ class Dev(commands.Cog):
             error = traceback.format_exc()
 
         output = stdout.getvalue()
-        color = discord.Color.green() if not error else discord.Color.red()
-        embed = discord.Embed(
-            title="📟 Eval", color=color, timestamp=discord.utils.utcnow()
-        )
-
-        if output:
-            embed.add_field(
-                name="stdout", value=f"```\n{output[:1000]}\n```", inline=False
-            )
-        if result is not None:
-            embed.add_field(
-                name="返回值", value=f"```py\n{repr(result)[:500]}\n```", inline=False
-            )
-        if error:
-            embed.add_field(
-                name="❌ 错误", value=f"```py\n{error[:1000]}\n```", inline=False
-            )
-        if not (output or result or error):
-            embed.description = "✅ 执行完毕，无输出。"
-
-        await ctx.send(embed=embed)
+        fields = [
+            ("stdout", f"```\n{output[:1000]}\n```" if output else None, False),
+            ("返回值", f"```py\n{repr(result)[:500]}\n```" if result is not None else None, False),
+            ("错误", f"```py\n{error[:1000]}\n```" if error else None, False),
+        ]
+        quiet = None if (output or result is not None or error) else "执行完毕，无输出。"
+        card = embed("error" if error else "success", "执行出错" if error else "执行完成", quiet, fields=fields)
+        await ctx.send(embed=card)
 
 
 async def setup(bot: commands.Bot):

@@ -1,12 +1,19 @@
 """机器人发出的 embed 只经过共用模板：不自己写颜色、不直接拼 discord.Embed，标题和字段名不加 emoji。"""
 import ast
+import glob
 import os
 import re
 
 import pytest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MIGRATED = ["rinbot/cogs/moderation.py", "rinbot/cogs/serverlog.py", "rinbot/cogs/automod.py", "rinbot/cogs/botlog.py"]
+# 所有 cog（新加的自动受约束）；网易云模块不进仓库，_messages 本身负责转换，general/help 在 Task 8 改
+PENDING = {"netease.py", "_messages.py", "general.py", "help.py"}
+MIGRATED = sorted(
+    os.path.relpath(path, ROOT).replace(os.sep, "/")
+    for path in glob.glob(os.path.join(ROOT, "rinbot", "cogs", "*.py"))
+    if os.path.basename(path) not in PENDING
+)
 EMOJI = re.compile("[\U0001F300-\U0001FAFF☀-➿⬀-⯿️]")
 RAW_COLOUR = re.compile(r"discord\.Colou?r\.|colou?r\s*=\s*0x|[\"']colou?r[\"']\s*:\s*0x")
 

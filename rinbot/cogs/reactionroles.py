@@ -18,6 +18,8 @@ import os
 from typing import Optional
 from _botlog_helper import audit, check_component
 from _perms import require
+from _messages import embed
+from rincore.embeds import build
 from rincore import roles
 
 DB_PATH = os.path.join(
@@ -183,11 +185,7 @@ class ReactionRoles(commands.Cog):
         description: str = "",
     ):
         """重建面板:embed + 按钮(用 raw aiohttp 绕过 discord.py http 限制)"""
-        embed = discord.Embed(
-            title=f"🏷 {title}",
-            description=description or "点击下方按钮领取对应身份组",
-            color=discord.Color.teal(),
-        )
+        panel = build("info", title, description or "点击下方按钮领取对应身份组")
         components = self._build_components(mappings, guild)
         token = self.bot.http.token
         try:
@@ -199,7 +197,7 @@ class ReactionRoles(commands.Cog):
                         "Content-Type": "application/json",
                     },
                     json={
-                        "embeds": [embed.to_dict()],
+                        "embeds": [panel],
                         "components": components,
                     },
                 ) as resp:
@@ -234,13 +232,7 @@ class ReactionRoles(commands.Cog):
         full_desc = description
         if exclusive:
             full_desc = f"{description}\n\n*注:只能选一个身份组,选其他会自动替换*"
-        embed = discord.Embed(
-            title=f"🏷 {title}",
-            description=f"{full_desc}\n\n*使用 `/rr_add` 添加身份组按钮*",
-            color=discord.Color.teal(),
-        )
-
-        msg = await ctx.send(embed=embed)
+        msg = await ctx.send(embed=embed("info", title, f"{full_desc}\n\n*使用 `/rr_add` 添加身份组按钮*"))
 
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
@@ -398,20 +390,18 @@ class ReactionRoles(commands.Cog):
             await ctx.send("📭 当前服务器没有反应身份组面板。")
             return
 
-        embed = discord.Embed(title="🏷 反应身份组面板列表", color=discord.Color.teal())
+        fields = []
         for msg_id, ch_id, title, mappings_json, exclusive in rows:
             mappings = json.loads(mappings_json)
             channel = ctx.guild.get_channel(ch_id)
             ch_name = channel.mention if channel else f"#{ch_id}"
             count = len(mappings)
             mode = "🔘 单选" if exclusive else "☑️ 多选"
-            embed.add_field(
-                name=f"{title}",
-                value=f"频道: {ch_name}\n消息 ID: `{msg_id}`\n映射数量: {count} | 模式: {mode}",
-                inline=False,
+            fields.append(
+                (title, f"频道: {ch_name}\n消息 ID: `{msg_id}`\n映射数量: {count} | 模式: {mode}", False)
             )
 
-        await ctx.send(embed=embed)
+        await ctx.send(embed=embed("info", "身份组面板", fields=fields))
 
     # ─── 指令:rr_exclusive ───
 

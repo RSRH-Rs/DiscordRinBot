@@ -24,6 +24,7 @@ def _ytdl_run(query: str, opts: dict):
 
 from config import YTDL_OPTIONS, FFMPEG_OPTIONS
 from _botlog_helper import check_component
+from _messages import embed
 
 try:
     from config import SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
@@ -217,8 +218,8 @@ class NowPlayingView(View):
         state.loop_mode = modes[idx]
         button.label = labels[state.loop_mode]
         button.emoji = emojis[state.loop_mode]
-        embed = self.music_cog._now_playing_embed(state.current, state)
-        await interaction.response.edit_message(embed=embed, view=self)
+        card = self.music_cog._now_playing_embed(state.current, state)
+        await interaction.response.edit_message(embed=card, view=self)
 
     @discord.ui.button(emoji="🔀", style=discord.ButtonStyle.secondary)
     async def shuffle_btn(self, interaction: discord.Interaction, button: Button):
@@ -233,8 +234,8 @@ class NowPlayingView(View):
         temp = list(state.queue)
         random.shuffle(temp)
         state.queue = deque(temp)
-        embed = self.music_cog._now_playing_embed(state.current, state)
-        await interaction.response.edit_message(embed=embed, view=self)
+        card = self.music_cog._now_playing_embed(state.current, state)
+        await interaction.response.edit_message(embed=card, view=self)
         await interaction.followup.send(
             f"🔀 已随机打乱 {len(state.queue)} 首歌！", ephemeral=True
         )
@@ -265,8 +266,8 @@ class NowPlayingView(View):
             return
         state = self.music_cog._get_state(interaction.guild.id)
         self.music_cog._set_volume(interaction.guild, state, max(0, round(state.volume * 100) - 10))
-        embed = self.music_cog._now_playing_embed(state.current, state)
-        await interaction.response.edit_message(embed=embed, view=self)
+        card = self.music_cog._now_playing_embed(state.current, state)
+        await interaction.response.edit_message(embed=card, view=self)
 
     @discord.ui.button(
         label="音量 +10", emoji="🔊", style=discord.ButtonStyle.secondary, row=1
@@ -276,16 +277,16 @@ class NowPlayingView(View):
             return
         state = self.music_cog._get_state(interaction.guild.id)
         self.music_cog._set_volume(interaction.guild, state, min(100, round(state.volume * 100) + 10))
-        embed = self.music_cog._now_playing_embed(state.current, state)
-        await interaction.response.edit_message(embed=embed, view=self)
+        card = self.music_cog._now_playing_embed(state.current, state)
+        await interaction.response.edit_message(embed=card, view=self)
 
     @discord.ui.button(
         label="查看队列", emoji="📋", style=discord.ButtonStyle.secondary, row=1
     )
     async def queue_btn(self, interaction: discord.Interaction, button: Button):
         state = self.music_cog._get_state(interaction.guild.id)
-        embed = self.music_cog._queue_embed(state)
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        card = self.music_cog._queue_embed(state)
+        await interaction.response.send_message(embed=card, ephemeral=True)
 
     async def on_timeout(self):
         for child in self.children:
@@ -512,12 +513,7 @@ class Music(commands.Cog):
                 message = channel.get_partial_message(state.player_message_id)
                 kwargs = {"view": None}
                 if status and song:
-                    embed = self._now_playing_embed(song, state)
-                    embed.set_author(name=status, icon_url=self.bot.user.display_avatar.url)
-                    for index in reversed(range(len(embed.fields))):
-                        if embed.fields[index].name == "⏭ 接下来":
-                            embed.remove_field(index)
-                    kwargs["embed"] = embed
+                    kwargs["embed"] = self._now_playing_embed(song, state, status=status)
                 await message.edit(**kwargs)
             except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                 pass
@@ -888,25 +884,23 @@ class Music(commands.Cog):
         if playing:
             state.queue.extend(songs)
             if is_list:
-                embed = discord.Embed(
-                    title="📋 歌单已加入队列",
-                    description=f"成功添加 **{len(songs)}** 首歌曲。",
-                    color=discord.Color.blue(),
+                card = embed(
+                    "success",
+                    "歌单已加入队列",
+                    f"成功添加 **{len(songs)}** 首歌曲。",
+                    footer=f"由 {ctx.author.display_name} 点歌",
                 )
-                embed.set_footer(text=f"请求者: {ctx.author.display_name}")
             else:
                 song = songs[0]
-                embed = discord.Embed(
-                    title="📋 已加入队列",
-                    description=f"**{song.title}**\n⏱ 时长: {Song.format_duration(song.duration)}",
-                    color=discord.Color.blue(),
-                )
-                embed.set_footer(
-                    text=f"队列位置: #{len(state.queue)} | 请求者: {ctx.author.display_name}"
+                card = embed(
+                    "success",
+                    "已加入队列",
+                    f"**{song.title}**\n⏱ 时长: {Song.format_duration(song.duration)}",
+                    footer=f"队列位置: #{len(state.queue)} | 由 {ctx.author.display_name} 点歌",
                 )
                 if song.thumbnail:
-                    embed.set_thumbnail(url=song.thumbnail)
-            await ctx.send(embed=embed)
+                    card.set_thumbnail(url=song.thumbnail)
+            await ctx.send(embed=card)
             return
 
         # 空闲：第一首立即播放（惰性条目开播前先解析出 stream_url），其余进队列
@@ -952,74 +946,67 @@ class Music(commands.Cog):
             uploader = f" · {r['uploader']}" if r["uploader"] else ""
             title = discord.utils.escape_markdown(r["title"][:100])
             lines.append(f"**{i}.** [{title}]({r['url']})\n`{dur}`{uploader}")
-        embed = discord.Embed(
-            title=f"🔍 “{query[:100]}” 的搜索结果",
-            description="\n\n".join(lines),
-            color=0xFFB6C1,
+        card = embed(
+            "info",
+            f"“{query[:100]}” 的搜索结果",
+            "\n\n".join(lines),
+            footer="60 秒内从下方菜单选择要播放的歌曲",
         )
         if results[0].get("thumbnail"):
-            embed.set_thumbnail(url=results[0]["thumbnail"])
-        embed.set_footer(text="60 秒内从下方菜单选择要播放的歌曲")
+            card.set_thumbnail(url=results[0]["thumbnail"])
         view = SearchView(self, ctx, results)
-        view.message = await ctx.send(embed=embed, view=view)
+        view.message = await ctx.send(embed=card, view=view)
 
-    def _now_playing_embed(self, song: Song, state: GuildMusicState):
-        """Build the compact player card shared by commands and buttons."""
-        embed = discord.Embed(color=0xFFB6C1)
-        embed.set_author(
-            name="正在播放 ♪",
-            icon_url=self.bot.user.display_avatar.url,
-        )
+    def _now_playing_embed(self, song: Song, state: GuildMusicState, status: Optional[str] = None):
+        """Build the compact player card shared by commands and buttons.
+        status 不为空时是播放结束后的定格卡片：作者行换成状态，不再显示"接下来"。"""
         title_display = song.title if len(song.title) <= 60 else song.title[:59] + "…"
-        embed.title = title_display
-        embed.url = song.url
-
-        if song.thumbnail:
-            embed.set_thumbnail(url=song.thumbnail)
-
         loop_labels = {"off": "❌ 关闭", "single": "🔂 单曲", "queue": "🔁 队列"}
-        embed.add_field(
-            name="⏱ 时长", value=Song.format_duration(song.duration), inline=True
-        )
-        embed.add_field(
-            name="🔊 音量", value=f"{int(state.volume * 100)}%", inline=True
-        )
-        embed.add_field(name="🔁 循环", value=loop_labels[state.loop_mode], inline=True)
-
-        if state.queue:
+        fields = [
+            ("时长", Song.format_duration(song.duration)),
+            ("音量", f"{int(state.volume * 100)}%"),
+            ("循环", loop_labels[state.loop_mode]),
+        ]
+        if state.queue and not status:
             next_song = state.queue[0]
             next_title = (
                 next_song.title
                 if len(next_song.title) <= 50
                 else next_song.title[:49] + "…"
             )
-            embed.add_field(
-                name="⏭ 接下来",
-                value=f"**{next_title}**\n*请求者: {next_song.requester.display_name}*",
-                inline=False,
+            fields.append(
+                ("接下来", f"**{next_title}**\n*请求者: {next_song.requester.display_name}*", False)
             )
 
-        embed.set_footer(
-            text=f"🌸 由 {song.requester.display_name} 点歌 · 小凛音乐 ♪",
-            icon_url=song.requester.display_avatar.url,
+        card = embed(
+            "info",
+            title_display,
+            url=song.url,
+            fields=fields,
+            author=status or "正在播放 ♪",
+            author_icon=self.bot.user.display_avatar.url,
+            footer=f"由 {song.requester.display_name} 点歌",
+            footer_icon=song.requester.display_avatar.url,
         )
-        return embed
+        if song.thumbnail:
+            card.set_thumbnail(url=song.thumbnail)
+        return card
 
     def _now_playing_payload(self, song: Song, state: GuildMusicState):
-        embed = self._now_playing_embed(song, state)
+        card = self._now_playing_embed(song, state)
         view = NowPlayingView(self, None, state)
-        return embed, view
+        return card, view
 
     async def _send_now_playing(self, ctx, song: Song, state: GuildMusicState):
         """Create the single player card and complete a deferred interaction."""
         await self._retire_player(state, status="播放已停止", song=state.current)
-        embed, view = self._now_playing_payload(song, state)
+        card, view = self._now_playing_payload(song, state)
         notify_ch = self._get_notify_channel(ctx)
         state.notify_channel_id = notify_ch.id
         if notify_ch.id == ctx.channel.id:
-            message = await ctx.send(embed=embed, view=view)
+            message = await ctx.send(embed=card, view=view)
         else:
-            message = await notify_ch.send(embed=embed, view=view)
+            message = await notify_ch.send(embed=card, view=view)
             await ctx.send(f"🎵 已开始播放 **{song.title}** → {notify_ch.mention}")
         state.player_message_id = message.id
         state.player_view = view
@@ -1033,7 +1020,7 @@ class Music(commands.Cog):
         channel = self._player_channel(state)
         if not channel:
             return
-        embed, view = self._now_playing_payload(state.current, state)
+        card, view = self._now_playing_payload(state.current, state)
         updated_existing = False
         try:
             if state.player_message_id:
@@ -1041,12 +1028,12 @@ class Music(commands.Cog):
                     state.player_view.stop()
                 message = channel.get_partial_message(state.player_message_id)
                 try:
-                    await message.edit(embed=embed, view=view)
+                    await message.edit(embed=card, view=view)
                     updated_existing = True
                 except discord.NotFound:
                     state.player_message_id = None
             if not state.player_message_id:
-                message = await channel.send(embed=embed, view=view)
+                message = await channel.send(embed=card, view=view)
                 state.player_message_id = message.id
             state.player_view = view
 
@@ -1133,13 +1120,13 @@ class Music(commands.Cog):
         if not state.current:
             await ctx.send("❌ 当前没有在播放。")
             return
-        embed = self._now_playing_embed(state.current, state)
+        card = self._now_playing_embed(state.current, state)
         if state.player_message_id and state.notify_channel_id:
-            embed.description = (
+            card.description = (
                 f"[打开当前播放器](https://discord.com/channels/{ctx.guild.id}/"
                 f"{state.notify_channel_id}/{state.player_message_id})"
             )
-        await ctx.send(embed=embed)
+        await ctx.send(embed=card)
 
     # ─── 指令：queue ───
 
@@ -1164,13 +1151,14 @@ class Music(commands.Cog):
         pages = max(1, (len(state.queue) + items_per_page - 1) // items_per_page)
         page = max(1, min(page, pages))
 
-        embed = discord.Embed(title="📋 播放队列", color=discord.Color.blurple())
-
+        fields = []
         if state.current:
-            embed.add_field(
-                name="🎵 正在播放",
-                value=f"**{state.current.title}** [{Song.format_duration(state.current.duration)}]\n请求者: {state.current.requester.mention}",
-                inline=False,
+            fields.append(
+                (
+                    "正在播放",
+                    f"**{state.current.title}** [{Song.format_duration(state.current.duration)}]\n请求者: {state.current.requester.mention}",
+                    False,
+                )
             )
 
         if state.queue:
@@ -1181,20 +1169,18 @@ class Music(commands.Cog):
                 lines.append(
                     f"`{i}.` **{song.title}** [{Song.format_duration(song.duration)}] — {song.requester.mention}"
                 )
-            embed.add_field(
-                name=f"队列 (第 {page}/{pages} 页)",
-                value="\n".join(lines),
-                inline=False,
-            )
+            fields.append((f"队列 (第 {page}/{pages} 页)", "\n".join(lines), False))
 
         total_dur = sum(s.duration or 0 for s in state.queue)
         if state.current and state.current.duration:
             total_dur += state.current.duration
         loop_labels = {"off": "关闭", "single": "🔂 单曲", "queue": "🔁 队列"}
-        embed.set_footer(
-            text=f"共 {len(state.queue)} 首待播放 | 总时长: {Song.format_duration(total_dur)} | 循环: {loop_labels[state.loop_mode]}"
+        return embed(
+            "info",
+            "播放队列",
+            fields=fields,
+            footer=f"共 {len(state.queue)} 首待播放 | 总时长: {Song.format_duration(total_dur)} | 循环: {loop_labels[state.loop_mode]}",
         )
-        return embed
 
     # ─── 指令：remove ───
 
@@ -1395,14 +1381,14 @@ class Music(commands.Cog):
         if not rows:
             await ctx.send("📭 还没有保存任何队列存档。用 `/saveq` 保存当前队列。")
             return
-        embed = discord.Embed(title="💾 已保存的队列存档", color=discord.Color.blurple())
+        fields = []
         for name, sj, _ in rows[:25]:
             try:
                 n = len(json.loads(sj))
             except Exception:
                 n = "?"
-            embed.add_field(name=name, value=f"{n} 首", inline=True)
-        await ctx.send(embed=embed)
+            fields.append((name, f"{n} 首"))
+        await ctx.send(embed=card("info", "已保存的队列", fields=fields))
 
     @commands.hybrid_command(name="delqueue", aliases=["delq"], description="删除一个队列存档")
     @commands.guild_only()

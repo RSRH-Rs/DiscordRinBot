@@ -9,7 +9,7 @@ import os
 import time
 from typing import NamedTuple
 
-from _messages import block_notice, send_notice
+from _messages import block_notice, embed, send_notice
 
 try:
     from config import OWNER_ID
@@ -165,18 +165,13 @@ class GlobalSettings(commands.Cog):
                     (len(guilds), bid),
                 )
                 await db.commit()
-            embed = discord.Embed(
-                title="📢 来自机器人主人的公告",
-                description=message,
-                color=0xF0607A,
-            )
-            embed.set_footer(text="小凛 RinBot")
+            card = embed("info", "机器人主人的公告", message)
             sent = 0
             for guild in guilds:
                 ch = self._pick_channel(guild)
                 if ch:
                     try:
-                        await ch.send(embed=embed)
+                        await ch.send(embed=card)
                         sent += 1
                     except Exception:
                         pass
