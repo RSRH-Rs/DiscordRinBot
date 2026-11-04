@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 from typing import Literal, Optional
 
 from _botlog_helper import audit
+from _perms import require
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "serverlog.db"
@@ -525,7 +526,7 @@ class ServerLog(commands.Cog):
     @commands.hybrid_group(
         name="serverlog", aliases=["slog"], description="服务器审计日志配置"
     )
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     @commands.guild_only()
     async def serverlog(self, ctx):
         if ctx.invoked_subcommand is None:
@@ -536,7 +537,7 @@ class ServerLog(commands.Cog):
 
     @serverlog.command(name="channel", description="[管理] 设置日志频道并开启记录")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def sl_channel(self, ctx, channel: discord.TextChannel):
         cfg = self._ensure(ctx.guild.id)
         cfg["channel_id"] = channel.id
@@ -552,7 +553,7 @@ class ServerLog(commands.Cog):
 
     @serverlog.command(name="toggle", description="[管理] 开关某个事件分类")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def sl_toggle(
         self,
         ctx,
@@ -582,7 +583,7 @@ class ServerLog(commands.Cog):
 
     @serverlog.command(name="enable", description="[管理] 启用审计日志")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def sl_enable(self, ctx):
         cfg = self._ensure(ctx.guild.id)
         if not cfg["channel_id"]:
@@ -596,7 +597,7 @@ class ServerLog(commands.Cog):
 
     @serverlog.command(name="disable", description="[管理] 停用审计日志")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def sl_disable(self, ctx):
         cfg = self._ensure(ctx.guild.id)
         cfg["enabled"] = False
@@ -605,7 +606,7 @@ class ServerLog(commands.Cog):
 
     @serverlog.command(name="ignore", description="[管理] 忽略某个频道的日志")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def sl_ignore(self, ctx, channel: discord.TextChannel):
         cfg = self._ensure(ctx.guild.id)
         cfg["ignored"].add(channel.id)
@@ -614,7 +615,7 @@ class ServerLog(commands.Cog):
 
     @serverlog.command(name="unignore", description="[管理] 取消忽略某个频道")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def sl_unignore(self, ctx, channel: discord.TextChannel):
         cfg = self._ensure(ctx.guild.id)
         cfg["ignored"].discard(channel.id)
@@ -623,7 +624,7 @@ class ServerLog(commands.Cog):
 
     @serverlog.command(name="status", description="查看当前审计日志配置")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def sl_status(self, ctx):
         cfg = self.get_config(ctx.guild.id)
         ch = ctx.guild.get_channel(cfg["channel_id"]) if cfg["channel_id"] else None

@@ -16,6 +16,7 @@ import os
 import re
 import aiosqlite
 from _botlog_helper import audit
+from _perms import require
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "welcome.db"
@@ -524,7 +525,7 @@ class Welcome(commands.Cog):
         name="welcome_setup", description="[管理] 配置迎新 & 道别系统"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_setup(self, ctx):
         embed = discord.Embed(
             title="🎀 迎新 & 道别设置面板",
@@ -543,7 +544,7 @@ class Welcome(commands.Cog):
         name="welcome_message", description="[管理] 自定义欢迎/道别消息"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_message(self, ctx, msg_type: str, *, text: str):
         """
         msg_type: welcome 或 farewell
@@ -566,7 +567,7 @@ class Welcome(commands.Cog):
 
     @commands.hybrid_command(name="welcome_test", description="[管理] 预览欢迎卡片效果")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_test(self, ctx):
         await ctx.defer()
         config = await self._get_config(ctx.guild.id) or {}
@@ -590,7 +591,7 @@ class Welcome(commands.Cog):
         name="welcome_toggle", description="[管理] 开启/关闭欢迎讯息"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_toggle(self, ctx, enabled: bool):
         await self._set_config(ctx.guild.id, "enabled", 1 if enabled else 0)
         await ctx.send(
@@ -602,7 +603,7 @@ class Welcome(commands.Cog):
         description="[管理] 自定义大图（留空关闭；支持 %avatar% / %server_avatar%）",
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_image(self, ctx, url: str = ""):
         url = url.strip()
         if (
@@ -624,7 +625,7 @@ class Welcome(commands.Cog):
         name="welcome_title", description="[管理] 自定义欢迎卡标题"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_title(self, ctx, *, text: str):
         await self._set_config(ctx.guild.id, "welcome_title", text[:200])
         await ctx.send(f"✅ 欢迎卡标题已设为：{text[:200]}", ephemeral=True)
@@ -633,7 +634,7 @@ class Welcome(commands.Cog):
         name="welcome_icon", description="[管理] 自定义标题小图标（留空恢复服务器头像）"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_icon(self, ctx, url: str = ""):
         url = url.strip()
         if url and not url.lower().startswith(("http://", "https://")):
@@ -653,7 +654,7 @@ class Welcome(commands.Cog):
         description="[管理] 自定义右侧缩略图（留空恢复用户头像）",
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_thumbnail(self, ctx, url: str = ""):
         url = url.strip()
         if (
@@ -676,7 +677,7 @@ class Welcome(commands.Cog):
         name="welcome_card", description="[管理] 是否附带图片横幅卡面"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_card(self, ctx, enabled: bool):
         await self._set_config(ctx.guild.id, "show_card", 1 if enabled else 0)
         await ctx.send(
@@ -687,7 +688,7 @@ class Welcome(commands.Cog):
         name="welcome_disable", description="[管理] 禁用迎新/道别系统"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def welcome_disable(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(

@@ -4,6 +4,7 @@
 
 import discord
 from discord.ext import commands, tasks
+from _perms import is_owner_only
 import json
 import os
 import time
@@ -33,7 +34,7 @@ class Health(commands.Cog):
         result = []
         for command in self.bot.commands:
             cog_name = command.cog_name or "Other"
-            if command.hidden or cog_name in hidden_cogs:
+            if command.hidden or cog_name in hidden_cogs or is_owner_only(command):
                 continue
             result.append(
                 {

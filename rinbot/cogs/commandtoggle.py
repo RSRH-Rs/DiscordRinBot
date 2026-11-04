@@ -12,6 +12,7 @@ import aiosqlite
 import os
 
 from _botlog_helper import audit
+from _perms import require
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -141,7 +142,7 @@ class CommandToggle(commands.Cog):
 
     @commands.hybrid_command(name="toggle", description="[管理] 启用/禁用指定指令")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def toggle_cmd(self, ctx, command_name: str):
         """command_name: 要切换的指令名 (如 play, kick, roll)"""
         if command_name in PROTECTED_COMMANDS:
@@ -175,7 +176,7 @@ class CommandToggle(commands.Cog):
         name="togglelist", description="[管理] 查看所有已禁用的指令"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def toggle_list(self, ctx):
         disabled = self._disabled.get(ctx.guild.id, set())
         if not disabled:

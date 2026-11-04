@@ -1,6 +1,7 @@
 # cogs/general.py
 import discord
 from discord.ext import commands
+from _perms import owner_only
 import aiosqlite
 import platform
 import psutil
@@ -90,7 +91,7 @@ class General(commands.Cog):
     @commands.hybrid_command(
         name="setstatus", description="[Owner] 修改机器人的活动状态"
     )
-    @commands.is_owner()
+    @owner_only()
     async def setstatus(
         self,
         ctx,
@@ -131,7 +132,7 @@ class General(commands.Cog):
         await ctx.send(f"✅ 状态已更新为: **{type} {text}**")
 
     @commands.hybrid_command(name="resetstatus", description="[Owner] 重置/清除状态")
-    @commands.is_owner()
+    @owner_only()
     async def resetstatus(self, ctx):
         async with aiosqlite.connect(BOTCONFIG_DB) as db:
             await db.execute("INSERT OR IGNORE INTO bot_personalizer (id) VALUES (1)")
@@ -151,7 +152,7 @@ class General(commands.Cog):
     @commands.hybrid_command(
         name="setbio", description="[Owner] 修改机器人的简介 (About Me)"
     )
-    @commands.is_owner()
+    @owner_only()
     async def setbio(self, ctx, *, text: str):
         """
         text: 新的简介内容

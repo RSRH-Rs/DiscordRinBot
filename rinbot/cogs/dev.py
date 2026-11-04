@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from _perms import owner_only
 import os
 import traceback
 from typing import Literal, Optional
@@ -45,7 +46,7 @@ class Dev(commands.Cog):
     @commands.hybrid_command(
         name="hot_update", description="[Dev] 热更新代码并可选同步指令"
     )
-    @commands.is_owner()
+    @owner_only()
     async def hot_update(
         self,
         ctx,
@@ -104,7 +105,7 @@ class Dev(commands.Cog):
     # ──────────────── 指令：load ────────────────
 
     @commands.hybrid_command(name="load", description="[Dev] 加载一个新 Cog")
-    @commands.is_owner()
+    @owner_only()
     async def load_cmd(self, ctx, cog: str):
         await ctx.defer(ephemeral=True)
         ext = cog if cog.startswith("cogs.") else f"cogs.{cog}"
@@ -119,7 +120,7 @@ class Dev(commands.Cog):
     @commands.hybrid_command(
         name="unload", description="[Dev] 卸载一个 Cog（Dev 自身无法卸载）"
     )
-    @commands.is_owner()
+    @owner_only()
     async def unload_cmd(self, ctx, cog: str):
         await ctx.defer(ephemeral=True)
         ext = cog if cog.startswith("cogs.") else f"cogs.{cog}"
@@ -137,7 +138,7 @@ class Dev(commands.Cog):
     @commands.hybrid_command(
         name="extensions", aliases=["exts"], description="[Dev] 查看所有扩展加载状态"
     )
-    @commands.is_owner()
+    @owner_only()
     async def extensions_cmd(self, ctx):
         all_files = set(self._all_cog_exts())
         loaded = set(self.bot.extensions.keys())
@@ -164,7 +165,7 @@ class Dev(commands.Cog):
     # ──────────────── 指令：sync ────────────────
 
     @commands.hybrid_command(name="sync", description="[Dev] 同步斜杠指令树")
-    @commands.is_owner()
+    @owner_only()
     async def sync_cmd(
         self, ctx, scope: Literal["guild", "global", "clear_guild"] = "guild"
     ):
@@ -199,7 +200,7 @@ class Dev(commands.Cog):
     # ──────────────── 指令：boteval ────────────────
 
     @commands.command(name="eval", hidden=True)  # 只保留前缀版本，更安全
-    @commands.is_owner()
+    @owner_only()
     async def boteval(self, ctx, *, code: str):
         """动态执行 Python 代码（仅 Owner，极度危险）"""
         if not EVAL_ENABLED:

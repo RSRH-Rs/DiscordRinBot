@@ -17,6 +17,7 @@ import json
 import os
 from typing import Optional
 from _botlog_helper import audit, check_component
+from _perms import require
 from rincore import roles
 
 DB_PATH = os.path.join(
@@ -214,7 +215,7 @@ class ReactionRoles(commands.Cog):
         name="rr_create", description="[管理] 创建一个反应身份组面板"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @require(manage_roles=True)
     async def rr_create(
         self,
         ctx,
@@ -276,7 +277,7 @@ class ReactionRoles(commands.Cog):
         name="rr_add", description="[管理] 向面板添加 emoji → 身份组 映射"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @require(manage_roles=True)
     async def rr_add(self, ctx, message_id: str, emoji: str, role: discord.Role):
         """
         message_id: 面板消息 ID
@@ -337,7 +338,7 @@ class ReactionRoles(commands.Cog):
         name="rr_remove", description="[管理] 从面板移除一个 emoji 映射"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @require(manage_roles=True)
     async def rr_remove(self, ctx, message_id: str, emoji: str):
         await ctx.defer(ephemeral=True)
         msg_id = int(message_id)
@@ -384,7 +385,7 @@ class ReactionRoles(commands.Cog):
         name="rr_list", description="[管理] 列出所有反应身份组面板"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @require(manage_roles=True)
     async def rr_list(self, ctx):
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
@@ -418,7 +419,7 @@ class ReactionRoles(commands.Cog):
         name="rr_exclusive", description="[管理] 切换面板的单选/多选模式"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @require(manage_roles=True)
     async def rr_exclusive(self, ctx, message_id: str, enabled: bool):
         """
         message_id: 面板消息 ID
@@ -451,7 +452,7 @@ class ReactionRoles(commands.Cog):
         name="rr_delete", description="[管理] 删除一个反应身份组面板"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_roles=True)
+    @require(manage_roles=True)
     async def rr_delete(self, ctx, message_id: str):
         await ctx.defer(ephemeral=True)
         msg_id = int(message_id)

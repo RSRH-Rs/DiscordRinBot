@@ -17,6 +17,7 @@ import asyncio
 import os
 from typing import Optional
 from _botlog_helper import audit, check_component
+from _perms import require
 from rincore import durations
 from rincore.throttle import Debouncer
 
@@ -356,6 +357,7 @@ class Giveaway(commands.Cog):
 
     @commands.hybrid_group(name="giveaway", aliases=["gw"], description="抽奖管理")
     @commands.guild_only()
+    @require(manage_guild=True)
     async def giveaway_group(self, ctx):
         if ctx.invoked_subcommand is None:
             await ctx.send(
@@ -364,7 +366,7 @@ class Giveaway(commands.Cog):
 
     @giveaway_group.command(name="start", description="发起一个抽奖活动")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def gw_start(self, ctx, duration: str, winners: int = 1, *, prize: str):
         """
         duration: 持续时间 (如 1h, 30m, 2d, 1d12h)
@@ -433,7 +435,7 @@ class Giveaway(commands.Cog):
 
     @giveaway_group.command(name="end", description="[管理] 提前结束一个抽奖")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def gw_end(self, ctx, giveaway_id: int):
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
@@ -459,7 +461,7 @@ class Giveaway(commands.Cog):
 
     @giveaway_group.command(name="reroll", description="[管理] 重新抽取获奖者")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def gw_reroll(self, ctx, giveaway_id: int, count: int = 1):
         if count < 1 or count > 20:
             await ctx.send("❌ 中奖人数范围: 1-20")

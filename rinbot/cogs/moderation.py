@@ -21,6 +21,7 @@
 
 import discord
 from discord.ext import commands, tasks
+from _perms import require
 import aiosqlite
 import datetime
 import os
@@ -319,7 +320,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="kick", description="踢出成员")
     @commands.guild_only()
-    @commands.has_permissions(kick_members=True)
+    @require(kick_members=True)
     @commands.bot_has_permissions(kick_members=True)
     async def kick(self, ctx, member: discord.Member, *, reason: str = "未提供原因"):
         err = self._hierarchy_check(ctx, member)
@@ -351,7 +352,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="ban", description="永久封禁成员")
     @commands.guild_only()
-    @commands.has_permissions(ban_members=True)
+    @require(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def ban(
         self,
@@ -403,7 +404,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="tempban", description="临时封禁成员 (到期自动解封)")
     @commands.guild_only()
-    @commands.has_permissions(ban_members=True)
+    @require(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def tempban(
         self, ctx, member: discord.Member, duration: str, *, reason: str = "未提供原因"
@@ -459,7 +460,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="unban", description="解除封禁")
     @commands.guild_only()
-    @commands.has_permissions(ban_members=True)
+    @require(ban_members=True)
     @commands.bot_has_permissions(ban_members=True)
     async def unban(self, ctx, user_id: str, *, reason: str = "未提供原因"):
         """user_id: 被封禁用户的 ID"""
@@ -489,7 +490,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="mute", description="禁言成员 (使用 Discord Timeout)")
     @commands.guild_only()
-    @commands.has_permissions(moderate_members=True)
+    @require(moderate_members=True)
     @commands.bot_has_permissions(moderate_members=True)
     async def mute(
         self,
@@ -534,7 +535,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="unmute", description="解除成员禁言")
     @commands.guild_only()
-    @commands.has_permissions(moderate_members=True)
+    @require(moderate_members=True)
     @commands.bot_has_permissions(moderate_members=True)
     async def unmute(self, ctx, member: discord.Member, *, reason: str = "未提供原因"):
         if not member.is_timed_out():
@@ -551,7 +552,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="warn", description="警告成员")
     @commands.guild_only()
-    @commands.has_permissions(manage_messages=True)
+    @require(manage_messages=True)
     async def warn(self, ctx, member: discord.Member, *, reason: str = "未提供原因"):
         err = self._hierarchy_check(ctx, member)
         if err:
@@ -601,7 +602,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="warns", description="查看成员的警告记录")
     @commands.guild_only()
-    @commands.has_permissions(manage_messages=True)
+    @require(manage_messages=True)
     async def warns(self, ctx, member: discord.Member):
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
@@ -637,7 +638,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="clearwarns", description="清除成员的所有警告")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def clearwarns(self, ctx, member: discord.Member):
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
@@ -666,7 +667,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="delwarn", description="删除指定 ID 的警告")
     @commands.guild_only()
-    @commands.has_permissions(manage_messages=True)
+    @require(manage_messages=True)
     async def delwarn(self, ctx, warn_id: int):
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
@@ -691,7 +692,7 @@ class Moderation(commands.Cog):
         name="purge", aliases=["prune"], description="批量清理消息"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_messages=True)
+    @require(manage_messages=True)
     @commands.bot_has_permissions(manage_messages=True)
     async def purge(self, ctx, amount: int, member: discord.Member = None):
         """
@@ -745,7 +746,7 @@ class Moderation(commands.Cog):
         name="slowmode", aliases=["slow"], description="设置频道慢速模式"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
+    @require(manage_channels=True)
     @commands.bot_has_permissions(manage_channels=True)
     async def slowmode(self, ctx, seconds: int = 0):
         """seconds: 慢速间隔秒数 (0=关闭, 最大 21600)"""
@@ -767,7 +768,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="lock", description="锁定频道 (禁止普通成员发言)")
     @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
+    @require(manage_channels=True)
     @commands.bot_has_permissions(manage_channels=True)
     async def lock(
         self, ctx, channel: discord.TextChannel = None, *, reason: str = "未提供原因"
@@ -782,7 +783,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="unlock", description="解锁频道")
     @commands.guild_only()
-    @commands.has_permissions(manage_channels=True)
+    @require(manage_channels=True)
     @commands.bot_has_permissions(manage_channels=True)
     async def unlock(self, ctx, channel: discord.TextChannel = None):
         channel = channel or ctx.channel
@@ -797,7 +798,7 @@ class Moderation(commands.Cog):
 
     @commands.hybrid_command(name="modlog", description="查看管理操作日志")
     @commands.guild_only()
-    @commands.has_permissions(manage_messages=True)
+    @require(manage_messages=True)
     async def modlog(self, ctx, member: discord.User = None, page: int = 1):
         """查看管理日志，可按成员筛选"""
         items_per_page = 10
@@ -851,7 +852,7 @@ class Moderation(commands.Cog):
         name="modlog_channel", description="[管理] 设置管理日志频道"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def modlog_channel(self, ctx, channel: discord.TextChannel = None):
         """channel: 留空则禁用管理日志"""
         botlog = self.bot.get_cog("BotLog")
@@ -898,7 +899,7 @@ class Moderation(commands.Cog):
         name="warn_config", description="[管理] 配置警告自动处罚阈值"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def warn_config(
         self,
         ctx,

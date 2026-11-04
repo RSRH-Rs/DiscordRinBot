@@ -10,6 +10,7 @@ from typing import Literal
 from discord.ext import tasks
 
 from _botlog_helper import audit
+from _perms import require
 from rincore.textmatch import find_badword, find_links, host_of, is_whitelisted
 
 DB_PATH = os.path.join(
@@ -446,7 +447,7 @@ class AutoMod(commands.Cog):
 
     @commands.hybrid_group(name="automod", description="自动审核管理")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def automod_group(self, ctx):
         if ctx.invoked_subcommand is None:
             cfg = await self._get_config(ctx.guild.id)
@@ -503,21 +504,21 @@ class AutoMod(commands.Cog):
 
     @automod_group.command(name="enable", description="启用自动审核系统")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def am_enable(self, ctx):
         await self._update_config(ctx.guild.id, enabled=1)
         await ctx.send("✅ 自动审核已启用！小凛开始值班了。", ephemeral=True)
 
     @automod_group.command(name="disable", description="禁用自动审核系统")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def am_disable(self, ctx):
         await self._update_config(ctx.guild.id, enabled=0)
         await ctx.send("✅ 自动审核已禁用。", ephemeral=True)
 
     @automod_group.command(name="toggle", description="开关指定功能")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def am_toggle(
         self, ctx, feature: Literal["spam", "badword", "link", "caps", "repeat"]
     ):
@@ -537,14 +538,14 @@ class AutoMod(commands.Cog):
 
     @automod_group.command(name="log", description="设置审核日志频道")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def am_log(self, ctx, channel: discord.TextChannel):
         await self._update_config(ctx.guild.id, log_channel=channel.id)
         await ctx.send(f"✅ 审核日志将发送到 {channel.mention}", ephemeral=True)
 
     @automod_group.command(name="mute_duration", description="设置刷屏禁言时长（分钟）")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def am_mute_dur(self, ctx, minutes: int):
         if minutes < 1 or minutes > 1440:
             await ctx.send("❌ 禁言时长范围: 1-1440 分钟")
@@ -554,7 +555,7 @@ class AutoMod(commands.Cog):
 
     @automod_group.command(name="spam_config", description="配置反刷屏参数")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def am_spam_cfg(self, ctx, threshold: int = 5, interval: int = 5):
         """
         threshold: 触发阈值（条数）
@@ -572,7 +573,7 @@ class AutoMod(commands.Cog):
 
     @commands.hybrid_command(name="automod_words", description="[管理] 管理违禁词列表")
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def am_words(
         self, ctx, action: Literal["add", "remove", "list"], *, word: str = ""
     ):
@@ -640,7 +641,7 @@ class AutoMod(commands.Cog):
         name="automod_whitelist", description="[管理] 管理链接白名单"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def am_whitelist(
         self, ctx, action: Literal["add", "remove", "list"], domain: str = ""
     ):
@@ -705,7 +706,7 @@ class AutoMod(commands.Cog):
         name="automod_ignore", description="[管理] 添加/移除审核忽略的频道或身份组"
     )
     @commands.guild_only()
-    @commands.has_permissions(manage_guild=True)
+    @require(manage_guild=True)
     async def am_ignore(
         self,
         ctx,
