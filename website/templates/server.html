@@ -275,14 +275,10 @@
     <div class="section">
         <h3 class="section-title">{{ tr('giveaway.new') }}</h3>
         <div class="list">
-            <div class="row row--block">
-                <div class="form-grid">
-                    <label class="field"><span class="row-title">{{ tr('giveaway.prize') }}</span><input class="input" id="gw-prize" maxlength="200" placeholder="{{ tr('giveaway.prize_placeholder') }}"></label>
-                    <label class="field"><span class="row-title">{{ tr('giveaway.winners') }}</span><input class="num" type="number" id="gw-winners" value="1" min="1" max="20"></label>
-                    <div class="field"><label class="row-title" for="gw-ch">{{ tr('giveaway.channel') }}</label><select class="select" id="gw-ch" data-search="{{ tr('giveaway.channel') }}"><option value="0">{{ tr('giveaway.pick_channel') }}</option></select></div>
-                    <div class="field"><label class="row-title" for="gw-role">{{ tr('giveaway.role') }}</label><span class="row-hint">{{ tr('giveaway.role_hint') }}</span><select class="select" id="gw-role" data-search="{{ tr('giveaway.role') }}"><option value="0">{{ tr('common.no_limit') }}</option></select></div>
-                </div>
-            </div>
+            {% call row(tr('giveaway.prize'), None, 'gw-prize', block=True) %}<input class="input" id="gw-prize" maxlength="200" placeholder="{{ tr('giveaway.prize_placeholder') }}">{% endcall %}
+            {% call row(tr('giveaway.winners'), None, 'gw-winners') %}{{ num('gw-winners', tr('giveaway.winners_unit'), 1, 20, 1) }}{% endcall %}
+            {% call row(tr('giveaway.channel'), None, 'gw-ch') %}<select class="select" id="gw-ch" data-search="{{ tr('giveaway.channel') }}"><option value="0">{{ tr('giveaway.pick_channel') }}</option></select>{% endcall %}
+            {% call row(tr('giveaway.role'), tr('giveaway.role_hint'), 'gw-role') %}<select class="select" id="gw-role" data-search="{{ tr('giveaway.role') }}"><option value="0">{{ tr('common.no_limit') }}</option></select>{% endcall %}
             <div class="row row--block">
                 <div class="row-text"><span class="row-title" id="gw-end-label">{{ tr('giveaway.end') }}</span></div>
                 <div class="seg" role="group" aria-labelledby="gw-end-label">

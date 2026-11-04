@@ -432,6 +432,7 @@
     "prize": "奖品",
     "prize_placeholder": "例如：Discord Nitro 一个月",
     "winners": "中奖人数",
+    "winners_unit": "人",
     "channel": "发到哪个频道",
     "pick_channel": "# 选择频道",
     "role": "参加限制",

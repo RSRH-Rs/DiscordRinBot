@@ -465,4 +465,17 @@ class DashboardTemplateTests(unittest.TestCase):
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
         self.assertIn('flex-direction: row-reverse',re.search(r'\n\.tog--head\s*\{([^}]*)\}',css).group(1))
 
+    def test_giveaway_form_is_flat_rows(self):
+        html,_=self.render('server.html')
+        start=html.index('id="pg-giveaway"');gw=html[start:html.index('</section>',start)]
+        self.assertNotIn('form-grid',gw);self.assertNotIn('class="field"',gw)
+        titles=re.findall(r'class="row-title"[^>]*>([^<]+)<',gw)
+        self.assertEqual(titles[:5],['奖品','中奖人数','发到哪个频道','参加限制','什么时候开奖'])
+        self.assertIn('<label class="row-title" for="gw-role">参加限制</label><span class="row-hint">不选就是所有人都能参加</span>',gw)
+        self.assertRegex(gw,r'<span class="num-field"><input class="num" type="number" inputmode="numeric" id="gw-winners"[^>]*><span class="num-unit" id="gw-winners-unit">人</span>')
+        self.assertEqual(len(re.findall(r'class="seg-option" data-end-in="[^"]+" data-label=',gw)),4)
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertNotIn('.form-grid',css);self.assertNotRegex(css,r'\n\.field[ ,{]')
+        self.assertIn('width: 240px',re.search(r'\n#gw-end\s*\{([^}]*)\}',css).group(1))
+
 if __name__=='__main__':unittest.main()

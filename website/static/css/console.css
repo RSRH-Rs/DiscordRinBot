@@ -563,10 +563,7 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .chip--unban, .chip--unmute { background: var(--ok-soft); color: var(--ok); }
 
 /* Pages: giveaway, leveling, general, commands */
-.form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 16px; }
-.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.field .input, .field .select, .field .search-select, .field .num { width: 100%; }
-#gw-end { margin-top: 8px; }
+#gw-end { width: 240px; margin-top: 8px; }
 .lb-list { display: flex; flex-direction: column; border-block: 1px solid var(--line); }
 .lb-list:has(.empty) { border: 0; }
 .lb-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
