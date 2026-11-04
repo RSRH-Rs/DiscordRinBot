@@ -60,7 +60,7 @@ async function validateWelcomeImageFile(file) {
             setImageState(kind, current, current ? imageUrl(kind) : '');
             return;
         }
-        setImageState(kind, images[kind].uploaded, URL.createObjectURL(file), tr('welcome.image.picked'));
+        setImageState(kind, images[kind].uploaded, URL.createObjectURL(file), tr('welcome.image.picked', {name: file.name}));
     }
     async function upload(kind) {
         const input = el(`w-${kind}-file`), button = el(`w-${kind}-upload`), file = input.files?.[0];

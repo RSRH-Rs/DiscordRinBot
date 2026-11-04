@@ -274,8 +274,6 @@ img { max-width: 100%; }
 .num-field .num { width: 100%; padding-right: calc(3em + 16px); }
 .num-unit { align-self: center; justify-self: end; margin-right: 12px; pointer-events: none; color: var(--muted); font-size: 14px; white-space: nowrap; }
 .unit { font-size: 13px; color: var(--muted); }
-input[type="file"] { max-width: 100%; font-size: 13px; color: var(--muted); }
-input[type="file"]::file-selector-button { margin-right: 8px; padding: 8px 12px; border: 0; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); font-weight: 600; cursor: pointer; }
 
 .tog { position: relative; display: inline-flex; flex-shrink: 0; width: 40px; height: 22px; cursor: pointer; }
 .tog--head { width: auto; flex-direction: row-reverse; align-items: center; gap: 8px; margin-top: 4px; }

@@ -14,7 +14,7 @@
             const kind = ACTIONS.includes(c.action) ? c.action : 'other';
             const details = [tr('moderation.case_user', {user: c.user_name || c.user_id}), tr('moderation.case_mod', {mod: c.mod_name || c.mod_id}), tr('moderation.case_reason', {reason: c.reason})];
             if (c.duration) details.push(tr('moderation.case_duration', {duration: c.duration}));
-            return `<div class="case"><div class="case-head"><span class="chip chip--static chip--${kind}">#${escapeHtml(c.case_no ?? c.id)} ${escapeHtml(c.action)}</span><span class="item-meta">${escapeHtml(when)}</span></div><p class="case-body">${details.map(escapeHtml).join(' · ')}</p></div>`;
+            return `<div class="case"><div class="case-head"><span class="chip chip--static chip--${kind}">#${escapeHtml(c.case_no ?? c.id)} ${escapeHtml(tr('moderation.action.' + kind))}</span><span class="item-meta">${escapeHtml(when)}</span></div><p class="case-body">${details.map(escapeHtml).join(' · ')}</p></div>`;
         }).join('');
     }
 

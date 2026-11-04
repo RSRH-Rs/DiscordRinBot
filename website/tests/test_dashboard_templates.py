@@ -478,4 +478,13 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertNotIn('.form-grid',css);self.assertNotRegex(css,r'\n\.field[ ,{]')
         self.assertIn('width: 240px',re.search(r'\n#gw-end\s*\{([^}]*)\}',css).group(1))
 
+    def test_file_inputs_hide_behind_a_styled_button(self):
+        for name in ['server.html','settings.html']:
+            html,_=self.render(name)
+            ids=re.findall(r'<input class="sr-only" type="file" id="([^"]+)"',html)
+            self.assertTrue(ids,name)
+            for id_ in ids:self.assertIn(f'<label class="btn btn--secondary" for="{id_}">',html)
+            self.assertEqual(len(re.findall(r'type="file"',html)),len(ids),name)
+        self.assertNotIn('file-selector-button',(ROOT/'static/css/console.css').read_text(encoding='utf-8'))
+
 if __name__=='__main__':unittest.main()
