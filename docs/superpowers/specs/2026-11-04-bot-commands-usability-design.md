@@ -14,7 +14,7 @@
 用户希望所有指令用起来顺手，做法参考 Dyno、Carl-bot、MEE6、ProBot 这些大型机器人。它们的共同点是：常用的管理动作是平铺的单条指令；处罚记录围绕案件编号来管；设置主要放在控制台；一组相关的管理指令收进一个组。
 
 这一版要做到：
-- 顶层斜杠指令从 66 条降到 38 条，和控制台重复的设置指令交给控制台。
+- 顶层斜杠指令从 66 条降到 40 条，和控制台重复的设置指令交给控制台。
 - 指令名统一英文；参数名、说明、选项按用户客户端语言显示中文或英文。
 - 编号、存档名、队列位置这类参数都能从列表里选，不用手打。
 - 时长只有一种写法，中文单位也能用；数字在 Discord 输入框里就被限制在范围内。
@@ -52,7 +52,7 @@
 
 ## 4. 新的指令表
 
-### 4.1 顶层 38 条
+### 4.1 顶层 40 条
 
 **管理，平铺 10 条**
 
@@ -99,6 +99,12 @@
 | `/automod whitelist add | remove | list` | `automod_whitelist` |
 | `/automod ignore add | remove | list` | `automod_ignore` |
 | `/commands disable | enable | list` | `toggle`、`togglelist` |
+| `/roles list | add | remove | exclusive | delete` | `rr_list`、`rr_add`、`rr_remove`、`rr_exclusive`、`rr_delete` |
+| `/serverlog ignore | unignore` | `serverlog ignore`、`serverlog unignore` |
+
+`/roles` 和 `/serverlog` 原本也要交给控制台。实现时发现控制台只能发新的身份组面板，改不了已经发出的面板，也没有日志的忽略列表，所以这两组留成指令（2026-11-04 用户决定）：
+- `/roles` 的面板从列表里按标题选，也认消息 ID 和消息链接。先改 Discord 上的面板消息，改成功了才保存；emoji 用不了或面板消息已经删了，就什么都不改。面板原来的说明文字保留，单选提示跟着模式加上或去掉。一个面板最多 20 个身份组，和控制台一致。
+- `/serverlog ignore | unignore` 只写忽略列表这一列，不会盖掉控制台刚存的开关、频道和分类。
 
 ### 4.2 交给控制台
 
@@ -107,12 +113,12 @@
 | 删掉的指令 | 控制台页面 |
 | --- | --- |
 | `welcome_message`、`welcome_toggle`、`welcome_image`、`welcome_title`、`welcome_icon`、`welcome_thumbnail`、`welcome_card`、`welcome_disable` | 欢迎新成员 |
-| `rr_create`、`rr_add`、`rr_remove`、`rr_list`、`rr_exclusive`、`rr_delete` | 领取身份组 |
+| `rr_create` | 领取身份组 |
 | `automod enable`、`disable`、`toggle`、`log`、`mute_duration`、`spam_config` | 自动审核 |
-| `serverlog` 整组（channel、toggle、enable、disable、ignore、unignore、status） | 服务器事件日志 |
+| `serverlog channel`、`toggle`、`enable`、`disable`、`status` | 服务器事件日志 |
 | `modlog_channel`、`warn_config` | 管理模块 |
 
-已经发出的身份组面板、迎新和日志照常工作，只是不能再用 Discord 指令改设置。
+已经发出的身份组面板、迎新和日志照常工作。
 
 ### 4.3 兼容旧用法
 
@@ -121,10 +127,11 @@
   - `saveq`、`loadq`、`queues`、`delqueue` → `playlist save`、`load`、`list`、`delete`；
   - `toggle` → `commands toggle`（隐藏的前缀子指令，停用和启用来回切换，和以前一样）；`togglelist` → `commands list`；
   - `welcome_setup`、`welcome_test` → `welcome setup`、`welcome test`；`automod_words`、`automod_whitelist`、`automod_ignore` → `automod words`、`automod whitelist`、`automod ignore`（原来的第一个参数 add / remove / list 正好成了子指令名）。
+  - `rr_list`、`rr_add`、`rr_remove`、`rr_exclusive`、`rr_delete` → `roles list`、`add`、`remove`、`exclusive`、`delete`；`slog` 还是 `serverlog` 的别名。
   - 只改写紧跟在前缀后面、而且后面是空格或结尾的完整指令名，不区分大小写；`r!warnsx` 这种不改写。改写后的前缀指令不进斜杠列表，也不占 100 条的名额。
 - **删掉的指令回复去向。** 有人打 4.2 表里的旧名字时，`errors.py` 在"找不到指令"的分支里认出它，私密回复 `("info", "这项设置已移到控制台", "在控制台的「{页面名}」里修改。")`，附一个链接按钮"打开控制台"，指向 `https://rin-bot.com/dashboard/server/{服务器 ID}#{页面}`。不在表里的名字照旧不回复。
 - **停用记录迁移。** 机器人加载时把每个服务器的停用记录和全局停用记录里的旧名字换成新名字，并且只迁移一次：
-  - `warns`、`delwarn`、`clearwarns` → `warnings`；`modlog` → `case`；`saveq`、`loadq`、`queues`、`delqueue` → `playlist`；`toggle`、`togglelist` → `commands`；`welcome_setup`、`welcome_test` → `welcome`；`automod_words`、`automod_whitelist`、`automod_ignore` → `automod`。
+  - `warns`、`delwarn`、`clearwarns` → `warnings`；`modlog` → `case`；`saveq`、`loadq`、`queues`、`delqueue` → `playlist`；`toggle`、`togglelist` → `commands`；`welcome_setup`、`welcome_test` → `welcome`；`automod_words`、`automod_whitelist`、`automod_ignore` → `automod`；`rr_*`（除了 `rr_create`）→ `roles`。
   - 多个旧名字指向同一个新名字时，只要有一个停用了，新指令就停用。
   - `tempban` 的记录删掉：它并进了 `/ban`，不能单独停用；为了不把 `/ban` 也停掉，不做合并。
   - 4.2 表里删掉的指令，记录直接删掉。
@@ -265,7 +272,7 @@
 根目录 `tests/`，pytest。
 
 - **指令表**：加载所有 cog（除 `netease.py`）到一个不联网的 bot 实例：
-  - 顶层斜杠指令（不含主人指令）的名字集合正好是第 4.1 节的 38 条；
+  - 顶层斜杠指令（不含主人指令）的名字集合正好是第 4.1 节的 40 条；
   - 各组的子指令和表里一致；
   - 4.2 表里的名字一个都不在。
 - **翻译表**：

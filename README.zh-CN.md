@@ -28,15 +28,15 @@
 
 | 模块 | 说明 | 主要指令 |
 |------|------|----------|
-| 🎵 **音乐系统** | 完整播放器：队列、循环、音量、洗牌、投票跳过、正在播放面板、保存歌单。可设置 DJ 身份组和通知频道 | `/play` `/queue` `/skip` `/loop` `/volume` `/saveq` |
+| 🎵 **音乐系统** | 完整播放器：队列、循环、音量、洗牌、投票跳过、正在播放面板、保存歌单。可设置 DJ 身份组和通知频道 | `/play` `/queue` `/skip` `/loop` `/volume` `/playlist` |
 | 🏆 **等级系统** | 发言积累经验，PIL 绘制等级卡片（在事件循环外渲染，不卡 Bot），服务器排行榜 | `/rank` `/leaderboard` |
-| 🔨 **管理模块** | kick / ban（支持成员或用户 ID，可选删除消息）/ tempban / mute / warn / purge / slowmode / lock。警告达到阈值可自动处罚，每条处罚都有按服务器编号的案件号 | `/ban` `/warn` `/purge` `/modlog` `/warn_config` |
-| 🎀 **迎新道别** | 新成员加入发送欢迎图卡（支持自定义图片）并自动分配身份组，离开时发送道别消息。会等待成员通过 Discord 的入群审核 | `/welcome_setup` `/welcome_card` `/welcome_test` |
-| 🏷 **反应身份组** | 点击 emoji 自助获取身份组，支持多面板和单选模式（每个面板只能选一个） | `/rr_create` `/rr_add` `/rr_exclusive` |
+| 🔨 **管理模块** | kick / ban（支持成员或用户 ID，可选时长和删除消息）/ mute / warn / purge / slowmode / lock。警告达到阈值可自动处罚，每条处罚都有按服务器编号的案件号，可以改原因和时长 | `/ban` `/warn` `/warnings` `/purge` `/case` |
+| 🎀 **迎新道别** | 新成员加入发送欢迎图卡（支持自定义图片）并自动分配身份组，离开时发送道别消息。会等待成员通过 Discord 的入群审核。消息和图片在控制台里设置 | `/welcome setup` `/welcome test` |
+| 🏷 **领取身份组** | 点按钮自助领取身份组，支持多面板和单选模式（每个面板只能选一个）。面板在控制台里发，发出后用 `/roles` 修改 | `/roles add` `/roles remove` `/roles exclusive` |
 | 🎉 **抽奖管理** | 倒计时自动开奖，按钮参与，支持重抽 | `/giveaway start` `/giveaway reroll` |
-| 🛡 **自动审核** | 反刷屏（自动清理刷屏消息）、违禁词过滤（识别零宽字符、全角字母和分隔符绕过）、链接和邀请过滤（支持白名单）、大写轰炸、重复消息检测 | `/automod` `/automod_words` `/automod_whitelist` |
-| 📋 **服务器日志** | 把服务器事件（消息、成员、身份组、频道等）转发到日志频道，可设置忽略列表 | `/serverlog channel` `/serverlog toggle` |
-| 🚦 **指令开关** | 按服务器启用或禁用任意指令 | `/toggle` `/togglelist` |
+| 🛡 **自动审核** | 反刷屏（自动清理刷屏消息）、违禁词过滤（识别零宽字符、全角字母和分隔符绕过）、链接和邀请过滤（支持白名单）、大写轰炸、重复消息检测 | `/automod status` `/automod words` `/automod whitelist` |
+| 📋 **服务器日志** | 把服务器事件（消息、成员、身份组、频道等）转发到日志频道。在控制台里设置，用 `/serverlog` 设置跳过的频道 | `/serverlog ignore` `/serverlog unignore` |
+| 🚦 **指令开关** | 按服务器启用或禁用任意指令 | `/commands disable` `/commands enable` `/commands list` |
 | 🛠 **通用工具** | 服务器状态、头像查看、骰子、Bot 状态和简介修改 | `/status` `/avatar` `/roll` |
 | ⚙️ **开发者工具** | 热更新、cog 管理、指令树同步 | `/hot_update` `/sync` |
 

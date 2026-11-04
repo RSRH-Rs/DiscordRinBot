@@ -28,15 +28,15 @@ Commands work both as slash commands and with the `r!` prefix.
 
 | Module | Description | Key Commands |
 |--------|-------------|--------------|
-| 🎵 **Music** | Full player with queue, loop, volume, shuffle, vote-skip, a now-playing panel and saved queues. DJ role and notification channel are configurable | `/play` `/queue` `/skip` `/loop` `/volume` `/saveq` |
+| 🎵 **Music** | Full player with queue, loop, volume, shuffle, vote-skip, a now-playing panel and saved queues. DJ role and notification channel are configurable | `/play` `/queue` `/skip` `/loop` `/volume` `/playlist` |
 | 🏆 **Leveling** | XP from chatting, PIL-rendered rank cards (drawn off the event loop), server leaderboard | `/rank` `/leaderboard` |
-| 🔨 **Moderation** | kick / ban (members or user IDs, optional message cleanup) / tempban / mute / warn / purge / slowmode / lock. Warnings can trigger automatic punishments, and every action gets a per-server case number | `/ban` `/warn` `/purge` `/modlog` `/warn_config` |
-| 🎀 **Welcome** | Welcome card on join (custom images allowed), auto-role, farewell message. Respects Discord membership screening | `/welcome_setup` `/welcome_card` `/welcome_test` |
-| 🏷 **Reaction Roles** | Click an emoji to get a role. Supports multiple panels and an exclusive mode (one role per panel) | `/rr_create` `/rr_add` `/rr_exclusive` |
+| 🔨 **Moderation** | kick / ban (members or user IDs, optional duration and message cleanup) / mute / warn / purge / slowmode / lock. Warnings can trigger automatic punishments, and every action gets a per-server case number whose reason and duration you can change | `/ban` `/warn` `/warnings` `/purge` `/case` |
+| 🎀 **Welcome** | Welcome card on join (custom images allowed), auto-role, farewell message. Respects Discord membership screening. Messages and images are set on the dashboard | `/welcome setup` `/welcome test` |
+| 🏷 **Reaction Roles** | Click a button to get a role. Supports multiple panels and an exclusive mode (one role per panel). Panels are sent from the dashboard and edited with `/roles` | `/roles add` `/roles remove` `/roles exclusive` |
 | 🎉 **Giveaways** | Countdown, button entry, auto-draw, reroll | `/giveaway start` `/giveaway reroll` |
-| 🛡 **Auto-Mod** | Anti-spam with message cleanup, bad words (sees through zero-width characters, full-width letters and separators), link and invite filter with whitelist, caps and repeat detection | `/automod` `/automod_words` `/automod_whitelist` |
-| 📋 **Server Log** | Forwards server events (messages, members, roles, channels…) to a log channel, with ignore lists | `/serverlog channel` `/serverlog toggle` |
-| 🚦 **Command Toggle** | Turn any command on or off per server | `/toggle` `/togglelist` |
+| 🛡 **Auto-Mod** | Anti-spam with message cleanup, bad words (sees through zero-width characters, full-width letters and separators), link and invite filter with whitelist, caps and repeat detection | `/automod status` `/automod words` `/automod whitelist` |
+| 📋 **Server Log** | Forwards server events (messages, members, roles, channels…) to a log channel. Set it up on the dashboard and skip channels with `/serverlog` | `/serverlog ignore` `/serverlog unignore` |
+| 🚦 **Command Toggle** | Turn any command on or off per server | `/commands disable` `/commands enable` `/commands list` |
 | 🛠 **Utility** | Server stats, avatar viewer, dice, bot status and bio | `/status` `/avatar` `/roll` |
 | ⚙️ **Dev Tools** | Hot reload, cog management, command tree sync | `/hot_update` `/sync` |
 
