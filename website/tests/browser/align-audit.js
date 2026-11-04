@@ -1,6 +1,7 @@
 /* Console alignment checker (spec: docs/superpowers/specs/2026-11-03-console-alignment-design.md §8).
    Paste into the browser console on a console page, or pass it to the preview's JS tool. On a server page it walks every
-   page and tab; on the settings page every panel; elsewhere it checks the page once. It resolves to {width, theme, problems},
+   page and tab; on the settings page every panel; elsewhere it checks the page once. Run it with no unsaved edits: a page
+   the draft guard keeps closed is listed in `skipped`, not checked. It resolves to {width, theme, skipped, problems},
    where each problem code lists what it found:
    A  controls in one grid row with different tops or heights        B  field text not left-aligned
    C  a control whose height is not --control-h                     D  side-by-side controls off one centre line
@@ -112,23 +113,28 @@
 
     const pages = [...document.querySelectorAll('.page[data-slug]')];
     const panels = [...document.querySelectorAll('[data-settings-panel]')];
+    const skipped = [];
     if (pages.length) {
         for (const page of pages) {
             const tabs = [...page.querySelectorAll('[role="tab"][data-tab]')].map(tab => tab.dataset.tab);
             for (const tab of tabs.length ? tabs : [null]) {
-                location.hash = page.dataset.slug + (tab ? '/' + tab : '');
+                const where = page.dataset.slug + (tab ? '/' + tab : '');
+                location.hash = where;
                 await sleep(400);
-                audit(page, page.dataset.slug + (tab ? '/' + tab : ''));
+                // A draft guard can refuse the hash change; a hidden page would pass every check, so report it instead.
+                if (!page.classList.contains('is-active')) { skipped.push(where); continue; }
+                audit(page, where);
             }
         }
     } else if (panels.length) {
         for (const panel of panels) {
             location.hash = panel.dataset.settingsPanel;
             await sleep(400);
+            if (panel.hidden) { skipped.push('settings/' + panel.dataset.settingsPanel); continue; }
             audit(panel, 'settings/' + panel.dataset.settingsPanel);
         }
     } else {
         audit(document.querySelector('.content') || document.body, location.pathname);
     }
-    return {width: innerWidth, theme: document.documentElement.dataset.theme || 'system', problems};
+    return {width: innerWidth, theme: document.documentElement.dataset.theme || 'system', skipped, problems};
 })()
