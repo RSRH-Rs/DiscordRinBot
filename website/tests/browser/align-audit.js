@@ -75,6 +75,11 @@
             const row = control.closest('.row'), at = Math.round(box(control).right), edge = Math.round(box(row).right);
             if (!near(at, edge)) add('F', where, `${row.querySelector('.row-title')?.textContent.trim()} ${at} vs ${edge}`);
         });
+        root.querySelectorAll('.page-head .tog--head .tog-track').forEach(track => {
+            if (!shown(track)) return;
+            const at = Math.round(box(track).right), edge = Math.round(box(track.closest('.page-head')).right);
+            if (!near(at, edge)) add('F', where, `master switch ${at} vs ${edge}`);
+        });
         root.querySelectorAll('[data-depends-on]').forEach(row => {
             if (!shown(row) || !row.matches('.row')) return;
             const title = row.querySelector('.row-title')?.textContent.trim();
