@@ -9,7 +9,9 @@ import time
 import traceback
 import uuid
 
+from _inputs import BadDuration, DurationTooLong
 from _messages import Notice, send_notice
+from rincore.durations import label
 
 
 def _root_exception(error) -> BaseException:
@@ -95,6 +97,10 @@ def notice_for(error, *, command=None, slash: bool = False, now: float | None = 
         return Notice("error", "找不到这个身份组", "检查一下名字有没有打错，或者直接 @ 这个身份组。")
     if isinstance(error, commands.ChannelNotFound):
         return Notice("error", "找不到这个频道", "检查一下名字有没有打错，或者直接 # 这个频道。")
+    if isinstance(error, BadDuration):
+        return Notice("error", "时长格式不对", "可以写 10m、1h30m、2d、1w，或者 10分钟、1小时、2天。")
+    if isinstance(error, DurationTooLong):
+        return Notice("error", "时长太长了", f"最长 {label(error.limit, zh=True)}。")
     if isinstance(error, (commands.BadArgument, commands.UserInputError)):
         # 其余 UserInputError（BadLiteralArgument/BadUnionArgument/TooManyArguments 等）
         return Notice("error", "参数格式不对", _usage_line(command, slash))
