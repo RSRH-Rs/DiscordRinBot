@@ -384,4 +384,26 @@ class DashboardTemplateTests(unittest.TestCase):
         for part in ['content: ""','position: absolute','inset: 0']:self.assertIn(part,after)
         self.assertRegex(css,r'\.mod-row \.tog\s*\{[^}]*position: relative;[^}]*z-index: 1')
 
+    def test_controls_share_one_height(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertRegex(re.search(r'\n:root\s*\{([^}]*)\}',css).group(1),r'--control-h:\s*40px')
+        narrow=css[css.index('@media (max-width: 859px)'):]
+        self.assertRegex(narrow,r':root\s*\{[^}]*--control-h:\s*44px')
+        fixed=re.search(r'\n\.input, \.select, \.num, \.select-trigger\s*\{([^}]*)\}',css).group(1)
+        for part in ['height: var(--control-h)','padding-block: 0']:self.assertIn(part,fixed)
+        self.assertIn('min-height: var(--control-h)',re.search(r'\n\.btn\s*\{([^}]*)\}',css).group(1))
+        self.assertIn('height: var(--control-h)',re.search(r'\n\.seg\s*\{([^}]*)\}',css).group(1))
+        self.assertIn('height: var(--control-h)',re.search(r'\n\.emoji-trigger\s*\{([^}]*)\}',css).group(1))
+        self.assertNotRegex(css,r'\.server-row\.is-unjoined \.btn\s*\{[^}]*min-height')
+
+    def test_phone_touch_targets(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8');narrow=css[css.index('@media (max-width: 859px)'):]
+        self.assertRegex(css,r'\n\.tog input\s*\{[^}]*inset: -9px 0')
+        self.assertRegex(narrow,r'\.tog\s*\{[^}]*width: 48px;[^}]*height: 28px')
+        self.assertRegex(narrow,r'\.tog input\s*\{[^}]*inset: -8px 0')
+        self.assertRegex(narrow,r'\.tog input:checked \+ \.tog-track::after\s*\{[^}]*translateX\(20px\)')
+        for sel in [r'\.nav-item',r'\.btn--icon',r'\.menu-btn',r'\.user-logout']:self.assertRegex(narrow,sel+r'\s*\{[^}]*min-height: 44px')
+        self.assertRegex(narrow,r'\.theme-switch button\s*\{[^}]*width: 44px;[^}]*height: 36px')
+        self.assertRegex(narrow,r'\.theme-switch button::after\s*\{[^}]*inset: -4px 0')
+
 if __name__=='__main__':unittest.main()
