@@ -419,6 +419,16 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn('width: 120px',re.search(r'\n\.num-field\s*\{([^}]*)\}',css).group(1))
         self.assertIn('pointer-events: none',re.search(r'\n\.num-unit\s*\{([^}]*)\}',css).group(1))
 
+    def test_spam_trigger_fits_small_phones(self):
+        # [5 秒] 内发 [5 条] needs 284px; an indented row on a 320px phone has 272, so the fields may shrink to 96px instead of wrapping
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        field=re.search(r'\n\.num-field\s*\{([^}]*)\}',css).group(1)
+        for part in ['flex: 0 1 120px','min-width: 96px']:self.assertIn(part,field)
+        narrow=css[css.index('@media (max-width: 859px)'):]
+        self.assertRegex(narrow,r'\.row--sentence \.row-control\s*\{[^}]*flex-wrap: nowrap')
+        html,_=self.render('server.html')
+        self.assertRegex(html,r'<div class="row row--sub row--sentence" data-depends-on="am-spam">')
+
     def test_spam_trigger_reads_seconds_then_messages(self):
         html,_=self.render('server.html')
         self.assertLess(html.index('id="am-si"'),html.index('>内发<'));self.assertLess(html.index('>内发<'),html.index('id="am-st"'))

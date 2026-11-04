@@ -1,5 +1,6 @@
 /* RinBot console. Sections: tokens → base → shell → controls → pages → responsive.
-   Single-class selectors only; colours come from the tokens (see test_console_contrast). */
+   Prefer one class per selector. Colours come from the tokens, and spacing, radii, weights and font sizes
+   from fixed sets; test_console_contrast holds the stylesheet to both. */
 
 /* ── Tokens ─────────────────────────────────────────── */
 :root {
@@ -269,7 +270,7 @@ img { max-width: 100%; }
 .textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
 .num { width: 120px; text-align: left; appearance: textfield; -moz-appearance: textfield; }
 .num::-webkit-inner-spin-button, .num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.num-field { display: inline-grid; flex-shrink: 0; width: 120px; }
+.num-field { display: inline-grid; flex: 0 1 120px; width: 120px; min-width: 96px; }
 .num-field > * { grid-area: 1 / 1; }
 .num-field .num { width: 100%; padding-right: calc(3em + 16px); }
 .num-unit { align-self: center; justify-self: end; margin-right: 12px; pointer-events: none; color: var(--muted); font-size: 14px; white-space: nowrap; }
@@ -582,7 +583,6 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .command-search .select { width: 150px; }
 .cmd-group > summary { justify-content: flex-start; }
 .cmd-bulk { margin-left: auto; min-height: 28px; font-weight: 400; font-size: 13px; }
-.cmd-name { }
 
 /* Page: global settings */
 .settings-panel[hidden] { display: none; }
@@ -688,6 +688,8 @@ a.server-row:hover .server-name { color: var(--accent-text); }
     .row-control { flex-wrap: wrap; }
     .row-control > .input, .row-control > .select, .row-control > .search-select, .row-control > .textarea { width: 100%; }
     .row--switch { flex-direction: row; align-items: center; }
+    /* A sentence of fields ([5 秒] 内发 [5 条]) stays on one line; its fields shrink to 96px first. */
+    .row--sentence .row-control { flex-wrap: nowrap; }
     .hero { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: start; gap: 4px 12px; }
     .hero img { width: 64px; height: 64px; margin: 0; }
     .hero .bot-status { grid-column: 2; justify-self: start; margin: 0; }

@@ -201,7 +201,7 @@
             <h3 class="section-title">{{ tr('automod.spam') }}</h3>
             <div class="list">
                 {% call row(tr('automod.spam_on'), tr('automod.spam_hint'), 'am-spam', depends='am-enabled', cls='row--switch') %}{{ toggle('am-spam', tr('automod.spam_on')) }}{% endcall %}
-                {% call row(tr('automod.spam_threshold'), tr('automod.spam_threshold_hint'), 'am-si', depends='am-spam', sub=True) %}
+                {% call row(tr('automod.spam_threshold'), tr('automod.spam_threshold_hint'), 'am-si', depends='am-spam', sub=True, cls='row--sentence') %}
                 {{ num('am-si', tr('automod.seconds'), 2, 30, 5) }}<span class="unit">{{ tr('automod.within') }}</span>{{ num('am-st', tr('automod.messages'), 2, 20, 5, tr('automod.messages_label')) }}
                 {% endcall %}
                 {% call row(tr('automod.mute'), tr('automod.mute_hint'), None, depends='am-spam', block=True, sub=True) %}
