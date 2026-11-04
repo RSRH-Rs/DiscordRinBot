@@ -129,10 +129,11 @@ class ServerLog(commands.Cog):
         except (discord.Forbidden, discord.HTTPException):
             pass
 
-    def _is_ignored(self, guild_id: int, channel_id: int) -> bool:
+    def _is_ignored(self, guild_id: int, channel) -> bool:
         cfg = self.get_config(guild_id)
-        # 跳过被忽略的频道，以及日志频道自身（防回环）
-        return channel_id in cfg["ignored"] or channel_id == cfg["channel_id"]
+        # 跳过被忽略的频道，以及日志频道自身（防回环）；子区跟着它所在的频道
+        skip = cfg["ignored"] | {cfg["channel_id"]}
+        return channel.id in skip or getattr(channel, "parent_id", None) in skip
 
     async def _actor(self, guild, action, target_id=None):
         """尽力从审计日志反查操作者（需 View Audit Log 权限，10 秒内的最近条目）"""
@@ -155,7 +156,7 @@ class ServerLog(commands.Cog):
     async def on_message_delete(self, message: discord.Message):
         if not message.guild or message.author.bot:
             return
-        if self._is_ignored(message.guild.id, message.channel.id):
+        if self._is_ignored(message.guild.id, message.channel):
             return
         fields = [("作者", message.author.mention), ("频道", message.channel.mention)]
         if message.attachments:
@@ -180,7 +181,7 @@ class ServerLog(commands.Cog):
             return
         if before.content == after.content:  # 嵌入加载等非内容编辑
             return
-        if self._is_ignored(after.guild.id, after.channel.id):
+        if self._is_ignored(after.guild.id, after.channel):
             return
         card = embed(
             event_kind("message_edit"),
@@ -201,7 +202,7 @@ class ServerLog(commands.Cog):
         if not messages or not messages[0].guild:
             return
         ch = messages[0].channel
-        if self._is_ignored(messages[0].guild.id, ch.id):
+        if self._is_ignored(messages[0].guild.id, ch):
             return
         card = embed(
             event_kind("message_bulk_delete"),
@@ -507,7 +508,7 @@ class ServerLog(commands.Cog):
             return
         await self._save_ignored(ctx.guild.id, ignored | {channel.id})
         card = embed(
-            "success", f"已忽略 #{channel.name}", "这个频道里删除和编辑的消息不会再记进日志。",
+            "success", f"已忽略 #{channel.name}", "这个频道和它的子区里删除和编辑的消息不会再记进日志。",
             fields=[self._ignored_field(ctx.guild.id)],
         )
         await send(ctx, card, private=True)
@@ -527,7 +528,7 @@ class ServerLog(commands.Cog):
             return
         await self._save_ignored(ctx.guild.id, ignored - {channel.id})
         card = embed(
-            "success", f"已恢复记录 #{channel.name}", "这个频道里删除和编辑的消息会照常记进日志。",
+            "success", f"已恢复记录 #{channel.name}", "这个频道和它的子区里删除和编辑的消息会照常记进日志。",
             fields=[self._ignored_field(ctx.guild.id)],
         )
         await send(ctx, card, private=True)

@@ -28,6 +28,7 @@ DB_PATH = os.path.join(
 MAX_BUTTONS = 20  # 和控制台一致（Discord 一条消息最多放 25 个按钮）
 DEFAULT_DESCRIPTION = "点击下方按钮领取对应身份组"
 EXCLUSIVE_HINT = "*注:只能选一个身份组,选其他会自动替换*"  # 控制台发单选面板时加在说明末尾的同一句
+OLD_ADD_HINT = "*使用 `/rr_add` 添加身份组按钮*"  # 旧的 rr_create 加在末尾的提示，指令已经不在了
 _MESSAGE_LINK = re.compile(r"https://(?:\w+\.)?discord(?:app)?\.com/channels/\d+/\d+/(\d+)")
 _CUSTOM_EMOJI = re.compile(r"<a?:(\w+):\d+>")
 _ROLE_MENTION = re.compile(r"<@&(\d+)>")
@@ -35,14 +36,18 @@ _ROLE_MENTION = re.compile(r"<@&(\d+)>")
 # 重画面板失败时的提示；失败时什么都不存
 _REFRESH_NOTICES = {
     "bad_emoji": Notice("error", "这个 emoji 用不了", "填一个 Discord 自带的 emoji，比如 🎮，或者这个服务器的自定义 emoji。"),
+    "old_emoji": Notice("error", "面板上有 emoji 用不了了", "多半是按钮用的服务器表情被删了，先用 /roles remove 去掉那个按钮。"),
     "gone": Notice("error", "面板消息已经不在了", "用 /roles delete 清掉这个面板，再到控制台重新发一个。"),
+    "no_access": Notice("error", "我看不到面板所在的频道", "给小凛这个频道的「查看频道」和「读取消息历史」权限，再试一次。"),
     "failed": Notice("error", "面板没更新成功", "稍后再试一次。"),
 }
 
 
 def panel_description(current: Optional[str], exclusive: bool) -> str:
-    """面板说明：保留原来写的内容，按单选与否加上或去掉末尾的单选提示。"""
+    """面板说明：保留原来写的内容，去掉旧的 rr_add 提示，按单选与否加上或去掉末尾的单选提示。"""
     text = (current or "").strip()
+    if text.endswith(OLD_ADD_HINT):
+        text = text[: -len(OLD_ADD_HINT)].rstrip()
     if text.endswith(EXCLUSIVE_HINT):
         text = text[: -len(EXCLUSIVE_HINT)].rstrip()
     text = text or DEFAULT_DESCRIPTION
@@ -190,13 +195,15 @@ class ReactionRoles(commands.Cog):
         await self.reload_guild(guild_id)
 
     def _build_components(self, mappings: dict, guild: discord.Guild) -> list:
-        """从 mappings 构造按钮 components"""
+        """从 mappings 构造按钮 components；同一个身份组只出一个按钮（custom_id 重复 Discord 会拒收整条消息）"""
         rows = []
         current = {"type": 1, "components": []}
+        seen = set()
         for emoji_str, role_id in mappings.items():
             role = guild.get_role(role_id)
-            if not role:
+            if not role or role.id in seen:
                 continue
+            seen.add(role.id)
 
             # 解析 emoji:Unicode / <:name:id> / <a:name:id>
             emoji_obj = None
@@ -264,7 +271,7 @@ class ReactionRoles(commands.Cog):
             return 0
 
     async def _refresh_panel(self, guild, panel: dict, mappings: dict, exclusive: bool) -> str:
-        """按新的身份组和模式重画面板消息，保留原来的说明文字；返回 ok、bad_emoji、gone 或 failed。"""
+        """按新的身份组和模式重画面板消息，保留原来的说明文字；返回 ok、bad_emoji、gone、no_access 或 failed。"""
         channel = guild.get_channel_or_thread(panel["channel_id"])
         if channel is None:
             return "gone"
@@ -272,6 +279,8 @@ class ReactionRoles(commands.Cog):
             message = await channel.fetch_message(panel["message_id"])
         except discord.NotFound:
             return "gone"
+        except discord.Forbidden:
+            return "no_access"
         except discord.HTTPException:
             return "failed"
         current = message.embeds[0].description if message.embeds else None
@@ -280,12 +289,14 @@ class ReactionRoles(commands.Cog):
         )
         if 200 <= status < 300:
             return "ok"
-        return {400: "bad_emoji", 404: "gone"}.get(status, "failed")
+        return {400: "bad_emoji", 403: "no_access", 404: "gone"}.get(status, "failed")
 
-    async def _apply(self, ctx, panel: dict, mappings: dict, exclusive: bool) -> bool:
+    async def _apply(self, ctx, panel: dict, mappings: dict, exclusive: bool, *, new_emoji: bool = False) -> bool:
         """先改 Discord 上的面板消息，成功了再存；改不了就说明原因，什么都不存。"""
         result = await self._refresh_panel(ctx.guild, panel, mappings, exclusive)
         if result != "ok":
+            if result == "bad_emoji" and not new_emoji:
+                result = "old_emoji"  # 没加新 emoji 也被拒：是面板上原有的 emoji 坏了
             await send_notice(ctx, _REFRESH_NOTICES[result])
             return False
         await self._store(ctx.guild.id, panel["message_id"], mappings, exclusive)
@@ -317,7 +328,7 @@ class ReactionRoles(commands.Cog):
             return
         fields = []
         for panel in panels[:25]:
-            channel = ctx.guild.get_channel(panel["channel_id"])
+            channel = ctx.guild.get_channel_or_thread(panel["channel_id"])
             mode = "单选" if panel["exclusive"] else "多选"
             value = f"{channel.mention if channel else '频道已删除'}，{len(panel['mappings'])} 个身份组，{mode}"
             if channel:
@@ -343,6 +354,9 @@ class ReactionRoles(commands.Cog):
         if role.is_default() or role.managed:
             await send_notice(ctx, Notice("error", f"「{role.name}」不能用来领取", "机器人和集成自带的身份组、@everyone 都不能放进面板。"))
             return
+        if not ctx.guild.me.guild_permissions.manage_roles:
+            await send_notice(ctx, Notice("error", "我没有「管理身份组」权限", "给小凛开「管理身份组」权限，成员才领得到身份组。"))
+            return
         if role >= ctx.guild.me.top_role:
             await send_notice(ctx, Notice("error", f"我分配不了「{role.name}」", f"把小凛的身份组拖到「{role.name}」上面，再试一次。"))
             return
@@ -355,7 +369,7 @@ class ReactionRoles(commands.Cog):
                 "error", f"这个面板已经有 {MAX_BUTTONS} 个身份组了", f"一个面板最多 {MAX_BUTTONS} 个身份组，先去掉一个再加。"
             ))
             return
-        if not await self._apply(ctx, found, mappings, found["exclusive"]):
+        if not await self._apply(ctx, found, mappings, found["exclusive"], new_emoji=True):
             return
         await send(ctx, embed(
             "success", "面板已更新", f"{emoji} {role.mention} 已加到「{found['title']}」，现在有 {len(mappings)} 个身份组。"
@@ -470,7 +484,7 @@ class ReactionRoles(commands.Cog):
             return []
         zh, items = is_zh(interaction), []
         for panel in panels:
-            channel = interaction.guild.get_channel(panel["channel_id"])
+            channel = interaction.guild.get_channel_or_thread(panel["channel_id"])
             count = len(panel["mappings"])
             if zh:
                 where = f"#{channel.name}" if channel else "频道已删除"

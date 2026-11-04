@@ -37,7 +37,7 @@ class _Role:
 
 
 BOT = SimpleNamespace(get_cog=lambda name: None)  # 没有系统日志模块时 audit 什么都不做
-ME = SimpleNamespace(top_role=_Role(1, "小凛", position=10))
+ME = SimpleNamespace(top_role=_Role(1, "小凛", position=10), guild_permissions=discord.Permissions.all())
 ROLES = {201: _Role(201, "游戏"), 202: _Role(202, "桌游"), 301: _Role(301, "红色"), 401: _Role(401, "新人")}
 PANELS = [
     (111, 10, 5, "游戏身份组", {"🎮": 201, "🎲": 202}, 0),
@@ -208,6 +208,7 @@ async def test_add_refuses_a_full_panel(tmp_path, monkeypatch):
 @pytest.mark.parametrize("result, title", [
     ("bad_emoji", "这个 emoji 用不了"),
     ("gone", "面板消息已经不在了"),
+    ("no_access", "我看不到面板所在的频道"),
     ("failed", "面板没更新成功"),
 ])
 async def test_add_changes_nothing_when_the_panel_cannot_change(tmp_path, monkeypatch, result, title):
@@ -325,7 +326,10 @@ async def test_refresh_keeps_the_panel_text():
     fetch["result"] = _http_error(discord.NotFound, 404)
     assert await cog._refresh_panel(guild, panel, {}, False) == "gone"
     fetch["result"] = _http_error(discord.Forbidden, 403)
-    assert await cog._refresh_panel(guild, panel, {}, False) == "failed"
+    assert await cog._refresh_panel(guild, panel, {}, False) == "no_access"
+    fetch["result"] = message
+    cog.status = 403
+    assert await cog._refresh_panel(guild, panel, {}, False) == "no_access"
     assert await cog._refresh_panel(_guild(), panel, {}, False) == "gone"
 
 
@@ -356,6 +360,54 @@ async def test_rebuild_reports_the_discord_status(monkeypatch):
     cog = ReactionRoles(SimpleNamespace(http=SimpleNamespace(token="t")))
     message = SimpleNamespace(id=111, channel=SimpleNamespace(id=10))
     assert await cog._rebuild_panel(message, "标题", {"abc": 201}, _guild()) == 400
+
+
+async def test_add_needs_manage_roles_for_the_bot(tmp_path, monkeypatch):
+    cog, path = await _cog(tmp_path, monkeypatch)
+    me = SimpleNamespace(top_role=ME.top_role, guild_permissions=discord.Permissions(send_messages=True))
+    ctx = _ctx(SimpleNamespace(**{**vars(_guild()), "me": me}))
+    await ReactionRoles.roles_add.callback(cog, ctx, "111", "⭐", ROLES[401])
+    assert (_card(ctx).title, _card(ctx).description) == ("我没有「管理身份组」权限", "给小凛开「管理身份组」权限，成员才领得到身份组。")
+    assert await _stored(path, 111) == ({"🎮": 201, "🎲": 202}, 0) and cog.refreshed == []
+
+
+@pytest.mark.parametrize("call", ["remove", "exclusive"])
+async def test_a_rejected_edit_without_a_new_emoji_blames_the_old_ones(tmp_path, monkeypatch, call):
+    cog, path = await _cog(tmp_path, monkeypatch)
+    cog.refresh_result = "bad_emoji"
+    ctx = _ctx()
+    if call == "remove":
+        await ReactionRoles.roles_remove.callback(cog, ctx, "111", role="🎲")
+    else:
+        await ReactionRoles.roles_exclusive.callback(cog, ctx, "111", True)
+    assert (_card(ctx).title, _card(ctx).description) == (
+        "面板上有 emoji 用不了了", "多半是按钮用的服务器表情被删了，先用 /roles remove 去掉那个按钮。"
+    )
+    assert await _stored(path, 111) == ({"🎮": 201, "🎲": 202}, 0)
+
+
+def test_one_button_per_role():
+    cog = ReactionRoles(BOT)
+    rows = cog._build_components({"🎮": 201, "🕹": 201, "🎲": 202}, _guild())
+    assert [b["custom_id"] for row in rows for b in row["components"]] == ["rr:201", "rr:202"]
+
+
+def test_old_panel_text_loses_the_rr_add_hint():
+    old = f"选一个\n\n{EXCLUSIVE_HINT}\n\n*使用 `/rr_add` 添加身份组按钮*"
+    assert panel_description(old, False) == "选一个"
+    assert panel_description(old, True) == f"选一个\n\n{EXCLUSIVE_HINT}"
+    assert panel_description("*使用 `/rr_add` 添加身份组按钮*", False) == "点击下方按钮领取对应身份组"
+
+
+async def test_panels_in_threads_show_their_thread(tmp_path, monkeypatch):
+    cog, _ = await _cog(tmp_path, monkeypatch, [(111, 10, 5, "游戏身份组", {"🎮": 201}, 0)])
+    thread = SimpleNamespace(name="身份组子区", mention="<#10>")
+    guild = SimpleNamespace(**{**vars(_guild()), "get_channel": lambda cid: None, "get_channel_or_thread": {10: thread}.get})
+    ctx = _ctx(guild)
+    await ReactionRoles.roles_list.callback(cog, ctx)
+    assert _card(ctx).fields[0].value.startswith("<#10>，1 个身份组")
+    interaction = SimpleNamespace(guild=guild, locale=discord.Locale.chinese)
+    assert (await cog._panel_autocomplete(interaction, ""))[0].name == "游戏身份组（#身份组子区，1 个身份组）"
 
 
 # ─── /roles delete、list ───
@@ -451,7 +503,7 @@ async def test_ignore_keeps_the_dashboard_settings(tmp_path, monkeypatch):
     assert await _log_row(path) == (77, 1, "ban,message", "10,11")
     assert cog.get_config(5)["ignored"] == {10, 11} and cog.get_config(5)["channel_id"] == 77
     card = _card(ctx)
-    assert (card.title, card.description) == ("已忽略 #闲聊", "这个频道里删除和编辑的消息不会再记进日志。")
+    assert (card.title, card.description) == ("已忽略 #闲聊", "这个频道和它的子区里删除和编辑的消息不会再记进日志。")
     assert [(f.name, f.value) for f in card.fields] == [("现在忽略的频道", "<#10> <#11>")]
 
 
@@ -470,7 +522,7 @@ async def test_unignore(tmp_path, monkeypatch):
     await ServerLog.sl_unignore.callback(cog, ctx, CHANNEL)
     assert await _log_row(path) == (77, 1, "ban", "")
     card = _card(ctx)
-    assert (card.title, card.description) == ("已恢复记录 #闲聊", "这个频道里删除和编辑的消息会照常记进日志。")
+    assert (card.title, card.description) == ("已恢复记录 #闲聊", "这个频道和它的子区里删除和编辑的消息会照常记进日志。")
     assert [(f.name, f.value) for f in card.fields] == [("现在忽略的频道", "没有")]
     ctx = _ctx()
     await ServerLog.sl_unignore.callback(cog, ctx, CHANNEL)
@@ -487,3 +539,13 @@ async def test_serverlog_bare_and_old_subcommands(tmp_path, monkeypatch):
     await ServerLog.serverlog_group.callback(cog, ctx)
     assert _card(ctx).title == "这项设置已移到控制台"
     assert ctx.send.calls[0][1]["view"].children[0].url == "https://rin-bot.com/dashboard/server/5#serverlog"
+
+
+async def test_threads_follow_their_channel(tmp_path, monkeypatch):
+    cog, _ = await _log_cog(tmp_path, monkeypatch, (5, 77, 1, "message", "10"))
+    await cog.reload_guild(5)
+    assert cog._is_ignored(5, SimpleNamespace(id=10, parent_id=None))
+    assert cog._is_ignored(5, SimpleNamespace(id=99, parent_id=10))
+    assert cog._is_ignored(5, SimpleNamespace(id=98, parent_id=77))  # 日志频道自己的子区也不记，防回环
+    assert not cog._is_ignored(5, SimpleNamespace(id=11, parent_id=None))
+    assert not cog._is_ignored(5, SimpleNamespace(id=12))
