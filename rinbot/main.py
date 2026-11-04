@@ -19,7 +19,13 @@ class HybridBot(commands.Bot):
         intents.message_content = True
         intents.members = True  # 必须：迎新/道别系统需要成员事件
 
-        super().__init__(command_prefix="r!", intents=intents, help_command=None)
+        # 永远不触发 @everyone、@here 和身份组提醒，只提醒具体的人
+        super().__init__(
+            command_prefix="r!",
+            intents=intents,
+            help_command=None,
+            allowed_mentions=discord.AllowedMentions(everyone=False, roles=False, users=True, replied_user=False),
+        )
         self.start_time = time.time()
         self.change_watcher = sync.ChangeWatcher()
 
