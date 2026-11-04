@@ -142,14 +142,14 @@ async def test_caps_logs_action():
     msg = _Msg("STOP SHOUTING AT EVERYONE", _TalkChannel(5))
     await cog.on_message(msg)
     assert msg.deleted
-    assert [e.title for e in logged] == ["📢 大写轰炸"]
+    assert [e.title for e in logged] == ["自动审核：大写"]
 
 
 async def test_link_without_scheme_blocked_unless_whitelisted():
     cog, logged = _cog_with(anti_link=1, link_whitelist='["example.com"]')
     blocked = _Msg("join discord.gg/abc", _TalkChannel(5))
     await cog.on_message(blocked)
-    assert blocked.deleted and [e.title for e in logged] == ["🔗 链接过滤"]
+    assert blocked.deleted and [e.title for e in logged] == ["自动审核：链接"]
     allowed = _Msg("see cdn.example.com/x", _TalkChannel(5))
     await cog.on_message(allowed)
     assert not allowed.deleted
@@ -162,7 +162,7 @@ async def test_badword_whole_word_only():
     assert not ok.deleted
     bad = _Msg("you ASS", _TalkChannel(5))
     await cog.on_message(bad)
-    assert bad.deleted and [e.title for e in logged] == ["🚫 违禁词"]
+    assert bad.deleted and [e.title for e in logged] == ["自动审核：违禁词"]
 
 
 async def test_spam_trigger_deletes_window_messages():
@@ -215,4 +215,4 @@ async def test_spam_cleanup_crash_still_mutes():
     for mid in (1, 2, 3):
         await cog.on_message(_Msg("hi", channel, mid))
     assert muted == ["刷屏"]
-    assert [e.title for e in logged] == ["🚨 刷屏检测"]
+    assert [e.title for e in logged] == ["自动审核：刷屏"]

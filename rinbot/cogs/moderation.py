@@ -29,6 +29,9 @@ import time
 from typing import Literal, Optional
 
 from rincore import cases, durations
+from rincore.cases import ACTION_NAMES
+from rincore.embeds import event_kind
+from _messages import embed
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "moderation.db"
@@ -151,38 +154,21 @@ class Moderation(commands.Cog):
         if log_ch_id:
             channel = guild.get_channel(log_ch_id)
             if channel:
-                action_emoji = {
-                    "kick": "👢",
-                    "ban": "🔨",
-                    "tempban": "⏳🔨",
-                    "unban": "🔓",
-                    "mute": "🔇",
-                    "unmute": "🔊",
-                    "warn": "⚠️",
-                    "clearwarns": "🧹",
-                    "purge": "🗑",
-                }.get(action, "📋")
-
-                embed = discord.Embed(
-                    title=f"{action_emoji} {action.upper()} | 案件 #{case_id}",
-                    color=(
-                        discord.Color.red()
-                        if action in ("ban", "tempban", "kick")
-                        else discord.Color.orange()
-                    ),
+                e = embed(
+                    event_kind(action),
+                    f"案件 #{case_id}：{ACTION_NAMES.get(action, action)}",
+                    fields=[
+                        ("成员", f"{user.mention}（{user.id}）"),
+                        ("管理员", mod.mention),
+                        ("时长", duration),
+                        ("原因", reason, False),
+                    ],
                     timestamp=discord.utils.utcnow(),
                 )
-                embed.add_field(
-                    name="成员", value=f"{user.mention} (`{user.id}`)", inline=True
-                )
-                embed.add_field(name="管理员", value=mod.mention, inline=True)
-                if duration:
-                    embed.add_field(name="时长", value=duration, inline=True)
-                embed.add_field(name="原因", value=reason, inline=False)
-                embed.set_thumbnail(url=user.display_avatar.url)
+                e.set_thumbnail(url=user.display_avatar.url)
 
                 try:
-                    await channel.send(embed=embed)
+                    await channel.send(embed=e)
                 except discord.Forbidden:
                     pass
 
@@ -330,12 +316,12 @@ class Moderation(commands.Cog):
 
         # 尝试 DM 通知
         try:
-            embed = discord.Embed(
-                title=f"👢 你已被踢出 {ctx.guild.name}",
-                description=f"**原因:** {reason}\n**管理员:** {ctx.author}",
-                color=discord.Color.orange(),
+            e = embed(
+                event_kind("kick"),
+                f"你已被踢出 {ctx.guild.name}",
+                fields=[("原因", reason, False), ("管理员", str(ctx.author))],
             )
-            await member.send(embed=embed)
+            await member.send(embed=e)
         except (discord.Forbidden, discord.HTTPException):
             pass
 
@@ -378,12 +364,12 @@ class Moderation(commands.Cog):
                 return
 
             try:
-                embed = discord.Embed(
-                    title=f"🔨 你已被永久封禁于 {ctx.guild.name}",
-                    description=f"**原因:** {reason}\n**管理员:** {ctx.author}",
-                    color=discord.Color.red(),
+                e = embed(
+                    event_kind("ban"),
+                    f"你已被封禁：{ctx.guild.name}",
+                    fields=[("原因", reason, False), ("管理员", str(ctx.author))],
                 )
-                await target.send(embed=embed)
+                await target.send(embed=e)
             except (discord.Forbidden, discord.HTTPException):
                 pass
 
@@ -425,12 +411,12 @@ class Moderation(commands.Cog):
         dur_text = self._format_duration(seconds)
 
         try:
-            embed = discord.Embed(
-                title=f"⏳🔨 你已被临时封禁于 {ctx.guild.name}",
-                description=f"**时长:** {dur_text}\n**原因:** {reason}\n**管理员:** {ctx.author}",
-                color=discord.Color.red(),
+            e = embed(
+                event_kind("tempban"),
+                f"你已被临时封禁：{ctx.guild.name}",
+                fields=[("原因", reason, False), ("时长", dur_text), ("管理员", str(ctx.author))],
             )
-            await member.send(embed=embed)
+            await member.send(embed=e)
         except (discord.Forbidden, discord.HTTPException):
             pass
 
@@ -578,12 +564,12 @@ class Moderation(commands.Cog):
 
         # DM 通知
         try:
-            embed = discord.Embed(
-                title=f"⚠️ 你在 {ctx.guild.name} 收到了一次警告",
-                description=f"**原因:** {reason}\n**管理员:** {ctx.author}\n**累计警告:** {total} 次",
-                color=discord.Color.yellow(),
+            e = embed(
+                event_kind("warn"),
+                f"你在 {ctx.guild.name} 收到一次警告",
+                fields=[("原因", reason, False), ("管理员", str(ctx.author)), ("累计警告", f"{total} 次")],
             )
-            await member.send(embed=embed)
+            await member.send(embed=e)
         except (discord.Forbidden, discord.HTTPException):
             pass
 
@@ -615,22 +601,13 @@ class Moderation(commands.Cog):
             await ctx.send(f"✅ **{member}** 没有任何警告记录。")
             return
 
-        embed = discord.Embed(
-            title=f"⚠️ {member.display_name} 的警告记录",
-            color=discord.Color.yellow(),
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-
-        for warn_id, mod_id, reason, created_at in rows:
-            ts = int(created_at)
-            embed.add_field(
-                name=f"#{warn_id} — <t:{ts}:R>",
-                value=f"管理员: <@{mod_id}>\n原因: {reason}",
-                inline=False,
-            )
-
-        embed.set_footer(text=f"共 {len(rows)} 条警告")
-        await ctx.send(embed=embed)
+        fields = [
+            (f"#{warn_id} — <t:{int(created_at)}:R>", f"管理员: <@{mod_id}>\n原因: {reason}", False)
+            for warn_id, mod_id, reason, created_at in rows
+        ]
+        e = embed("info", f"{member.display_name} 的警告记录", fields=fields, footer=f"共 {len(rows)} 条警告")
+        e.set_thumbnail(url=member.display_avatar.url)
+        await ctx.send(embed=e)
 
     # ═══════════════════════════════════════
     #  指令：clearwarns
@@ -825,24 +802,25 @@ class Moderation(commands.Cog):
         start = (page - 1) * items_per_page
         end = start + items_per_page
 
-        embed = discord.Embed(
-            title=f"📋 管理日志" + (f" — {member}" if member else ""),
-            color=discord.Color.blue(),
-        )
-
+        fields = []
         for case_id, action, user_id, mod_id, reason, duration, created_at in rows[
             start:end
         ]:
-            ts = int(created_at)
             dur_info = f" | 时长: {duration}" if duration else ""
-            embed.add_field(
-                name=f"#{case_id} | {action.upper()} | <t:{ts}:R>",
-                value=f"成员: <@{user_id}> | 管理员: <@{mod_id}>{dur_info}\n原因: {reason[:80]}",
-                inline=False,
+            fields.append(
+                (
+                    f"#{case_id} {ACTION_NAMES.get(action, action)}（<t:{int(created_at)}:R>）",
+                    f"成员: <@{user_id}> | 管理员: <@{mod_id}>{dur_info}\n原因: {reason[:80]}",
+                    False,
+                )
             )
-
-        embed.set_footer(text=f"第 {page}/{total_pages} 页 | 共 {len(rows)} 条记录")
-        await ctx.send(embed=embed)
+        e = embed(
+            "info",
+            f"管理日志：{member}" if member else "管理日志",
+            fields=fields,
+            footer=f"第 {page}/{total_pages} 页 | 共 {len(rows)} 条记录",
+        )
+        await ctx.send(embed=e)
 
     # ═══════════════════════════════════════
     #  指令：modlog_channel
@@ -942,12 +920,7 @@ class Moderation(commands.Cog):
         if not lines:
             lines.append("所有自动处罚已禁用")
 
-        embed = discord.Embed(
-            title="⚙️ 警告自动处罚配置",
-            description="\n".join(lines),
-            color=discord.Color.blue(),
-        )
-        await ctx.send(embed=embed, ephemeral=True)
+        await ctx.send(embed=embed("info", "警告自动处罚", "\n".join(lines)), ephemeral=True)
 
         botlog = self.bot.get_cog("BotLog")
         if botlog:

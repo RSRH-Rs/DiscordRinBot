@@ -11,6 +11,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
+from _messages import embed
+from rincore.embeds import LOG_LEVELS
+
 try:
     from config import DEV_GUILD_ID
 except ImportError:
@@ -20,12 +23,6 @@ DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "botlog.db"
 )
 
-LEVEL_META = {
-    "error": {"emoji": "❌", "color": 0xE24B4A, "label": "错误"},
-    "warning": {"emoji": "⚠️", "color": 0xEF9F27, "label": "警告"},
-    "info": {"emoji": "ℹ️", "color": 0x85B7EB, "label": "信息"},
-    "config": {"emoji": "⚙️", "color": 0x5A9E6F, "label": "配置变更"},
-}
 
 
 def new_error_id() -> str:
@@ -108,7 +105,7 @@ class BotLog(commands.Cog):
     async def set_config(
         self, guild_id: int, channel_id: int, enabled: bool, levels: list[str]
     ):
-        levels_str = ",".join(sorted(set(levels) & set(LEVEL_META.keys())))
+        levels_str = ",".join(sorted(set(levels) & set(LOG_LEVELS.keys())))
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
                 "INSERT OR REPLACE INTO botlog_config (guild_id, channel_id, enabled, levels) VALUES (?, ?, ?, ?)",
@@ -140,22 +137,19 @@ class BotLog(commands.Cog):
         if not channel:
             return
 
-        meta = LEVEL_META.get(level, LEVEL_META["info"])
-        embed = discord.Embed(
-            title=f"{meta['emoji']} {title}",
-            description=description[:4000] if description else None,
-            color=meta["color"],
+        kind, label = LOG_LEVELS.get(level, LOG_LEVELS["info"])
+        e = embed(
+            kind,
+            title,
+            description,
+            fields=[(k, v) for k, v in fields.items()],
+            author=f"系统日志 · {label}",
+            footer=f"Guild ID: {guild_id}",
             timestamp=datetime.now(timezone.utc),
         )
-        embed.set_author(name=f"系统日志 · {meta['label']}")
-        for k, v in fields.items():
-            if v is None or v == "":
-                continue
-            embed.add_field(name=k, value=str(v)[:1000], inline=True)
-        embed.set_footer(text=f"Guild ID: {guild_id}")
 
         try:
-            await channel.send(embed=embed)
+            await channel.send(embed=e)
         except (discord.Forbidden, discord.HTTPException):
             pass
 

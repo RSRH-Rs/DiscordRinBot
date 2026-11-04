@@ -11,6 +11,8 @@ from typing import Literal, Optional
 
 from _botlog_helper import audit
 from _perms import require
+from _messages import embed
+from rincore.embeds import event_kind
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "serverlog.db"
@@ -134,7 +136,7 @@ class ServerLog(commands.Cog):
 
     # ─── 发送核心 ───
 
-    async def _send(self, guild_id: int, category: str, embed: discord.Embed):
+    async def _send(self, guild_id: int, category: str, card: discord.Embed):
         cfg = self.get_config(guild_id)
         if not cfg["enabled"] or not cfg["channel_id"]:
             return
@@ -146,9 +148,9 @@ class ServerLog(commands.Cog):
         channel = guild.get_channel(cfg["channel_id"])
         if not channel:
             return
-        embed.timestamp = datetime.now(timezone.utc)
+        card.timestamp = datetime.now(timezone.utc)
         try:
-            await channel.send(embed=embed)
+            await channel.send(embed=card)
         except (discord.Forbidden, discord.HTTPException):
             pass
 
@@ -180,26 +182,22 @@ class ServerLog(commands.Cog):
             return
         if self._is_ignored(message.guild.id, message.channel.id):
             return
-        embed = discord.Embed(
-            title="💬 消息被删除",
-            description=message.content[:2000] or "*（无文字内容）*",
-            color=0xE24B4A,
-        )
-        embed.add_field(name="作者", value=message.author.mention, inline=True)
-        embed.add_field(name="频道", value=message.channel.mention, inline=True)
+        fields = [("作者", message.author.mention), ("频道", message.channel.mention)]
         if message.attachments:
-            embed.add_field(
-                name="附件",
-                value="\n".join(a.filename for a in message.attachments)[:1000],
-                inline=False,
-            )
+            fields.append(("附件", "\n".join(a.filename for a in message.attachments)[:1000], False))
         entry = await self._actor(
             message.guild, discord.AuditLogAction.message_delete, message.author.id
         )
         if entry:
-            embed.add_field(name="操作者", value=entry.user.mention, inline=True)
-        embed.set_footer(text=f"作者 ID: {message.author.id}")
-        await self._send(message.guild.id, "message", embed)
+            fields.append(("操作者", entry.user.mention))
+        card = embed(
+            event_kind("message_delete"),
+            "消息被删除",
+            message.content[:2000] or "*（无文字内容）*",
+            fields=fields,
+            footer=f"作者 ID: {message.author.id}",
+        )
+        await self._send(message.guild.id, "message", card)
 
     @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
@@ -209,17 +207,19 @@ class ServerLog(commands.Cog):
             return
         if self._is_ignored(after.guild.id, after.channel.id):
             return
-        embed = discord.Embed(title="✏️ 消息被编辑", color=0xEF9F27, url=after.jump_url)
-        embed.add_field(
-            name="之前", value=(before.content[:1000] or "*（空）*"), inline=False
+        card = embed(
+            event_kind("message_edit"),
+            "消息被编辑",
+            url=after.jump_url,
+            fields=[
+                ("之前", before.content[:1000] or "*（空）*", False),
+                ("之后", after.content[:1000] or "*（空）*", False),
+                ("作者", after.author.mention),
+                ("频道", after.channel.mention),
+            ],
+            footer=f"作者 ID: {after.author.id}",
         )
-        embed.add_field(
-            name="之后", value=(after.content[:1000] or "*（空）*"), inline=False
-        )
-        embed.add_field(name="作者", value=after.author.mention, inline=True)
-        embed.add_field(name="频道", value=after.channel.mention, inline=True)
-        embed.set_footer(text=f"作者 ID: {after.author.id}")
-        await self._send(after.guild.id, "message", embed)
+        await self._send(after.guild.id, "message", card)
 
     @commands.Cog.listener()
     async def on_bulk_message_delete(self, messages: list[discord.Message]):
@@ -228,33 +228,29 @@ class ServerLog(commands.Cog):
         ch = messages[0].channel
         if self._is_ignored(messages[0].guild.id, ch.id):
             return
-        embed = discord.Embed(
-            title="🧹 批量删除消息",
-            description=f"在 {ch.mention} 删除了 **{len(messages)}** 条消息。",
-            color=0x992D22,
+        card = embed(
+            event_kind("message_bulk_delete"),
+            "批量删除消息",
+            f"在 {ch.mention} 删除了 **{len(messages)}** 条消息。",
         )
-        await self._send(messages[0].guild.id, "message", embed)
+        await self._send(messages[0].guild.id, "message", card)
 
     # ───────────── 成员事件 ─────────────
 
     @commands.Cog.listener()
     async def on_member_join(self, member: discord.Member):
-        embed = discord.Embed(
-            title="🚪 成员加入",
-            description=f"{member.mention} 加入了服务器",
-            color=0x57F287,
+        card = embed(
+            event_kind("member_join"),
+            "成员加入",
+            f"{member.mention} 加入了服务器",
+            fields=[
+                ("账号创建于", discord.utils.format_dt(member.created_at, "R")),
+                ("当前成员数", str(member.guild.member_count)),
+            ],
+            footer=f"用户 ID: {member.id}",
         )
-        embed.add_field(
-            name="账号创建于",
-            value=discord.utils.format_dt(member.created_at, "R"),
-            inline=True,
-        )
-        embed.add_field(
-            name="当前成员数", value=str(member.guild.member_count), inline=True
-        )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"用户 ID: {member.id}")
-        await self._send(member.guild.id, "member", embed)
+        card.set_thumbnail(url=member.display_avatar.url)
+        await self._send(member.guild.id, "member", card)
 
     @commands.Cog.listener()
     async def on_member_remove(self, member: discord.Member):
@@ -264,124 +260,117 @@ class ServerLog(commands.Cog):
         # 尝试区分主动离开与被踢
         entry = await self._actor(member.guild, discord.AuditLogAction.kick, member.id)
         if entry:
-            embed = discord.Embed(
-                title="👢 成员被踢出",
-                description=f"{member} 被踢出服务器",
-                color=0xE67E22,
-            )
-            embed.add_field(name="操作者", value=entry.user.mention, inline=True)
-            if entry.reason:
-                embed.add_field(name="原因", value=entry.reason[:1000], inline=True)
+            kind, title, text = event_kind("member_kick"), "成员被踢出", f"{member} 被踢出服务器"
+            fields = [("操作者", entry.user.mention), ("原因", (entry.reason or "")[:1000])]
         else:
-            embed = discord.Embed(
-                title="🚪 成员离开",
-                description=f"**{member}** 离开了服务器",
-                color=0x95A5A6,
-            )
+            kind, title, text = event_kind("member_leave"), "成员离开", f"**{member}** 离开了服务器"
+            fields = []
         roles = [r.mention for r in member.roles if r.name != "@everyone"]
         if roles:
-            embed.add_field(
-                name="曾持有身份组", value=" ".join(roles)[:1000], inline=False
-            )
-        embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text=f"用户 ID: {member.id}")
-        await self._send(member.guild.id, "member", embed)
+            fields.append(("曾持有身份组", " ".join(roles)[:1000], False))
+        card = embed(kind, title, text, fields=fields, footer=f"用户 ID: {member.id}")
+        card.set_thumbnail(url=member.display_avatar.url)
+        await self._send(member.guild.id, "member", card)
 
     @commands.Cog.listener()
     async def on_member_update(self, before: discord.Member, after: discord.Member):
         guild_id = after.guild.id
         # 昵称
         if before.nick != after.nick:
-            embed = discord.Embed(title="✏️ 昵称变更", color=0x5865F2)
-            embed.add_field(name="成员", value=after.mention, inline=False)
-            embed.add_field(name="之前", value=before.nick or "*（无）*", inline=True)
-            embed.add_field(name="之后", value=after.nick or "*（无）*", inline=True)
-            embed.set_footer(text=f"用户 ID: {after.id}")
-            await self._send(guild_id, "member_update", embed)
+            card = embed(
+                event_kind("nick_change"),
+                "昵称变更",
+                fields=[
+                    ("成员", after.mention, False),
+                    ("之前", before.nick or "*（无）*"),
+                    ("之后", after.nick or "*（无）*"),
+                ],
+                footer=f"用户 ID: {after.id}",
+            )
+            await self._send(guild_id, "member_update", card)
         # 身份组
         if set(before.roles) != set(after.roles):
             added = [r.mention for r in after.roles if r not in before.roles]
             removed = [r.mention for r in before.roles if r not in after.roles]
-            embed = discord.Embed(title="🏷️ 成员身份组变更", color=0x5865F2)
-            embed.add_field(name="成员", value=after.mention, inline=False)
-            if added:
-                embed.add_field(name="新增", value=" ".join(added)[:1000], inline=False)
-            if removed:
-                embed.add_field(
-                    name="移除", value=" ".join(removed)[:1000], inline=False
-                )
-            embed.set_footer(text=f"用户 ID: {after.id}")
-            await self._send(guild_id, "member_update", embed)
+            card = embed(
+                event_kind("member_roles"),
+                "成员身份组变更",
+                fields=[
+                    ("成员", after.mention, False),
+                    ("新增", " ".join(added)[:1000], False),
+                    ("移除", " ".join(removed)[:1000], False),
+                ],
+                footer=f"用户 ID: {after.id}",
+            )
+            await self._send(guild_id, "member_update", card)
         # 超时（禁言）
         if before.timed_out_until != after.timed_out_until:
             if after.timed_out_until:
-                embed = discord.Embed(
-                    title="⏳ 成员被超时禁言",
-                    description=f"{after.mention} 将被禁言至 {discord.utils.format_dt(after.timed_out_until, 'F')}",
-                    color=0xE67E22,
+                card = embed(
+                    event_kind("member_timeout"),
+                    "成员被超时禁言",
+                    f"{after.mention} 将被禁言至 {discord.utils.format_dt(after.timed_out_until, 'F')}",
+                    footer=f"用户 ID: {after.id}",
                 )
             else:
-                embed = discord.Embed(
-                    title="✅ 成员超时已解除",
-                    description=f"{after.mention} 的禁言已解除",
-                    color=0x57F287,
+                card = embed(
+                    event_kind("member_timeout_end"),
+                    "成员超时已解除",
+                    f"{after.mention} 的禁言已解除",
+                    footer=f"用户 ID: {after.id}",
                 )
-            embed.set_footer(text=f"用户 ID: {after.id}")
-            await self._send(guild_id, "member_update", embed)
+            await self._send(guild_id, "member_update", card)
 
     # ───────────── 封禁事件 ─────────────
 
     @commands.Cog.listener()
     async def on_member_ban(self, guild: discord.Guild, user):
-        embed = discord.Embed(
-            title="🔨 成员被封禁", description=f"**{user}** 被封禁", color=0xE24B4A
-        )
         entry = await self._actor(guild, discord.AuditLogAction.ban, user.id)
-        if entry:
-            embed.add_field(name="操作者", value=entry.user.mention, inline=True)
-            if entry.reason:
-                embed.add_field(name="原因", value=entry.reason[:1000], inline=True)
-        embed.set_footer(text=f"用户 ID: {user.id}")
-        await self._send(guild.id, "ban", embed)
+        fields = [("操作者", entry.user.mention), ("原因", (entry.reason or "")[:1000])] if entry else []
+        card = embed(
+            event_kind("member_ban"), "成员被封禁", f"**{user}** 被封禁", fields=fields, footer=f"用户 ID: {user.id}"
+        )
+        await self._send(guild.id, "ban", card)
 
     @commands.Cog.listener()
     async def on_member_unban(self, guild: discord.Guild, user):
-        embed = discord.Embed(
-            title="🕊️ 成员被解封", description=f"**{user}** 被解除封禁", color=0x57F287
-        )
         entry = await self._actor(guild, discord.AuditLogAction.unban, user.id)
-        if entry:
-            embed.add_field(name="操作者", value=entry.user.mention, inline=True)
-        embed.set_footer(text=f"用户 ID: {user.id}")
-        await self._send(guild.id, "ban", embed)
+        card = embed(
+            event_kind("member_unban"),
+            "成员被解封",
+            f"**{user}** 被解除封禁",
+            fields=[("操作者", entry.user.mention)] if entry else [],
+            footer=f"用户 ID: {user.id}",
+        )
+        await self._send(guild.id, "ban", card)
 
     # ───────────── 频道事件 ─────────────
 
     @commands.Cog.listener()
     async def on_guild_channel_create(self, channel):
-        embed = discord.Embed(
-            title="📁 频道已创建",
-            description=f"{channel.mention}（`{channel.name}`）",
-            color=0x57F287,
-        )
         entry = await self._actor(
             channel.guild, discord.AuditLogAction.channel_create, channel.id
         )
-        if entry:
-            embed.add_field(name="操作者", value=entry.user.mention, inline=True)
-        await self._send(channel.guild.id, "channel", embed)
+        card = embed(
+            event_kind("channel_create"),
+            "频道已创建",
+            f"{channel.mention}（`{channel.name}`）",
+            fields=[("操作者", entry.user.mention)] if entry else [],
+        )
+        await self._send(channel.guild.id, "channel", card)
 
     @commands.Cog.listener()
     async def on_guild_channel_delete(self, channel):
-        embed = discord.Embed(
-            title="🗑️ 频道已删除", description=f"`{channel.name}`", color=0xE24B4A
-        )
         entry = await self._actor(
             channel.guild, discord.AuditLogAction.channel_delete, channel.id
         )
-        if entry:
-            embed.add_field(name="操作者", value=entry.user.mention, inline=True)
-        await self._send(channel.guild.id, "channel", embed)
+        card = embed(
+            event_kind("channel_delete"),
+            "频道已删除",
+            f"`{channel.name}`",
+            fields=[("操作者", entry.user.mention)] if entry else [],
+        )
+        await self._send(channel.guild.id, "channel", card)
 
     @commands.Cog.listener()
     async def on_guild_channel_update(self, before, after):
@@ -398,40 +387,36 @@ class ServerLog(commands.Cog):
             changes.append(f"NSFW: {getattr(after, 'nsfw', False)}")
         if not changes:
             return
-        embed = discord.Embed(
-            title="📂 频道已修改",
-            description=f"{after.mention}\n" + "\n".join(changes),
-            color=0xEF9F27,
-        )
-        await self._send(after.guild.id, "channel", embed)
+        card = embed(event_kind("channel_update"), "频道已修改", f"{after.mention}\n" + "\n".join(changes))
+        await self._send(after.guild.id, "channel", card)
 
     # ───────────── 身份组事件 ─────────────
 
     @commands.Cog.listener()
     async def on_guild_role_create(self, role: discord.Role):
-        embed = discord.Embed(
-            title="🏷️ 身份组已创建",
-            description=f"{role.mention}（`{role.name}`）",
-            color=0x57F287,
-        )
         entry = await self._actor(
             role.guild, discord.AuditLogAction.role_create, role.id
         )
-        if entry:
-            embed.add_field(name="操作者", value=entry.user.mention, inline=True)
-        await self._send(role.guild.id, "role", embed)
+        card = embed(
+            event_kind("role_create"),
+            "身份组已创建",
+            f"{role.mention}（`{role.name}`）",
+            fields=[("操作者", entry.user.mention)] if entry else [],
+        )
+        await self._send(role.guild.id, "role", card)
 
     @commands.Cog.listener()
     async def on_guild_role_delete(self, role: discord.Role):
-        embed = discord.Embed(
-            title="🗑️ 身份组已删除", description=f"`{role.name}`", color=0xE24B4A
-        )
         entry = await self._actor(
             role.guild, discord.AuditLogAction.role_delete, role.id
         )
-        if entry:
-            embed.add_field(name="操作者", value=entry.user.mention, inline=True)
-        await self._send(role.guild.id, "role", embed)
+        card = embed(
+            event_kind("role_delete"),
+            "身份组已删除",
+            f"`{role.name}`",
+            fields=[("操作者", entry.user.mention)] if entry else [],
+        )
+        await self._send(role.guild.id, "role", card)
 
     @commands.Cog.listener()
     async def on_guild_role_update(self, before: discord.Role, after: discord.Role):
@@ -448,12 +433,8 @@ class ServerLog(commands.Cog):
             changes.append("权限已修改")
         if not changes:
             return
-        embed = discord.Embed(
-            title="🏷️ 身份组已修改",
-            description=f"{after.mention}\n" + "\n".join(changes),
-            color=0xEF9F27,
-        )
-        await self._send(after.guild.id, "role", embed)
+        card = embed(event_kind("role_update"), "身份组已修改", f"{after.mention}\n" + "\n".join(changes))
+        await self._send(after.guild.id, "role", card)
 
     # ───────────── 服务器事件 ─────────────
 
@@ -468,12 +449,8 @@ class ServerLog(commands.Cog):
             changes.append("服务器图标已更换")
         if not changes:
             return
-        embed = discord.Embed(
-            title="🛠️ 服务器设置已更新",
-            description="\n".join(changes),
-            color=0x85B7EB,
-        )
-        await self._send(after.id, "server", embed)
+        card = embed(event_kind("guild_update"), "服务器设置已更新", "\n".join(changes))
+        await self._send(after.id, "server", card)
 
     @commands.Cog.listener()
     async def on_guild_emojis_update(self, guild, before, after):
@@ -481,18 +458,15 @@ class ServerLog(commands.Cog):
         removed = [e for e in before if e not in after]
         if not added and not removed:
             return
-        embed = discord.Embed(title="😀 表情已更新", color=0x85B7EB)
-        if added:
-            embed.add_field(
-                name="新增", value=" ".join(str(e) for e in added)[:1000], inline=False
-            )
-        if removed:
-            embed.add_field(
-                name="移除",
-                value=", ".join(e.name for e in removed)[:1000],
-                inline=False,
-            )
-        await self._send(guild.id, "server", embed)
+        card = embed(
+            event_kind("emoji_update"),
+            "表情已更新",
+            fields=[
+                ("新增", " ".join(str(e) for e in added)[:1000], False),
+                ("移除", ", ".join(e.name for e in removed)[:1000], False),
+            ],
+        )
+        await self._send(guild.id, "server", card)
 
     # ───────────── 语音事件 ─────────────
 
@@ -501,25 +475,16 @@ class ServerLog(commands.Cog):
         if member.bot or before.channel == after.channel:
             return
         if before.channel is None:
-            embed = discord.Embed(
-                title="🔊 加入语音",
-                description=f"{member.mention} → {after.channel.mention}",
-                color=0x57F287,
-            )
+            kind, title = event_kind("voice_join"), "加入语音"
+            text = f"{member.mention} → {after.channel.mention}"
         elif after.channel is None:
-            embed = discord.Embed(
-                title="🔇 离开语音",
-                description=f"{member.mention} ← {before.channel.mention}",
-                color=0x95A5A6,
-            )
+            kind, title = event_kind("voice_leave"), "离开语音"
+            text = f"{member.mention} ← {before.channel.mention}"
         else:
-            embed = discord.Embed(
-                title="🔀 切换语音频道",
-                description=f"{member.mention}: {before.channel.mention} → {after.channel.mention}",
-                color=0x9B59B6,
-            )
-        embed.set_footer(text=f"用户 ID: {member.id}")
-        await self._send(member.guild.id, "voice", embed)
+            kind, title = event_kind("voice_move"), "切换语音频道"
+            text = f"{member.mention}: {before.channel.mention} → {after.channel.mention}"
+        card = embed(kind, title, text, footer=f"用户 ID: {member.id}")
+        await self._send(member.guild.id, "voice", card)
 
     # ───────────── 配置指令 ─────────────
 
@@ -628,31 +593,22 @@ class ServerLog(commands.Cog):
     async def sl_status(self, ctx):
         cfg = self.get_config(ctx.guild.id)
         ch = ctx.guild.get_channel(cfg["channel_id"]) if cfg["channel_id"] else None
-        embed = discord.Embed(
-            title="🗃️ 服务器审计日志配置",
-            color=(
-                discord.Color.green() if cfg["enabled"] else discord.Color.light_grey()
-            ),
-        )
-        embed.add_field(
-            name="状态", value="🟢 开启" if cfg["enabled"] else "⚪ 关闭", inline=True
-        )
-        embed.add_field(
-            name="日志频道", value=ch.mention if ch else "未设置", inline=True
-        )
         lines = []
         for key, meta in CATEGORY_META.items():
             mark = "✅" if key in cfg["categories"] else "⬜"
             lines.append(f"{mark} {meta['emoji']} **{meta['label']}** — {meta['desc']}")
-        embed.add_field(name="事件分类", value="\n".join(lines), inline=False)
-        if cfg["ignored"]:
-            embed.add_field(
-                name="忽略的频道",
-                value=" ".join(f"<#{c}>" for c in cfg["ignored"])[:1000],
-                inline=False,
-            )
-        embed.set_footer(text="用 /serverlog toggle <分类> 开关单项")
-        await ctx.send(embed=embed, ephemeral=True)
+        card = embed(
+            "info",
+            "审计日志设置",
+            fields=[
+                ("状态", "🟢 开启" if cfg["enabled"] else "⚪ 关闭"),
+                ("日志频道", ch.mention if ch else "未设置"),
+                ("事件分类", "\n".join(lines), False),
+                ("忽略的频道", " ".join(f"<#{c}>" for c in cfg["ignored"])[:1000], False),
+            ],
+            footer="用 /serverlog toggle <分类> 开关单项",
+        )
+        await ctx.send(embed=card, ephemeral=True)
 
 
 async def setup(bot):

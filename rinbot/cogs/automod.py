@@ -11,6 +11,8 @@ from discord.ext import tasks
 
 from _botlog_helper import audit
 from _perms import require
+from _messages import embed
+from rincore.embeds import event_kind
 from rincore.textmatch import find_badword, find_links, host_of, is_whitelisted
 
 DB_PATH = os.path.join(
@@ -201,7 +203,7 @@ class AutoMod(commands.Cog):
             if row:
                 self._config_cache[guild_id] = dict(row)
 
-    async def _log_action(self, guild: discord.Guild, embed: discord.Embed):
+    async def _log_action(self, guild: discord.Guild, e: discord.Embed):
         cfg = await self._get_config(guild.id)
         if not cfg or not cfg.get("log_channel"):
             if AUTOMOD_DEBUG:
@@ -214,7 +216,7 @@ class AutoMod(commands.Cog):
             )
             return
         try:
-            await channel.send(embed=embed)
+            await channel.send(embed=e)
         except discord.Forbidden:
             print(f"[automod] 日志发送失败：bot 在频道 {channel.id} 无发送权限")
 
@@ -313,13 +315,17 @@ class AutoMod(commands.Cog):
                     )
                 except discord.Forbidden:
                     print("[automod] 刷屏提示发送失败：bot 在该频道无发送权限")
-                embed = discord.Embed(
-                    title="🚨 刷屏检测",
-                    description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**处理:** 禁言 {mute_dur // 60} 分钟",
-                    color=discord.Color.red(),
+                e = embed(
+                    event_kind("automod"),
+                    "自动审核：刷屏",
+                    fields=[
+                        ("成员", message.author.mention),
+                        ("频道", message.channel.mention),
+                        ("处理", f"禁言 {mute_dur // 60} 分钟"),
+                    ],
                     timestamp=discord.utils.utcnow(),
                 )
-                await self._log_action(message.guild, embed)
+                await self._log_action(message.guild, e)
                 return
 
         # ── 2. 重复消息检测 ──
@@ -351,13 +357,17 @@ class AutoMod(commands.Cog):
                     print(
                         "[automod] 重复消息处理失败：bot 缺少『管理消息』权限（无法删除消息）"
                     )
-                embed = discord.Embed(
-                    title="🔁 重复消息",
-                    description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**内容:** {content[:100]}",
-                    color=discord.Color.orange(),
+                e = embed(
+                    event_kind("automod"),
+                    "自动审核：重复消息",
+                    fields=[
+                        ("成员", message.author.mention),
+                        ("频道", message.channel.mention),
+                        ("内容", content[:100], False),
+                    ],
                     timestamp=discord.utils.utcnow(),
                 )
-                await self._log_action(message.guild, embed)
+                await self._log_action(message.guild, e)
                 return
 
         # ── 3. 违禁词过滤 ──
@@ -377,13 +387,17 @@ class AutoMod(commands.Cog):
                     )
                 except discord.Forbidden:
                     pass
-                embed = discord.Embed(
-                    title="🚫 违禁词",
-                    description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**触发词:** ||{word}||",
-                    color=discord.Color.red(),
+                e = embed(
+                    event_kind("automod"),
+                    "自动审核：违禁词",
+                    fields=[
+                        ("成员", message.author.mention),
+                        ("频道", message.channel.mention),
+                        ("触发词", f"||{word}||"),
+                    ],
                     timestamp=discord.utils.utcnow(),
                 )
-                await self._log_action(message.guild, embed)
+                await self._log_action(message.guild, e)
                 return
 
         # ── 4. 链接过滤 ──
@@ -406,13 +420,17 @@ class AutoMod(commands.Cog):
                             )
                         except discord.Forbidden:
                             pass
-                        embed = discord.Embed(
-                            title="🔗 链接过滤",
-                            description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**链接:** {url[:100]}",
-                            color=discord.Color.orange(),
+                        e = embed(
+                            event_kind("automod"),
+                            "自动审核：链接",
+                            fields=[
+                                ("成员", message.author.mention),
+                                ("频道", message.channel.mention),
+                                ("链接", url[:100], False),
+                            ],
                             timestamp=discord.utils.utcnow(),
                         )
-                        await self._log_action(message.guild, embed)
+                        await self._log_action(message.guild, e)
                         return
 
         # ── 5. 大写字母轰炸 ──
@@ -434,13 +452,17 @@ class AutoMod(commands.Cog):
                         )
                     except discord.Forbidden:
                         pass
-                    embed = discord.Embed(
-                        title="📢 大写轰炸",
-                        description=f"**用户:** {message.author.mention}\n**频道:** {message.channel.mention}\n**内容:** {text[:100]}",
-                        color=discord.Color.orange(),
+                    e = embed(
+                        event_kind("automod"),
+                        "自动审核：大写",
+                        fields=[
+                            ("成员", message.author.mention),
+                            ("频道", message.channel.mention),
+                            ("内容", text[:100], False),
+                        ],
                         timestamp=discord.utils.utcnow(),
                     )
-                    await self._log_action(message.guild, embed)
+                    await self._log_action(message.guild, e)
                     return
 
     # ─── 配置指令 ───
@@ -456,51 +478,23 @@ class AutoMod(commands.Cog):
                 return
 
             status_emoji = lambda v: "🟢" if v else "🔴"
-            embed = discord.Embed(
-                title="🛡 自动审核配置面板",
-                color=discord.Color.blue(),
-            )
-            embed.add_field(
-                name="总开关", value=status_emoji(cfg["enabled"]), inline=True
-            )
-            embed.add_field(
-                name="反刷屏",
-                value=f"{status_emoji(cfg['anti_spam'])} ({cfg['spam_threshold']}条/{cfg['spam_interval']}秒)",
-                inline=True,
-            )
-            embed.add_field(
-                name="违禁词",
-                value=f"{status_emoji(cfg['anti_badword'])} ({len(json.loads(cfg.get('badwords','[]')))}个词)",
-                inline=True,
-            )
-            embed.add_field(
-                name="链接过滤", value=status_emoji(cfg["anti_link"]), inline=True
-            )
-            embed.add_field(
-                name="大写过滤",
-                value=f"{status_emoji(cfg['anti_caps'])} (>{cfg['caps_threshold']}%)",
-                inline=True,
-            )
-            embed.add_field(
-                name="重复消息",
-                value=f"{status_emoji(cfg['anti_repeat'])} ({cfg['repeat_threshold']}次触发)",
-                inline=True,
-            )
-
             log_ch = ctx.guild.get_channel(cfg.get("log_channel", 0))
-            embed.add_field(
-                name="日志频道",
-                value=log_ch.mention if log_ch else "未设置",
-                inline=True,
+            e = embed(
+                "info",
+                "自动审核设置",
+                fields=[
+                    ("总开关", status_emoji(cfg["enabled"])),
+                    ("反刷屏", f"{status_emoji(cfg['anti_spam'])} ({cfg['spam_threshold']}条/{cfg['spam_interval']}秒)"),
+                    ("违禁词", f"{status_emoji(cfg['anti_badword'])} ({len(json.loads(cfg.get('badwords','[]')))}个词)"),
+                    ("链接过滤", status_emoji(cfg["anti_link"])),
+                    ("大写过滤", f"{status_emoji(cfg['anti_caps'])} (>{cfg['caps_threshold']}%)"),
+                    ("重复消息", f"{status_emoji(cfg['anti_repeat'])} ({cfg['repeat_threshold']}次触发)"),
+                    ("日志频道", log_ch.mention if log_ch else "未设置"),
+                    ("禁言时长", f"{cfg.get('mute_duration', 300) // 60} 分钟"),
+                ],
+                footer="使用 /automod enable|disable|toggle 子指令来配置",
             )
-            embed.add_field(
-                name="禁言时长",
-                value=f"{cfg.get('mute_duration', 300) // 60} 分钟",
-                inline=True,
-            )
-
-            embed.set_footer(text="使用 /automod enable|disable|toggle 子指令来配置")
-            await ctx.send(embed=embed)
+            await ctx.send(embed=e)
 
     @automod_group.command(name="enable", description="启用自动审核系统")
     @commands.guild_only()
@@ -728,12 +722,8 @@ class AutoMod(commands.Cog):
         if action == "list":
             ch_text = ", ".join(f"<#{cid}>" for cid in ignored_channels) or "无"
             role_text = ", ".join(f"<@&{rid}>" for rid in ignored_roles) or "无"
-            embed = discord.Embed(
-                title="🔕 审核忽略列表", color=discord.Color.greyple()
-            )
-            embed.add_field(name="频道", value=ch_text, inline=False)
-            embed.add_field(name="身份组", value=role_text, inline=False)
-            await ctx.send(embed=embed, ephemeral=True)
+            e = embed("info", "自动审核忽略列表", fields=[("频道", ch_text, False), ("身份组", role_text, False)])
+            await ctx.send(embed=e, ephemeral=True)
             return
 
         if action == "add":
