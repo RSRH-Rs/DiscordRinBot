@@ -245,6 +245,8 @@ img { max-width: 100%; }
 .row { display: flex; align-items: center; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
 .row:first-child { border-top: 0; }
 .row--block { flex-direction: column; align-items: stretch; gap: 8px; }
+/* A setting that depends on the switch row above it; its own top hairline starts at the indent. */
+.row--sub { margin-left: 16px; }
 .row-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .row-title { display: block; font-size: 14px; }
 .row-hint { display: block; font-size: 13px; color: var(--muted); }

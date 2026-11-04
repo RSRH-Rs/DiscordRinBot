@@ -201,10 +201,10 @@
             <h3 class="section-title">{{ tr('automod.spam') }}</h3>
             <div class="list">
                 {% call row(tr('automod.spam_on'), tr('automod.spam_hint'), 'am-spam', depends='am-enabled', cls='row--switch') %}{{ toggle('am-spam', tr('automod.spam_on')) }}{% endcall %}
-                {% call row(tr('automod.spam_threshold'), tr('automod.spam_threshold_hint'), 'am-si', depends='am-spam') %}
+                {% call row(tr('automod.spam_threshold'), tr('automod.spam_threshold_hint'), 'am-si', depends='am-spam', sub=True) %}
                 {{ num('am-si', tr('automod.seconds'), 2, 30, 5) }}<span class="unit">{{ tr('automod.within') }}</span>{{ num('am-st', tr('automod.messages'), 2, 20, 5, tr('automod.messages_label')) }}
                 {% endcall %}
-                {% call row(tr('automod.mute'), tr('automod.mute_hint'), None, depends='am-spam', block=True) %}
+                {% call row(tr('automod.mute'), tr('automod.mute_hint'), None, depends='am-spam', block=True, sub=True) %}
                 <div class="duration-field"><div class="seg" data-duration data-for="am-mute" role="group" aria-label="{{ tr('automod.mute') }}"></div><input type="number" id="am-mute" min="60" max="86400" value="300" hidden></div>
                 {% endcall %}
             </div>
@@ -213,9 +213,9 @@
             <h3 class="section-title">{{ tr('automod.other') }}</h3>
             <div class="list">
                 {% call row(tr('automod.caps'), tr('automod.caps_hint'), 'am-caps', depends='am-enabled', cls='row--switch') %}{{ toggle('am-caps', tr('automod.caps')) }}{% endcall %}
-                {% call row(tr('automod.caps_threshold'), None, 'am-ct', depends='am-caps') %}{{ num('am-ct', '%', 50, 100, 70) }}{% endcall %}
+                {% call row(tr('automod.caps_threshold'), None, 'am-ct', depends='am-caps', sub=True) %}{{ num('am-ct', '%', 50, 100, 70) }}{% endcall %}
                 {% call row(tr('automod.repeat'), tr('automod.repeat_hint'), 'am-repeat', depends='am-enabled', cls='row--switch') %}{{ toggle('am-repeat', tr('automod.repeat')) }}{% endcall %}
-                {% call row(tr('automod.repeat_threshold'), None, 'am-rt', depends='am-repeat') %}{{ num('am-rt', tr('automod.times'), 2, 10, 3) }}{% endcall %}
+                {% call row(tr('automod.repeat_threshold'), None, 'am-rt', depends='am-repeat', sub=True) %}{{ num('am-rt', tr('automod.times'), 2, 10, 3) }}{% endcall %}
             </div>
         </div>
     {% endcall %}
@@ -224,7 +224,7 @@
             <h3 class="section-title">{{ tr('automod.badwords') }}</h3>
             <div class="list">
                 {% call row(tr('automod.badwords_on'), tr('automod.badwords_hint'), 'am-bw', depends='am-enabled', cls='row--switch') %}{{ toggle('am-bw', tr('automod.badwords_on')) }}{% endcall %}
-                {% call row(tr('automod.badwords_list'), None, 'am-bw-new', depends='am-bw', block=True) %}
+                {% call row(tr('automod.badwords_list'), None, 'am-bw-new', depends='am-bw', block=True, sub=True) %}
                 <div class="chip-list" id="am-bw-tags" data-tags></div>
                 <div class="chip-add"><input class="input" id="am-bw-new" placeholder="{{ tr('automod.badwords_placeholder') }}" data-draft-ignore><button type="button" class="btn btn--secondary" id="am-bw-add">{{ tr('automod.add') }}</button></div>
                 {% endcall %}
@@ -236,7 +236,7 @@
             <h3 class="section-title">{{ tr('automod.links') }}</h3>
             <div class="list">
                 {% call row(tr('automod.links_on'), tr('automod.links_hint'), 'am-link', depends='am-enabled', cls='row--switch') %}{{ toggle('am-link', tr('automod.links_on')) }}{% endcall %}
-                {% call row(tr('automod.whitelist'), None, 'am-wl-new', depends='am-link', block=True) %}
+                {% call row(tr('automod.whitelist'), None, 'am-wl-new', depends='am-link', block=True, sub=True) %}
                 <div class="chip-list" id="am-wl-tags" data-tags></div>
                 <div class="chip-add"><input class="input" id="am-wl-new" placeholder="{{ tr('automod.whitelist_placeholder') }}" data-draft-ignore><button type="button" class="btn btn--secondary" id="am-wl-add">{{ tr('automod.add') }}</button></div>
                 {% endcall %}

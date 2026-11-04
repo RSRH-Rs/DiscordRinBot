@@ -2,8 +2,9 @@
 <svg class="icon" width="{{ size }}" height="{{ size }}" aria-hidden="true" focusable="false"><use href="{{ url_for('static', filename='icons.svg') }}#i-{{ name }}"/></svg>
 {%- endmacro -%}
 
-{%- macro row(title, hint=None, for_id=None, depends=None, block=False, cls='') -%}
-<div class="row{{ ' row--block' if block }}{{ ' ' ~ cls if cls }}"{% if depends %} data-depends-on="{{ depends }}"{% endif %}>
+{#- sub: the row depends on a switch row above it and sits indented under it. -#}
+{%- macro row(title, hint=None, for_id=None, depends=None, block=False, cls='', sub=False) -%}
+<div class="row{{ ' row--block' if block }}{{ ' row--sub' if sub }}{{ ' ' ~ cls if cls }}"{% if depends %} data-depends-on="{{ depends }}"{% endif %}>
     <div class="row-text">
         {%- if for_id %}<label class="row-title" for="{{ for_id }}">{{ title }}</label>{% else %}<span class="row-title">{{ title }}</span>{% endif -%}
         {%- if hint %}<span class="row-hint">{{ hint }}</span>{% endif -%}

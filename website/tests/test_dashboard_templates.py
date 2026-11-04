@@ -444,4 +444,13 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertEqual(len(found),4)
         for label,text in found:self.assertEqual(label,text)
 
+    def test_sub_settings_are_indented(self):
+        html,_=self.render('server.html')
+        masters=set(re.findall(r'class="tog tog--head"><input type="checkbox" role="switch" id="([^"]+)"',html))
+        rows=re.findall(r'<div class="(row[^"]*)" data-depends-on="([^"]+)"',html)
+        self.assertEqual(sorted(d for c,d in rows if 'row--sub' in c.split()),['am-bw','am-caps','am-link','am-repeat','am-spam','am-spam'])
+        for cls,dep in rows:self.assertEqual('row--sub' in cls.split(),dep not in masters,(cls,dep))
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('margin-left: 16px',re.search(r'\n\.row--sub\s*\{([^}]*)\}',css).group(1))
+
 if __name__=='__main__':unittest.main()
