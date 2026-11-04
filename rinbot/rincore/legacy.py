@@ -59,14 +59,18 @@ def dashboard_url(guild_id: int, slug: str) -> str:
     return f"{DASHBOARD}/dashboard/server/{guild_id}#{slug}"
 
 
-def rewrite(content: str) -> str:
-    """r!旧名 … → r!新路径 …；只认紧跟前缀的完整指令名（区分大小写，和指令解析一致），其他原样返回。"""
+def rewrite_named(content: str) -> tuple[str, "str | None"]:
+    """r!旧名 … → (r!新路径 …, 旧名)；只认紧跟前缀的完整指令名（区分大小写，和指令解析一致），其他原样返回且旧名为 None。"""
     if not content.startswith(PREFIX):
-        return content
+        return content, None
     match = _COMMAND.fullmatch(content[len(PREFIX):])
     if not match or match.group(1) not in RENAMED:
-        return content
-    return PREFIX + RENAMED[match.group(1)] + (match.group(2) or "")
+        return content, None
+    return PREFIX + RENAMED[match.group(1)] + (match.group(2) or ""), match.group(1)
+
+
+def rewrite(content: str) -> str:
+    return rewrite_named(content)[0]
 
 
 def migrate_disabled(names: set[str]) -> set[str]:

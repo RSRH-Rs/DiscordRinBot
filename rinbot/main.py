@@ -34,12 +34,15 @@ class HybridBot(commands.Bot):
     async def get_context(self, origin, /, *, cls=commands.Context):
         # 旧前缀名（r!warns 等）在解析前改写成新指令，权限、停用和报错都照常生效；
         # 改的是消息的副本，自动审核等监听器读到的仍是原文
+        old_name = None
         if isinstance(origin, discord.Message):
-            rewritten = legacy.rewrite(origin.content)
-            if rewritten != origin.content:
+            rewritten, old_name = legacy.rewrite_named(origin.content)
+            if old_name:
                 origin = copy.copy(origin)
                 origin.content = rewritten
-        return await super().get_context(origin, cls=cls)
+        ctx = await super().get_context(origin, cls=cls)
+        ctx.rinbot_legacy = old_name  # 指令里需要知道用户打的是哪个旧名字（如 r!tempban 必须填时长）
+        return ctx
 
     async def setup_hook(self):
         await storage.enable_wal()

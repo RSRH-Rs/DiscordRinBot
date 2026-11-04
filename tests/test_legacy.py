@@ -63,7 +63,7 @@ def test_get_context_rewrites_a_copy():
     bot = next(n for n in tree.body if isinstance(n, ast.ClassDef) and n.name == "HybridBot")
     method = next(n for n in bot.body if isinstance(n, ast.AsyncFunctionDef) and n.name == "get_context")
     calls = {ast.unparse(n.func) for n in ast.walk(method) if isinstance(n, ast.Call)}
-    assert {"copy.copy", "legacy.rewrite"} <= calls
+    assert {"copy.copy", "legacy.rewrite_named"} <= calls
 
 
 class _Recorder:

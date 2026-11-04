@@ -1,6 +1,7 @@
 # cogs/_inputs.py
 # 指令参数的共用工具：时长转换器和补全、补全候选过滤、按客户端语言选中英文
 
+import re
 from typing import Iterable
 
 import discord
@@ -79,6 +80,17 @@ def SlashRange(low: int, high: int) -> type:
 
     _SlashRange.__name__ = f"SlashRange_{low}_{high}"
     return _SlashRange
+
+
+_DURATION_LIKE = re.compile(r"(?:\d+\s*(?:[a-z]+|星期|分钟|小时|[秒分时天日周]))+", re.I)
+
+
+async def check_prefix_duration(kind: str, text: str) -> None:
+    """前缀指令里可选的时长参数看不懂时会被跳过、并进原因。原因开头那个词明显是在写时长
+    （数字加字母或时间单位，如 7days、400d）时，按时长解析，写错或超上限就抛出对应的错误。"""
+    word = text.split(maxsplit=1)[0] if text and text.strip() else ""
+    if word and _DURATION_LIKE.fullmatch(word):
+        await Duration(kind)().convert(None, word)
 
 
 def duration_autocomplete(kind: str):

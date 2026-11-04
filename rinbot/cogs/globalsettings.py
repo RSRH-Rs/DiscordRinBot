@@ -97,7 +97,10 @@ class GlobalSettings(commands.Cog):
                 "CREATE TABLE IF NOT EXISTS global_disabled_cmds (name TEXT PRIMARY KEY)"
             )
             await db.commit()
-            await migrate_global_rows(db)
+            try:
+                await migrate_global_rows(db)
+            except Exception as e:
+                print(f"[globalsettings] 全局停用记录迁移失败，下次加载再试: {e}")
 
     async def _reload(self):
         async with aiosqlite.connect(DB_PATH) as db:

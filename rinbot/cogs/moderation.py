@@ -30,7 +30,7 @@ from rincore import cases, durations
 from rincore.cases import ACTION_NAMES
 from rincore.embeds import EVENT_KINDS, event_kind
 from _messages import Notice, embed, send_notice
-from _inputs import Duration, SlashRange, choices, duration_autocomplete, is_zh
+from _inputs import Duration, SlashRange, check_prefix_duration, choices, duration_autocomplete, is_zh
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "moderation.db"
@@ -370,7 +370,12 @@ class Moderation(commands.Cog):
         *,
         reason: str = DEFAULT_REASON,
     ):
-        # 前缀调用里时长和删除天数都可以不填：看不懂的词会跳过，留给原因
+        # 前缀调用里时长和删除天数都可以不填：看不懂的词会跳过，留给原因；
+        # 但明显写错的时长要报出来，旧的 r!tempban 也必须填时长
+        if ctx.interaction is None and duration is None:
+            if getattr(ctx, "rinbot_legacy", None) == "tempban":
+                raise commands.MissingRequiredArgument(self.ban.clean_params["duration"])
+            await check_prefix_duration("ban", reason)
         delete_days, reason = resolve_ban_args(
             ctx.interaction is not None, delete_days or 0, reason
         )
@@ -511,6 +516,8 @@ class Moderation(commands.Cog):
         *,
         reason: str = DEFAULT_REASON,
     ):
+        if ctx.interaction is None and duration is None:
+            await check_prefix_duration("mute", reason)
         err = self._hierarchy_check(ctx, member)
         if err:
             await ctx.send(err, ephemeral=True)
@@ -759,8 +766,9 @@ class Moderation(commands.Cog):
     @commands.guild_only()
     @require(manage_channels=True)
     @commands.bot_has_permissions(manage_channels=True)
-    async def slowmode(self, ctx, duration: Optional[Duration("slowmode")] = None):
-        seconds = duration or 0
+    async def slowmode(self, ctx, duration: Duration("slowmode") = 0):
+        # 不用 Optional：前缀里写错的时长要报出来，而不是悄悄关掉慢速模式
+        seconds = duration
         await ctx.channel.edit(slowmode_delay=seconds)
 
         if seconds == 0:
@@ -941,6 +949,11 @@ class Moderation(commands.Cog):
             raise commands.MissingPermissions([needed])
         if not getattr(ctx.guild.me.guild_permissions, needed):
             raise commands.BotMissingPermissions([needed])
+        if mute:
+            err = self._hierarchy_check(ctx, ctx.guild.get_member(row["user_id"]))
+            if err:
+                await ctx.send(err, ephemeral=True)
+                return
         seconds = await Duration("mute" if mute else "ban")().convert(ctx, duration)
         new_until = discord.utils.utcnow() + datetime.timedelta(seconds=seconds)
         if mute:

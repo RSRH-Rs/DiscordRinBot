@@ -33,6 +33,7 @@ class _Recorder:
 class _Author:
     id = 9
     mention = "<@9>"
+    top_role = 50
 
     def __init__(self, perms):
         self.guild_permissions = perms
@@ -58,14 +59,14 @@ async def _db(tmp_path, monkeypatch, rows):
 def _member(user_id=5, timed_out_until=None):
     return SimpleNamespace(
         id=user_id, display_name=f"成员{user_id}", mention=f"<@{user_id}>", timed_out_until=timed_out_until,
-        timeout=_Recorder(),
+        timeout=_Recorder(), top_role=1,
     )
 
 
 def _guild(members=(), channel=None):
     by_id = {m.id: m for m in members}
-    me = SimpleNamespace(guild_permissions=discord.Permissions.all())
-    return SimpleNamespace(id=1, me=me, get_member=by_id.get, get_channel=lambda cid: channel)
+    me = SimpleNamespace(guild_permissions=discord.Permissions.all(), top_role=100)
+    return SimpleNamespace(id=1, me=me, owner=object(), get_member=by_id.get, get_channel=lambda cid: channel)
 
 
 def _ctx(guild, perms=None):

@@ -25,20 +25,8 @@ DB_PATH = os.path.join(
     "commandtoggle.db",
 )
 
-# 这些指令永远不能被禁用
-PROTECTED_COMMANDS = {
-    "commands",
-    "hot_update",
-    "sync",
-    "load",
-    "unload",
-    "extensions",
-    "eval",
-    "setstatus",
-    "resetstatus",
-    "setbio",
-    "help",
-}
+# 这些指令永远不能被停用（和控制台共用一份）
+from rincore.command_list import PROTECTED_COMMANDS  # noqa: E402
 
 
 async def migrate_rows(db) -> None:
@@ -76,7 +64,10 @@ class CommandToggle(commands.Cog):
                 PRIMARY KEY (guild_id, command_name)
             )""")
             await db.commit()
-            await migrate_rows(db)
+            try:
+                await migrate_rows(db)
+            except Exception as e:
+                print(f"[CommandToggle] 停用记录迁移失败，下次加载再试: {e}")
 
         await self._refresh_cache()
 

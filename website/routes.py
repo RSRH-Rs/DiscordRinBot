@@ -170,7 +170,7 @@ BOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rinbot
 _BOT_DIR_ABS = os.path.abspath(BOT_DIR)
 if _BOT_DIR_ABS not in sys.path:
     sys.path.insert(0, _BOT_DIR_ABS)
-from rincore import cases, storage, sync  # noqa: E402
+from rincore import cases, command_list, storage, sync  # noqa: E402
 from rincore.embeds import LOG_LEVELS, build, giveaway_running  # noqa: E402
 from guild_ids import collect_guild_ids  # noqa: E402
 WELCOME_UPLOAD_DIR = os.path.abspath(
@@ -2649,89 +2649,10 @@ def setup_routes(app, discord):
 
     # ═══════ Command Toggle (Utility) ═══════
 
-    # Static command registry — matches bot's actual commands
-    COMMAND_REGISTRY = [
-        {"name": "play", "desc": "播放音乐 (歌名或链接)", "cog": "Music"},
-        {"name": "search", "desc": "搜索歌曲并选择播放", "cog": "Music"},
-        {"name": "queue", "desc": "查看播放队列", "cog": "Music"},
-        {"name": "skip", "desc": "跳过当前歌曲", "cog": "Music"},
-        {"name": "pause", "desc": "暂停播放", "cog": "Music"},
-        {"name": "resume", "desc": "恢复播放", "cog": "Music"},
-        {"name": "stop", "desc": "停止播放并离开频道", "cog": "Music"},
-        {"name": "nowplaying", "desc": "查看正在播放的歌曲", "cog": "Music"},
-        {"name": "loop", "desc": "设置循环模式", "cog": "Music"},
-        {"name": "volume", "desc": "调整音量 (0-200)", "cog": "Music"},
-        {"name": "shuffle", "desc": "随机打乱队列", "cog": "Music"},
-        {"name": "move", "desc": "移动队列中的歌曲位置", "cog": "Music"},
-        {"name": "remove", "desc": "从队列移除指定歌曲", "cog": "Music"},
-        {"name": "clear", "desc": "清空播放队列", "cog": "Music"},
-        {"name": "join", "desc": "加入你的语音频道", "cog": "Music"},
-        {"name": "saveq", "desc": "保存当前播放队列", "cog": "Music"},
-        {"name": "loadq", "desc": "载入播放队列存档", "cog": "Music"},
-        {"name": "queues", "desc": "查看播放队列存档", "cog": "Music"},
-        {"name": "delqueue", "desc": "删除播放队列存档", "cog": "Music"},
-        {"name": "rank", "desc": "查看你的等级卡片", "cog": "Leveling"},
-        {"name": "leaderboard", "desc": "查看服务器等级排行榜", "cog": "Leveling"},
-        {"name": "kick", "desc": "踢出成员", "cog": "Moderation"},
-        {"name": "ban", "desc": "永久封禁成员", "cog": "Moderation"},
-        {"name": "tempban", "desc": "临时封禁成员", "cog": "Moderation"},
-        {"name": "unban", "desc": "解除封禁", "cog": "Moderation"},
-        {"name": "mute", "desc": "禁言成员 (Timeout)", "cog": "Moderation"},
-        {"name": "unmute", "desc": "解除禁言", "cog": "Moderation"},
-        {"name": "warn", "desc": "警告成员", "cog": "Moderation"},
-        {"name": "warns", "desc": "查看警告记录", "cog": "Moderation"},
-        {"name": "clearwarns", "desc": "清除所有警告", "cog": "Moderation"},
-        {"name": "delwarn", "desc": "删除指定警告", "cog": "Moderation"},
-        {"name": "purge", "desc": "批量清理消息", "cog": "Moderation"},
-        {"name": "slowmode", "desc": "设置频道慢速模式", "cog": "Moderation"},
-        {"name": "lock", "desc": "锁定频道", "cog": "Moderation"},
-        {"name": "unlock", "desc": "解锁频道", "cog": "Moderation"},
-        {"name": "modlog", "desc": "查看管理操作日志", "cog": "Moderation"},
-        {"name": "modlog_channel", "desc": "设置管理日志频道", "cog": "Moderation"},
-        {"name": "warn_config", "desc": "配置警告自动处罚阈值", "cog": "Moderation"},
-        {"name": "status", "desc": "显示服务器详细状态", "cog": "General"},
-        {"name": "roll", "desc": "投掷骰子 (默认6面)", "cog": "General"},
-        {"name": "avatar", "desc": "查看用户的大图头像", "cog": "General"},
-        {"name": "setstatus", "desc": "修改机器人的活动状态", "cog": "General"},
-        {"name": "resetstatus", "desc": "重置机器人状态", "cog": "General"},
-        {"name": "setbio", "desc": "修改机器人的简介", "cog": "General"},
-        {"name": "welcome_setup", "desc": "配置迎新和道别系统", "cog": "Welcome"},
-        {"name": "welcome_test", "desc": "测试欢迎图卡效果", "cog": "Welcome"},
-        {"name": "welcome_message", "desc": "自定义欢迎/道别消息", "cog": "Welcome"},
-        {"name": "welcome_toggle", "desc": "开启或关闭欢迎模块", "cog": "Welcome"},
-        {"name": "welcome_image", "desc": "设置欢迎大图", "cog": "Welcome"},
-        {"name": "welcome_title", "desc": "设置欢迎卡标题", "cog": "Welcome"},
-        {"name": "welcome_icon", "desc": "设置欢迎标题图标", "cog": "Welcome"},
-        {"name": "welcome_thumbnail", "desc": "设置欢迎缩略图", "cog": "Welcome"},
-        {"name": "welcome_card", "desc": "开启或关闭欢迎卡片", "cog": "Welcome"},
-        {"name": "welcome_disable", "desc": "禁用迎新与道别系统", "cog": "Welcome"},
-        {"name": "rr_create", "desc": "创建反应身份组面板", "cog": "ReactionRoles"},
-        {"name": "rr_add", "desc": "添加 emoji → 身份组映射", "cog": "ReactionRoles"},
-        {"name": "rr_remove", "desc": "移除一个 emoji 映射", "cog": "ReactionRoles"},
-        {"name": "rr_list", "desc": "列出所有面板", "cog": "ReactionRoles"},
-        {"name": "rr_exclusive", "desc": "切换面板的单选/多选模式", "cog": "ReactionRoles"},
-        {"name": "rr_delete", "desc": "删除面板", "cog": "ReactionRoles"},
-        {"name": "giveaway", "desc": "抽奖管理 (start/end/reroll)", "cog": "Giveaway"},
-        {"name": "automod", "desc": "自动审核配置面板", "cog": "AutoMod"},
-        {"name": "automod_words", "desc": "管理违禁词列表", "cog": "AutoMod"},
-        {"name": "automod_whitelist", "desc": "管理链接白名单", "cog": "AutoMod"},
-        {"name": "automod_ignore", "desc": "管理审核忽略列表", "cog": "AutoMod"},
-        {"name": "serverlog", "desc": "配置服务器审计日志", "cog": "ServerLog"},
-        {"name": "toggle", "desc": "启用/禁用指定指令", "cog": "System"},
-        {"name": "togglelist", "desc": "查看已禁用的指令", "cog": "System"},
-        {"name": "help", "desc": "打开交互式指令菜单", "cog": "System"},
-    ]
-    PROTECTED = {
-        "toggle",
-        "togglelist",
-        "hot_update",
-        "sync",
-        "load",
-        "unload",
-        "extensions",
-        "eval",
-        "help",
-    }
+    # 备用指令列表（health.json 缺失时用）和不能停用的指令，都和机器人共用 rincore.command_list
+    COMMAND_REGISTRY = command_list.registry()
+    PROTECTED = command_list.PROTECTED_COMMANDS
+
     def _current_command_registry():
         """Prefer the Bot's live command snapshot, with the static list as fallback."""
         try:
