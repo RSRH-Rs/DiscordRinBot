@@ -53,8 +53,8 @@ window.DashboardPreview = (() => {
     }
     function refreshRoles(){
         const target=el('roles-preview-content');if(!target)return;
-        const embed=document.createElement('div');embed.className='preview-embed preview-embed--roles';
-        embed.append(textNode('strong','preview-title',value('rr-title').trim()||'🏷 身份组选择'));
+        const embed=document.createElement('div');embed.className='preview-embed';
+        embed.append(textNode('strong','preview-title',value('rr-title').trim()||'身份组选择'));
         embed.append(textNode('p','preview-body',value('rr-content').trim()||'点击下方的按钮来领取身份组'));
         if(el('rr-exclusive').checked)embed.append(textNode('p','preview-notice','只能选一个身份组，选择其他会自动替换。'));
         const card=bubble(embed),buttons=document.createElement('div');buttons.className='preview-role-buttons';

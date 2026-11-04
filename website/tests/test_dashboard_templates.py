@@ -42,9 +42,9 @@ class DashboardTemplateTests(unittest.TestCase):
             self.assertNotIn('储存设定',html)
         for name in ['dashboard.html','settings.html','server.html']:
             html,p=self.render(name)
-            self.assertIn('console.css?v=20261103',html)
-            self.assertIn('dashboard-ui.js?v=20261103',html)
-            self.assertIn('console-core.js?v=20261103',html)
+            self.assertIn('console.css?v=20261104',html)
+            self.assertIn('dashboard-ui.js?v=20261104',html)
+            self.assertIn('console-core.js?v=20261104',html)
     def test_invites_do_not_request_administrator_and_match_homepage(self):
         html,p=self.render('dashboard.html')
         invites=[link for link in p.links if link.startswith('https://discord.com/oauth2/authorize')]
@@ -78,7 +78,7 @@ class DashboardTemplateTests(unittest.TestCase):
             self.assertEqual(p.ids.count(field),1)
         self.assertLess(p.ids.index('w-msg'),p.ids.index('panel-welcome-appearance'))
         self.assertIn('最大 5 MB、4096×4096',html)
-        self.assertIn('message-preview.js?v=20261103',html)
+        self.assertIn('message-preview.js?v=20261104',html)
 
     def test_overview_lists_every_module_once_with_toggles_for_four(self):
         html,p=self.render('server.html')
@@ -243,7 +243,15 @@ class DashboardTemplateTests(unittest.TestCase):
             html,_=self.render(name)
             for value in ['light','','dark']:
                 self.assertEqual(html.count(f'data-theme-set="{value}"'),1,f'{name} {value!r}')
-            self.assertIn('js/theme.js?v=20261103c',html)
+            self.assertIn('js/theme.js?v=20261104a',html)
+
+    def test_role_panel_preview_matches_the_bot(self):
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        js=(ROOT/'static/js/message-preview.js').read_text(encoding='utf-8')
+        self.assertNotIn('preview-embed--roles',css)
+        self.assertNotIn('preview-embed--roles',js)
+        self.assertNotIn('🏷 身份组选择',js)
+        self.assertIn("'身份组选择'",js)
 
     def test_login_gate_sits_on_a_blurred_console_backdrop(self):
         html,_=self.render('login_gate.html')
@@ -276,7 +284,7 @@ class DashboardTemplateTests(unittest.TestCase):
             for ref in re.findall(r'(?:src|href)="/static/([^"?#]+)(\?[^"]*)?"',html):
                 path,query=ref
                 self.assertTrue((ROOT/'static'/path).is_file(),f'{name}: missing {path}')
-                if path.endswith(('.css','.js')):self.assertIn('v=20261103',query,f'{name}: {path} not versioned')
+                if path.endswith(('.css','.js')):self.assertIn('v=20261104',query,f'{name}: {path} not versioned')
 
     def test_legacy_assets_are_gone(self):
         for old in ['css/dashboard.css','css/dashboard-ui.css','css/server.css','css/dashboard-extras.css','js/server.js','js/dashboard.js']:

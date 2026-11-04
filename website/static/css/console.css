@@ -525,7 +525,6 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .preview-author img { border-radius: 50%; }
 .preview-bot { padding: 1px 4px; border-radius: 3px; background: #5865F2; color: #FFFFFF; font-size: 10px; }
 .preview-embed { display: flow-root; padding: 12px 14px; border-left: 4px solid #EB8BAC; border-radius: 4px; background: #2B2D31; }
-.preview-embed--roles { border-left-color: #2DD4BF; }
 .preview-title { display: block; color: #F3F3F5; }
 .preview-body { margin-top: 6px; white-space: pre-wrap; line-height: 1.7; }
 .preview-image-thumb, .preview-image-large { display: flex; align-items: center; justify-content: center; min-height: 64px; margin-top: 10px; padding: 10px; border: 1px dashed #92949C; border-radius: 6px; background: #43454C; color: #E1DCE0; font-size: 12px; text-align: center; }

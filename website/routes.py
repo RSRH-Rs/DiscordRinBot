@@ -171,6 +171,7 @@ _BOT_DIR_ABS = os.path.abspath(BOT_DIR)
 if _BOT_DIR_ABS not in sys.path:
     sys.path.insert(0, _BOT_DIR_ABS)
 from rincore import cases, storage, sync  # noqa: E402
+from rincore.embeds import LOG_LEVELS, build, giveaway_running  # noqa: E402
 from guild_ids import collect_guild_ids  # noqa: E402
 WELCOME_UPLOAD_DIR = os.path.abspath(
     os.environ.get(
@@ -691,15 +692,6 @@ async def discord_api_delete(path):
         return resp.status in (200, 204)
 
 
-# 等级配色和 emoji,跟 cogs/botlog.py 对齐
-_AUDIT_LEVEL_META = {
-    "error": {"emoji": "❌", "color": 0xE24B4A, "label": "错误"},
-    "warning": {"emoji": "⚠️", "color": 0xEF9F27, "label": "警告"},
-    "info": {"emoji": "ℹ️", "color": 0x85B7EB, "label": "信息"},
-    "config": {"emoji": "⚙️", "color": 0x5A9E6F, "label": "配置变更"},
-}
-
-
 async def _botlog_send(
     guild_id: int, level: str, title: str, desc: str = "", actor: str = "", **fields
 ):
@@ -717,26 +709,17 @@ async def _botlog_send(
         if level not in allowed_levels:
             return
 
-        meta = _AUDIT_LEVEL_META.get(level, _AUDIT_LEVEL_META["info"])
-        embed_fields = [
-            {"name": k, "value": str(v)[:1000], "inline": True}
-            for k, v in fields.items()
-            if v not in (None, "")
-        ]
-        if actor:
-            embed_fields.insert(0, {"name": "操作者", "value": actor, "inline": True})
-
-        embed = {
-            "title": f"{meta['emoji']} {title}",
-            "color": meta["color"],
-            "author": {"name": f"系统日志 · {meta['label']}"},
-            "footer": {"text": f"网页控制台 · Guild ID: {guild_id}"},
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-        }
-        if desc:
-            embed["description"] = desc[:4000]
-        if embed_fields:
-            embed["fields"] = embed_fields[:25]
+        # 级别颜色和机器人的系统日志共用 rincore.embeds.LOG_LEVELS
+        kind, label = LOG_LEVELS.get(level, LOG_LEVELS["info"])
+        embed = build(
+            kind,
+            title,
+            desc,
+            fields=[("操作者", actor)] + list(fields.items()),
+            author=f"系统日志 · {label}",
+            footer=f"网页控制台 · Guild ID: {guild_id}",
+            timestamp=datetime.now(timezone.utc),
+        )
 
         session = await _get_session()
         async with session.post(
@@ -1897,12 +1880,7 @@ def setup_routes(app, discord):
             if not BOT_TOKEN:
                 return jsonify({"error": "BOT_TOKEN 未配置"}), 500
 
-            embed = {
-                "title": "ℹ️ 测试消息",
-                "description": "如果你看到这条消息,说明系统日志频道配置正确!",
-                "color": 0x85B7EB,
-                "footer": {"text": f"由网页控制台触发 · Guild ID: {g}"},
-            }
+            embed = build("success", "测试消息", "看到这条消息，说明日志频道设置正确。", footer=f"由网页控制台触发 · Guild ID: {g}")
             session = await _get_session()
             async with session.post(
                 f"https://discord.com/api/v10/channels/{row[0]}/messages",
@@ -2031,12 +2009,7 @@ def setup_routes(app, discord):
             if not BOT_TOKEN:
                 return jsonify({"error": "BOT_TOKEN 未配置"}), 500
 
-            embed = {
-                "title": "🗃️ 测试消息",
-                "description": "如果你看到这条消息,说明审计日志频道配置正确!",
-                "color": 0x5A9E6F,
-                "footer": {"text": f"由网页控制台触发 · Guild ID: {g}"},
-            }
+            embed = build("success", "测试消息", "看到这条消息，说明日志频道设置正确。", footer=f"由网页控制台触发 · Guild ID: {g}")
             session = await _get_session()
             async with session.post(
                 f"https://discord.com/api/v10/channels/{row[0]}/messages",
@@ -2456,7 +2429,7 @@ def setup_routes(app, discord):
                 return jsonify({"error": "unauthorized"}), 401
             d = await request.get_json()
             channel_id = d.get("channel_id")
-            title = d.get("title", "🏷 身份组选择")
+            title = d.get("title") or "身份组选择"
             content = d.get("content", "点击下方的按钮来领取身分组")
             mappings_list = d.get("mappings", [])  # [{emoji, role_id, role_name}]
             exclusive = bool(d.get("exclusive", False))
@@ -2529,13 +2502,7 @@ def setup_routes(app, discord):
             msg_data = await discord_api_post(
                 f"/channels/{channel_id}/messages",
                 {
-                    "embeds": [
-                        {
-                            "title": title,
-                            "description": desc_with_hint,
-                            "color": 0x2DD4BF,
-                        }
-                    ],
+                    "embeds": [build("info", title, desc_with_hint)],
                     "components": components,
                 },
             )
@@ -2612,26 +2579,21 @@ def setup_routes(app, discord):
 
             end_ts = int(end_time)
 
-            # 1. Send giveaway embed with button to Discord
-            embed_desc = (
-                f"**奖品:** {prize}\n"
-                f"**中奖名额:** {winners_count} 人\n"
-                f"**结束时间:** <t:{end_ts}:R> (<t:{end_ts}:f>)\n\n"
-                f"点击下方按钮参加抽奖！"
-            )
-            if restrict_role:
-                embed_desc += f"\n\n🔒 限制身份组: <@&{restrict_role}>"
+            # 发起人是登录的用户（取不到时为 0，消息里就不显示发起人）
+            try:
+                user = await discord.fetch_user()
+                host_id = int(user.id)
+            except Exception:
+                host_id = 0
 
+            # 1. Send giveaway embed with button to Discord（和机器人 /giveaway start 共用一个生成函数）
             msg_data = await discord_api_post(
                 f"/channels/{channel_id}/messages",
                 {
                     "embeds": [
-                        {
-                            "title": "🎉 抽奖活动！",
-                            "description": embed_desc,
-                            "color": 0x57F287,
-                            "footer": {"text": "小凛抽奖系统 | 公平公正公开"},
-                        }
+                        giveaway_running(
+                            prize, winners_count, end_ts, host_id=host_id or None, role_id=int(restrict_role or 0) or None
+                        )
                     ],
                     "components": [
                         {
@@ -2652,12 +2614,6 @@ def setup_routes(app, discord):
 
             # 2. Save to giveaway DB
             g = int(gid)
-            # Get host user from session (we know they're logged in)
-            try:
-                user = await discord.fetch_user()
-                host_id = int(user.id)
-            except Exception:
-                host_id = 0
 
             async with aiosqlite.connect(DB_GIVEAWAY) as db:
                 await db.execute(

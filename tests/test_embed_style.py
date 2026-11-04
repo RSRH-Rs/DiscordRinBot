@@ -38,7 +38,11 @@ def _embed_calls(tree):
             yield node
 
 
-@pytest.mark.parametrize("path", MIGRATED)
+# 网页进程直接发 Discord JSON，同样只能用 rincore.embeds 的颜色
+WEB = ["website/routes.py"]
+
+
+@pytest.mark.parametrize("path", MIGRATED + WEB)
 def test_no_raw_colours(path):
     assert RAW_COLOUR.findall(_source(path)) == []
 
