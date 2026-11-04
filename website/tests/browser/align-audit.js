@@ -108,6 +108,12 @@
             const widths = options.map(o => box(o).width), tops = options.map(o => Math.round(box(o).top));
             if (Math.max(...widths) - Math.min(...widths) > 1) add('S', where, `${seg.getAttribute('aria-label') || name(seg)} widths=${widths.map(Math.round)}`);
             if (new Set(tops).size > 1) add('S', where, `${seg.getAttribute('aria-label') || name(seg)} wraps onto ${new Set(tops).size} lines`);
+            for (const option of options) {
+                const range = document.createRange(), s = getComputedStyle(option);
+                range.selectNodeContents(option);
+                const room = box(option).width - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight) - parseFloat(s.borderLeftWidth);
+                if (range.getBoundingClientRect().width > room + 0.5) add('S', where, `"${option.textContent}" needs ${Math.round(range.getBoundingClientRect().width)}px, has ${Math.round(room)}px`);
+            }
         });
     }
 
