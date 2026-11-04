@@ -1,5 +1,6 @@
 # cogs/general.py
 import discord
+from discord import app_commands
 from discord.ext import commands
 from _perms import owner_only
 from _messages import embed
@@ -19,7 +20,7 @@ class General(commands.Cog):
         self.bot = bot
 
     @commands.hybrid_command(
-        name="status", aliases=["stat", "info"], description="查看小凛的运行状态"
+        name="status", aliases=["stat", "info"], description="Show how the bot is doing"
     )
     async def status(self, ctx):
         # 只给机器人自己的状态；主机的 CPU、内存、磁盘不对外公开
@@ -35,18 +36,17 @@ class General(commands.Cog):
         await ctx.send(embed=card)
 
     @commands.hybrid_command(
-        name="roll", aliases=["dice", "touzi"], description="投掷骰子 (默认6面)"
+        name="roll", aliases=["dice", "touzi"], description="Roll a die"
     )
-    async def roll(self, ctx, sides: int = 6):
-        if sides < 2:
-            await ctx.send("❌ 骰子至少要有 2 个面！")
-            return
+    @app_commands.describe(sides="How many sides, 2-1000; default 6")
+    async def roll(self, ctx, sides: commands.Range[int, 2, 1000] = 6):
         result = random.randint(1, sides)
         await ctx.send(f"🎲 你掷出了一个 **{sides}** 面骰子，结果是：**{result}**")
 
     @commands.hybrid_command(
-        name="avatar", aliases=["av"], description="查看用户的大图头像"
+        name="avatar", aliases=["av"], description="Show someone's avatar in full size"
     )
+    @app_commands.describe(member="Whose avatar; default yours")
     async def avatar(self, ctx, member: discord.Member = None):
         target = member or ctx.author
         card = embed("info", f"{target.name} 的头像")

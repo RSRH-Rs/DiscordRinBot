@@ -42,7 +42,9 @@ def test_status_has_no_host_info():
     assert "psutil" not in source and "platform" not in source
     with open(os.path.join(ROOT, "rinbot", "requirements.txt"), encoding="utf-8") as f:
         assert "psutil" not in f.read()
-    assert general.General.status.description == "查看小凛的运行状态"
+    from rincore import command_i18n
+
+    assert command_i18n.zh_description("status") == "查看小凛的运行状态"
 
 
 def test_member_sees_no_admin_commands():

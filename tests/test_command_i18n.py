@@ -34,6 +34,8 @@ DONE: set[str] = {
     # Task 6
     "play", "search", "skip", "pause", "resume", "stop", "nowplaying", "queue",
     "remove", "clear", "shuffle", "loop", "volume", "move", "join", "playlist",
+    # Task 7
+    "giveaway", "status", "roll", "avatar", "help", "rank", "leaderboard",
 }
 
 

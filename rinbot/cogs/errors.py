@@ -10,6 +10,7 @@ import traceback
 import uuid
 
 from _inputs import BadDuration, DurationTooLong
+from _perms import PERMISSION_NAMES, permission_list  # noqa: F401  （测试和其他模块从这里取）
 from _messages import Notice, send_moved, send_notice
 from rincore.durations import label
 
@@ -21,37 +22,10 @@ def _root_exception(error) -> BaseException:
     return error
 
 
-# 权限英文名 -> Discord 简体中文客户端里的叫法
-PERMISSION_NAMES = {
-    "administrator": "管理员",
-    "view_channel": "查看频道",
-    "manage_channels": "管理频道",
-    "manage_roles": "管理身份组",
-    "manage_guild": "管理服务器",
-    "kick_members": "踢出成员",
-    "ban_members": "封禁成员",
-    "moderate_members": "禁言成员",
-    "manage_messages": "管理消息",
-    "manage_nicknames": "管理昵称",
-    "send_messages": "发送消息",
-    "embed_links": "嵌入链接",
-    "attach_files": "附加文件",
-    "read_message_history": "阅读消息历史记录",
-    "add_reactions": "添加反应",
-    "use_external_emojis": "使用外部表情符号",
-    "mention_everyone": "提及 @everyone、@here 和所有身份组",
-    "connect": "连接",
-    "speak": "说话",
-}
 
 UNEXPECTED = object()  # notice_for 的返回值：未知错误，需要上报并给出错误编号
 
 _MENTION_HINT = "检查一下有没有打错，或者直接 @ 对方。"
-
-
-def permission_list(perms) -> str:
-    """["manage_messages", "embed_links"] -> 「管理消息」「嵌入链接」"""
-    return "".join(f"「{PERMISSION_NAMES.get(p, p.replace('_', ' '))}」" for p in perms)
 
 
 def usage(command, *, slash: bool) -> str:

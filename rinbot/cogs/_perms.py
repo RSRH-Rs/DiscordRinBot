@@ -13,12 +13,42 @@ except ImportError:
     DEV_GUILD_ID = 0
 
 
+# 权限英文名 -> Discord 简体中文客户端里的叫法
+PERMISSION_NAMES = {
+    "administrator": "管理员",
+    "view_channel": "查看频道",
+    "manage_channels": "管理频道",
+    "manage_roles": "管理身份组",
+    "manage_guild": "管理服务器",
+    "kick_members": "踢出成员",
+    "ban_members": "封禁成员",
+    "moderate_members": "禁言成员",
+    "manage_messages": "管理消息",
+    "manage_nicknames": "管理昵称",
+    "send_messages": "发送消息",
+    "embed_links": "嵌入链接",
+    "attach_files": "附加文件",
+    "read_message_history": "阅读消息历史记录",
+    "add_reactions": "添加反应",
+    "use_external_emojis": "使用外部表情符号",
+    "mention_everyone": "提及 @everyone、@here 和所有身份组",
+    "connect": "连接",
+    "speak": "说话",
+}
+
+
+def permission_list(perms) -> str:
+    """["manage_messages", "embed_links"] -> 「管理消息」「嵌入链接」"""
+    return "".join(f"「{PERMISSION_NAMES.get(p, p.replace('_', ' '))}」" for p in perms)
+
+
 def require(**perms):
     """成员需要这些权限：执行时检查，并让 Discord 默认对没有权限的成员隐藏。
     写在 @commands.hybrid_command / @组.command 下面；Discord 只认顶层指令的默认权限，指令组要加在组上。"""
 
     def decorator(func):
         func = commands.has_permissions(**perms)(func)
+        func.__rinbot_required__ = list(perms)  # /help 按写的顺序显示这条指令自己要的权限
         return app_commands.default_permissions(**perms)(func)
 
     return decorator

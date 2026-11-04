@@ -8,6 +8,7 @@
 #   • 自动倒计时 + 自动开奖
 
 import discord
+from discord import app_commands
 from discord.ext import commands, tasks
 from discord.ui import View, Button
 import aiosqlite
@@ -19,6 +20,8 @@ from typing import Optional
 from _botlog_helper import audit, check_component
 from _perms import require
 from _messages import embed
+from _inputs import Duration, choices, duration_autocomplete, is_zh
+from rincore import durations
 from rincore.embeds import giveaway_ended, giveaway_running
 from rincore import durations
 from rincore.throttle import Debouncer
@@ -344,7 +347,7 @@ class Giveaway(commands.Cog):
 
     # ─── 指令：giveaway start ───
 
-    @commands.hybrid_group(name="giveaway", aliases=["gw"], description="抽奖管理")
+    @commands.hybrid_group(name="giveaway", aliases=["gw"], description="Start and manage giveaways")
     @commands.guild_only()
     @require(manage_guild=True)
     async def giveaway_group(self, ctx):
@@ -353,27 +356,15 @@ class Giveaway(commands.Cog):
                 "用法: `/giveaway start`, `/giveaway end`, `/giveaway reroll`, `/giveaway list`"
             )
 
-    @giveaway_group.command(name="start", description="发起一个抽奖活动")
+    @giveaway_group.command(name="start", description="Start a giveaway in this channel")
+    @app_commands.describe(duration="How long it runs, up to 365 days", winners="How many winners, 1-20", prize="What the winners get")
     @commands.guild_only()
     @require(manage_guild=True)
-    async def gw_start(self, ctx, duration: str, winners: int = 1, *, prize: str):
-        """
-        duration: 持续时间 (如 1h, 30m, 2d, 1d12h)
-        winners: 中奖人数 (默认 1)
-        prize: 奖品描述
-        """
+    async def gw_start(
+        self, ctx, duration: Duration("giveaway"), winners: commands.Range[int, 1, 20] = 1, *, prize: str
+    ):
         await ctx.defer()
-
-        seconds = self._parse_duration(duration)
-        if not seconds:
-            await ctx.send(
-                "❌ 无效的时间格式或时间超过 365 天！示例: `1h`, `30m`, `2d`, `1d12h`"
-            )
-            return
-
-        if winners < 1 or winners > 20:
-            await ctx.send("❌ 中奖人数范围: 1-20")
-            return
+        seconds = duration
 
         end_time = time.time() + seconds
         end_ts = int(end_time)
@@ -410,10 +401,12 @@ class Giveaway(commands.Cog):
             },
         )
 
-    @giveaway_group.command(name="end", description="[管理] 提前结束一个抽奖")
+    @giveaway_group.command(name="end", description="End a running giveaway now")
+    @app_commands.describe(giveaway="The giveaway to end; pick from the list")
     @commands.guild_only()
     @require(manage_guild=True)
-    async def gw_end(self, ctx, giveaway_id: int):
+    async def gw_end(self, ctx, giveaway: int):
+        giveaway_id = giveaway
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
                 "SELECT ended FROM giveaways WHERE id = ? AND guild_id = ?",
@@ -436,13 +429,12 @@ class Giveaway(commands.Cog):
             **{"操作者": ctx.author.mention, "抽奖 ID": str(giveaway_id)},
         )
 
-    @giveaway_group.command(name="reroll", description="[管理] 重新抽取获奖者")
+    @giveaway_group.command(name="reroll", description="Draw new winners for an ended giveaway")
+    @app_commands.describe(giveaway="The ended giveaway; pick from the list", count="How many new winners, 1-20")
     @commands.guild_only()
     @require(manage_guild=True)
-    async def gw_reroll(self, ctx, giveaway_id: int, count: int = 1):
-        if count < 1 or count > 20:
-            await ctx.send("❌ 中奖人数范围: 1-20")
-            return
+    async def gw_reroll(self, ctx, giveaway: int, count: commands.Range[int, 1, 20] = 1):
+        giveaway_id = giveaway
         async with aiosqlite.connect(DB_PATH) as db:
             cursor = await db.execute(
                 "SELECT channel_id, prize, ended FROM giveaways WHERE id = ? AND guild_id = ?",
@@ -474,7 +466,7 @@ class Giveaway(commands.Cog):
         else:
             await ctx.send("❌ 没有新的合格参与者可以 Reroll。")
 
-    @giveaway_group.command(name="list", description="查看当前活跃的抽奖活动")
+    @giveaway_group.command(name="list", description="List this server's recent giveaways")
     @commands.guild_only()
     @require(manage_guild=True)
     async def gw_list(self, ctx):
@@ -498,6 +490,44 @@ class Giveaway(commands.Cog):
             for gw_id, prize, wc, end_time, ended in rows
         ]
         await ctx.send(embed=embed("info", "最近的抽奖", fields=fields))
+
+
+    gw_start.autocomplete("duration")(duration_autocomplete("giveaway"))
+
+    @gw_end.autocomplete("giveaway")
+    async def _running_autocomplete(self, interaction: discord.Interaction, current: str):
+        if interaction.guild is None:
+            return []
+        try:
+            rows = await _giveaway_rows(interaction.guild.id, ended=False)
+        except Exception:
+            return []
+        zh, now = is_zh(interaction), time.time()
+        items = []
+        for gw_id, prize, end_time in rows:
+            left = durations.label(max(60, int(end_time - now) // 60 * 60), zh)
+            items.append((f"{prize[:60]} 剩 {left}" if zh else f"{prize[:60]} {left} left", gw_id))
+        return choices(items, current)
+
+    @gw_reroll.autocomplete("giveaway")
+    async def _ended_autocomplete(self, interaction: discord.Interaction, current: str):
+        if interaction.guild is None:
+            return []
+        try:
+            rows = await _giveaway_rows(interaction.guild.id, ended=True)
+        except Exception:
+            return []
+        zh = is_zh(interaction)
+        return choices([(f"{prize[:60]} 已结束" if zh else f"{prize[:60]} ended", gw_id) for gw_id, prize, _ in rows], current)
+
+async def _giveaway_rows(guild_id: int, ended: bool):
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT id, prize, end_time FROM giveaways WHERE guild_id = ? AND ended = ? ORDER BY end_time "
+            + ("DESC" if ended else "ASC") + " LIMIT 50",
+            (guild_id, 1 if ended else 0),
+        )
+        return await cursor.fetchall()
 
 
 async def setup(bot):

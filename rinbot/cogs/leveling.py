@@ -1,5 +1,6 @@
 import asyncio
 import discord
+from discord import app_commands
 from _messages import embed
 from discord.ext import commands
 from PIL import Image, ImageDraw, ImageFont
@@ -235,8 +236,9 @@ class Leveling(commands.Cog):
             await db.commit()
 
     # --- 🖼️ Rank 指令 ---
-    @commands.hybrid_command(name="rank", description="查看你的等级卡片")
+    @commands.hybrid_command(name="rank", description="Show a level card")
     @commands.guild_only()
+    @app_commands.describe(member="Whose card; default yours")
     async def rank(self, ctx, member: discord.Member = None):
         member = member or ctx.author
         await ctx.defer()  # 告诉 Discord 机器人正在思考，防止超时
@@ -295,12 +297,11 @@ class Leveling(commands.Cog):
 
     # --- 🏆 Leaderboard 排行榜 ---
     @commands.hybrid_command(
-        name="leaderboard", aliases=["top", "lb"], description="查看服务器等级排行榜"
+        name="leaderboard", aliases=["top", "lb"], description="Show this server's level leaderboard"
     )
     @commands.guild_only()
-    async def leaderboard(self, ctx, page: int = 1):
-        if page < 1:
-            page = 1
+    @app_commands.describe(page="Which page to show")
+    async def leaderboard(self, ctx, page: commands.Range[int, 1, None] = 1):
         per_page = 10
         offset = (page - 1) * per_page
 

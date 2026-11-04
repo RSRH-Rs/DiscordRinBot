@@ -1,5 +1,17 @@
 {
   "commands": {
+    "avatar": {
+      "description": "查看某人的大图头像",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "看谁的头像，默认是你自己"
+        }
+      },
+      "examples": [
+        "/avatar @小明"
+      ]
+    },
     "ban": {
       "description": "封禁一名成员，填了时长就是临时封禁",
       "params": {
@@ -95,6 +107,77 @@
         "/clear"
       ]
     },
+    "giveaway": {
+      "description": "发起和管理抽奖"
+    },
+    "giveaway end": {
+      "description": "提前结束一个进行中的抽奖",
+      "params": {
+        "giveaway": {
+          "name": "抽奖",
+          "description": "要结束的抽奖，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/giveaway end 3"
+      ]
+    },
+    "giveaway list": {
+      "description": "查看这个服务器最近的抽奖",
+      "examples": [
+        "/giveaway list"
+      ]
+    },
+    "giveaway reroll": {
+      "description": "给已结束的抽奖重新抽中奖者",
+      "params": {
+        "giveaway": {
+          "name": "抽奖",
+          "description": "已结束的抽奖，可以从列表里选"
+        },
+        "count": {
+          "name": "人数",
+          "description": "重新抽几个人，1–20"
+        }
+      },
+      "examples": [
+        "/giveaway reroll 3",
+        "/giveaway reroll 3 2"
+      ]
+    },
+    "giveaway start": {
+      "description": "在这个频道发起一个抽奖",
+      "params": {
+        "duration": {
+          "name": "时长",
+          "description": "抽奖持续多久，最长 365 天"
+        },
+        "winners": {
+          "name": "中奖人数",
+          "description": "抽出几个人，1–20"
+        },
+        "prize": {
+          "name": "奖品",
+          "description": "中奖者能得到什么"
+        }
+      },
+      "examples": [
+        "/giveaway start 1d 1 Nitro 一个月"
+      ]
+    },
+    "help": {
+      "description": "打开指令菜单，或者查看一条指令的用法",
+      "params": {
+        "command": {
+          "name": "指令",
+          "description": "想了解的指令，如 ban、warnings clear"
+        }
+      },
+      "examples": [
+        "/help",
+        "/help ban"
+      ]
+    },
     "join": {
       "description": "让机器人加入你所在的语音频道",
       "examples": [
@@ -115,6 +198,19 @@
       },
       "examples": [
         "/kick @小明 多次刷屏"
+      ]
+    },
+    "leaderboard": {
+      "description": "查看这个服务器的等级排行榜",
+      "params": {
+        "page": {
+          "name": "页码",
+          "description": "看第几页"
+        }
+      },
+      "examples": [
+        "/leaderboard",
+        "/leaderboard 2"
       ]
     },
     "lock": {
@@ -283,6 +379,19 @@
         "/queue 2"
       ]
     },
+    "rank": {
+      "description": "查看等级卡片",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "看谁的等级，默认是你自己"
+        }
+      },
+      "examples": [
+        "/rank",
+        "/rank @小明"
+      ]
+    },
     "remove": {
       "description": "从队列里移除一首歌",
       "params": {
@@ -299,6 +408,19 @@
       "description": "继续播放",
       "examples": [
         "/resume"
+      ]
+    },
+    "roll": {
+      "description": "掷一个骰子",
+      "params": {
+        "sides": {
+          "name": "面数",
+          "description": "骰子有几个面，2–1000，默认 6"
+        }
+      },
+      "examples": [
+        "/roll",
+        "/roll 20"
       ]
     },
     "search": {
@@ -336,6 +458,12 @@
       "examples": [
         "/slowmode 30s",
         "/slowmode 0"
+      ]
+    },
+    "status": {
+      "description": "查看小凛的运行状态",
+      "examples": [
+        "/status"
       ]
     },
     "stop": {

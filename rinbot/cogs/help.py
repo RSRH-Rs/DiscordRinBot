@@ -1,11 +1,13 @@
 from typing import Optional
 
 import discord
+from discord import app_commands
 from discord.ext import commands
 from discord.ui import Select, View
 
 from _messages import Notice, embed, send_notice
-from _perms import is_owner_only, required_permissions
+from _inputs import choices, is_zh
+from _perms import is_owner_only, permission_list, required_permissions
 from rincore import command_i18n
 
 # Cog 元数据(emoji + 描述)— 没列在这的 cog 会被隐藏
@@ -194,17 +196,67 @@ class HelpView(View):
         return True
 
 
+def usage_zh(command) -> str:
+    """用法行，参数用中文名：/ban <成员> [时长] [清理天数] [原因]"""
+    path = command.qualified_name
+    parts = []
+    for name, param in command.clean_params.items():
+        label = (command_i18n.zh_param(path, name) or {}).get("name", name)
+        parts.append(f"<{label}>" if param.required else f"[{label}]")
+    return " ".join([f"/{path}", *parts])
+
+
+def _own_permissions(command) -> list[str]:
+    """这条指令执行时要的权限：子指令可能比所在的组更严格，所以先看它自己的。"""
+    own = getattr(command.callback, "__rinbot_required__", None)
+    if own:
+        return list(own)
+    required = required_permissions(command)
+    return [name for name, value in required if value] if required else []
+
+
+def _detail_embed(command) -> discord.Embed:
+    path = command.qualified_name
+    fields = [
+        ("用法", f"`{usage_zh(command)}`", False),
+        ("例子", "\n".join(command_i18n.examples(path)), False),
+        ("需要的权限", permission_list(_own_permissions(command))),
+    ]
+    return embed("info", f"/{path}", command_i18n.zh_description(path) or command.description, fields=fields)
+
+
 class Help(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    @commands.hybrid_command(name="help", description="打开交互式指令菜单")
-    async def help(self, ctx):
+    @commands.hybrid_command(name="help", description="Open the command menu, or explain one command")
+    @app_commands.describe(command="A command to explain, such as ban or warnings clear")
+    async def help(self, ctx, *, command: Optional[str] = None):
         guild_id = ctx.guild.id if ctx.guild else None
         perms = ctx.author.guild_permissions if ctx.guild else None
+        if command:
+            found = self.bot.get_command(command.strip().lstrip("/"))
+            if found is None or found.hidden or not visible(found, perms):
+                await send_notice(ctx, Notice("error", "找不到这条指令"))
+                return
+            await ctx.send(embed=_detail_embed(found), ephemeral=True)
+            return
         card = _build_home_embed(self.bot, guild_id, perms)
         view = HelpView(self.bot, guild_id, perms, ctx.author.id, ctx.author.display_name)
         await ctx.send(embed=card, view=view, ephemeral=True)
+
+    @help.autocomplete("command")
+    async def _command_autocomplete(self, interaction: discord.Interaction, current: str):
+        perms = getattr(interaction.user, "guild_permissions", None) if interaction.guild else None
+        zh = is_zh(interaction)
+        items = []
+        for cmd in self.bot.walk_commands():
+            if cmd.hidden or getattr(cmd, "app_command", None) is None or not visible(cmd, perms):
+                continue
+            path = cmd.qualified_name
+            text = (command_i18n.zh_description(path) if zh else None) or cmd.description
+            items.append((f"/{path} {text[:50]}", path))
+        return choices(items, current)
 
 
 async def setup(bot):
