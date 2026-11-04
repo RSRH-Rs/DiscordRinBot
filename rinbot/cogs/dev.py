@@ -257,14 +257,6 @@ class Dev(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    # ──────────────── 错误处理 ────────────────
-
-    async def cog_command_error(self, ctx, error):
-        if isinstance(error, commands.NotOwner):
-            await ctx.send("🚫 只有 Bot 拥有者可以使用此命令。", ephemeral=True)
-        else:
-            raise error
-
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Dev(bot))

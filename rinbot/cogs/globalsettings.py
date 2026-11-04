@@ -7,6 +7,9 @@ from discord.ext import commands, tasks
 import aiosqlite
 import os
 import time
+from typing import NamedTuple
+
+from _messages import block_notice, send_notice
 
 try:
     from config import OWNER_ID
@@ -18,20 +21,23 @@ DB_PATH = os.path.join(
 )
 
 
-DEFAULT_MAINT_MSG = "🔧 机器人维护中，请稍后再试 (｡•́︿•̀｡)"
-DISABLED_MSG = "⛔ 该指令已被全局停用。"
+class Block(NamedTuple):
+    """拦截原因：blacklist（黑名单）/ maintenance（维护，text 为网页里填的说明）/ disabled（全局停用）"""
+
+    kind: str
+    text: str = ""
 
 
 def decide_block(user_id, owner_id, blacklist, maintenance, maint_msg, disabled, command_name):
-    """纯判定：None 放行；"" 静默拒绝（黑名单）；其他字符串为需要提示的拒绝原因。"""
+    """纯判定：None 放行，否则返回 Block。"""
     if user_id == owner_id:
         return None
     if user_id in blacklist:
-        return ""
+        return Block("blacklist")
     if maintenance:
-        return maint_msg or DEFAULT_MAINT_MSG
+        return Block("maintenance", maint_msg or "")
     if command_name and command_name in disabled:
-        return DISABLED_MSG
+        return Block("disabled")
     return None
 
 
@@ -100,8 +106,8 @@ class GlobalSettings(commands.Cog):
         # 全局设置：忽略参数，全量重载（只有几个标志与两张小表）
         await self._reload()
 
-    def blocked_reason(self, user_id: int, command_name: str | None = None) -> str | None:
-        """None 放行；"" 静默拒绝；其他字符串为拒绝提示。"""
+    def blocked_reason(self, user_id: int, command_name: str | None = None) -> Block | None:
+        """None 放行，否则返回拦截原因 Block。"""
         return decide_block(
             user_id,
             self.owner_id,
@@ -117,14 +123,12 @@ class GlobalSettings(commands.Cog):
         command_name = None
         if ctx.command is not None:
             command_name = ctx.command.qualified_name.split()[0]
-        reason = self.blocked_reason(ctx.author.id, command_name)
-        if reason is None:
+        block = self.blocked_reason(ctx.author.id, command_name)
+        if block is None:
             return True
-        if reason:
-            try:
-                await ctx.send(reason, ephemeral=True)
-            except Exception:
-                pass
+        notice = block_notice(block)
+        if notice:
+            await send_notice(ctx, notice)
         return False
 
     def _pick_channel(self, guild):

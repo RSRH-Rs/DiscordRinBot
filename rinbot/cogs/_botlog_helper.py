@@ -1,6 +1,8 @@
 # cogs/_botlog_helper.py
 # 给其他 cog 用的便捷函数,统一 config 等级日志写法
 
+from _messages import block_notice, send_notice
+
 
 async def audit(bot, guild_id: int, title: str, **fields):
     """写一条 config 等级的系统日志(若未启用 BotLog 或未配置则静默)"""
@@ -36,15 +38,11 @@ async def check_component(bot, interaction) -> bool:
     cog = bot.get_cog("GlobalSettings")
     if cog is None:
         return True
-    reason = cog.blocked_reason(interaction.user.id)
-    if reason is None:
+    block = cog.blocked_reason(interaction.user.id)
+    if block is None:
         return True
-    text = "❌ 你无法使用此功能。" if reason == "" else reason
     try:
-        if interaction.response.is_done():
-            await interaction.followup.send(text, ephemeral=True)
-        else:
-            await interaction.response.send_message(text, ephemeral=True)
+        await send_notice(interaction, block_notice(block, component=True))
     except Exception:
         pass
     return False

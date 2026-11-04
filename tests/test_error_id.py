@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 from cogs import botlog
 from cogs._botlog_helper import check_component
+from cogs.globalsettings import Block
 
 DEV = 111
 OTHER = 222
@@ -92,16 +93,16 @@ class _Resp:
     def is_done(self):
         return self.done
 
-    async def send_message(self, content, **kw):
-        self.sent.append((content, kw))
+    async def send_message(self, *, embed, **kw):
+        self.sent.append((embed.title, kw))
 
 
 class _Follow:
     def __init__(self):
         self.sent = []
 
-    async def send(self, content, **kw):
-        self.sent.append((content, kw))
+    async def send(self, *, embed, **kw):
+        self.sent.append((embed.title, kw))
 
 
 def _interaction(done=False):
@@ -127,14 +128,20 @@ def test_check_component_allows():
 
 def test_check_component_blacklist_message():
     i = _interaction()
-    assert asyncio.run(check_component(_bot(""), i)) is False
-    assert i.response.sent == [("❌ 你无法使用此功能。", {"ephemeral": True})]
+    assert asyncio.run(check_component(_bot(Block("blacklist")), i)) is False
+    assert i.response.sent == [("你现在不能使用这个功能", {"ephemeral": True})]
 
 
 def test_check_component_maintenance_message_via_followup():
     i = _interaction(done=True)
-    assert asyncio.run(check_component(_bot("维护中"), i)) is False
-    assert i.followup.sent == [("维护中", {"ephemeral": True})]
+    assert asyncio.run(check_component(_bot(Block("maintenance", "维护中")), i)) is False
+    assert i.followup.sent == [("小凛正在维护", {"ephemeral": True})]
+
+
+def test_check_component_disabled_message():
+    i = _interaction()
+    assert asyncio.run(check_component(_bot(Block("disabled")), i)) is False
+    assert i.response.sent == [("这条指令已停用", {"ephemeral": True})]
 
 
 def test_check_component_swallows_send_errors():
@@ -144,4 +151,4 @@ def test_check_component_swallows_send_errors():
         raise RuntimeError("x")
 
     i.response.send_message = bad
-    assert asyncio.run(check_component(_bot(""), i)) is False
+    assert asyncio.run(check_component(_bot(Block("blacklist")), i)) is False
