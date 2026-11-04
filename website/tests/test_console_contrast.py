@@ -162,8 +162,11 @@ class ConsoleContrastTests(unittest.TestCase):
             bad += [(', '.join(parts), w.strip()) for w in weights if w.strip() not in ('400', '600')]
         self.assertEqual(bad, [])
 
+    def test_no_empty_rules(self):
+        self.assertEqual([', '.join(parts) for parts, body in rules(self.css) if not body.strip()], [])
+
     def test_row_and_module_titles_are_regular(self):
-        for selector in ['.row-title', '.mod-name', '.server-name', '.lb-name', '.cmd-name', '.user-name']:
+        for selector in ['.row-title', '.mod-name', '.server-name', '.lb-name', '.user-name']:
             body = rule(self.css, selector)
             self.assertNotIn('font-weight: 600', body, selector)
             self.assertNotIn('font-weight: 500', body, selector)

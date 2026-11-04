@@ -43,7 +43,7 @@ window.CommandToggles = (() => {
             for (const c of commands) {
                 const row = document.createElement('div'); row.className = 'row row--switch'; row.id = 'cr-' + c.name;
                 const text = document.createElement('div'); text.className = 'row-text';
-                const name = document.createElement('span'); name.className = 'row-title cmd-name'; name.textContent = '/' + c.name;
+                const name = document.createElement('span'); name.className = 'row-title'; name.textContent = '/' + c.name;
                 const desc = document.createElement('span'); desc.className = 'row-hint'; desc.textContent = c.desc + (c.protected ? tr('utility.protected') : '');
                 text.append(name, desc);
                 row.append(text, toggleSwitch(c.enabled, c.protected || saving, tr('utility.toggle_label', {name: c.name}), checked => toggleCommand(c.name, checked)));
