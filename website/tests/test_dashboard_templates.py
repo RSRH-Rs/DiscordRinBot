@@ -453,4 +453,16 @@ class DashboardTemplateTests(unittest.TestCase):
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
         self.assertIn('margin-left: 16px',re.search(r'\n\.row--sub\s*\{([^}]*)\}',css).group(1))
 
+    def test_editor_head_sits_in_the_form_column(self):
+        html,_=self.render('server.html')
+        for slug in ['welcome','roles']:
+            start=html.index(f'id="pg-{slug}"');page=html[start:html.index('</section>',start)]
+            self.assertRegex(page,r'^[^>]*>\s*<div class="editor">\s*<div class="editor-form">\s*<div class="page-head">',slug)
+            if slug=='welcome':self.assertLess(page.index('class="page-head"'),page.index('class="tabs"'))
+
+    def test_master_switch_track_ends_on_the_control_line(self):
+        # 开启/已关闭 sits left of the track so the track's right edge meets the row switches' right edge
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('flex-direction: row-reverse',re.search(r'\n\.tog--head\s*\{([^}]*)\}',css).group(1))
+
 if __name__=='__main__':unittest.main()

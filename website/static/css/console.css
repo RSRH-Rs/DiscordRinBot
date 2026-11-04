@@ -278,7 +278,7 @@ input[type="file"] { max-width: 100%; font-size: 13px; color: var(--muted); }
 input[type="file"]::file-selector-button { margin-right: 8px; padding: 8px 12px; border: 0; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text); font-weight: 600; cursor: pointer; }
 
 .tog { position: relative; display: inline-flex; flex-shrink: 0; width: 40px; height: 22px; cursor: pointer; }
-.tog--head { width: auto; align-items: center; gap: 8px; margin-top: 4px; }
+.tog--head { width: auto; flex-direction: row-reverse; align-items: center; gap: 8px; margin-top: 4px; }
 .tog--head .tog-track { width: 40px; flex-shrink: 0; }
 .tog-on, .tog-off { font-size: 13px; color: var(--muted); white-space: nowrap; }
 .tog input:checked ~ .tog-off, .tog input:not(:checked) ~ .tog-on { display: none; }

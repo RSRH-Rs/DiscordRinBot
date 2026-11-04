@@ -88,10 +88,10 @@
 </section>
 
 <section class="page page--editor" id="pg-welcome" data-slug="welcome" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.welcome') }}" data-draft>
-    {{ page_head(tr('nav.module.welcome'), tr('welcome.intro'), 'w-enabled', tr('welcome.enabled')) }}
-    {{ tabs('welcome', [('message', tr('welcome.tab.message')), ('appearance', tr('welcome.tab.appearance')), ('farewell', tr('welcome.tab.farewell')), ('autoroles', tr('welcome.tab.autoroles'))]) }}
     <div class="editor">
         <div class="editor-form">
+            {{ page_head(tr('nav.module.welcome'), tr('welcome.intro'), 'w-enabled', tr('welcome.enabled')) }}
+            {{ tabs('welcome', [('message', tr('welcome.tab.message')), ('appearance', tr('welcome.tab.appearance')), ('farewell', tr('welcome.tab.farewell')), ('autoroles', tr('welcome.tab.autoroles'))]) }}
             {% call tab_panel('welcome', 'message') %}
             <div class="list">
                 {% call row(tr('welcome.channel'), None, 'w-ch', depends='w-enabled') %}<select class="select" id="w-ch" data-search="{{ tr('welcome.channel') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
@@ -138,9 +138,9 @@
 </section>
 
 <section class="page page--editor" id="pg-roles" data-slug="roles" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.roles') }}" data-draft data-draft-inline>
-    {{ page_head(tr('nav.module.roles'), tr('roles.intro')) }}
     <div class="editor">
         <div class="editor-form">
+            {{ page_head(tr('nav.module.roles'), tr('roles.intro')) }}
             <div class="section" id="rr-message-section">
                 <div class="section-head"><h3 class="section-title">{{ tr('roles.step_message') }}</h3><span data-sample-slot="roles"></span></div>
                 <div class="list">
