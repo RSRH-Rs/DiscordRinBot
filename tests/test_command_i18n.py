@@ -29,6 +29,8 @@ TABLE = {
 DONE: set[str] = {
     # Task 4
     "ban", "unban", "kick", "mute", "unmute", "warn", "purge", "slowmode", "lock", "unlock", "warnings",
+    # Task 5
+    "case",
 }
 
 

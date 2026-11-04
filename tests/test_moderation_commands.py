@@ -16,7 +16,7 @@ from cogs.moderation import Moderation
 
 def test_moderation_command_names():
     tops = {cmd.name: cmd for cmd in top_level_app_commands(Moderation)}
-    assert set(tops) == {"ban", "unban", "kick", "mute", "unmute", "warn", "purge", "slowmode", "lock", "unlock", "warnings", "modlog"}
+    assert set(tops) == {"ban", "unban", "kick", "mute", "unmute", "warn", "purge", "slowmode", "lock", "unlock", "warnings", "case"}
     assert {c.name for c in tops["warnings"].commands} == {"list", "remove", "clear"}
 
 

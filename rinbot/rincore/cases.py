@@ -6,6 +6,7 @@ bot 与网站面板启动时都会调用 migrate()，两者可能同时运行，
   • 唯一索引使用 IF NOT EXISTS。
 """
 import sqlite3
+from typing import Optional, Sequence
 
 import aiosqlite
 
@@ -105,3 +106,49 @@ async def next_case(
         await db.rollback()
         raise
     return case_no
+
+
+_FIELDS = ("case_no", "action", "user_id", "mod_id", "reason", "duration", "created_at")
+_SELECT = "SELECT case_no, action, user_id, mod_id, reason, duration, created_at FROM mod_cases"
+
+
+async def get_case(db: aiosqlite.Connection, guild_id: int, case_no: int) -> Optional[dict]:
+    async with db.execute(f"{_SELECT} WHERE guild_id = ? AND case_no = ?", (guild_id, case_no)) as cur:
+        row = await cur.fetchone()
+    return dict(zip(_FIELDS, row)) if row else None
+
+
+async def recent_cases(
+    db: aiosqlite.Connection, guild_id: int, limit: int = 25, actions: Optional[Sequence[str]] = None
+) -> list[dict]:
+    """本服务器最近的案件，新的在前；actions 给定时只取这些动作。"""
+    sql, args = f"{_SELECT} WHERE guild_id = ?", [guild_id]
+    if actions:
+        sql += f" AND action IN ({', '.join('?' for _ in actions)})"
+        args += list(actions)
+    sql += " ORDER BY case_no DESC LIMIT ?"
+    async with db.execute(sql, (*args, limit)) as cur:
+        return [dict(zip(_FIELDS, row)) for row in await cur.fetchall()]
+
+
+async def latest_case_no(db: aiosqlite.Connection, guild_id: int, user_id: int, action: str) -> Optional[int]:
+    """某人最新一次某动作的案件号（判断禁言/临时封禁案件是否还是当前生效的那次）。"""
+    async with db.execute(
+        "SELECT MAX(case_no) FROM mod_cases WHERE guild_id = ? AND user_id = ? AND action = ?",
+        (guild_id, user_id, action),
+    ) as cur:
+        return (await cur.fetchone())[0]
+
+
+async def _update(db, column: str, guild_id: int, case_no: int, value: str) -> bool:
+    cur = await db.execute(f"UPDATE mod_cases SET {column} = ? WHERE guild_id = ? AND case_no = ?", (value, guild_id, case_no))
+    await db.commit()
+    return cur.rowcount == 1
+
+
+async def set_reason(db: aiosqlite.Connection, guild_id: int, case_no: int, reason: str) -> bool:
+    return await _update(db, "reason", guild_id, case_no, reason)
+
+
+async def set_duration(db: aiosqlite.Connection, guild_id: int, case_no: int, duration: str) -> bool:
+    return await _update(db, "duration", guild_id, case_no, duration)

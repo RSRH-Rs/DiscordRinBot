@@ -25,6 +25,70 @@
         "/ban 123456789012345678 发广告"
       ]
     },
+    "case": {
+      "description": "查看和修改管理案件"
+    },
+    "case duration": {
+      "description": "修改还在生效的禁言或临时封禁的时长",
+      "params": {
+        "case": {
+          "name": "案件",
+          "description": "还在生效的禁言或临时封禁，可以从列表里选"
+        },
+        "duration": {
+          "name": "时长",
+          "description": "新的时长，从现在算起"
+        }
+      },
+      "examples": [
+        "/case duration 12 2h"
+      ]
+    },
+    "case list": {
+      "description": "查看管理记录，可以只看一个成员的",
+      "params": {
+        "member": {
+          "name": "成员",
+          "description": "只看这个成员的案件（可选）"
+        },
+        "page": {
+          "name": "页码",
+          "description": "看第几页"
+        }
+      },
+      "examples": [
+        "/case list",
+        "/case list @小明"
+      ]
+    },
+    "case reason": {
+      "description": "修改一个案件的原因",
+      "params": {
+        "case": {
+          "name": "案件",
+          "description": "要修改的案件，可以从列表里选"
+        },
+        "reason": {
+          "name": "原因",
+          "description": "新的原因"
+        }
+      },
+      "examples": [
+        "/case reason 12 发广告"
+      ]
+    },
+    "case view": {
+      "description": "查看一个案件",
+      "params": {
+        "case": {
+          "name": "案件",
+          "description": "要查看的案件，可以从列表里选"
+        }
+      },
+      "examples": [
+        "/case view 12"
+      ]
+    },
     "kick": {
       "description": "把一名成员踢出服务器",
       "params": {

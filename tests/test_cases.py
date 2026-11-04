@@ -180,3 +180,46 @@ async def test_migrate_tolerates_column_added_by_other_process(tmp_path):
     async with aiosqlite.connect(path) as db:
         await cases.migrate(db)
     assert [r[2] for r in await dump(path)] == [1, 1, 2, 3, 2]
+
+
+async def _fresh(path):
+    db = await aiosqlite.connect(path)
+    await db.execute(OLD_SCHEMA)
+    await cases.migrate(db)
+    for i, (action, user_id) in enumerate([("warn", 1), ("mute", 1), ("tempban", 2), ("kick", 3)]):
+        duration = "1小时" if action in ("mute", "tempban") else ""
+        await cases.next_case(db, 100, action, user_id, 9, f"原因{i}", duration, float(i))
+    await cases.next_case(db, 200, "warn", 1, 9, "别的服务器", "", 9.0)
+    return db
+
+
+async def test_get_and_recent_cases(tmp_path):
+    db = await _fresh(tmp_path / "c.db")
+    try:
+        case = await cases.get_case(db, 100, 2)
+        assert case == {
+            "case_no": 2, "action": "mute", "user_id": 1, "mod_id": 9,
+            "reason": "原因1", "duration": "1小时", "created_at": 1.0,
+        }
+        assert await cases.get_case(db, 100, 99) is None
+        assert [c["case_no"] for c in await cases.recent_cases(db, 100)] == [4, 3, 2, 1]
+        assert [c["case_no"] for c in await cases.recent_cases(db, 100, limit=2)] == [4, 3]
+        assert [c["case_no"] for c in await cases.recent_cases(db, 100, actions=("mute", "tempban"))] == [3, 2]
+        assert await cases.latest_case_no(db, 100, 1, "mute") == 2
+        assert await cases.latest_case_no(db, 100, 3, "mute") is None
+    finally:
+        await db.close()
+
+
+async def test_set_reason_and_duration(tmp_path):
+    db = await _fresh(tmp_path / "c.db")
+    try:
+        assert await cases.set_reason(db, 100, 1, "改过的原因") is True
+        assert (await cases.get_case(db, 100, 1))["reason"] == "改过的原因"
+        assert await cases.set_duration(db, 100, 2, "2小时") is True
+        assert (await cases.get_case(db, 100, 2))["duration"] == "2小时"
+        assert await cases.set_reason(db, 100, 99, "x") is False
+        assert await cases.set_duration(db, 300, 1, "x") is False
+        assert (await cases.get_case(db, 200, 1))["reason"] == "别的服务器"
+    finally:
+        await db.close()

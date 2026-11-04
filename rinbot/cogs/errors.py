@@ -72,6 +72,9 @@ def notice_for(error, *, command=None, slash: bool = False, now: float | None = 
     """把指令错误转成给用户看的提示；None=不回复；UNEXPECTED=未知错误，需要上报。"""
     if isinstance(error, commands.HybridCommandError):
         error = error.original
+    # 指令代码里主动抛出的指令错误（如权限不够、时长不对）在前缀调用里会被包一层
+    if isinstance(error, commands.CommandInvokeError) and isinstance(error.original, commands.CommandError):
+        error = error.original
     if isinstance(error, commands.CommandNotFound):
         return None
     if isinstance(error, (commands.MissingPermissions, app_commands.MissingPermissions)):

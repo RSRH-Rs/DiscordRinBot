@@ -31,9 +31,9 @@ from typing import Literal, Optional
 
 from rincore import cases, durations
 from rincore.cases import ACTION_NAMES
-from rincore.embeds import event_kind
+from rincore.embeds import EVENT_KINDS, event_kind
 from _messages import Notice, embed, send_notice
-from _inputs import Duration, SlashRange, choices, duration_autocomplete
+from _inputs import Duration, SlashRange, choices, duration_autocomplete, is_zh
 
 DB_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "moderation.db"
@@ -134,6 +134,34 @@ class Moderation(commands.Cog):
             row = await cursor.fetchone()
             return dict(row) if row else {}
 
+    def _case_embed(self, case: dict, remaining: Optional[datetime.datetime] = None) -> discord.Embed:
+        """一个案件的卡片：管理日志和 /case view 共用；remaining 是生效中的处罚的解除时间。"""
+        fields = [
+            ("成员", f"<@{case['user_id']}>（{case['user_id']}）"),
+            ("管理员", f"<@{case['mod_id']}>"),
+            ("时长", case["duration"]),
+            ("原因", case["reason"], False),
+        ]
+        if remaining is not None:
+            fields.append(("剩余", f"<t:{int(remaining.timestamp())}:R>"))
+        return embed(
+            EVENT_KINDS.get(case["action"], "log"),
+            f"案件 #{case['case_no']}：{ACTION_NAMES.get(case['action'], case['action'])}",
+            fields=fields,
+            timestamp=datetime.datetime.fromtimestamp(case["created_at"], tz=datetime.timezone.utc),
+        )
+
+    async def _send_log(self, guild: discord.Guild, e: discord.Embed) -> None:
+        """发到管理日志频道；没设置或发不出去时静默。"""
+        config = await self._get_config(guild.id)
+        channel = guild.get_channel(config.get("log_channel", 0) or 0)
+        if channel is None:
+            return
+        try:
+            await channel.send(embed=e)
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
     async def _log_case(
         self,
         guild: discord.Guild,
@@ -152,28 +180,14 @@ class Moderation(commands.Cog):
             )
 
         # 发送到日志频道
-        config = await self._get_config(guild.id)
-        log_ch_id = config.get("log_channel", 0)
-        if log_ch_id:
-            channel = guild.get_channel(log_ch_id)
-            if channel:
-                e = embed(
-                    event_kind(action),
-                    f"案件 #{case_id}：{ACTION_NAMES.get(action, action)}",
-                    fields=[
-                        ("成员", f"{user.mention}（{user.id}）"),
-                        ("管理员", mod.mention),
-                        ("时长", duration),
-                        ("原因", reason, False),
-                    ],
-                    timestamp=discord.utils.utcnow(),
-                )
-                e.set_thumbnail(url=user.display_avatar.url)
-
-                try:
-                    await channel.send(embed=e)
-                except discord.Forbidden:
-                    pass
+        e = self._case_embed(
+            {
+                "case_no": case_id, "action": action, "user_id": user.id, "mod_id": mod.id,
+                "reason": reason, "duration": duration, "created_at": now,
+            }
+        )
+        e.set_thumbnail(url=user.display_avatar.url)
+        await self._send_log(guild, e)
 
         return case_id
 
@@ -793,14 +807,50 @@ class Moderation(commands.Cog):
         await ctx.send(f"🔓 {channel.mention} 已解锁。")
 
     # ═══════════════════════════════════════
-    #  指令：modlog
+    #  指令：case list / view / reason / duration
     # ═══════════════════════════════════════
 
-    @commands.hybrid_command(name="modlog", description="查看管理操作日志")
+    async def _get_case(self, guild_id: int, case_no: int) -> Optional[dict]:
+        async with aiosqlite.connect(DB_PATH) as db:
+            return await cases.get_case(db, guild_id, case_no)
+
+    async def _active_until(self, guild: discord.Guild, case: dict) -> Optional[datetime.datetime]:
+        """禁言或临时封禁还在生效时返回解除时间；已到期、成员已离开、已解封或不是最新那次时返回 None。"""
+        action = case["action"]
+        if action not in ("mute", "tempban"):
+            return None
+        async with aiosqlite.connect(DB_PATH) as db:
+            if await cases.latest_case_no(db, guild.id, case["user_id"], action) != case["case_no"]:
+                return None
+            if action == "tempban":
+                cursor = await db.execute(
+                    "SELECT unban_at FROM tempbans WHERE guild_id = ? AND user_id = ?",
+                    (guild.id, case["user_id"]),
+                )
+                row = await cursor.fetchone()
+                return datetime.datetime.fromtimestamp(row[0], tz=datetime.timezone.utc) if row else None
+        member = guild.get_member(case["user_id"])
+        until = getattr(member, "timed_out_until", None)
+        return until if until is not None and until > discord.utils.utcnow() else None
+
+    def _case_label(self, guild: discord.Guild, case: dict) -> str:
+        member = guild.get_member(case["user_id"])
+        name = member.display_name if member else str(case["user_id"])
+        action = ACTION_NAMES.get(case["action"], case["action"])
+        return f"#{case['case_no']} {action} {name} {(case['reason'] or '')[:30]}"
+
+    @commands.hybrid_group(name="case", description="View and edit moderation cases")
     @commands.guild_only()
     @require(manage_messages=True)
-    async def modlog(self, ctx, member: discord.User = None, page: int = 1):
-        """查看管理日志，可按成员筛选"""
+    async def case_group(self, ctx):
+        if ctx.invoked_subcommand is None:
+            await ctx.send("用法：`r!case list [成员] [页码]`、`r!case view <案件>`、`r!case reason <案件> <原因>`、`r!case duration <案件> <时长>`")
+
+    @case_group.command(name="list", description="List moderation cases, optionally for one member")
+    @app_commands.describe(member="Only show cases for this member", page="Which page to show")
+    @commands.guild_only()
+    @require(manage_messages=True)
+    async def case_list(self, ctx, member: discord.User = None, page: commands.Range[int, 1, None] = 1):
         items_per_page = 10
 
         async with aiosqlite.connect(DB_PATH) as db:
@@ -821,14 +871,12 @@ class Moderation(commands.Cog):
             return
 
         total_pages = max(1, (len(rows) + items_per_page - 1) // items_per_page)
-        page = max(1, min(page, total_pages))
+        page = min(page, total_pages)
         start = (page - 1) * items_per_page
         end = start + items_per_page
 
         fields = []
-        for case_id, action, user_id, mod_id, reason, duration, created_at in rows[
-            start:end
-        ]:
+        for case_id, action, user_id, mod_id, reason, duration, created_at in rows[start:end]:
             dur_info = f" | 时长: {duration}" if duration else ""
             fields.append(
                 (
@@ -845,6 +893,115 @@ class Moderation(commands.Cog):
         )
         await ctx.send(embed=e)
 
+    @case_group.command(name="view", description="Show one case")
+    @app_commands.describe(case="The case to show; pick from the list")
+    @commands.guild_only()
+    @require(manage_messages=True)
+    async def case_view(self, ctx, case: int):
+        row = await self._get_case(ctx.guild.id, case)
+        if row is None:
+            await send_notice(ctx, Notice("error", f"找不到案件 #{case}"))
+            return
+        await ctx.send(embed=self._case_embed(row, await self._active_until(ctx.guild, row)))
+
+    @case_group.command(name="reason", description="Change the reason of a case")
+    @app_commands.describe(case="The case to change; pick from the list", reason="The new reason")
+    @commands.guild_only()
+    @require(manage_messages=True)
+    async def case_reason(self, ctx, case: int, *, reason: str):
+        row = await self._get_case(ctx.guild.id, case)
+        if row is None:
+            await send_notice(ctx, Notice("error", f"找不到案件 #{case}"))
+            return
+        async with aiosqlite.connect(DB_PATH) as db:
+            await cases.set_reason(db, ctx.guild.id, case, reason)
+        await self._send_log(
+            ctx.guild,
+            embed(
+                "warning",
+                f"案件 #{case}：原因已更新",
+                fields=[("之前", row["reason"], False), ("之后", reason, False), ("管理员", ctx.author.mention)],
+                timestamp=discord.utils.utcnow(),
+            ),
+        )
+        await send_notice(ctx, Notice("success", f"案件 #{case} 的原因已更新"))
+
+    @case_group.command(name="duration", description="Change how long an active timeout or temporary ban lasts")
+    @app_commands.describe(case="The active timeout or temporary ban; pick from the list", duration="The new length, counted from now")
+    @commands.guild_only()
+    @require(manage_messages=True)
+    async def case_duration(self, ctx, case: int, duration: str):
+        row = await self._get_case(ctx.guild.id, case)
+        if row is None:
+            await send_notice(ctx, Notice("error", f"找不到案件 #{case}"))
+            return
+        if await self._active_until(ctx.guild, row) is None:
+            await send_notice(ctx, Notice("error", "这个案件没有可以修改的时长"))
+            return
+        mute = row["action"] == "mute"
+        needed = "moderate_members" if mute else "ban_members"
+        if not getattr(ctx.author.guild_permissions, needed):
+            raise commands.MissingPermissions([needed])
+        if not getattr(ctx.guild.me.guild_permissions, needed):
+            raise commands.BotMissingPermissions([needed])
+        seconds = await Duration("mute" if mute else "ban")().convert(ctx, duration)
+        new_until = discord.utils.utcnow() + datetime.timedelta(seconds=seconds)
+        if mute:
+            await ctx.guild.get_member(row["user_id"]).timeout(new_until, reason=f"{ctx.author}: 修改案件 #{case} 的时长")
+        else:
+            async with aiosqlite.connect(DB_PATH) as db:
+                await db.execute(
+                    "UPDATE tempbans SET unban_at = ? WHERE guild_id = ? AND user_id = ?",
+                    (time.time() + seconds, ctx.guild.id, row["user_id"]),
+                )
+                await db.commit()
+        text = self._format_duration(seconds)
+        async with aiosqlite.connect(DB_PATH) as db:
+            await cases.set_duration(db, ctx.guild.id, case, text)
+        await self._send_log(
+            ctx.guild,
+            embed(
+                "warning",
+                f"案件 #{case}：时长已更新",
+                fields=[("之前", row["duration"] or "—"), ("之后", text), ("管理员", ctx.author.mention)],
+                timestamp=discord.utils.utcnow(),
+            ),
+        )
+        await send_notice(ctx, Notice("success", f"案件 #{case} 将在 <t:{int(new_until.timestamp())}:R> 解除"))
+
+    case_duration.autocomplete("duration")(duration_autocomplete("mute"))
+
+    @case_view.autocomplete("case")
+    @case_reason.autocomplete("case")
+    async def _case_autocomplete(self, interaction: discord.Interaction, current: str):
+        if interaction.guild is None:
+            return []
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                rows = await cases.recent_cases(db, interaction.guild.id)
+        except Exception:
+            return []
+        return choices([(self._case_label(interaction.guild, c), c["case_no"]) for c in rows], current)
+
+    @case_duration.autocomplete("case")
+    async def _case_duration_autocomplete(self, interaction: discord.Interaction, current: str):
+        if interaction.guild is None:
+            return []
+        try:
+            async with aiosqlite.connect(DB_PATH) as db:
+                rows = await cases.recent_cases(db, interaction.guild.id, limit=50, actions=("mute", "tempban"))
+            items = []
+            for case in rows:
+                until = await self._active_until(interaction.guild, case)
+                if until is None:
+                    continue
+                left = max(60, int((until - discord.utils.utcnow()).total_seconds()) // 60 * 60)
+                zh = is_zh(interaction)
+                suffix = f" 剩 {durations.label(left, True)}" if zh else f" {durations.label(left, False)} left"
+                items.append((self._case_label(interaction.guild, case) + suffix, case["case_no"]))
+        except Exception:
+            return []
+        return choices(items, current)
 
 async def setup(bot):
     await bot.add_cog(Moderation(bot))
