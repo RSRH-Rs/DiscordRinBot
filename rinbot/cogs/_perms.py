@@ -29,6 +29,8 @@ def owner_only():
 
     def decorator(func):
         func = commands.is_owner()(func)
+        # 开发服务器里也只让管理员看到（主人本人是管理员）
+        func = app_commands.default_permissions(administrator=True)(func)
         func = (app_commands.guilds(DEV_GUILD_ID) if DEV_GUILD_ID else app_commands.guilds())(func)
         func.__rinbot_owner_only__ = True
         return func

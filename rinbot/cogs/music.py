@@ -1388,7 +1388,7 @@ class Music(commands.Cog):
             except Exception:
                 n = "?"
             fields.append((name, f"{n} 首"))
-        await ctx.send(embed=card("info", "已保存的队列", fields=fields))
+        await ctx.send(embed=embed("info", "已保存的队列", fields=fields))
 
     @commands.hybrid_command(name="delqueue", aliases=["delq"], description="删除一个队列存档")
     @commands.guild_only()

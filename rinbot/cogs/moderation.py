@@ -937,24 +937,6 @@ class Moderation(commands.Cog):
                 },
             )
 
-    # ═══════════════════════════════════════
-    #  全局错误处理
-    # ═══════════════════════════════════════
-
-    async def cog_command_error(self, ctx, error):
-        if isinstance(error, commands.MissingPermissions):
-            perms = ", ".join(error.missing_permissions)
-            await ctx.send(f"🚫 你缺少权限: `{perms}`", ephemeral=True)
-        elif isinstance(error, commands.BotMissingPermissions):
-            perms = ", ".join(error.missing_permissions)
-            await ctx.send(f"🚫 我缺少权限: `{perms}`", ephemeral=True)
-        elif isinstance(error, commands.MemberNotFound):
-            await ctx.send("❌ 找不到该成员。", ephemeral=True)
-        elif isinstance(error, commands.BadArgument):
-            await ctx.send(f"❌ 参数错误: {error}", ephemeral=True)
-        else:
-            raise error
-
 
 async def setup(bot):
     await bot.add_cog(Moderation(bot))

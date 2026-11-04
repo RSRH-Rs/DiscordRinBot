@@ -458,8 +458,8 @@ class Welcome(commands.Cog):
             files.append(custom_file)
             card.set_image(url=f"attachment://{custom_filename}")
         elif config.get("show_card", 0):
-            card = await self._render_card_file(member)
-            files.append(card)
+            banner = await self._render_card_file(member)
+            files.append(banner)
             card.set_image(url="attachment://welcome.png")
 
         try:
@@ -580,8 +580,8 @@ class Welcome(commands.Cog):
             files.append(custom_file)
             card.set_image(url=f"attachment://{custom_filename}")
         elif config.get("show_card", 0):
-            card = await self._render_card_file(ctx.author)
-            files.append(card)
+            banner = await self._render_card_file(ctx.author)
+            files.append(banner)
             card.set_image(url="attachment://welcome.png")
         await ctx.send(embed=card, files=files)
 
