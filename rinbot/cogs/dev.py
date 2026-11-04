@@ -9,7 +9,8 @@ from typing import Literal, Optional
 from io import StringIO
 import contextlib
 
-COGS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# cogs/ 目录本身；和 main.py 一样只把不以 _ 开头的 .py 当作扩展
+COGS_DIR = os.path.dirname(os.path.abspath(__file__))
 EVAL_ENABLED = os.getenv("RINBOT_ENABLE_EVAL", "0").strip().lower() in {
     "1",
     "true",
@@ -67,7 +68,9 @@ class Dev(commands.Cog):
     def _all_cog_exts(self) -> list[str]:
         if not os.path.isdir(COGS_DIR):
             return []
-        return [f"cogs.{f[:-3]}" for f in os.listdir(COGS_DIR) if f.endswith(".py")]
+        return sorted(
+            f"cogs.{f[:-3]}" for f in os.listdir(COGS_DIR) if f.endswith(".py") and not f.startswith("_")
+        )
 
     # ──────────────── 指令：hot_update ────────────────
 
