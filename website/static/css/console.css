@@ -234,6 +234,7 @@ img { max-width: 100%; }
 .page-head-text { flex: 1; min-width: 0; }
 .page-head h1, .page-head h2 { font: 600 22px/1.35 var(--font-body); overflow-wrap: anywhere; }
 .page-head p { margin-top: 4px; color: var(--muted); }
+.page-head h2:focus { outline: none; }
 .master-hint { margin: -16px 0 16px; color: var(--warn); font-size: 13px; }
 .tab-panel > .section { margin: 0; }
 
@@ -282,7 +283,7 @@ img { max-width: 100%; }
 .tog-on, .tog-off { font-size: 13px; color: var(--muted); white-space: nowrap; }
 .tog input:checked ~ .tog-off, .tog input:not(:checked) ~ .tog-on { display: none; }
 .tog input { position: absolute; inset: -9px 0; margin: 0; opacity: 0; cursor: inherit; z-index: 1; }
-.tog-track { width: 100%; height: 100%; border-radius: 999px; background: var(--field-line); transition: background .15s; }
+.tog-track { position: relative; width: 100%; height: 100%; border-radius: 999px; background: var(--field-line); transition: background .15s; }
 .tog-track::after {
     content: "";
     position: absolute;

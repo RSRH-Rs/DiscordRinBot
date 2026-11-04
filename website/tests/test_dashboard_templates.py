@@ -243,7 +243,7 @@ class DashboardTemplateTests(unittest.TestCase):
             html,_=self.render(name)
             for value in ['light','','dark']:
                 self.assertEqual(html.count(f'data-theme-set="{value}"'),1,f'{name} {value!r}')
-            self.assertIn('js/theme.js?v=20261104a',html)
+            self.assertIn('js/theme.js?v=20261104b',html)
 
     def test_role_panel_preview_matches_the_bot(self):
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
@@ -482,6 +482,20 @@ class DashboardTemplateTests(unittest.TestCase):
         # 开启/已关闭 sits left of the track so the track's right edge meets the row switches' right edge
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
         self.assertIn('flex-direction: row-reverse',re.search(r'\n\.tog--head\s*\{([^}]*)\}',css).group(1))
+
+    def test_switch_knob_sits_on_its_track(self):
+        # the knob is absolutely placed; with the label text in front of the track (page heads) it must
+        # measure from the track, not from the whole switch, or it lands on 开启/已关闭
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('position: relative',re.search(r'\n\.tog-track\s*\{([^}]*)\}',css).group(1))
+        self.assertIn('position: absolute',re.search(r'\n\.tog-track::after\s*\{([^}]*)\}',css).group(1))
+
+    def test_page_title_takes_focus_without_a_ring(self):
+        # switching pages moves focus to the title for screen readers; the title is not a control, so no ring
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        self.assertIn('outline: none',re.search(r'\n\.page-head h2:focus\s*\{([^}]*)\}',css).group(1))
+        js=(ROOT/'static/js/console-core.js').read_text(encoding='utf-8')
+        self.assertIn("heading.tabIndex = -1; heading.focus(",js)
 
     def test_giveaway_form_is_flat_rows(self):
         html,_=self.render('server.html')
