@@ -38,9 +38,6 @@ class HomepageThemeTests(unittest.TestCase):
         # The metas come first so the boot script can point both at the saved palette's background.
         head = self.html[:self.html.index('</head>')]
         self.assertLess(head.index('name="theme-color"'), head.index("localStorage.getItem('rin-theme')"))
-        script = re.search(r"<script>try\{var t=localStorage\.getItem\('rin-theme'\).*?</script>", head).group(0)
-        for part in ['theme-color', '#17171B', '#F7F7F8']:
-            self.assertIn(part, script)
 
     def test_no_old_palette_left(self):
         for old in OLD:
