@@ -126,3 +126,23 @@ async def test_commands_page(client):
     nav = re.search(r'<nav class="nav".*?</nav>', html, re.S).group(0)
     assert re.search(r'<a href="/commands" class="nav-link" aria-current="page">', nav)
     assert 'class="has-side"' in html and 'data-spy="g-Music"' in html
+
+
+async def test_permissions_page(client):
+    import html as htmllib
+    import re
+    import site_data
+    r = await client.get("/permissions")
+    html = await r.get_data(as_text=True)
+    assert r.status_code == 200
+    assert html.count('data-l="zh"') == html.count('data-l="en"')
+    bits = [int(b) for b in re.findall(r'<input type="checkbox" data-bit="(\d+)" checked', html)]
+    assert bits == [p["bit"] for p in site_data.PERMISSIONS]
+    side = re.search(r'<aside class="side-sum".*?</aside>', html, re.S).group(0)
+    assert htmllib.unescape(re.search(r'<a class="btn"[^>]*href="([^"]+)"', side).group(1)) == site_data.invite_url()
+    assert 'id="role-order"' in html
+    for entry in site_data.NEVER:
+        assert entry["zh"] in html and entry["en"] in html
+    nav = re.search(r'<footer.*?</footer>', html, re.S).group(0)
+    assert re.search(r'<a href="/permissions" aria-current="page">', nav)
+    assert 'class="has-side"' not in html

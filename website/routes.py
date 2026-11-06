@@ -928,6 +928,13 @@ def setup_routes(app, discord):
             groups=site_data.COMMAND_GROUPS, perm_labels=site_data.PERM_LABELS,
         )
 
+    @app.route("/permissions")
+    async def permissions_page():
+        return await _site_page(
+            "permissions.html", perm_groups=site_data.PERMISSION_GROUPS,
+            permissions=site_data.PERMISSIONS, never=site_data.NEVER,
+        )
+
     @app.route("/privacy")
     async def privacy():
         return await _site_page("privacy.html", contact_email=CONTACT_EMAIL)

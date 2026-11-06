@@ -72,6 +72,14 @@ class PageCssTests(unittest.TestCase):
         self.assertIn('max-height', panel)
         self.assertIn('overflow-y: auto', panel)
 
+    def test_permissions_page_works_without_script(self):
+        css = self.read('permissions.css')
+        self.assertLessEqual(font_sizes(css), PAGE_SIZES)
+        self.assertIn(':has(input:not(:checked))', css)
+        ticked = re.search(r'input:checked\s*\{([^}]*)\}', css).group(1)
+        self.assertIn('var(--dc-name)', ticked)
+        self.assertNotIn('--accent', ticked)
+
     def test_legal_prose_is_narrow_and_the_table_is_wider(self):
         css = self.read('legal.css')
         self.assertRegex(css, r'max-width:\s*38em')

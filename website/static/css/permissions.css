@@ -1,0 +1,66 @@
+/* 邀请权限：仿 Discord 邀请页的勾选列表是整页唯一显眼的地方；取消勾选后的橙色提示比勾选框更醒目。 */
+.perms { padding-top: 44px; padding-bottom: 96px; font-family: var(--read); font-size: 15px; line-height: 1.6; }
+.perms .head h1 { font: 600 40px/1.15 var(--display); margin-bottom: 8px; }
+.perms .head p { color: var(--muted); max-width: 60ch; }
+.perms .grid { margin-top: 32px; display: grid; grid-template-columns: minmax(0, 640px) 360px; gap: 48px; align-items: start; }
+
+.auth { background: var(--dc-bg); color: var(--dc-text); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; }
+.auth-top { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--dc-line); }
+.auth-top img { width: 44px; height: 44px; border-radius: 50%; }
+.auth-top b { display: block; color: var(--dc-name); font-size: 15px; }
+.auth-top span { color: var(--dc-muted); font-size: 14px; }
+.auth-group { padding: 6px 20px 10px; }
+.auth-group + .auth-group { border-top: 1px solid var(--dc-line); }
+.auth-group h2 { margin: 12px 0 4px; font-size: 12.5px; font-weight: 700; color: var(--dc-muted); }
+.perm { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; padding: 9px 0; cursor: pointer; }
+.perm input { appearance: none; -webkit-appearance: none; margin: 2px 0 0; width: 20px; height: 20px; border: 2px solid var(--field-line); border-radius: 5px; display: grid; place-items: center; cursor: pointer; background: var(--dc-bg); transition: background .12s, border-color .12s; }
+.perm input:checked { background: var(--dc-name); border-color: var(--dc-name); }
+.perm input:checked::after { content: ''; width: 5px; height: 10px; border: solid var(--dc-bg); border-width: 0 2.5px 2.5px 0; transform: translateY(-1px) rotate(45deg); }
+.perm .name { font-weight: 600; color: var(--dc-name); }
+.perm .why { display: block; color: var(--dc-muted); font-size: 14px; }
+.perm .lose { display: none; margin-top: 6px; padding: 6px 10px; border-radius: 6px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
+/* 取消勾选：不靠脚本，划掉名称并亮出后果 */
+.perm:has(input:not(:checked)) .name { color: var(--dc-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.perm:has(input:not(:checked)) .lose { display: block; }
+
+.side-sum { position: sticky; top: 88px; display: grid; gap: 16px; }
+.side-sum h3 { font: 600 19px var(--display); }
+.side-sum p { color: var(--muted); font-size: 14px; }
+.side-sum .all-ok { color: var(--ok); font-weight: 600; }
+.side-sum ul { list-style: none; display: grid; gap: 6px; font-size: 14px; margin-top: 6px; }
+.side-sum li { padding-left: 12px; border-left: 2px solid var(--warn); }
+.side-sum li b { font-weight: 600; }
+.sum-acts { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; }
+.sum-acts .btn { font-size: 15px; padding: 10px 18px; }
+.reset { border: 0; background: none; color: var(--accent-text); font: inherit; font-size: 14px; padding: 0; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+
+.perms .sec { margin-top: 56px; max-width: 640px; }
+.perms .sec h2 { font: 600 19px var(--display); }
+.perms .sec .intro { margin: 4px 0 12px; color: var(--muted); font-size: 14px; }
+.flat { list-style: none; border-top: 1px solid var(--line); }
+.flat li { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.flat li b { font-weight: 600; font-size: 15px; }
+.flat li span { color: var(--muted); }
+
+.roles { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 32px; align-items: center; }
+.roles p { margin-bottom: 10px; }
+.roles p.muted { color: var(--muted); font-size: 14px; }
+.roles ol { list-style: none; background: var(--dc-bg); color: var(--dc-text); border: 1px solid var(--line); border-radius: 12px; padding: 10px; box-shadow: var(--shadow-sm); }
+.roles ol li { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; font-size: 14px; }
+.roles ol li i { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.roles ol li.me { background: var(--accent-soft); color: var(--text); font-weight: 600; }
+.roles ol li.me i { background: var(--accent); }
+.roles ol li .hint { margin-left: auto; font-size: 12.5px; color: var(--muted); font-weight: 400; }
+
+@media (max-width: 1079px) {
+    .perms .grid { grid-template-columns: minmax(0, 1fr); }
+    .side-sum { position: static; }
+    .perms .sec { max-width: none; }
+}
+@media (max-width: 640px) {
+    .perms { padding-top: 28px; padding-bottom: 80px; }
+    .perms .head h1 { font-size: 32px; }
+    .auth-group, .auth-top { padding-left: 14px; padding-right: 14px; }
+    .flat li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .roles { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}

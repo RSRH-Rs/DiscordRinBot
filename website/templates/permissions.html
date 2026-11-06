@@ -1,0 +1,84 @@
+{%- set active_nav = 'permissions' -%}
+{%- extends '_site_base.html' -%}
+{%- from '_site_macros.html' import t -%}
+
+{% block title %}邀请权限 · 小凛Rinbot{% endblock %}
+{% block description %}邀请小凛时 Discord 会列出的 16 项权限：每项用来做什么，取消后哪些功能会受影响。{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/permissions.css') }}">
+{%- endblock %}
+
+{% block content %}
+<div class="wrap perms">
+    <div class="head">
+        <h1>{{ t('邀请小凛时要的权限', 'What Rin asks for when you invite her') }}</h1>
+        <p>{{ t('点“邀请小凛”后，Discord 会列出下面这 16 项让你勾选。每项都写了小凛拿它做什么。不想给的可以取消勾选，这里会告诉你哪些功能会受影响。', 'After you click Invite, Discord lists these 16 permissions for you to tick. Each one says what Rin uses it for. Untick any you don’t want to give, and this page shows what stops working.') }}</p>
+    </div>
+
+    <div class="grid">
+        <div class="auth">
+            <div class="auth-top">
+                <img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="44" height="44">
+                <div><b>{{ t('小凛 想在你的服务器里获得这些权限', 'Rin would like these permissions in your server') }}</b><span>{{ t('和 Discord 邀请页上的一样，顺序可能不同', 'Same as on Discord’s invite page, the order may differ') }}</span></div>
+            </div>
+            {%- for g in perm_groups %}
+            <div class="auth-group" role="group" aria-labelledby="pg-{{ g.key }}">
+                <h2 id="pg-{{ g.key }}">{{ t(g.zh, g.en) }}</h2>
+                {%- for p in permissions if p.group == g.key %}
+                <label class="perm"><input type="checkbox" data-bit="{{ p.bit }}" checked>
+                    <span><span class="name">{{ t(p.zh, p.en) }}</span><span class="why">{{ t(p.why_zh, p.why_en) }}</span><span class="lose">{{ t('取消后：' ~ p.lose_zh, 'Without it: ' ~ p.lose_en) }}</span></span></label>
+                {%- endfor %}
+            </div>
+            {%- endfor %}
+        </div>
+
+        <aside class="side-sum" id="sum" aria-live="polite">
+            <div id="sum-body">
+                <h3>{{ t('全部勾选', 'Everything ticked') }}</h3>
+                <p class="all-ok">{{ t('所有功能都能用。', 'Every feature works.') }}</p>
+                <p>{{ t('试着取消一项，看看会少什么。', 'Untick one to see what you’d lose.') }}</p>
+            </div>
+            <div class="sum-acts">
+                <a class="btn" id="invite" href="{{ invite_url }}" target="_blank" rel="noopener">{{ t('邀请小凛', 'Invite Rin') }}</a>
+                <button type="button" class="reset" id="reset" hidden>{{ t('全部勾回', 'Tick all again') }}</button>
+            </div>
+            <p class="hint">{{ t('Discord 的邀请页上也能取消勾选，效果一样。', 'You can also untick boxes on Discord’s invite page; it works the same.') }}</p>
+        </aside>
+    </div>
+
+    <section class="sec" id="role-order">
+        <h2>{{ t('邀请之后：把小凛的身份组往上拖', 'After inviting: drag Rin’s role up') }}</h2>
+        <p class="intro">{{ t('Discord 规定，机器人只能给比自己低的身份组发放、只能处罚比自己低的成员。权限都给了，位置不对也会失败。', 'Discord only lets a bot hand out roles below its own and act on members below it. Even with every permission, the wrong position makes it fail.') }}</p>
+        <div class="roles">
+            <div>
+                <p>{{ t('在 Discord 的「服务器设置 › 身份组」里，把「小凛」拖到要自动发放的身份组上面。', 'In Discord, open Server Settings › Roles and drag “Rin” above the roles she should hand out.') }}</p>
+                <p class="muted">{{ t('管理员的身份组可以留在小凛上面，这样小凛就管不到他们。', 'Keep your admins’ roles above Rin so she can’t act on them.') }}</p>
+            </div>
+            <ol aria-label="示例身份组顺序" data-i18n-aria="roles">
+                <li><i style="background:#E67E22"></i>{{ t('管理员', 'Admin') }}</li>
+                <li class="me"><i></i>{{ t('小凛', 'Rin') }}<span class="hint">{{ t('放在这里', 'put her here') }}</span></li>
+                <li><i style="background:#3BA55C"></i>{{ t('新朋友', 'New friend') }}</li>
+                <li><i style="background:#5865F2"></i>{{ t('成员', 'Member') }}</li>
+                <li><i style="background:#99AAB5"></i>@everyone</li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="sec" id="never">
+        <h2>{{ t('小凛不会要的权限', 'Permissions Rin never asks for') }}</h2>
+        <p class="intro">{{ t('这些权限太大，小凛用不到，邀请链接里也没有。', 'These are too broad for what Rin does, so the invite link leaves them out.') }}</p>
+        <ul class="flat">
+            {%- for n in never %}
+            <li><b>{{ t(n.zh, n.en) }}</b><span>{{ t(n.why_zh, n.why_en) }}</span></li>
+            {%- endfor %}
+        </ul>
+    </section>
+</div>
+<script type="application/json" id="perms-data">{{ {'permissions': permissions}|tojson }}</script>
+{%- endblock %}
+
+{% block attr_i18n %}{"zh": {"title": "邀请权限 · 小凛Rinbot", "description": "邀请小凛时 Discord 会列出的 16 项权限：每项用来做什么，取消后哪些功能会受影响。", "toggle": "Switch to English", "roles": "示例身份组顺序"}, "en": {"title": "Invite permissions · 小凛Rinbot", "description": "The 16 permissions Discord lists when you invite Rin: what each is for and what stops working without it.", "toggle": "切换到中文", "roles": "Example role order"}}{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/permissions.js') }}"></script>
+{%- endblock %}
