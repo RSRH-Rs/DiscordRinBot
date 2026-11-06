@@ -1,10 +1,10 @@
-// Homepage boot script: runs the inline script from index.html against a fake document and storage.
+// Public site boot script: runs the inline theme script from the shared shell (_site_base.html) against a fake document and storage.
 const {test} = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
-const html = fs.readFileSync(path.join(__dirname, '../templates/index.html'), 'utf8');
+const html = fs.readFileSync(path.join(__dirname, '../templates/_site_base.html'), 'utf8');
 const script = html.match(/<script>(try\{var t=localStorage\.getItem\('rin-theme'\).*?)<\/script>/)[1];
 
 function boot(saved) {
