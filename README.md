@@ -14,7 +14,7 @@
 
 A multi-server Discord bot built from scratch, with music, leveling, moderation, welcome cards, reaction roles, giveaways, auto-moderation and audit logging. It comes with a full web dashboard for managing every module from the browser, and dashboard changes reach the bot within seconds.
 
-[Invite RinBot](https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands) · [Dashboard](https://rin-bot.com/dashboard) · [Report Bug](https://github.com/RSRH-Rs/DiscordRinBot/issues)
+[Invite RinBot](https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands) · [Dashboard](https://rin-bot.com/dashboard) · [Report Bug](https://github.com/RSRH-Rs/DiscordRinBot/issues)
 
 </div>
 
@@ -50,6 +50,14 @@ The bot also runs some modules in the background:
 ### Web Dashboard
 
 Built with Quart + Discord OAuth2. Live at [rin-bot.com](https://rin-bot.com).
+
+Public pages, in Chinese and English:
+
+- **[Commands](https://rin-bot.com/commands).** Every slash command, searchable, with a Discord-style preview of how to fill it in and who can use it.
+- **[Invite permissions](https://rin-bot.com/permissions).** What each of the 16 invite permissions is for and what stops working without it.
+- **[Privacy](https://rin-bot.com/privacy) and [Terms](https://rin-bot.com/terms).**
+
+The dashboard:
 
 - **OAuth2 login.** Detects the servers where you have Manage Server.
 - **Module panels.** Configure welcome (with image uploads), auto-mod, moderation thresholds, music, bot log and server log.
@@ -154,7 +162,7 @@ cp rinbot/config.example.py rinbot/config.py
 cp website/config.example.py website/config.py
 ```
 
-In `rinbot/config.py`, fill in `TOKEN`, `DEV_GUILD_ID` and `OWNER_ID`. In `website/config.py`, fill in the same bot token, a `SECRET_KEY`, and your OAuth2 client ID, secret and redirect URI. Both files are git-ignored.
+In `rinbot/config.py`, fill in `TOKEN`, `DEV_GUILD_ID` and `OWNER_ID`. In `website/config.py`, fill in the same bot token, a `SECRET_KEY`, your OAuth2 client ID, secret and redirect URI, and optionally `CONTACT_EMAIL` (shown on the privacy page; empty points people to GitHub issues). Both files are git-ignored.
 
 > Enable **Server Members Intent** and **Message Content Intent** in the Developer Portal.
 
@@ -180,10 +188,12 @@ Tests cover core logic and use temporary SQLite databases only. They never conne
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q                       # bot + core: 143 tests
-cd website && python -m pytest -q tests   # dashboard: 28 tests
-node --test tests/*.cjs                   # dashboard UI: 33 tests (from website/)
+python -m pytest -q                       # bot, core and website pages: 593 tests
+cd website && python -m pytest -q tests   # dashboard: 131 tests
+node --test tests/*.cjs                   # dashboard and site UI: 116 tests (from website/)
 ```
+
+After changing a slash command, regenerate the website's command list with `python website/tools/build_commands.py`; `tests/test_command_catalog.py` fails until you do.
 
 ---
 

@@ -14,7 +14,7 @@
 
 从零构建的多服务器 Discord 机器人，覆盖音乐、等级、管理、迎新、身份组、抽奖、自动审核、审计日志等模块。配套的 Web 仪表盘让管理员在浏览器里就能配置所有模块，保存后几秒内同步到 Bot。
 
-[邀请小凛](https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=8&integration_type=0&scope=bot+applications.commands) · [管理面板](https://rin-bot.com/dashboard) · [问题反馈](https://github.com/RSRH-Rs/DiscordRinBot/issues)
+[邀请小凛](https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands) · [管理面板](https://rin-bot.com/dashboard) · [问题反馈](https://github.com/RSRH-Rs/DiscordRinBot/issues)
 
 </div>
 
@@ -50,6 +50,14 @@
 ### 🌐 Web 仪表盘
 
 基于 Quart + Discord OAuth2，部署在 [rin-bot.com](https://rin-bot.com)。
+
+官网页面（中英双语）：
+
+- **[指令大全](https://rin-bot.com/commands)**：全部斜杠指令，可以搜索，用 Discord 输入框的样子说明怎么填、谁能用。
+- **[邀请权限](https://rin-bot.com/permissions)**：邀请时要的 16 项权限各用来做什么，取消后哪些功能会受影响。
+- **[隐私政策](https://rin-bot.com/privacy)和[服务条款](https://rin-bot.com/terms)**。
+
+控制台：
 
 - **OAuth2 登录**：自动识别你拥有"管理服务器"权限的服务器。
 - **模块配置面板**：迎新（支持上传图片）、自动审核、管理阈值、音乐、系统日志、服务器日志。
@@ -154,7 +162,7 @@ cp rinbot/config.example.py rinbot/config.py
 cp website/config.example.py website/config.py
 ```
 
-在 `rinbot/config.py` 里填写 `TOKEN`、`DEV_GUILD_ID` 和 `OWNER_ID`；在 `website/config.py` 里填写同一个 Bot Token、`SECRET_KEY`，以及 OAuth2 的 Client ID、Secret 和回调地址。这两个文件已被 git 忽略。
+在 `rinbot/config.py` 里填写 `TOKEN`、`DEV_GUILD_ID` 和 `OWNER_ID`；在 `website/config.py` 里填写同一个 Bot Token、`SECRET_KEY`、OAuth2 的 Client ID、Secret 和回调地址，还可以填 `CONTACT_EMAIL`（显示在隐私政策里；留空就改为指向 GitHub issues）。这两个文件已被 git 忽略。
 
 > 记得在 Developer Portal 中开启 **Server Members Intent** 和 **Message Content Intent**。
 
@@ -180,10 +188,12 @@ cd website && python -m hypercorn main:app --bind 127.0.0.1:5000
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q                       # Bot 与核心逻辑：143 个测试
-cd website && python -m pytest -q tests   # 仪表盘：28 个测试
-node --test tests/*.cjs                   # 仪表盘界面：33 个测试（在 website/ 下运行）
+python -m pytest -q                       # Bot、核心逻辑和官网页面：593 个测试
+cd website && python -m pytest -q tests   # 仪表盘：131 个测试
+node --test tests/*.cjs                   # 仪表盘和官网界面：116 个测试（在 website/ 下运行）
 ```
+
+改了斜杠指令以后，运行 `python website/tools/build_commands.py` 重新生成官网的指令清单；不重新生成，`tests/test_command_catalog.py` 会失败。
 
 ---
 
