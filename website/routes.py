@@ -2,6 +2,7 @@ from quart import redirect, url_for, render_template, session, jsonify, request,
 import asyncio
 import base64
 import binascii
+import difflib
 import hashlib
 import time
 import math
@@ -19,6 +20,7 @@ from datetime import datetime, timezone
 from urllib.parse import urlparse
 
 from PIL import Image, UnidentifiedImageError
+import config
 from config import BOT_TOKEN
 from i18n import tr
 import site_data
@@ -27,6 +29,19 @@ try:
     from config import OWNER_ID
 except ImportError:
     OWNER_ID = 0
+
+# 隐私政策里写的联系邮箱；只写在服务器上的 config.py 里，没有就改指向 GitHub issues
+CONTACT_EMAIL = getattr(config, "CONTACT_EMAIL", "")
+
+# 404 页会把打错的地址和这些页面比较，猜用户要找的是哪一个
+SITE_PAGES = ("commands", "permissions", "privacy", "terms", "dashboard")
+
+
+def suggest_page(path: str) -> Optional[str]:
+    """和 path 最像的官网页面名，没有足够像的就返回 None。"""
+    matches = difflib.get_close_matches(path.strip("/").lower(), SITE_PAGES, n=1, cutoff=0.6)
+    return matches[0] if matches else None
+
 
 # Shared aiohttp session — created at app startup, closed at shutdown
 _session: Optional[aiohttp.ClientSession] = None
@@ -879,6 +894,32 @@ def setup_routes(app, discord):
         return await render_template(
             "index.html", bot=bot_info, is_logged_in=is_logged_in
         )
+
+    async def _site_page(template: str, **ctx):
+        """官网页面：和首页一样按登录状态显示"登录控制台"或"进入控制台"。"""
+        try:
+            is_logged_in = await discord.authorized
+        except Exception:
+            is_logged_in = False
+        return await render_template(template, is_logged_in=is_logged_in, **ctx)
+
+    @app.route("/privacy")
+    async def privacy():
+        return await _site_page("privacy.html", contact_email=CONTACT_EMAIL)
+
+    @app.route("/terms")
+    async def terms():
+        return await _site_page("terms.html", contact_email=CONTACT_EMAIL)
+
+    @app.errorhandler(404)
+    async def not_found(_error):
+        if request.path.startswith("/api/"):
+            return jsonify({"error": "not found"}), 404
+        page = await _site_page(
+            "not_found.html", host=request.host, path=request.path[:80],
+            suggestion=suggest_page(request.path),
+        )
+        return page, 404
 
     @app.route("/login")
     async def login():

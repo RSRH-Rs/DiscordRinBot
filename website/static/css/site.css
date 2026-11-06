@@ -52,8 +52,8 @@
     --mark: #FFE7A3;
     --dc-input: #EBEDEF;
     --dc-slot: #DFE1E5;
-    /* 正文阅读用系统字体，标题和品牌用 Fredoka */
-    --read: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    /* 正文阅读用系统字体，标题和品牌用 Fredoka。西文字体放前面：中文字体里的弯引号是全角的，英文会被撑开 */
+    --read: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
     --display: 'Fredoka', var(--read);
     color-scheme: light;
 }

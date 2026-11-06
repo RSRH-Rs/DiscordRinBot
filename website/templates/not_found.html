@@ -1,0 +1,38 @@
+{%- set active_nav = '' -%}
+{%- extends '_site_base.html' -%}
+{%- from '_site_macros.html' import t -%}
+{%- set pages = {
+    'commands': ('指令大全', 'Commands'),
+    'permissions': ('邀请权限', 'Invite permissions'),
+    'privacy': ('隐私政策', 'Privacy policy'),
+    'terms': ('服务条款', 'Terms of service'),
+    'dashboard': ('控制台', 'Dashboard'),
+} -%}
+
+{% block title %}找不到这个页面 · 小凛Rinbot{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/legal.css') }}">
+{%- endblock %}
+
+{% block content %}
+<div class="wrap legal">
+    <div class="nf">
+        <img src="{{ url_for('static', filename='images/rin/confused-480.webp') }}" alt="" width="180" height="180">
+        <div>
+            <h1>{{ t('这个页面不存在', 'This page doesn’t exist') }}</h1>
+            <p>{{ t('找不到 ', 'Couldn’t find ') }}<span class="path">{{ host }}{{ path }}</span>{{ t('。地址可能打错了，或者页面已经搬走了。', '. The address may be mistyped, or the page has moved.') }}</p>
+            {%- if suggestion %}
+            {%- set name = pages[suggestion] %}
+            <p class="sugg">{{ t('你要找的是不是 ', 'Did you mean ') }}<a href="/{{ suggestion }}">{{ t(name[0], name[1]) }}（/{{ suggestion }}）</a>{{ t('？', '?') }}</p>
+            {%- endif %}
+            <div class="actions">
+                <a class="btn" href="/">{{ t('回首页', 'Back to home') }}</a>
+                <a class="btn btn-ghost" href="/commands">{{ t('指令大全', 'Commands') }}</a>
+                <a class="btn btn-ghost" href="/dashboard">{{ t('控制台', 'Dashboard') }}</a>
+            </div>
+        </div>
+    </div>
+</div>
+{%- endblock %}
+
+{% block attr_i18n %}{"zh": {"title": "找不到这个页面 · 小凛Rinbot", "toggle": "Switch to English"}, "en": {"title": "Page not found · 小凛Rinbot", "toggle": "切换到中文"}}{% endblock %}

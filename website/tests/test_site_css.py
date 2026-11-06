@@ -52,5 +52,23 @@ class SiteCssTests(unittest.TestCase):
         self.assertIn('animation: none', blocks[0])
 
 
+PAGE_SIZES = {12.5, 14, 15, 16, 19, 24, 32, 40}
+
+
+class PageCssTests(unittest.TestCase):
+    """新页面各自的样式表只用页面字号表里的字号。"""
+
+    def read(self, name):
+        return (CSS_DIR / name).read_text(encoding='utf-8')
+
+    def test_legal_pages_use_the_page_scale(self):
+        self.assertLessEqual(font_sizes(self.read('legal.css')), PAGE_SIZES)
+
+    def test_legal_prose_is_narrow_and_the_table_is_wider(self):
+        css = self.read('legal.css')
+        self.assertRegex(css, r'max-width:\s*38em')
+        self.assertRegex(re.search(r'\.data\s*\{([^}]*)\}', css).group(1), r'760px')
+
+
 if __name__ == '__main__':
     unittest.main()

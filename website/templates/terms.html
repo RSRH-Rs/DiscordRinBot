@@ -1,0 +1,89 @@
+{%- set active_nav = 'terms' -%}
+{%- extends '_site_base.html' -%}
+{%- from '_site_macros.html' import t -%}
+{%- set issues_url = 'https://github.com/RSRH-Rs/DiscordRinBot/issues' -%}
+{%- macro anchor(id) -%}<a class="anchor" href="#{{ id }}" data-i18n-aria="anchor" aria-label="这一节的链接">#</a>{%- endmacro -%}
+
+{% block title %}服务条款 · 小凛Rinbot{% endblock %}
+{% block description %}使用小凛时要遵守的规则，以及小凛能保证什么、不能保证什么。{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/legal.css') }}">
+{%- endblock %}
+
+{% block content %}
+<div class="wrap legal">
+<article class="doc">
+    <h1>{{ t('服务条款', 'Terms of service') }}</h1>
+    <p class="date">{{ t('最后更新：2026 年 11 月 6 日', 'Last updated: November 6, 2026') }}</p>
+    <p class="sum">{{ t('小凛免费使用，按现在的样子提供。用小凛时请遵守 Discord 的规则，不要滥用；服务器里的设置和处罚由管理员决定。', 'Rin is free and provided as is. Follow Discord’s rules when you use her and don’t abuse her; settings and punishments in a server are up to its moderators.') }}</p>
+
+    <nav class="toc" aria-labelledby="toc-title">
+        <h2 id="toc-title">{{ t('这一页的内容', 'On this page') }}</h2>
+        <ol>
+            <li><a href="#accept">{{ t('接受条款', 'Accepting these terms') }}</a></li>
+            <li><a href="#as-is">{{ t('免费，按现状提供', 'Free and as is') }}</a></li>
+            <li><a href="#rules">{{ t('不能做的事', 'What you can’t do') }}</a></li>
+            <li><a href="#blocklist">{{ t('黑名单', 'Blocklist') }}</a></li>
+            <li><a href="#moderators">{{ t('服务器管理员的责任', 'Moderators’ responsibility') }}</a></li>
+            <li><a href="#music">{{ t('音乐内容', 'Music') }}</a></li>
+            <li><a href="#source">{{ t('开源', 'Open source') }}</a></li>
+            <li><a href="#liability">{{ t('责任限制', 'Limitation of liability') }}</a></li>
+            <li><a href="#changes">{{ t('修改和联系', 'Changes and contact') }}</a></li>
+        </ol>
+    </nav>
+
+    <section id="accept">
+        <h2>{{ t('接受条款', 'Accepting these terms') }}{{ anchor('accept') }}</h2>
+        <p>{{ t('使用小凛，就表示你同意这些条款，以及 Discord 的<a href="https://discord.com/terms" target="_blank" rel="noopener">服务条款</a>和<a href="https://discord.com/guidelines" target="_blank" rel="noopener">社区准则</a>。', 'By using Rin you agree to these terms and to Discord’s <a href="https://discord.com/terms" target="_blank" rel="noopener">Terms of Service</a> and <a href="https://discord.com/guidelines" target="_blank" rel="noopener">Community Guidelines</a>.') }}</p>
+    </section>
+
+    <section id="as-is">
+        <h2>{{ t('免费，按现状提供', 'Free and as is') }}{{ anchor('as-is') }}</h2>
+        <p>{{ t('小凛免费使用。我们不保证她一直在线、没有错误，功能也可能调整或停止。', 'Rin is free to use. We don’t promise she’s always online or free of bugs, and features may change or stop.') }}</p>
+    </section>
+
+    <section id="rules">
+        <h2>{{ t('不能做的事', 'What you can’t do') }}{{ anchor('rules') }}</h2>
+        <ul class="plain">
+            <li>{{ t('用小凛做违反 Discord 条款或法律的事。', 'Use Rin for anything that breaks Discord’s terms or the law.') }}</li>
+            <li>{{ t('刷指令，或者故意让小凛变慢、出错。', 'Spam commands, or try to slow Rin down or make her fail on purpose.') }}</li>
+            <li>{{ t('攻击小凛、绕过限制，或者利用漏洞。发现漏洞请告诉我们。', 'Attack Rin, get around her limits or exploit bugs. If you find a bug, please tell us.') }}</li>
+        </ul>
+    </section>
+
+    <section id="blocklist">
+        <h2>{{ t('黑名单', 'Blocklist') }}{{ anchor('blocklist') }}</h2>
+        <p>{{ t('滥用小凛的用户可能被禁止使用她。', 'Users who abuse Rin may be blocked from using her.') }}</p>
+    </section>
+
+    <section id="moderators">
+        <h2>{{ t('服务器管理员的责任', 'Moderators’ responsibility') }}{{ anchor('moderators') }}</h2>
+        <p>{{ t('服务器里的设置（违禁词、自动处罚、欢迎消息等）和用小凛做出的处罚，由这个服务器的管理员决定，并由他们负责。', 'A server’s settings (banned words, automatic punishments, welcome messages and so on) and the punishments given through Rin are decided by that server’s moderators, who are responsible for them.') }}</p>
+    </section>
+
+    <section id="music">
+        <h2>{{ t('音乐内容', 'Music') }}{{ anchor('music') }}</h2>
+        <p>{{ t('小凛播放的音乐来自第三方平台，版权归原作者。请遵守这些平台的规定。', 'The music Rin plays comes from third-party platforms and belongs to its creators. Please follow those platforms’ rules.') }}</p>
+    </section>
+
+    <section id="source">
+        <h2>{{ t('开源', 'Open source') }}{{ anchor('source') }}</h2>
+        <p>{{ t('小凛的代码以 MIT 许可证发布在 <a href="https://github.com/RSRH-Rs/DiscordRinBot" target="_blank" rel="noopener">GitHub</a>。', 'Rin’s code is published on <a href="https://github.com/RSRH-Rs/DiscordRinBot" target="_blank" rel="noopener">GitHub</a> under the MIT License.') }}</p>
+    </section>
+
+    <section id="liability">
+        <h2>{{ t('责任限制', 'Limitation of liability') }}{{ anchor('liability') }}</h2>
+        <p>{{ t('在法律允许的范围内，我们不对使用小凛造成的任何损失负责。', 'To the extent the law allows, we aren’t liable for any loss caused by using Rin.') }}</p>
+    </section>
+
+    <section id="changes">
+        <h2>{{ t('修改和联系', 'Changes and contact') }}{{ anchor('changes') }}</h2>
+        <p>{{ t('改动后会更新本页顶部的日期。有问题请联系 ', 'When these terms change, the date at the top changes with them. Questions go to ') }}
+            {%- if contact_email %}<a href="mailto:{{ contact_email }}">{{ contact_email }}</a>{% else %}<a href="{{ issues_url }}" target="_blank" rel="noopener">GitHub issues</a>{% endif %}{{ t('。', '.') }}</p>
+        <p>{{ t('数据怎么处理，见<a href="/privacy">隐私政策</a>。', 'For how data is handled, see the <a href="/privacy">privacy policy</a>.') }}</p>
+    </section>
+</article>
+</div>
+{%- endblock %}
+
+{% block attr_i18n %}{"zh": {"title": "服务条款 · 小凛Rinbot", "description": "使用小凛时要遵守的规则，以及小凛能保证什么、不能保证什么。", "toggle": "Switch to English", "anchor": "这一节的链接"}, "en": {"title": "Terms of service · 小凛Rinbot", "description": "The rules for using Rin, and what she can and can’t promise.", "toggle": "切换到中文", "anchor": "Link to this section"}}{% endblock %}

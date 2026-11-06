@@ -5,6 +5,8 @@ os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 BOT_TOKEN = ""  # same token as rinbot/config.py
 OWNER_ID = 0
+# 隐私政策和服务条款里写的联系邮箱（删除数据的请求发到这里）；留空就改为指向 GitHub issues
+CONTACT_EMAIL = ""
 
 class Config:
     # Must be a plain STRING (not bytes b"...") — bytes breaks itsdangerous → CSRF

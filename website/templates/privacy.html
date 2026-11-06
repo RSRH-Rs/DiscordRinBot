@@ -1,0 +1,126 @@
+{%- set active_nav = 'privacy' -%}
+{%- extends '_site_base.html' -%}
+{%- from '_site_macros.html' import t -%}
+{%- set issues_url = 'https://github.com/RSRH-Rs/DiscordRinBot/issues' -%}
+{%- macro anchor(id) -%}<a class="anchor" href="#{{ id }}" data-i18n-aria="anchor" aria-label="这一节的链接">#</a>{%- endmacro -%}
+{%- macro contact() -%}
+{%- if contact_email -%}<a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+{%- else -%}<a href="{{ issues_url }}" target="_blank" rel="noopener">GitHub issues</a>{%- endif -%}
+{%- endmacro -%}
+{%- macro row(what_zh, what_en, who_zh, who_en, for_zh, for_en, del_zh, del_en) -%}
+<tr><td>{{ t(what_zh, what_en) }}<small>{{ t(who_zh, who_en) }}</small></td><td>{{ t(for_zh, for_en) }}</td><td><span class="removed">{{ t('删除：', 'Removed: ') }}</span>{{ t(del_zh, del_en) }}</td></tr>
+{%- endmacro -%}
+
+{% block title %}隐私政策 · 小凛Rinbot{% endblock %}
+{% block description %}小凛记下哪些数据、用来做什么、什么时候删除，以及怎么让我们删除。{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/legal.css') }}">
+{%- endblock %}
+
+{% block content %}
+<div class="wrap legal">
+<article class="doc">
+    <h1>{{ t('隐私政策', 'Privacy policy') }}</h1>
+    <p class="date">{{ t('最后更新：2026 年 11 月 6 日', 'Last updated: November 6, 2026') }}</p>
+    <p class="sum">{{ t('小凛只记下功能运行需要的东西：经验值、警告和管理记录、抽奖参与者，以及每个服务器的设置。小凛不保存聊天内容，不卖数据，也不拿数据做广告。想删除数据，联系我们就行。', 'Rin only keeps what her features need: XP, warnings and moderation cases, giveaway entries, and each server’s settings. Rin doesn’t store chat messages, doesn’t sell data and doesn’t use it for ads. To have data deleted, get in touch.') }}</p>
+
+    <nav class="toc" aria-labelledby="toc-title">
+        <h2 id="toc-title">{{ t('这一页的内容', 'On this page') }}</h2>
+        <ol>
+            <li><a href="#keep">{{ t('小凛会记下什么', 'What Rin keeps') }}</a></li>
+            <li><a href="#read">{{ t('读了但不保存的', 'What Rin reads but doesn’t keep') }}</a></li>
+            <li><a href="#web">{{ t('网站和控制台', 'The website and dashboard') }}</a></li>
+            <li><a href="#others">{{ t('用到的其他服务', 'Other services Rin uses') }}</a></li>
+            <li><a href="#delete">{{ t('怎么删除数据', 'Deleting data') }}</a></li>
+            <li><a href="#logs">{{ t('运行日志', 'Error logs') }}</a></li>
+            <li><a href="#age">{{ t('年龄', 'Age') }}</a></li>
+            <li><a href="#changes">{{ t('这一页的修改', 'Changes to this page') }}</a></li>
+            <li><a href="#contact">{{ t('联系我们', 'Contact') }}</a></li>
+        </ol>
+    </nav>
+
+    <section id="keep">
+        <h2>{{ t('小凛会记下什么', 'What Rin keeps') }}{{ anchor('keep') }}</h2>
+        <p>{{ t('这些数据存在运行小凛的服务器上，用 Discord 的服务器 ID 和用户 ID 记录，不保存你的用户名和头像。', 'This is stored on the server that runs Rin, keyed by Discord server and user IDs. Your username and avatar are not stored.') }}</p>
+        <table class="data">
+            <thead><tr><th>{{ t('记下什么', 'What') }}</th><th>{{ t('用来做什么', 'Used for') }}</th><th>{{ t('什么时候删除', 'When it’s removed') }}</th></tr></thead>
+            <tbody>
+                {{ row('经验值和等级', 'XP and levels', '服务器、用户', 'Server, user', '等级卡和排行榜', 'Rank cards and the leaderboard', '小凛被移出服务器 30 天后，或按你的要求', '30 days after Rin is removed, or on request') }}
+                {{ row('警告', 'Warnings', '被警告的成员、管理员、原因、时间', 'Member, moderator, reason, time', '<code>/warnings</code> 查看，警告够了自动处罚', '<code>/warnings</code>, and automatic punishment after enough warnings', '管理员用 <code>/warnings remove</code> 或 <code>clear</code> 删除；移出 30 天后', 'When a moderator uses <code>/warnings remove</code> or <code>clear</code>; 30 days after removal') }}
+                {{ row('管理记录', 'Moderation cases', '操作、成员、管理员、原因、时长、时间', 'Action, member, moderator, reason, duration, time', '<code>/case</code> 查看和修改', 'Looking up and editing with <code>/case</code>', '移出 30 天后，或按你的要求', '30 days after removal, or on request') }}
+                {{ row('临时封禁', 'Temporary bans', '成员、解封时间', 'Member, unban time', '到期自动解封', 'Lifting the ban on time', '解封后', 'Once the ban is lifted') }}
+                {{ row('抽奖', 'Giveaways', '发起人、奖品、参与者和中奖者', 'Host, prize, entrants and winners', '开奖和重抽', 'Drawing and rerolling', '退出抽奖时删除你的参与记录；移出 30 天后全部删除', 'Your entry when you leave; everything 30 days after removal') }}
+                {{ row('播放队列存档', 'Saved queues', '服务器、存档名、歌曲列表', 'Server, name, song list', '<code>/playlist load</code> 重新播放', 'Playing them again with <code>/playlist load</code>', '<code>/playlist delete</code> 删除；移出 30 天后', 'With <code>/playlist delete</code>; 30 days after removal') }}
+                {{ row('服务器设置', 'Server settings', '频道、身份组、欢迎文字、违禁词等', 'Channels, roles, welcome text, banned words and so on', '按你们的设置运行各个功能', 'Running each feature the way you set it up', '移出 30 天后，或按你的要求', '30 days after removal, or on request') }}
+                {{ row('欢迎图片', 'Welcome images', '管理员在控制台上传的图片', 'Images uploaded in the dashboard', '欢迎卡的背景', 'Welcome card backgrounds', '换图或移除时；移出 30 天后', 'When replaced or removed; 30 days after removal') }}
+                {{ row('黑名单', 'Blocklist', '被禁止使用小凛的用户、原因', 'Users banned from using Rin, and why', '阻止滥用', 'Stopping abuse', '解除时', 'When the entry is lifted') }}
+            </tbody>
+        </table>
+    </section>
+
+    <section id="read">
+        <h2>{{ t('读了但不保存的', 'What Rin reads but doesn’t keep') }}{{ anchor('read') }}</h2>
+        <ul class="plain">
+            <li>{{ t('消息内容：自动审核用来检查违禁词、链接和刷屏，等级系统只看你有没有发言。检查完就丢掉。', 'Message text: AutoMod checks it for banned words, links and spam, and levels only look at whether you spoke. It’s dropped after the check.') }}</li>
+            <li>{{ t('成员加入和离开：用来发欢迎、道别消息和发放身份组。', 'Members joining and leaving: used for welcome and goodbye messages and join roles.') }}</li>
+            <li>{{ t('服务器日志会把被删除或编辑的消息转发到管理员设置的日志频道。这些内容在你们自己的 Discord 频道里，不在小凛这里。', 'The server log forwards deleted and edited messages to the log channel your moderators chose. That text lives in your own Discord channel, not with Rin.') }}</li>
+        </ul>
+    </section>
+
+    <section id="web">
+        <h2>{{ t('网站和控制台', 'The website and dashboard') }}{{ anchor('web') }}</h2>
+        <ul class="plain">
+            <li>{{ t('用 Discord 登录时只请求两项：你的账号基本信息，和你加入了哪些服务器。用来判断你能管理哪些服务器。', 'Logging in with Discord asks for two things only: your basic account info and the servers you’re in, to work out which servers you can manage.') }}</li>
+            <li>{{ t('登录状态存在浏览器的会话 cookie 里，2 小时后失效。', 'Your login is kept in a session cookie that expires after 2 hours.') }}</li>
+            <li>{{ t('语言和日夜间设置存在你的浏览器里，不会上传。', 'Your language and light or dark choice stay in your browser and are never uploaded.') }}</li>
+            <li>{{ t('网站没有统计、广告或追踪代码。', 'The website has no analytics, ads or tracking code.') }}</li>
+        </ul>
+    </section>
+
+    <section id="others">
+        <h2>{{ t('用到的其他服务', 'Other services Rin uses') }}{{ anchor('others') }}</h2>
+        <ul class="plain">
+            <li>{{ t('Discord：小凛运行在 Discord 上。', 'Discord: Rin runs on Discord.') }}</li>
+            <li>{{ t('YouTube：用 <code>/play</code> 或 <code>/search</code> 时，歌名会发给 YouTube 搜索和播放。', 'YouTube: song names from <code>/play</code> and <code>/search</code> are sent to YouTube to find and play them.') }}</li>
+            <li>{{ t('Spotify：贴 Spotify 链接时，用 Spotify 的接口读出里面的歌曲。', 'Spotify: when you paste a Spotify link, Spotify’s API is used to read the songs in it.') }}</li>
+            <li>{{ t('网易云音乐：用 <code>/netease</code> 时，歌名会发给网易云音乐。', 'NetEase Cloud Music: song names from <code>/netease</code> are sent to NetEase.') }}</li>
+            <li>{{ t('Cloudflare：网站的访问经过 Cloudflare 转发。', 'Cloudflare: visits to this website pass through Cloudflare.') }}</li>
+            <li>{{ t('Google Fonts：网站的英文字体从 Google 加载。', 'Google Fonts: the website’s English font loads from Google.') }}</li>
+        </ul>
+    </section>
+
+    <section id="delete">
+        <h2>{{ t('怎么删除数据', 'Deleting data') }}{{ anchor('delete') }}</h2>
+        <p>{{ t('小凛被移出服务器 30 天后，会自动删除这个服务器的全部数据。30 天内重新邀请，数据会保留。', 'Thirty days after Rin is removed from a server, all of that server’s data is deleted automatically. Invite her back within 30 days and it’s kept.') }}</p>
+        <p>{{ t('你离开一个服务器时，你在那里的经验值和警告不会自动删除。', 'When you leave a server, your XP and warnings there are not deleted automatically.') }}</p>
+        <p>{{ t('想现在就删除某个服务器或你自己的数据，联系 ', 'To delete a server’s data or your own now, contact ') }}{{ contact() }}{{ t('，写上服务器 ID 或用户 ID。我们会在 30 天内删除，并回复你。', ' with the server ID or user ID. We delete it within 30 days and let you know.') }}</p>
+        {%- if not contact_email %}
+        <p>{{ t('issue 是公开的，不要贴出别人的 ID。', 'Issues are public — don’t post other people’s IDs.') }}</p>
+        {%- endif %}
+        <p>{{ t('管理员也可以自己删一部分：<code>/warnings clear</code> 清空一名成员的警告，<code>/playlist delete</code> 删除队列存档。', 'Moderators can delete some of it themselves: <code>/warnings clear</code> clears a member’s warnings and <code>/playlist delete</code> removes a saved queue.') }}</p>
+    </section>
+
+    <section id="logs">
+        <h2>{{ t('运行日志', 'Error logs') }}{{ anchor('logs') }}</h2>
+        <p>{{ t('出错时，运行日志可能记下服务器 ID、用户 ID 和用了哪条指令，只用来排查问题。', 'When something goes wrong, the error log may record the server ID, user ID and which command was used. It’s only used to fix the problem.') }}</p>
+    </section>
+
+    <section id="age">
+        <h2>{{ t('年龄', 'Age') }}{{ anchor('age') }}</h2>
+        <p>{{ t('使用小凛需要满足 Discord 的年龄要求。', 'You need to meet Discord’s age requirement to use Rin.') }}</p>
+    </section>
+
+    <section id="changes">
+        <h2>{{ t('这一页的修改', 'Changes to this page') }}{{ anchor('changes') }}</h2>
+        <p>{{ t('改动后会更新本页顶部的日期。', 'When this page changes, the date at the top changes with it.') }}</p>
+    </section>
+
+    <section id="contact">
+        <h2>{{ t('联系我们', 'Contact') }}{{ anchor('contact') }}</h2>
+        <p>{{ contact() }}</p>
+    </section>
+</article>
+</div>
+{%- endblock %}
+
+{% block attr_i18n %}{"zh": {"title": "隐私政策 · 小凛Rinbot", "description": "小凛记下哪些数据、用来做什么、什么时候删除，以及怎么让我们删除。", "toggle": "Switch to English", "anchor": "这一节的链接"}, "en": {"title": "Privacy policy · 小凛Rinbot", "description": "What Rin keeps, what it’s for, when it’s removed, and how to have it deleted.", "toggle": "切换到中文", "anchor": "Link to this section"}}{% endblock %}
