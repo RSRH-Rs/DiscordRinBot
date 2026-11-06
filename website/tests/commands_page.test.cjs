@@ -61,3 +61,11 @@ test('a command needing several permissions names all of them', () => {
     assert.equal(C.permText(['ban_members', 'manage_messages'], labels, 'en'), 'Ban Members, Manage Messages');
     assert.equal(C.permText([], labels, 'zh'), null);
 });
+
+test('copying only reports success when the clipboard accepted it', async () => {
+    assert.equal(await C.copyText('/ban', {writeText: () => Promise.resolve()}), true);
+    assert.equal(await C.copyText('/ban', {writeText: () => Promise.reject(new Error('denied'))}), false);
+    assert.equal(await C.copyText('/ban', {writeText: () => { throw new Error('no focus'); }}), false);
+    assert.equal(await C.copyText('/ban', undefined), false);
+    assert.equal(await C.copyText('/ban', {}), false);
+});

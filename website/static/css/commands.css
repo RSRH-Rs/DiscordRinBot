@@ -18,6 +18,9 @@
 .search .clear { border: 0; background: none; color: var(--muted); font: inherit; font-size: 14px; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
 .search .clear:hover { background: var(--hover); color: var(--text); }
 .found { margin-top: 10px; font-size: 14px; color: var(--muted); min-height: 1.6em; }
+/* 搜索靠脚本；脚本没跑时（外壳没给 html 加 .js）不显示搜索框和提示，列表照样能读 */
+html:not(.js) .cmds .search,
+html:not(.js) .cmds .found { display: none; }
 
 /* 列表：所有分组共用一套列宽，说明从同一条竖线开始 */
 #list { display: grid; grid-template-columns: max-content minmax(0, 1fr) auto; }

@@ -87,6 +87,13 @@ class PageCssTests(unittest.TestCase):
         self.assertRegex(css, r'#list \.sec\s*\{[^}]*scroll-margin-top:\s*140px')
         self.assertRegex(re.search(r'\n\.row\s*\{([^}]*)\}', css).group(1), r'scroll-margin-top:\s*140px')
 
+    def test_commands_search_hides_without_script(self):
+        # 搜索要靠脚本；外壳在脚本能跑时给 html 加 .js，没有 .js 就不显示搜索框和"按 / 键"提示
+        css = self.read('commands.css')
+        rule = re.search(r'html:not\(\.js\) \.cmds \.search,\s*html:not\(\.js\) \.cmds \.found\s*\{([^}]*)\}', css)
+        self.assertTrue(rule)
+        self.assertIn('display: none', rule.group(1))
+
     def test_legal_prose_is_narrow_and_the_table_is_wider(self):
         css = self.read('legal.css')
         self.assertRegex(css, r'max-width:\s*38em')

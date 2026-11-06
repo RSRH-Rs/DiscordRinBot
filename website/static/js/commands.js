@@ -47,6 +47,12 @@ window.RinCommands = (() => {
         return perms.map(p => labels[p][i]).join(lang === 'zh' ? '、' : ', ');
     }
 
+    /* 写进剪贴板；只有剪贴板真的收下了才算成功（没有剪贴板、被拒绝或直接报错都算失败） */
+    function copyText(text, clipboard) {
+        if (!clipboard || typeof clipboard.writeText !== 'function') return Promise.resolve(false);
+        return Promise.resolve().then(() => clipboard.writeText(text)).then(() => true, () => false);
+    }
+
     function step(ids, current, delta) {
         if (!ids.length) return null;
         const i = ids.indexOf(current);
@@ -60,7 +66,7 @@ window.RinCommands = (() => {
         return id && ids.includes(id) ? id : null;
     }
 
-    const api = {normalize, matches, highlight, examplesFor, slotsFor, permText, step, idFromHash};
+    const api = {normalize, matches, highlight, examplesFor, slotsFor, permText, copyText, step, idFromHash};
     const dataEl = document.getElementById('commands-data');
     if (!dataEl) return api;
 
@@ -198,11 +204,14 @@ window.RinCommands = (() => {
         const copy = e.target.closest('[data-copy]');
         if (copy) {
             const text = copy.dataset.copy;
-            if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
-            toast.textContent = L(`已复制 ${text}，在 Discord 里粘贴后选中它`, `Copied ${text}. Paste it in Discord and pick it from the list`);
-            toast.classList.add('show');
-            clearTimeout(toastTimer);
-            toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+            copyText(text, navigator.clipboard).then(ok => {
+                toast.textContent = ok
+                    ? L(`已复制 ${text}，在 Discord 里粘贴后选中它`, `Copied ${text}. Paste it in Discord and pick it from the list`)
+                    : L(`没能复制，请在 Discord 里直接输入 ${text}`, `Couldn’t copy. Type ${text} in Discord instead`);
+                toast.classList.add('show');
+                clearTimeout(toastTimer);
+                toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);
+            });
         }
     });
     document.addEventListener('mouseover', e => {
