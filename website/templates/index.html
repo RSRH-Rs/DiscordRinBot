@@ -81,7 +81,10 @@
 
     /* ── 功能一览：Discord 嵌入卡式的条目 ── */
     .overview { padding: 8px 0 40px; }
-    .overview h2 { font-size: 24px; font-weight: 700; margin-bottom: 20px; }
+    .overview h2 { font-size: 24px; font-weight: 700; }
+    .overview-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 20px; margin-bottom: 20px; }
+    .overview-head .link { font-size: 15px; }
+    .before-invite { margin-top: 16px; font-size: 15px; color: var(--muted); }
     .mods { list-style: none; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
     .mods a {
         display: block; height: 100%; text-decoration: none;
@@ -295,6 +298,7 @@
                 <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ t('邀请小凛', 'Invite Rin') }}</a>
                 <a href="/dashboard" class="btn btn-ghost">{{ t(dash_zh, dash_en) }}</a>
             </div>
+            <p class="before-invite"><a href="/permissions" class="link">{{ t('邀请前看看小凛要哪些权限', 'See what Rin asks for before inviting') }}</a></p>
             <p class="count">{{ t('我现在待在 <b data-stat="servers">12</b> 个服务器里', 'I’m in <b data-stat="servers">12</b> servers right now') }}</p>
         </div>
 
@@ -328,7 +332,10 @@
 
     <!-- 功能一览 -->
     <section class="overview" aria-labelledby="overview-title">
-        <h2 id="overview-title">{{ t('都能做什么', 'What it does') }}</h2>
+        <div class="overview-head">
+            <h2 id="overview-title">{{ t('都能做什么', 'What it does') }}</h2>
+            <a href="/commands" class="link">{{ t('查看全部指令', 'See all commands') }}</a>
+        </div>
         <ul class="mods">
             <li><a href="#music" style="--c:#FFB37A"><b>{{ t('♪ 音乐', '♪ Music') }}</b><span class="d">{{ t('/play 后面跟歌名、链接或 Spotify 歌单，网易云用 /netease。队列可以存档，下次直接载入。', '/play takes a song name, a link or a Spotify playlist, and /netease plays NetEase songs. Save a queue and load it again later.') }}</span></a></li>
             <li><a href="#music" style="--c:#FF8FAB"><b>{{ t('⭐ 等级', '⭐ Levels') }}</b><span class="d">{{ t('发消息涨经验，一分钟最多算一次，刷屏刷不上去。/rank 出一张等级卡。', 'Messages earn XP, at most once a minute, so spamming doesn’t help. /rank shows your card.') }}</span></a></li>
@@ -495,7 +502,7 @@
                 </div>
                 <ul class="facts">
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('免费使用', 'Free to use') }}</li>
-                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('不需要管理员权限', 'No Administrator permission needed') }}</li>
+                    <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg><a href="/permissions" class="link">{{ t('不需要管理员权限', 'No Administrator permission needed') }}</a></li>
                     <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 5 5 9-10"/></svg>{{ t('不会保存完整的聊天记录', 'Doesn’t keep a full archive of your chats') }}</li>
                 </ul>
                 <div class="ask">

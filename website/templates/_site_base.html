@@ -55,9 +55,10 @@
 
 <nav class="nav" id="nav" aria-label="RinBot">
     <div class="wrap nav-in">
-        <a href="/" class="brand"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34">小凛 RinBot</a>
+        <a href="/" class="brand" aria-label="小凛 RinBot"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34"><span class="brand-name">小凛 RinBot</span></a>
         <div class="nav-r">
             <button type="button" class="nav-link" id="lang-toggle" onclick="rinSetLang(document.documentElement.getAttribute('data-lang') === 'zh' ? 'en' : 'zh')">{{ t('EN', '中文') }}</button>
+            <a href="/commands" class="nav-link"{% if active_nav == 'commands' %} aria-current="page"{% endif %}>{{ t('指令', 'Commands') }}</a>
             <a href="/dashboard" class="nav-link"><span class="long">{{ t(dash_zh, dash_en) }}</span><span class="short">{{ t('控制台', 'Dashboard') }}</span></a>
             <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn">{{ t('邀请小凛', 'Invite Rin') }}</a>
         </div>
@@ -79,6 +80,10 @@
             <div class="footer-links">
                 <a href="/dashboard">{{ t('控制台', 'Dashboard') }}</a>
                 <a href="{{ invite_url }}" target="_blank" rel="noopener">{{ t('邀请小凛', 'Invite Rin') }}</a>
+                <a href="/commands"{% if active_nav == 'commands' %} aria-current="page"{% endif %}>{{ t('指令大全', 'Commands') }}</a>
+                <a href="/permissions"{% if active_nav == 'permissions' %} aria-current="page"{% endif %}>{{ t('邀请权限', 'Invite permissions') }}</a>
+                <a href="/privacy"{% if active_nav == 'privacy' %} aria-current="page"{% endif %}>{{ t('隐私政策', 'Privacy') }}</a>
+                <a href="/terms"{% if active_nav == 'terms' %} aria-current="page"{% endif %}>{{ t('服务条款', 'Terms') }}</a>
                 <a href="https://github.com/RSRH-Rs/DiscordRinBot" target="_blank" rel="noopener">GitHub</a>
                 <a href="https://github.com/RSRH-Rs/DiscordRinBot/issues" target="_blank" rel="noopener">{{ t('反馈问题', 'Report an issue') }}</a>
             </div>

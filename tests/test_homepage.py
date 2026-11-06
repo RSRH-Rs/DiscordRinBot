@@ -253,3 +253,28 @@ def test_modlog_shows_edit_and_join_records(page):
     section = re.search(r'<section[^>]*id="moderation".*?</section>', page, re.S).group(0)
     for needle in ("✏️ 消息被编辑", "🚪 成员加入", "Message edited", "Member joined"):
         assert needle in section, needle
+
+
+def _hrefs(fragment):
+    return re.findall(r'(?:href="([^"]+)"|id="(lang-toggle)")', fragment)
+
+
+def test_nav_has_commands_between_language_and_dashboard(page):
+    nav = re.search(r'<nav class="nav".*?</nav>', page, re.S).group(0)
+    order = [h or i for h, i in _hrefs(nav) if h != "/"]
+    assert order == ["lang-toggle", "/commands", "/dashboard", INVITE], order
+
+
+def test_footer_links_new_pages(page):
+    links = re.search(r'<div class="footer-links">.*?</div>', page, re.S).group(0)
+    assert re.findall(r'href="([^"]+)"', links) == [
+        "/dashboard", INVITE, "/commands", "/permissions", "/privacy", "/terms", GITHUB, GITHUB + "/issues"]
+
+
+def test_homepage_points_to_commands_and_permissions(page):
+    overview = re.search(r'<section class="overview".*?</section>', page, re.S).group(0)
+    assert 'href="/commands"' in overview
+    hero = re.search(r'<section class="hero".*?</section>', page, re.S).group(0)
+    assert 'href="/permissions"' in hero
+    facts = re.search(r'<ul class="facts">.*?</ul>', page, re.S).group(0)
+    assert re.search(r'<a href="/permissions"[^>]*>.*?不需要管理员权限', facts, re.S)
