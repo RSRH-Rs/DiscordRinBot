@@ -91,10 +91,14 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertNotIn('pg-personalizer',html)
 
     def test_homepage_tab_title_stays_short_in_both_languages(self):
+        # 标签页标题写在外壳的 <title> 和首页的 #attr-i18n 里，切换语言时由 site.js 改写
+        base=(ROOT/'templates/_site_base.html').read_text(encoding='utf-8')
         html=(ROOT/'templates/index.html').read_text(encoding='utf-8')
-        self.assertIn('<title>小凛Rinbot</title>',html)
-        self.assertEqual(html.count("title: '小凛Rinbot'"),2)
-        self.assertIn('document.title = t.title;',html)
+        script=(ROOT/'static/js/site.js').read_text(encoding='utf-8')
+        self.assertIn('<title>{% block title %}小凛Rinbot{% endblock %}</title>',base)
+        self.assertNotIn('{% block title %}',html)
+        self.assertEqual(html.count('"title": "小凛Rinbot"'),2)
+        self.assertIn('document.title = t.title;',script)
 
     def render_all(self):
         for name in ['dashboard.html','server.html','settings.html','login_gate.html','error.html']:
