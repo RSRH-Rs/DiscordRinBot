@@ -21,7 +21,9 @@
 
 /* 列表：所有分组共用一套列宽，说明从同一条竖线开始 */
 #list { display: grid; grid-template-columns: max-content minmax(0, 1fr) auto; }
-.sec { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; scroll-margin-top: 140px; }
+.sec { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; }
+/* 留出导航和吸顶搜索框的高度；要比 site.css 的 section[id] 更具体才生效 */
+#list .sec { scroll-margin-top: 140px; }
 .sec-head, .empty { grid-column: 1 / -1; }
 .sec-head { margin: 28px 0 8px; }
 .sec-head h2 { font: 600 19px var(--display); display: flex; align-items: baseline; gap: 8px; }
@@ -29,7 +31,7 @@
 .sec-head p { color: var(--muted); font-size: 14px; margin-top: 2px; }
 .sec-head p b { color: var(--text); font-weight: 600; }
 .rows { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; border-top: 1px solid var(--line); }
-.row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; gap: 16px; align-items: center; position: relative; padding: 10px 12px; margin: 0 -12px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; gap: 16px; align-items: center; position: relative; scroll-margin-top: 140px; scroll-margin-bottom: 16px; padding: 10px 12px; margin: 0 -12px; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .row:hover { background: var(--row-hover); }
 .row[aria-selected="true"] { background: var(--accent-soft); }
 .row[aria-selected="true"]::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }

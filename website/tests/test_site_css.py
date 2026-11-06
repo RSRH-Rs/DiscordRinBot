@@ -80,6 +80,13 @@ class PageCssTests(unittest.TestCase):
         self.assertIn('var(--dc-name)', ticked)
         self.assertNotIn('--accent', ticked)
 
+    def test_commands_scroll_targets_clear_the_sticky_search(self):
+        # site.css 的 section[id] { scroll-margin-top: 72px } 比 .sec 更具体；分组要用更具体的选择器才能留出搜索框的高度，
+        # 方向键选中的行也要留，不然会滚到导航和搜索框底下
+        css = self.read('commands.css')
+        self.assertRegex(css, r'#list \.sec\s*\{[^}]*scroll-margin-top:\s*140px')
+        self.assertRegex(re.search(r'\n\.row\s*\{([^}]*)\}', css).group(1), r'scroll-margin-top:\s*140px')
+
     def test_legal_prose_is_narrow_and_the_table_is_wider(self):
         css = self.read('legal.css')
         self.assertRegex(css, r'max-width:\s*38em')
