@@ -4,6 +4,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 import pytest
+import site_data
 from jinja2 import Environment, FileSystemLoader
 from PIL import Image
 
@@ -55,6 +56,7 @@ class _Tags(HTMLParser):
 def render(is_logged_in=False):
     env = Environment(loader=FileSystemLoader(str(ROOT / "website" / "templates")))
     env.globals["url_for"] = lambda endpoint, filename: "/static/" + filename
+    env.globals["invite_url"] = site_data.invite_url()
     return env.get_template("index.html").render(is_logged_in=is_logged_in)
 
 

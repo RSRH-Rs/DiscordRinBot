@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 from PIL import Image, UnidentifiedImageError
 from config import BOT_TOKEN
 from i18n import tr
+import site_data
 
 try:
     from config import OWNER_ID
@@ -847,6 +848,7 @@ async def _validate_guild_resources(
 
 
 def setup_routes(app, discord):
+    app.jinja_env.globals["invite_url"] = site_data.invite_url()
 
     @app.before_serving
     async def startup():

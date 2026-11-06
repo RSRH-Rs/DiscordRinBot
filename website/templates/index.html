@@ -5,7 +5,6 @@
 {%- macro rin_av() -%}<div class="av"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="40" height="40" loading="lazy" decoding="async"></div>{%- endmacro -%}
 {%- macro demo_av(file) -%}<div class="av"><img src="{{ url_for('static', filename='images/demo/' ~ file) }}" alt="" width="40" height="40" loading="lazy" decoding="async"></div>{%- endmacro -%}
 {%- macro chips(cmds) -%}<ul class="chips" aria-label="Slash commands">{% for c in cmds %}<li>{{ c }}</li>{% endfor %}</ul>{%- endmacro -%}
-{%- set invite_url = 'https://discord.com/oauth2/authorize?client_id=1352551616427069492&permissions=1374694796438&integration_type=0&scope=bot+applications.commands' -%}
 {%- set dash_zh = '进入控制台' if is_logged_in else '登录控制台' -%}
 {%- set dash_en = 'Open dashboard' if is_logged_in else 'Dashboard login' -%}
 <!DOCTYPE html>
