@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-lang="zh" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>邀请权限说明 试装</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #F7F7F8; --panel: #FFFFFF; --line: #E4E4E8; --text: #18181B; --muted: #5F5F68;
+    --accent: #D6336C; --accent-hover: #C42A60; --on-accent: #FFFFFF; --accent-soft: #FDECF2; --accent-text: #B32457;
+    --field-line: #8A8A93; --hover: #E7E7EA; --warn: #A15C00; --warn-soft: #FFF4E0; --ok: #1A7A43;
+    --shadow-sm: 0 1px 2px rgba(24,24,27,.06);
+    --dc-bg: #FFFFFF; --dc-deep: #F2F3F5; --dc-line: #E3E5E8; --dc-text: #313338; --dc-muted: #5C5E66; --dc-name: #060607;
+    --font: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --display: "Fredoka", var(--font);
+}
+html[data-theme="dark"] {
+    --bg: #17171B; --panel: #1F1F24; --line: #2C2C33; --text: #EDEDF0; --muted: #9A9AA5;
+    --accent: #FF6FA3; --accent-hover: #FF8DB7; --on-accent: #2A0A17; --accent-soft: #3A1A28; --accent-text: #FF8DB7;
+    --field-line: #6A6A74; --hover: #1E1E23; --warn: #F5B94A; --warn-soft: #33270F; --ok: #3DD68C;
+    --shadow-sm: none;
+    --dc-bg: #313338; --dc-deep: #2B2D31; --dc-line: #3F4147; --dc-text: #DBDEE1; --dc-muted: #B5BAC1; --dc-name: #F2F3F5;
+}
+* { box-sizing: border-box; }
+html[data-lang="zh"] [data-l="en"], html[data-lang="en"] [data-l="zh"] { display: none; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+a { color: var(--accent-text); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.demo { position: fixed; right: 16px; bottom: 16px; z-index: 90; display: flex; gap: 6px; align-items: center; background: #18181B; color: #FAFAFA; border-radius: 10px; padding: 6px 8px 6px 12px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.demo button { border: 1px solid #3F3F46; background: transparent; color: #FAFAFA; border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+
+.nav { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.nav-in { max-width: 1180px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 6px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; margin-right: auto; white-space: nowrap; }
+.brand img { width: 34px; height: 34px; border-radius: 50%; }
+.nav-link { font-weight: 600; font-size: 15px; color: var(--muted); background: none; border: 0; padding: 8px 12px; border-radius: 8px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.nav-link:hover { color: var(--text); background: var(--hover); }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 700; font-size: 15px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--accent-hover); }
+.btn-ghost { background: none; color: var(--text); border: 1px solid var(--field-line); }
+.btn-ghost:hover { background: var(--hover); }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 44px 24px 96px; }
+.head h1 { font: 600 40px/1.15 var(--display); margin: 0 0 8px; }
+.head p { margin: 0; color: var(--muted); font-size: 15px; max-width: 60ch; }
+.grid { margin-top: 32px; display: grid; grid-template-columns: minmax(0, 640px) 360px; gap: 48px; align-items: start; }
+
+/* Discord 授权页式的勾选列表：整页唯一显眼的地方 */
+.auth { background: var(--dc-bg); color: var(--dc-text); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-sm); overflow: hidden; }
+.auth-top { display: flex; align-items: center; gap: 12px; padding: 18px 20px; border-bottom: 1px solid var(--dc-line); }
+.auth-top img { width: 44px; height: 44px; border-radius: 50%; }
+.auth-top b { display: block; color: var(--dc-name); font-size: 15px; }
+.auth-top span { color: var(--dc-muted); font-size: 14px; }
+.auth-group { padding: 6px 20px 10px; }
+.auth-group + .auth-group { border-top: 1px solid var(--dc-line); }
+.auth-group h2 { margin: 12px 0 4px; font-size: 12.5px; font-weight: 700; color: var(--dc-muted); }
+.perm { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 12px; padding: 9px 0; cursor: pointer; }
+.perm input { appearance: none; margin: 2px 0 0; width: 20px; height: 20px; border: 2px solid var(--field-line); border-radius: 5px; display: grid; place-items: center; cursor: pointer; background: var(--dc-bg); transition: background .12s, border-color .12s; }
+.perm input:checked { background: var(--dc-name); border-color: var(--dc-name); }
+.perm input:checked::after { content: ''; width: 5px; height: 10px; border: solid var(--dc-bg); border-width: 0 2.5px 2.5px 0; transform: translateY(-1px) rotate(45deg); }
+.perm .name { font-weight: 600; color: var(--dc-name); }
+.perm .why { display: block; color: var(--dc-muted); font-size: 14px; }
+.perm .lose { display: none; margin-top: 6px; padding: 6px 10px; border-radius: 6px; background: var(--warn-soft); color: var(--warn); font-size: 14px; }
+.perm.off .name { color: var(--dc-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
+.perm.off .lose { display: block; }
+
+/* 右侧：勾选的结果 */
+.side { position: sticky; top: 88px; display: grid; gap: 16px; }
+.side h3 { margin: 0; font: 600 19px var(--display); }
+.side p { margin: 0; color: var(--muted); font-size: 14px; }
+.side ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; }
+.side li { padding-left: 12px; border-left: 2px solid var(--warn); }
+.side li b { font-weight: 600; }
+.side .row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.reset { border: 0; background: none; color: var(--accent-text); cursor: pointer; padding: 0; font-size: 14px; text-decoration: underline; text-underline-offset: 3px; }
+.all-ok { color: var(--ok); font-weight: 600; }
+
+/* 下面两节：平铺列表 */
+.sec { margin-top: 56px; max-width: 640px; }
+.sec h2 { font: 600 19px var(--display); margin: 0; }
+.sec > p { margin: 4px 0 12px; color: var(--muted); font-size: 14px; }
+.flat { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.flat li { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.flat li b { font-weight: 600; font-size: 15px; }
+.flat li span { color: var(--muted); }
+
+.roles { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 32px; align-items: center; }
+.roles ol { margin: 0; padding: 0; list-style: none; background: var(--dc-bg); color: var(--dc-text); border: 1px solid var(--line); border-radius: 12px; padding: 10px; box-shadow: var(--shadow-sm); }
+.roles ol li { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 6px; font-size: 14px; }
+.roles ol li i { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.roles ol li.me { background: var(--accent-soft); color: var(--text); font-weight: 600; }
+.roles ol li .hint { margin-left: auto; font-size: 12.5px; color: var(--muted); font-weight: 400; }
+.roles p { margin: 0 0 10px; font-size: 15px; }
+.roles p.muted { color: var(--muted); font-size: 14px; }
+
+@media (max-width: 1079px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .side { position: static; }
+    .sec { max-width: none; }
+}
+@media (max-width: 640px) {
+    .wrap { padding: 28px 16px 80px; }
+    .head h1 { font-size: 32px; }
+    .nav-in { padding: 0 12px; gap: 2px; }
+    .brand span { display: none; }
+    .nav-link { padding: 8px; }
+    .auth-group, .auth-top { padding-left: 14px; padding-right: 14px; }
+    .flat li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+    .roles { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-in">
+    <a class="brand" href="#"><img src="/files/rin-avatar.png" alt=""><span>小凛 RinBot</span></a>
+    <a class="nav-link" href="#"><span data-l="zh">指令</span><span data-l="en">Commands</span></a>
+    <button class="nav-link" type="button" data-lang-btn>EN</button>
+    <a class="nav-link" href="#"><span data-l="zh">控制台</span><span data-l="en">Dashboard</span></a>
+    <a class="btn" href="#"><span data-l="zh">邀请小凛</span><span data-l="en">Invite Rin</span></a>
+</div></nav>
+
+<main class="wrap">
+    <div class="head">
+        <h1><span data-l="zh">邀请小凛时要的权限</span><span data-l="en">What Rin asks for when you invite her</span></h1>
+        <p><span data-l="zh">点“邀请小凛”后，Discord 会列出下面这 16 项让你勾选。每项都写了小凛拿它做什么。不想给的可以取消勾选，这里会告诉你哪些功能会受影响。</span><span data-l="en">After you click Invite, Discord lists these 16 permissions for you to tick. Each one says what Rin uses it for. Untick any you don’t want to give, and this page shows what stops working.</span></p>
+    </div>
+
+    <div class="grid">
+        <div class="auth">
+            <div class="auth-top"><img src="/files/rin-avatar.png" alt=""><div><b><span data-l="zh">小凛 想在你的服务器里获得这些权限</span><span data-l="en">Rin would like these permissions in your server</span></b><span data-l="zh">和 Discord 邀请页上的一样，顺序可能不同</span><span data-l="en">Same as on Discord’s invite page, the order may differ</span></div></div>
+            <div id="groups"></div>
+        </div>
+        <aside class="side" id="side" aria-live="polite"></aside>
+    </div>
+
+    <section class="sec">
+        <h2><span data-l="zh">邀请之后：把小凛的身份组往上拖</span><span data-l="en">After inviting: drag Rin’s role up</span></h2>
+        <p><span data-l="zh">Discord 规定，机器人只能给比自己低的身份组发放、只能处罚比自己低的成员。权限都给了，位置不对也会失败。</span><span data-l="en">Discord only lets a bot hand out roles below its own and act on members below it. Even with every permission, the wrong position makes it fail.</span></p>
+        <div class="roles">
+            <div>
+                <p><span data-l="zh">在 Discord 的「服务器设置 › 身份组」里，把「小凛」拖到要自动发放的身份组上面。</span><span data-l="en">In Discord, open Server Settings › Roles and drag “Rin” above the roles she should hand out.</span></p>
+                <p class="muted"><span data-l="zh">管理员的身份组可以留在小凛上面，这样小凛就管不到他们。</span><span data-l="en">Keep your admins’ roles above Rin so she can’t act on them.</span></p>
+            </div>
+            <ol aria-label="示例身份组顺序">
+                <li><i style="background:#E67E22"></i><span data-l="zh">管理员</span><span data-l="en">Admin</span></li>
+                <li class="me"><i style="background:var(--accent)"></i><span data-l="zh">小凛</span><span data-l="en">Rin</span><span class="hint"><span data-l="zh">放在这里</span><span data-l="en">put her here</span></span></li>
+                <li><i style="background:#3BA55C"></i><span data-l="zh">新朋友</span><span data-l="en">New friend</span></li>
+                <li><i style="background:#5865F2"></i><span data-l="zh">成员</span><span data-l="en">Member</span></li>
+                <li><i style="background:#99AAB5"></i>@everyone</li>
+            </ol>
+        </div>
+    </section>
+
+    <section class="sec">
+        <h2><span data-l="zh">小凛不会要的权限</span><span data-l="en">Permissions Rin never asks for</span></h2>
+        <p><span data-l="zh">这些权限太大，小凛用不到，邀请链接里也没有。</span><span data-l="en">These are too broad for what Rin does, so the invite link leaves them out.</span></p>
+        <ul class="flat">
+            <li><b><span data-l="zh">管理员</span><span data-l="en">Administrator</span></b><span><span data-l="zh">等于什么都能做，所以不要。</span><span data-l="en">It allows everything, so Rin doesn’t take it.</span></span></li>
+            <li><b><span data-l="zh">管理服务器</span><span data-l="en">Manage Server</span></b><span><span data-l="zh">改服务器名称、图标和设置，小凛不碰这些。</span><span data-l="en">Changes the server’s name, icon and settings. Rin leaves those alone.</span></span></li>
+            <li><b><span data-l="zh">提及 @everyone</span><span data-l="en">Mention @everyone</span></b><span><span data-l="zh">小凛的消息不会 @全体或 @身份组。</span><span data-l="en">Rin’s messages never ping everyone or a role.</span></span></li>
+            <li><b><span data-l="zh">管理 Webhook</span><span data-l="en">Manage Webhooks</span></b><span><span data-l="zh">日志直接用小凛自己发，不借用 Webhook。</span><span data-l="en">Logs are posted by Rin herself, not through webhooks.</span></span></li>
+        </ul>
+    </section>
+</main>
+<div class="demo"><span>试装页</span><button type="button" data-lang-btn>EN</button><button type="button" id="theme-btn">夜间</button></div>
+
+<script>
+const BASE = 'https://discord.com/oauth2/authorize?client_id=1352551616427069492&integration_type=0&scope=bot+applications.commands&permissions=';
+const GROUPS = [
+    ['msg', '发消息（每个功能都要）', 'Messages (every feature needs these)', [
+        [10, '查看频道', 'View Channels', '找到你在控制台里选的欢迎、日志频道', 'Find the welcome and log channels you pick in the dashboard', '小凛看不到频道，几乎所有功能都会失效', 'Rin can’t see channels, so almost nothing works'],
+        [11, '发送消息', 'Send Messages', '发欢迎消息、日志、抽奖和身份组面板', 'Post welcomes, logs, giveaways and role panels', '小凛没法在频道里说话，几乎所有功能都会失效', 'Rin can’t talk in channels, so almost nothing works'],
+        [38, '在子区中发送消息', 'Send Messages in Threads', '在子区里用指令时也能回复', 'Reply when a command is used in a thread', '在子区里小凛不会回复', 'Rin won’t reply inside threads'],
+        [14, '嵌入链接', 'Embed Links', '小凛的消息都是带颜色边条的卡片', 'Every message Rin sends is a card with a coloured edge', '消息会变成一堆没排版的文字', 'Messages turn into unformatted text'],
+        [15, '附加文件', 'Attach Files', '发欢迎图卡和等级卡图片', 'Send welcome cards and rank card images', '欢迎图卡和 /rank 等级卡发不出来', 'Welcome cards and /rank images can’t be sent'],
+        [16, '阅读消息历史', 'Read Message History', '开奖时找到原来的抽奖消息，/purge 只删某个人时往前翻', 'Find the giveaway message when drawing, and look back when /purge targets one member', '抽奖到点开不了奖，/purge 不能只删某个人的消息', 'Giveaways can’t be drawn, and /purge can’t target one member'],
+    ]],
+    ['voice', '放歌', 'Music', [
+        [20, '连接', 'Connect', '进入你所在的语音频道', 'Join your voice channel', '不能放歌', 'Music won’t work'],
+        [21, '说话', 'Speak', '在语音频道里放出声音', 'Play sound in the voice channel', '进了语音频道也没声音', 'Rin joins but no one hears anything'],
+        [25, '使用语音活动', 'Use Voice Activity', '在要求按键说话的语音频道里也能出声', 'Be heard in voice channels that require push-to-talk', '在要求按键说话的频道里没声音', 'No sound in push-to-talk channels'],
+    ]],
+    ['roles', '身份组', 'Roles', [
+        [28, '管理身份组', 'Manage Roles', '给新成员发身份组、身份组面板发放身份组、/lock 锁频道', 'Give roles to new members and from role panels, and lock channels with /lock', '迎新自动身份组和身份组面板不能用，/lock 也会失败', 'Join roles and role panels stop working, and /lock fails'],
+    ]],
+    ['mod', '管理和自动审核', 'Moderation and AutoMod', [
+        [13, '管理消息', 'Manage Messages', '自动审核删掉违规消息，/purge 批量删除', 'Delete messages that break AutoMod rules, and bulk delete with /purge', '自动审核删不掉违规消息，/purge 不能用', 'AutoMod can’t delete messages, and /purge fails'],
+        [4, '管理频道', 'Manage Channels', '/lock、/unlock 锁频道，/slowmode 设慢速模式', 'Lock channels with /lock and /unlock, set /slowmode', '/lock、/unlock 和 /slowmode 不能用', '/lock, /unlock and /slowmode fail'],
+        [1, '踢出成员', 'Kick Members', '/kick，警告次数够了自动踢出', '/kick, and kicking automatically after enough warnings', '/kick 和警告后自动踢出不能用', '/kick and kicks after warnings fail'],
+        [2, '封禁成员', 'Ban Members', '/ban、临时封禁到期自动解封、/unban', '/ban, lifting temporary bans on time, and /unban', '封禁、解封都不能用', 'Bans and unbans fail'],
+        [40, '禁言成员', 'Timeout Members', '/mute，警告够了自动禁言，自动审核禁言刷屏的人', '/mute, timeouts after warnings, and AutoMod timeouts for spam', '禁言相关的功能都不能用', 'Timeouts fail everywhere'],
+    ]],
+    ['log', '服务器日志', 'Server log', [
+        [7, '查看审核日志', 'View Audit Log', '日志里写明是谁删了消息、封了人、改了身份组', 'Show who deleted a message, banned someone or changed a role', '日志只记发生了什么，不写是谁做的', 'The log shows what happened, but not who did it'],
+    ]],
+];
+const ALL = GROUPS.flatMap(g => g[3]);
+const root = document.documentElement;
+const $ = id => document.getElementById(id);
+const zh = () => root.dataset.lang === 'zh';
+const L = (a, b) => zh() ? a : b;
+const off = new Set();
+
+function renderGroups() {
+    $('groups').innerHTML = GROUPS.map(g => `<div class="auth-group"><h2>${L(g[1], g[2])}</h2>${g[3].map(p => `
+        <label class="perm ${off.has(p[0]) ? 'off' : ''}"><input type="checkbox" data-bit="${p[0]}" ${off.has(p[0]) ? '' : 'checked'}>
+            <span><span class="name">${L(p[1], p[2])}</span><span class="why">${L(p[3], p[4])}</span><span class="lose">${L('取消后：', 'Without it: ')}${L(p[5], p[6])}</span></span></label>`).join('')}</div>`).join('');
+}
+function renderSide() {
+    const bits = ALL.filter(p => !off.has(p[0])).reduce((s, p) => s | (1n << BigInt(p[0])), 0n);
+    const missing = ALL.filter(p => off.has(p[0]));
+    const head = missing.length
+        ? `<div><h3>${L(`取消了 ${missing.length} 项`, `${missing.length} unticked`)}</h3><p>${L('这些功能会受影响：', 'These will stop working:')}</p></div><ul>${missing.map(p => `<li><b>${L(p[1], p[2])}</b>：${L(p[5], p[6])}</li>`).join('')}</ul>`
+        : `<div><h3>${L('全部勾选', 'Everything ticked')}</h3><p class="all-ok">${L('所有功能都能用。', 'Every feature works.')}</p></div><p>${L('试着取消一项，看看会少什么。', 'Untick one to see what you’d lose.')}</p>`;
+    $('side').innerHTML = `${head}
+        <div class="row"><a class="btn" href="${BASE}${bits}" target="_blank" rel="noopener">${missing.length ? L('按这里的勾选邀请小凛', 'Invite Rin with these ticks') : L('邀请小凛', 'Invite Rin')}</a>${missing.length ? `<button type="button" class="reset" id="reset">${L('全部勾回', 'Tick all again')}</button>` : ''}</div>
+        <p>${L('Discord 的邀请页上也能取消勾选，效果一样。', 'You can also untick boxes on Discord’s invite page; it works the same.')}</p>`;
+}
+function renderAll() {
+    renderGroups(); renderSide();
+    document.querySelectorAll('[data-lang-btn]').forEach(b => { b.textContent = zh() ? 'EN' : '中文'; });
+    $('theme-btn').textContent = root.dataset.theme === 'dark' ? '白天' : '夜间';
+}
+document.addEventListener('change', e => {
+    const b = e.target.dataset.bit;
+    if (!b) return;
+    e.target.checked ? off.delete(+b) : off.add(+b);
+    e.target.closest('.perm').classList.toggle('off', !e.target.checked);
+    renderSide();
+});
+document.addEventListener('click', e => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.id === 'reset') { off.clear(); renderGroups(); renderSide(); }
+    else if (t.hasAttribute('data-lang-btn')) { root.dataset.lang = zh() ? 'en' : 'zh'; renderAll(); }
+    else if (t.id === 'theme-btn') { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; renderAll(); }
+});
+renderAll();
+console.assert(ALL.reduce((s, p) => s | (1n << BigInt(p[0])), 0n) === 1374694796438n, 'permission bits differ from the live invite link');
+</script>
+</body>
+</html>

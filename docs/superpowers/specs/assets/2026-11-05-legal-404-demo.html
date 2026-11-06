@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light" data-view="privacy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>隐私政策和 404 试装</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #F7F7F8; --panel: #FFFFFF; --line: #E4E4E8; --text: #18181B; --muted: #5F5F68;
+    --accent: #D6336C; --accent-hover: #C42A60; --on-accent: #FFFFFF; --accent-soft: #FDECF2; --accent-text: #B32457;
+    --field-line: #8A8A93; --hover: #E7E7EA;
+    --font: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --display: "Fredoka", var(--font);
+}
+html[data-theme="dark"] {
+    --bg: #17171B; --panel: #1F1F24; --line: #2C2C33; --text: #EDEDF0; --muted: #9A9AA5;
+    --accent: #FF6FA3; --accent-hover: #FF8DB7; --on-accent: #2A0A17; --accent-soft: #3A1A28; --accent-text: #FF8DB7;
+    --field-line: #6A6A74; --hover: #1E1E23;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: 80px; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+a { color: var(--accent-text); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.view { display: none; }
+html[data-view="privacy"] .v-privacy, html[data-view="404"] .v-404 { display: block; }
+
+.demo { position: fixed; right: 16px; bottom: 16px; z-index: 90; display: flex; gap: 6px; align-items: center; background: #18181B; color: #FAFAFA; border-radius: 10px; padding: 6px 8px 6px 12px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.demo button { border: 1px solid #3F3F46; background: transparent; color: #FAFAFA; border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+.demo button.on { background: #FAFAFA; color: #18181B; }
+
+.nav { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.nav-in { max-width: 1180px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 6px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; margin-right: auto; white-space: nowrap; }
+.brand img { width: 34px; height: 34px; border-radius: 50%; }
+.nav-link { font-weight: 600; font-size: 15px; color: var(--muted); background: none; border: 0; padding: 8px 12px; border-radius: 8px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.nav-link:hover { color: var(--text); background: var(--hover); }
+.btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: var(--on-accent); border: 1px solid transparent; border-radius: 8px; padding: 9px 16px; font-weight: 700; font-size: 15px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--accent-hover); }
+.btn-ghost { background: none; color: var(--text); border-color: var(--field-line); }
+.btn-ghost:hover { background: var(--hover); }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 44px 24px 96px; }
+
+/* ── 隐私政策：阅读页 ── */
+.doc { max-width: 760px; }
+.doc > h1, .doc > p, .doc p, .doc ul.plain, .toc { max-width: 38em; }
+.doc h1 { font: 600 40px/1.15 var(--display); margin: 0 0 6px; }
+.doc .date { margin: 0; color: var(--muted); font-size: 14px; }
+.doc .sum { margin: 20px 0 0; font-size: 15px; line-height: 1.8; }
+.toc { margin: 28px 0 0; padding: 14px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.toc h2 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.toc ol { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: 32px; font-size: 14px; line-height: 1.9; }
+.toc a { color: var(--text); text-decoration: none; }
+.toc a:hover { color: var(--accent-text); text-decoration: underline; }
+.doc section { margin-top: 44px; }
+.doc h2 { font: 600 19px/1.3 var(--display); margin: 0 0 10px; }
+.doc h2 a.anchor { color: var(--muted); text-decoration: none; margin-left: 6px; opacity: 0; font-size: 15px; }
+.doc h2:hover a.anchor, .doc h2 a.anchor:focus-visible { opacity: 1; }
+.doc p, .doc li { line-height: 1.8; }
+.doc p { margin: 0 0 10px; }
+.doc ul.plain { margin: 0; padding-left: 1.2em; }
+.doc ul.plain li { margin: 4px 0; }
+.doc ul.plain li::marker { color: var(--muted); }
+.doc code { font: inherit; font-weight: 600; }
+
+/* 记下什么：整页唯一的结构化表格，比正文略宽 */
+.data { width: min(760px, 100%); border-collapse: collapse; font-size: 14px; margin-top: 4px; }
+.data th { text-align: left; font-weight: 600; color: var(--muted); padding: 8px 16px 8px 0; border-bottom: 1px solid var(--line); }
+.data td { padding: 12px 16px 12px 0; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.7; }
+.data td:first-child { font-weight: 600; width: 32%; }
+.data td:first-child small { display: block; font-weight: 400; color: var(--muted); font-size: 14px; }
+.data td:last-child { color: var(--muted); width: 28%; }
+
+/* ── 404 ── */
+.nf { display: grid; grid-template-columns: 180px minmax(0, 32em); gap: 32px; align-items: center; padding-top: 40px; }
+.nf img { width: 180px; height: 180px; object-fit: contain; }
+.nf h1 { font: 600 40px/1.15 var(--display); margin: 0 0 8px; }
+.nf p { margin: 0 0 6px; color: var(--muted); }
+.nf .path { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
+.nf .sugg { margin: 14px 0 0; color: var(--text); }
+.nf .sugg a { font-weight: 600; }
+.nf .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+
+@media (max-width: 640px) {
+    .wrap { padding: 28px 16px 80px; }
+    .doc h1, .nf h1 { font-size: 32px; }
+    .nav-in { padding: 0 12px; gap: 2px; }
+    .brand span { display: none; }
+    .nav-link { padding: 8px; }
+    .toc ol { columns: 1; }
+    .data thead { display: none; }
+    .data, .data tbody, .data tr, .data td { display: block; width: auto; }
+    .data tr { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .data td, .data td:first-child, .data td:last-child { border: 0; padding: 2px 0; width: auto; }
+    .data td:last-child::before { content: '删除：'; }
+    .nf { grid-template-columns: minmax(0, 1fr); gap: 8px; padding-top: 8px; }
+    .nf img { width: 120px; height: 120px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="nav"><div class="nav-in">
+    <a class="brand" href="#"><img src="/files/rin-avatar.png" alt=""><span>小凛 RinBot</span></a>
+    <a class="nav-link" href="#">指令</a>
+    <button class="nav-link" type="button">EN</button>
+    <a class="nav-link" href="#">控制台</a>
+    <a class="btn" href="#">邀请小凛</a>
+</div></nav>
+
+<main class="wrap">
+<article class="view v-privacy doc">
+    <h1>隐私政策</h1>
+    <p class="date">最后更新：2026 年 11 月（上线时填具体日期）</p>
+    <p class="sum">小凛只记下功能运行需要的东西：经验值、警告和管理记录、抽奖参与者，以及每个服务器的设置。小凛不保存聊天内容，不卖数据，也不拿数据做广告。想删除数据，发邮件给我们就行。</p>
+
+    <nav class="toc" aria-labelledby="toc-t">
+        <h2 id="toc-t">这一页的内容</h2>
+        <ol>
+            <li><a href="#keep">小凛会记下什么</a></li>
+            <li><a href="#read">读了但不保存的</a></li>
+            <li><a href="#web">网站和控制台</a></li>
+            <li><a href="#others">用到的其他服务</a></li>
+            <li><a href="#delete">怎么删除数据</a></li>
+            <li><a href="#logs">运行日志</a></li>
+            <li><a href="#age">年龄</a></li>
+            <li><a href="#changes">这一页的修改</a></li>
+            <li><a href="#contact">联系我们</a></li>
+        </ol>
+    </nav>
+
+    <section id="keep">
+        <h2>小凛会记下什么<a class="anchor" href="#keep" aria-label="这一节的链接">#</a></h2>
+        <p>这些数据存在运行小凛的服务器上，用 Discord 的服务器 ID 和用户 ID 记录，不保存你的用户名和头像。</p>
+        <table class="data">
+            <thead><tr><th>记下什么</th><th>用来做什么</th><th>什么时候删除</th></tr></thead>
+            <tbody>
+                <tr><td>经验值和等级<small>服务器、用户</small></td><td>等级卡和排行榜</td><td>按你的要求删除</td></tr>
+                <tr><td>警告<small>被警告的成员、管理员、原因、时间</small></td><td><code>/warnings</code> 查看，警告够了自动处罚</td><td>管理员用 <code>/warnings remove</code> 或 <code>clear</code> 删除</td></tr>
+                <tr><td>管理记录<small>操作、成员、管理员、原因、时长、时间</small></td><td><code>/case</code> 查看和修改</td><td>按你的要求删除</td></tr>
+                <tr><td>临时封禁<small>成员、解封时间</small></td><td>到期自动解封</td><td>解封后删除</td></tr>
+                <tr><td>抽奖<small>发起人、奖品、参与者和中奖者</small></td><td>开奖和重抽</td><td>退出抽奖时删除你的参与记录，其余按要求删除</td></tr>
+                <tr><td>播放队列存档<small>服务器、存档名、歌曲列表</small></td><td><code>/playlist load</code> 重新播放</td><td><code>/playlist delete</code> 删除</td></tr>
+                <tr><td>服务器设置<small>频道、身份组、欢迎文字、违禁词等</small></td><td>按你们的设置运行各个功能</td><td>按你的要求删除</td></tr>
+                <tr><td>欢迎图片<small>管理员在控制台上传的图片</small></td><td>欢迎卡的背景</td><td>换图或移除时删除</td></tr>
+                <tr><td>黑名单<small>被禁止使用小凛的用户、原因</small></td><td>阻止滥用</td><td>解除时删除</td></tr>
+            </tbody>
+        </table>
+    </section>
+
+    <section id="read">
+        <h2>读了但不保存的<a class="anchor" href="#read" aria-label="这一节的链接">#</a></h2>
+        <ul class="plain">
+            <li>消息内容：自动审核用来检查违禁词、链接和刷屏，等级系统只看你有没有发言。检查完就丢掉。</li>
+            <li>成员加入和离开：用来发欢迎、道别消息和发放身份组。</li>
+            <li>服务器日志会把被删除或编辑的消息转发到管理员设置的日志频道。这些内容在你们自己的 Discord 频道里，不在小凛这里。</li>
+        </ul>
+    </section>
+
+    <section id="web">
+        <h2>网站和控制台<a class="anchor" href="#web" aria-label="这一节的链接">#</a></h2>
+        <ul class="plain">
+            <li>用 Discord 登录时只请求两项：你的账号基本信息，和你加入了哪些服务器。用来判断你能管理哪些服务器。</li>
+            <li>登录状态存在浏览器的会话 cookie 里，2 小时后失效。</li>
+            <li>语言和日夜间设置存在你的浏览器里，不会上传。</li>
+            <li>网站没有统计、广告或追踪代码。</li>
+        </ul>
+    </section>
+
+    <section id="others">
+        <h2>用到的其他服务<a class="anchor" href="#others" aria-label="这一节的链接">#</a></h2>
+        <ul class="plain">
+            <li>Discord：小凛运行在 Discord 上。</li>
+            <li>YouTube：用 <code>/play</code> 或 <code>/search</code> 时，歌名会发给 YouTube 搜索和播放。</li>
+            <li>Spotify：贴 Spotify 链接时，用 Spotify 的接口读出里面的歌曲。</li>
+            <li>网易云音乐：用 <code>/netease</code> 时，歌名会发给网易云音乐。</li>
+            <li>Cloudflare：网站的访问经过 Cloudflare 转发。</li>
+            <li>Google Fonts：网站的英文字体从 Google 加载。</li>
+        </ul>
+    </section>
+
+    <section id="delete">
+        <h2>怎么删除数据<a class="anchor" href="#delete" aria-label="这一节的链接">#</a></h2>
+        <p>小凛被移出服务器后，这个服务器的数据不会自动删除。</p>
+        <p>想删除某个服务器或你自己的全部数据，发邮件到 <a href="#">联系邮箱</a>，写上服务器 ID 或用户 ID。我们会在 30 天内删除，并回信告诉你。</p>
+        <p>管理员也可以自己删一部分：<code>/warnings clear</code> 清空一名成员的警告，<code>/playlist delete</code> 删除队列存档。</p>
+    </section>
+
+    <section id="logs">
+        <h2>运行日志<a class="anchor" href="#logs" aria-label="这一节的链接">#</a></h2>
+        <p>出错时，运行日志可能记下服务器 ID、用户 ID 和用了哪条指令，只用来排查问题。</p>
+    </section>
+
+    <section id="age">
+        <h2>年龄<a class="anchor" href="#age" aria-label="这一节的链接">#</a></h2>
+        <p>使用小凛需要满足 Discord 的年龄要求。</p>
+    </section>
+
+    <section id="changes">
+        <h2>这一页的修改<a class="anchor" href="#changes" aria-label="这一节的链接">#</a></h2>
+        <p>改动后会更新本页顶部的日期。</p>
+    </section>
+
+    <section id="contact">
+        <h2>联系我们<a class="anchor" href="#contact" aria-label="这一节的链接">#</a></h2>
+        <p>邮件：<a href="#">联系邮箱</a>（没设置时这里换成 GitHub issues 链接）。</p>
+    </section>
+</article>
+
+<section class="view v-404">
+    <div class="nf">
+        <img src="/files/rin-confused.png" alt="">
+        <div>
+            <h1>这个页面不存在</h1>
+            <p>找不到 <span class="path">rin-bot.com/comands</span>。地址可能打错了，或者页面已经搬走了。</p>
+            <p class="sugg">你要找的是不是 <a href="#">指令大全（/commands）</a>？</p>
+            <div class="actions">
+                <a class="btn" href="#">回首页</a>
+                <a class="btn btn-ghost" href="#">指令大全</a>
+                <a class="btn btn-ghost" href="#">控制台</a>
+            </div>
+        </div>
+    </div>
+</section>
+</main>
+
+<div class="demo"><span>试装页</span>
+    <button type="button" data-choice="privacy" data-view="privacy" class="on">隐私政策</button>
+    <button type="button" data-choice="404" data-view="404">404</button>
+    <button type="button" id="theme-btn">夜间</button>
+</div>
+<script>
+const root = document.documentElement;
+document.addEventListener('click', e => {
+    const t = e.target.closest('.demo button');
+    if (!t) return;
+    if (t.dataset.view) { root.dataset.view = t.dataset.view; document.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b === t)); scrollTo(0, 0); }
+    else { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; t.textContent = root.dataset.theme === 'dark' ? '白天' : '夜间'; }
+});
+</script>
+</body>
+</html>

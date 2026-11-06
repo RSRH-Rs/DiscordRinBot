@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-lang="zh" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>指令大全 C 第二轮打磨</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+    --bg: #F7F7F8; --panel: #FFFFFF; --side: #F0F0F2; --line: #E4E4E8; --text: #18181B; --muted: #5F5F68;
+    --accent: #D6336C; --accent-hover: #C42A60; --on-accent: #FFFFFF; --accent-soft: #FDECF2; --accent-text: #B32457;
+    --field: #FFFFFF; --field-line: #8A8A93; --hover: #E7E7EA; --cur: #FFFFFF; --off: #C9C9CF; --leaf: #1A7A43;
+    --row-hover: #EFEFF2; --mark: #FFE7A3; --shadow-sm: 0 1px 2px rgba(24,24,27,.06);
+    --dc-bg: #FFFFFF; --dc-deep: #F2F3F5; --dc-input: #EBEDEF; --dc-slot: #DFE1E5; --dc-line: #E3E5E8; --dc-text: #313338; --dc-muted: #5C5E66; --dc-name: #060607;
+    --font: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --display: "Fredoka", var(--font);
+}
+html[data-theme="dark"] {
+    --bg: #17171B; --panel: #1F1F24; --side: #121215; --line: #2C2C33; --text: #EDEDF0; --muted: #9A9AA5;
+    --accent: #FF6FA3; --accent-hover: #FF8DB7; --on-accent: #2A0A17; --accent-soft: #3A1A28; --accent-text: #FF8DB7;
+    --field: #17171B; --field-line: #6A6A74; --hover: #1E1E23; --cur: #26262C; --off: #3A3A42; --leaf: #3DD68C;
+    --row-hover: #1F1F25; --mark: #5A4512; --shadow-sm: none;
+    --dc-bg: #313338; --dc-deep: #2B2D31; --dc-input: #383A40; --dc-slot: #4E5058; --dc-line: #3F4147; --dc-text: #DBDEE1; --dc-muted: #B5BAC1; --dc-name: #F2F3F5;
+}
+* { box-sizing: border-box; }
+html[data-lang="zh"] [data-l="en"], html[data-lang="en"] [data-l="zh"] { display: none; }
+html { scroll-padding-top: 80px; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 var(--font); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; }
+a { color: var(--accent-text); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
+
+/* ── 试装页自己的按钮，不是设计的一部分 ── */
+.demo { position: fixed; right: 16px; bottom: 16px; z-index: 90; display: flex; gap: 6px; align-items: center; background: #18181B; color: #FAFAFA; border-radius: 10px; padding: 6px 8px 6px 12px; font-size: 13px; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+.demo button { border: 1px solid #3F3F46; background: transparent; color: #FAFAFA; border-radius: 6px; padding: 3px 10px; cursor: pointer; }
+
+/* ── 顶部导航（和首页一样） ── */
+.nav { position: sticky; top: 0; z-index: 50; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+.nav-in { max-width: 1180px; margin: 0 auto; padding: 0 24px; height: 64px; display: flex; align-items: center; gap: 6px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; color: var(--text); text-decoration: none; margin-right: auto; white-space: nowrap; }
+.brand img { width: 34px; height: 34px; border-radius: 50%; }
+.nav-link { font-weight: 600; font-size: 15px; color: var(--muted); background: none; border: 0; padding: 8px 12px; border-radius: 8px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.nav-link:hover { color: var(--text); background: var(--hover); }
+.nav-link[aria-current] { color: var(--text); }
+.btn { display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: var(--on-accent); border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 700; font-size: 15px; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.btn:hover { background: var(--accent-hover); }
+
+/* ── 宽屏左侧栏（和首页一样，频道换成指令分组） ── */
+.side { display: none; }
+.rail { width: 72px; flex-shrink: 0; background: var(--hover); padding: 12px 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.rail a { position: relative; width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--bg); color: var(--muted); text-decoration: none; transition: border-radius .15s, background .15s; }
+.rail a:hover, .rail a.home { border-radius: 16px; }
+.rail a:hover { background: var(--accent); color: var(--on-accent); }
+.rail a.home::before { content: ''; position: absolute; left: -12px; top: 4px; width: 4px; height: 40px; border-radius: 0 4px 4px 0; background: var(--text); }
+.rail img { width: 48px; height: 48px; border-radius: inherit; }
+.rail svg { width: 22px; height: 22px; }
+.rail .sep { width: 32px; height: 2px; background: var(--off); border-radius: 1px; }
+.chan { flex: 1; min-width: 0; background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+.chan-head { height: 64px; flex-shrink: 0; display: flex; align-items: center; padding: 0 16px; font-weight: 700; border-bottom: 1px solid var(--line); }
+.chan-cat { font-size: 12.5px; font-weight: 700; color: var(--muted); padding: 20px 16px 6px; }
+.chan a { display: flex; align-items: center; gap: 8px; margin: 1px 8px; padding: 7px 10px; border-radius: 6px; color: var(--muted); text-decoration: none; font-weight: 500; font-size: 15px; }
+.chan a .h { opacity: .7; font-weight: 700; width: 12px; }
+.chan a .n { margin-left: auto; font-size: 12.5px; opacity: .8; }
+.chan a:hover { background: var(--hover); color: var(--text); }
+.chan a.on { background: var(--cur); color: var(--text); box-shadow: var(--shadow-sm); }
+@media (min-width: 1440px) {
+    body { padding-left: 312px; }
+    .side { display: flex; position: fixed; top: 0; bottom: 0; left: 0; width: 312px; z-index: 60; }
+    .nav .brand { display: none; }
+    .nav-in { justify-content: flex-end; max-width: 1320px; }
+    .wrap { max-width: 1320px; }
+}
+
+/* ── 页面 ── */
+.wrap { max-width: 1180px; margin: 0 auto; padding: 44px 24px 96px; }
+.head h1 { font: 600 40px/1.15 var(--display); margin: 0 0 8px; }
+.head p { margin: 0; color: var(--muted); font-size: 15px; max-width: 56ch; }
+.grid { margin-top: 28px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 48px; align-items: start; }
+
+.search { position: sticky; top: 76px; z-index: 5; display: flex; align-items: center; gap: 10px; background: var(--field); border: 1px solid var(--field-line); border-radius: 12px; padding: 0 8px 0 14px; height: 48px; box-shadow: 0 0 0 6px var(--bg), 0 -12px 0 6px var(--bg); }
+.search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 6px var(--bg), 0 -12px 0 6px var(--bg); }
+.search .slash { font: 600 19px var(--display); color: var(--muted); }
+.search input { flex: 1; border: 0; background: none; outline: none; font: inherit; font-size: 16px; color: var(--text); min-width: 0; }
+.search input::placeholder { color: var(--muted); }
+.search input::-webkit-search-cancel-button { display: none; }
+.search .clear { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 4px 8px; border-radius: 6px; font-size: 14px; }
+.search .clear:hover { background: var(--hover); color: var(--text); }
+.found { margin: 10px 0 0; font-size: 14px; color: var(--muted); min-height: 1.6em; }
+
+#list { display: grid; grid-template-columns: max-content minmax(0, 1fr) auto; }
+.sec { scroll-margin-top: 140px; grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; }
+.sec-head, .empty { grid-column: 1 / -1; }
+.sec-head { margin: 28px 0 8px; }
+.sec-head h2 { font: 600 19px var(--display); margin: 0; display: flex; align-items: baseline; gap: 8px; }
+.sec-head h2 small { font: 500 14px var(--font); color: var(--muted); }
+.sec-head p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+.sec-head p b { color: var(--text); font-weight: 600; }
+.rows { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; border-top: 1px solid var(--line); }
+.row { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; gap: 16px; align-items: center; padding: 10px 12px; margin: 0 -12px; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; cursor: pointer; position: relative; }
+.row:hover { background: var(--row-hover); }
+.row[aria-selected="true"] { background: var(--accent-soft); }
+.row[aria-selected="true"]::before { content: ''; position: absolute; left: 0; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+.cmd { font-weight: 700; white-space: nowrap; }
+.cmd .pre { color: var(--muted); font-weight: 600; }
+.row .desc { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row[aria-selected="true"] .desc { color: var(--text); }
+.row .perm { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.empty { padding: 24px 0; color: var(--muted); display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; align-items: center; }
+.empty-stk { width: 88px; height: 88px; object-fit: contain; }
+.empty .sugg { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.empty .sugg button { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 4px 12px; cursor: pointer; font-size: 14px; }
+.empty .sugg button:hover { border-color: var(--field-line); }
+
+/* ── 右侧详情 ── */
+.panel { position: sticky; top: 88px; display: grid; gap: 18px; max-height: calc(100vh - 104px); overflow-y: auto; overscroll-behavior: contain; padding: 0 6px 12px 0; margin-right: -6px; scrollbar-width: thin; }
+.panel h3 { margin: 0; font: 600 24px/1.2 var(--display); overflow-wrap: anywhere; }
+.panel .lead { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+.who { margin: 0; display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
+.who b { color: var(--text); font-weight: 600; }
+.who svg { width: 15px; height: 15px; flex: none; }
+.inline-panel { display: none; }
+
+/* Discord 输入框：整页唯一放胆的地方 */
+.dcm { background: var(--dc-bg); color: var(--dc-text); border: 1px solid var(--line); border-radius: 12px; padding: 12px; box-shadow: var(--shadow-sm); }
+.dcm-pop { background: var(--dc-deep); border-radius: 8px; padding: 10px 12px 12px; margin-bottom: 8px; font-size: 14px; }
+.dcm-app { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--dc-muted); margin-bottom: 6px; }
+.dcm-app img { width: 16px; height: 16px; border-radius: 50%; }
+.dcm-opt b { color: var(--dc-name); font-weight: 700; }
+.dcm-opt .need { font-size: 12.5px; color: var(--dc-muted); margin-left: 6px; }
+.dcm-opt span.d { display: block; color: var(--dc-muted); margin-top: 1px; }
+.dcm-in { background: var(--dc-input); border-radius: 8px; padding: 9px 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 15px; min-height: 44px; }
+.dcm-in .c { font-weight: 700; color: var(--dc-name); margin-right: 2px; }
+.slot { display: inline-flex; align-items: center; background: var(--dc-slot); border-radius: 4px; padding: 1px 7px; font-size: 14px; color: var(--dc-name); transition: box-shadow .12s; }
+.slot::after { content: ':'; color: var(--dc-muted); margin-left: 1px; }
+.slot.on { box-shadow: 0 0 0 2px var(--accent); }
+.more { font-size: 12.5px; color: var(--dc-muted); padding: 1px 4px; }
+
+.block h4 { margin: 0 0 6px; font-size: 14px; font-weight: 600; color: var(--muted); }
+.params { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.params button { width: 100%; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; align-items: baseline; padding: 8px 0; border: 0; border-bottom: 1px solid var(--line); background: none; text-align: left; cursor: pointer; font-size: 14px; }
+.params button:hover .pn, .params button.on .pn { color: var(--accent-text); }
+.pn { font-weight: 600; }
+.pn .tag { font-weight: 500; font-size: 12.5px; color: var(--muted); margin-left: 6px; }
+.pd { color: var(--muted); }
+.ex { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: 15px; }
+.ex li { padding: 3px 0 3px 12px; border-left: 2px solid var(--line); overflow-wrap: anywhere; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; }
+.copy { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--field-line); background: var(--panel); border-radius: 8px; padding: 6px 12px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.copy:hover { border-color: var(--accent); color: var(--accent-text); }
+.copy svg { width: 15px; height: 15px; }
+.note { font-size: 14px; color: var(--muted); margin: 0; }
+.note b { color: var(--text); font-weight: 600; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 16px); opacity: 0; background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font-size: 14px; transition: .18s; pointer-events: none; z-index: 95; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* 窄屏：详情展开在选中的那一行下面 */
+@media (max-width: 1079px) {
+    .grid { grid-template-columns: minmax(0, 1fr); }
+    .panel { display: none; }
+    .inline-panel { display: grid; gap: 18px; grid-column: 1 / -1; padding: 6px 0 22px; border-bottom: 1px solid var(--line); }
+    .inline-panel h3 { display: none; }
+    .inline-panel .lead { display: none; }
+}
+@media (max-width: 640px) {
+    .wrap { padding: 28px 16px 80px; }
+    .head h1 { font-size: 32px; }
+    .nav-in { padding: 0 12px; gap: 2px; }
+    .brand span { display: none; }
+    .nav-link { padding: 8px; }
+    .nav .btn { padding: 8px 12px; }
+    #list { grid-template-columns: minmax(0, 1fr); }
+    .row { gap: 2px; }
+    .row .desc { white-space: normal; }
+    .row .perm { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<aside class="side" aria-label="指令分组">
+    <div class="rail">
+        <a href="#" class="home"><img src="/files/rin-avatar.png" alt="小凛 RinBot"></a>
+        <span class="sep" aria-hidden="true"></span>
+        <a href="#" aria-label="邀请小凛"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></a>
+        <a href="#" aria-label="控制台"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg></a>
+    </div>
+    <nav class="chan">
+        <div class="chan-head"><span data-l="zh">小凛的服务器</span><span data-l="en">Rin’s server</span></div>
+        <div class="chan-cat"><span data-l="zh">指令</span><span data-l="en">Commands</span></div>
+        <div id="chan-list"></div>
+    </nav>
+</aside>
+
+<nav class="nav"><div class="nav-in">
+    <a class="brand" href="#"><img src="/files/rin-avatar.png" alt=""><span>小凛 RinBot</span></a>
+    <a class="nav-link" href="#" aria-current="page"><span data-l="zh">指令</span><span data-l="en">Commands</span></a>
+    <button class="nav-link" type="button" data-lang-btn>EN</button>
+    <a class="nav-link" href="#"><span data-l="zh">控制台</span><span data-l="en">Dashboard</span></a>
+    <a class="btn" href="#"><span data-l="zh">邀请小凛</span><span data-l="en">Invite Rin</span></a>
+</div></nav>
+
+<main class="wrap">
+    <div class="head">
+        <h1><span data-l="zh">指令大全</span><span data-l="en">Commands</span></h1>
+        <p><span data-l="zh">在 Discord 里输入 / 就能用。点一条指令，看它在输入框里怎么填。</span><span data-l="en">Type / in Discord to use them. Pick one to see how to fill it in.</span></p>
+    </div>
+    <div class="grid">
+        <div>
+            <label class="search"><span class="slash" aria-hidden="true">/</span><input id="q" type="search" autocomplete="off" spellcheck="false" aria-controls="list"><button type="button" class="clear" id="clear" hidden></button></label>
+            <p class="found" id="found" role="status"></p>
+            <div id="list" role="listbox"></div>
+        </div>
+        <aside class="panel" id="panel" aria-live="polite"></aside>
+    </div>
+</main>
+<div class="toast" id="toast" role="status"></div>
+<div class="demo"><span>试装页</span><button type="button" data-lang-btn>EN</button><button type="button" id="theme-btn">夜间</button></div>
+
+<script>
+const DATA = [{"cog": "AutoMod", "name": "automod status", "en": "Show the automatic moderation settings", "zh": "查看自动审核的设置", "perms": ["manage_guild"], "params": [], "examples": ["/automod status"]}, {"cog": "AutoMod", "name": "automod words add", "en": "Add a banned word", "zh": "添加一个违禁词", "perms": ["manage_guild"], "params": [{"name": "word", "en": "The word to ban", "required": true, "zh": "违禁词", "zhd": "要禁止的词"}], "examples": ["/automod words add 广告"]}, {"cog": "AutoMod", "name": "automod words remove", "en": "Remove a banned word", "zh": "移除一个违禁词", "perms": ["manage_guild"], "params": [{"name": "word", "en": "The word to remove; pick from the list", "required": true, "zh": "违禁词", "zhd": "要移除的词，可以从列表里选"}], "examples": ["/automod words remove 广告"]}, {"cog": "AutoMod", "name": "automod words list", "en": "Show the banned words", "zh": "查看违禁词", "perms": ["manage_guild"], "params": [], "examples": ["/automod words list"]}, {"cog": "AutoMod", "name": "automod whitelist add", "en": "Allow links to a domain", "zh": "允许某个域名的链接", "perms": ["manage_guild"], "params": [{"name": "domain", "en": "A domain such as youtube.com", "required": true, "zh": "域名", "zhd": "如 youtube.com"}], "examples": ["/automod whitelist add youtube.com"]}, {"cog": "AutoMod", "name": "automod whitelist remove", "en": "Stop allowing links to a domain", "zh": "不再允许某个域名的链接", "perms": ["manage_guild"], "params": [{"name": "domain", "en": "The domain to remove; pick from the list", "required": true, "zh": "域名", "zhd": "要移除的域名，可以从列表里选"}], "examples": ["/automod whitelist remove youtube.com"]}, {"cog": "AutoMod", "name": "automod whitelist list", "en": "Show the allowed domains", "zh": "查看允许的域名", "perms": ["manage_guild"], "params": [], "examples": ["/automod whitelist list"]}, {"cog": "AutoMod", "name": "automod ignore add", "en": "Skip a channel or role", "zh": "让自动审核跳过一个频道或身份组", "perms": ["manage_guild"], "params": [{"name": "channel", "en": "A channel to skip", "required": false, "zh": "频道", "zhd": "要跳过的频道"}, {"name": "role", "en": "A role to skip", "required": false, "zh": "身份组", "zhd": "要跳过的身份组"}], "examples": ["/automod ignore add #管理员频道"]}, {"cog": "AutoMod", "name": "automod ignore remove", "en": "Stop skipping a channel or role", "zh": "不再跳过一个频道或身份组", "perms": ["manage_guild"], "params": [{"name": "channel", "en": "The channel to stop skipping", "required": false, "zh": "频道", "zhd": "不再跳过的频道"}, {"name": "role", "en": "The role to stop skipping", "required": false, "zh": "身份组", "zhd": "不再跳过的身份组"}], "examples": ["/automod ignore remove @管理员"]}, {"cog": "AutoMod", "name": "automod ignore list", "en": "Show the skipped channels and roles", "zh": "查看跳过的频道和身份组", "perms": ["manage_guild"], "params": [], "examples": ["/automod ignore list"]}, {"cog": "CommandToggle", "name": "commands disable", "en": "Turn a command off for this server", "zh": "在这个服务器停用一条指令", "perms": ["manage_guild"], "params": [{"name": "command", "en": "The command to turn off; pick from the list", "required": true, "zh": "指令", "zhd": "要停用的指令，可以从列表里选"}], "examples": ["/commands disable roll"]}, {"cog": "CommandToggle", "name": "commands enable", "en": "Turn a command back on", "zh": "重新启用一条指令", "perms": ["manage_guild"], "params": [{"name": "command", "en": "The command to turn on; pick from the list", "required": true, "zh": "指令", "zhd": "要启用的指令，可以从列表里选"}], "examples": ["/commands enable roll"]}, {"cog": "CommandToggle", "name": "commands list", "en": "Show the commands turned off here", "zh": "查看这个服务器停用了哪些指令", "perms": ["manage_guild"], "params": [], "examples": ["/commands list"]}, {"cog": "General", "name": "status", "en": "Show how the bot is doing", "zh": "查看小凛的运行状态", "perms": [], "params": [], "examples": ["/status"]}, {"cog": "General", "name": "roll", "en": "Roll a die", "zh": "掷一个骰子", "perms": [], "params": [{"name": "sides", "en": "How many sides, 2-1000; default 6", "required": false, "zh": "面数", "zhd": "骰子有几个面，2–1000，默认 6"}], "examples": ["/roll", "/roll 20"]}, {"cog": "General", "name": "avatar", "en": "Show someone's avatar in full size", "zh": "查看某人的大图头像", "perms": [], "params": [{"name": "member", "en": "Whose avatar; default yours", "required": false, "zh": "成员", "zhd": "看谁的头像，默认是你自己"}], "examples": ["/avatar @小明"]}, {"cog": "Giveaway", "name": "giveaway start", "en": "Start a giveaway in this channel", "zh": "在这个频道发起一个抽奖", "perms": ["manage_guild"], "params": [{"name": "duration", "en": "How long it runs, up to 365 days", "required": true, "zh": "时长", "zhd": "抽奖持续多久，最长 365 天"}, {"name": "prize", "en": "What the winners get", "required": true, "zh": "奖品", "zhd": "中奖者能得到什么"}, {"name": "winners", "en": "How many winners, 1-20", "required": false, "zh": "中奖人数", "zhd": "抽出几个人，1–20"}], "examples": ["/giveaway start 1d 1 Nitro 一个月"]}, {"cog": "Giveaway", "name": "giveaway end", "en": "End a running giveaway now", "zh": "提前结束一个进行中的抽奖", "perms": ["manage_guild"], "params": [{"name": "giveaway", "en": "The giveaway to end; pick from the list", "required": true, "zh": "抽奖", "zhd": "要结束的抽奖，可以从列表里选"}], "examples": ["/giveaway end 3"]}, {"cog": "Giveaway", "name": "giveaway reroll", "en": "Draw new winners for an ended giveaway", "zh": "给已结束的抽奖重新抽中奖者", "perms": ["manage_guild"], "params": [{"name": "giveaway", "en": "The ended giveaway; pick from the list", "required": true, "zh": "抽奖", "zhd": "已结束的抽奖，可以从列表里选"}, {"name": "count", "en": "How many new winners, 1-20", "required": false, "zh": "人数", "zhd": "重新抽几个人，1–20"}], "examples": ["/giveaway reroll 3", "/giveaway reroll 3 2"]}, {"cog": "Giveaway", "name": "giveaway list", "en": "List this server's recent giveaways", "zh": "查看这个服务器最近的抽奖", "perms": ["manage_guild"], "params": [], "examples": ["/giveaway list"]}, {"cog": "Help", "name": "help", "en": "Open the command menu, or explain one command", "zh": "打开指令菜单，或者查看一条指令的用法", "perms": [], "params": [{"name": "command", "en": "A command to explain, such as ban or warnings clear", "required": false, "zh": "指令", "zhd": "想了解的指令，如 ban、warnings clear"}], "examples": ["/help", "/help ban"]}, {"cog": "Leveling", "name": "rank", "en": "Show a level card", "zh": "查看等级卡片", "perms": [], "params": [{"name": "member", "en": "Whose card; default yours", "required": false, "zh": "成员", "zhd": "看谁的等级，默认是你自己"}], "examples": ["/rank", "/rank @小明"]}, {"cog": "Leveling", "name": "leaderboard", "en": "Show this server's level leaderboard", "zh": "查看这个服务器的等级排行榜", "perms": [], "params": [{"name": "page", "en": "Which page to show", "required": false, "zh": "页码", "zhd": "看第几页"}], "examples": ["/leaderboard", "/leaderboard 2"]}, {"cog": "Moderation", "name": "kick", "en": "Kick a member from the server", "zh": "把一名成员踢出服务器", "perms": ["kick_members"], "params": [{"name": "member", "en": "The member to kick", "required": true, "zh": "成员", "zhd": "要踢出的成员"}, {"name": "reason", "en": "Why they are kicked", "required": false, "zh": "原因", "zhd": "踢出的原因，会私信告诉对方"}], "examples": ["/kick @小明 多次刷屏"]}, {"cog": "Moderation", "name": "ban", "en": "Ban a member; add a duration for a temporary ban", "zh": "封禁一名成员，填了时长就是临时封禁", "perms": ["ban_members"], "params": [{"name": "member", "en": "The member or user ID to ban", "required": true, "zh": "成员", "zhd": "要封禁的成员，也可以填用户 ID"}, {"name": "duration", "en": "How long, such as 1d or 7d; leave empty to ban for good", "required": false, "zh": "时长", "zhd": "封禁多久，如 1d、7d；不填就是永久"}, {"name": "delete_days", "en": "Also delete their messages from the last 0-7 days", "required": false, "zh": "清理天数", "zhd": "同时删除他最近几天发的消息，0–7 天"}, {"name": "reason", "en": "Why they are banned", "required": false, "zh": "原因", "zhd": "封禁的原因，会私信告诉对方"}], "examples": ["/ban @小明 7d 刷屏", "/ban 123456789012345678 发广告"]}, {"cog": "Moderation", "name": "unban", "en": "Lift a ban", "zh": "解除封禁", "perms": ["ban_members"], "params": [{"name": "user", "en": "Who to unban; pick from the ban list or enter a user ID", "required": true, "zh": "用户", "zhd": "要解封的人，可以从封禁名单里选，也可以填用户 ID"}, {"name": "reason", "en": "Why the ban is lifted", "required": false, "zh": "原因", "zhd": "解封的原因"}], "examples": ["/unban 小明"]}, {"cog": "Moderation", "name": "mute", "en": "Time out a member", "zh": "禁言一名成员（Discord 超时）", "perms": ["moderate_members"], "params": [{"name": "member", "en": "The member to time out", "required": true, "zh": "成员", "zhd": "要禁言的成员"}, {"name": "duration", "en": "How long, up to 28 days; default 10 minutes", "required": false, "zh": "时长", "zhd": "禁言多久，最长 28 天，默认 10 分钟"}, {"name": "reason", "en": "Why they are timed out", "required": false, "zh": "原因", "zhd": "禁言的原因"}], "examples": ["/mute @小明 1h 刷屏"]}, {"cog": "Moderation", "name": "unmute", "en": "Remove a member's timeout", "zh": "解除成员的禁言", "perms": ["moderate_members"], "params": [{"name": "member", "en": "The member to free", "required": true, "zh": "成员", "zhd": "要解除禁言的成员"}, {"name": "reason", "en": "Why the timeout is removed", "required": false, "zh": "原因", "zhd": "解除的原因"}], "examples": ["/unmute @小明"]}, {"cog": "Moderation", "name": "warn", "en": "Warn a member; enough warnings trigger an automatic punishment", "zh": "警告一名成员，警告次数够了会自动处罚", "perms": ["manage_messages"], "params": [{"name": "member", "en": "The member to warn", "required": true, "zh": "成员", "zhd": "要警告的成员"}, {"name": "reason", "en": "Why they are warned", "required": false, "zh": "原因", "zhd": "警告的原因，会私信告诉对方"}], "examples": ["/warn @小明 请不要刷屏"]}, {"cog": "Moderation", "name": "warnings list", "en": "Show a member's warnings", "zh": "查看一名成员的警告记录", "perms": ["manage_messages"], "params": [{"name": "member", "en": "The member to look up", "required": true, "zh": "成员", "zhd": "要查看的成员"}], "examples": ["/warnings list @小明"]}, {"cog": "Moderation", "name": "warnings remove", "en": "Delete one warning", "zh": "删除一条警告", "perms": ["manage_messages"], "params": [{"name": "warning", "en": "The warning to delete; pick from the list", "required": true, "zh": "警告", "zhd": "要删除的警告，可以从列表里选"}], "examples": ["/warnings remove 12"]}, {"cog": "Moderation", "name": "warnings clear", "en": "Delete all of a member's warnings", "zh": "清空一名成员的所有警告", "perms": ["manage_messages"], "params": [{"name": "member", "en": "The member whose warnings are cleared", "required": true, "zh": "成员", "zhd": "要清空警告的成员"}], "examples": ["/warnings clear @小明"]}, {"cog": "Moderation", "name": "purge", "en": "Delete recent messages in this channel", "zh": "批量删除这个频道最近的消息", "perms": ["manage_messages"], "params": [{"name": "amount", "en": "How many messages, 1-500", "required": true, "zh": "条数", "zhd": "删除多少条，1–500"}, {"name": "member", "en": "Only delete messages from this member", "required": false, "zh": "成员", "zhd": "只删除这个成员的消息（可选）"}], "examples": ["/purge 50", "/purge 100 @小明"]}, {"cog": "Moderation", "name": "slowmode", "en": "Set slow mode for this channel", "zh": "设置这个频道的慢速模式", "perms": ["manage_channels"], "params": [{"name": "duration", "en": "Time between messages, up to 6 hours; 0 turns it off", "required": false, "zh": "间隔", "zhd": "每条消息之间至少隔多久，最长 6 小时；填 0 关闭"}], "examples": ["/slowmode 30s", "/slowmode 0"]}, {"cog": "Moderation", "name": "lock", "en": "Stop members from sending messages in a channel", "zh": "锁定频道，普通成员不能发言", "perms": ["manage_channels"], "params": [{"name": "channel", "en": "The channel to lock; default this one", "required": false, "zh": "频道", "zhd": "要锁定的频道，默认当前频道"}, {"name": "reason", "en": "Why it is locked", "required": false, "zh": "原因", "zhd": "锁定的原因"}], "examples": ["/lock", "/lock #公告 维护中"]}, {"cog": "Moderation", "name": "unlock", "en": "Let members send messages in a locked channel again", "zh": "解锁频道，恢复普通成员发言", "perms": ["manage_channels"], "params": [{"name": "channel", "en": "The channel to unlock; default this one", "required": false, "zh": "频道", "zhd": "要解锁的频道，默认当前频道"}], "examples": ["/unlock"]}, {"cog": "Moderation", "name": "case list", "en": "List moderation cases, optionally for one member", "zh": "查看管理记录，可以只看一个成员的", "perms": ["manage_messages"], "params": [{"name": "member", "en": "Only show cases for this member", "required": false, "zh": "成员", "zhd": "只看这个成员的案件（可选）"}, {"name": "page", "en": "Which page to show", "required": false, "zh": "页码", "zhd": "看第几页"}], "examples": ["/case list", "/case list @小明"]}, {"cog": "Moderation", "name": "case view", "en": "Show one case", "zh": "查看一个案件", "perms": ["manage_messages"], "params": [{"name": "case", "en": "The case to show; pick from the list", "required": true, "zh": "案件", "zhd": "要查看的案件，可以从列表里选"}], "examples": ["/case view 12"]}, {"cog": "Moderation", "name": "case reason", "en": "Change the reason of a case", "zh": "修改一个案件的原因", "perms": ["manage_messages"], "params": [{"name": "case", "en": "The case to change; pick from the list", "required": true, "zh": "案件", "zhd": "要修改的案件，可以从列表里选"}, {"name": "reason", "en": "The new reason", "required": true, "zh": "原因", "zhd": "新的原因"}], "examples": ["/case reason 12 发广告"]}, {"cog": "Moderation", "name": "case duration", "en": "Change how long an active timeout or temporary ban lasts", "zh": "修改还在生效的禁言或临时封禁的时长", "perms": ["manage_messages"], "params": [{"name": "case", "en": "The active timeout or temporary ban; pick from the list", "required": true, "zh": "案件", "zhd": "还在生效的禁言或临时封禁，可以从列表里选"}, {"name": "duration", "en": "The new length, counted from now", "required": true, "zh": "时长", "zhd": "新的时长，从现在算起"}], "examples": ["/case duration 12 2h"]}, {"cog": "Music", "name": "play", "en": "Play a song, link, playlist or Spotify link, or add it to the queue", "zh": "播放歌曲、链接、歌单或 Spotify 链接，正在播放时加入队列", "perms": [], "params": [{"name": "query", "en": "A song name, song link or playlist link", "required": true, "zh": "歌曲", "zhd": "歌名、歌曲链接或歌单链接"}], "examples": ["/play 晴天 周杰伦", "/play https://youtu.be/..."]}, {"cog": "Music", "name": "search", "en": "Search for songs and pick one to play", "zh": "搜索歌曲，从结果里选一首播放", "perms": [], "params": [{"name": "query", "en": "A song name or artist to search for", "required": true, "zh": "关键词", "zhd": "要搜索的歌名或歌手"}], "examples": ["/search 七里香"]}, {"cog": "Music", "name": "skip", "en": "Skip the current song, or vote to skip it", "zh": "跳过当前歌曲，人多时发起投票", "perms": [], "params": [], "examples": ["/skip"]}, {"cog": "Music", "name": "pause", "en": "Pause the music", "zh": "暂停播放", "perms": [], "params": [], "examples": ["/pause"]}, {"cog": "Music", "name": "resume", "en": "Resume the music", "zh": "继续播放", "perms": [], "params": [], "examples": ["/resume"]}, {"cog": "Music", "name": "stop", "en": "Stop the music, clear the queue and leave the voice channel", "zh": "停止播放、清空队列并离开语音频道", "perms": [], "params": [], "examples": ["/stop"]}, {"cog": "Music", "name": "nowplaying", "en": "Show the song that is playing", "zh": "查看正在播放的歌曲", "perms": [], "params": [], "examples": ["/nowplaying"]}, {"cog": "Music", "name": "queue", "en": "Show the queue", "zh": "查看播放队列", "perms": [], "params": [{"name": "page", "en": "Which page of the queue to show", "required": false, "zh": "页码", "zhd": "看第几页"}], "examples": ["/queue", "/queue 2"]}, {"cog": "Music", "name": "remove", "en": "Remove a song from the queue", "zh": "从队列里移除一首歌", "perms": [], "params": [{"name": "position", "en": "The song to remove; pick from the queue", "required": true, "zh": "歌曲", "zhd": "要移除的歌，可以从队列里选"}], "examples": ["/remove 3"]}, {"cog": "Music", "name": "clear", "en": "Clear the queue without stopping the current song", "zh": "清空播放队列，当前这首继续播", "perms": [], "params": [], "examples": ["/clear"]}, {"cog": "Music", "name": "shuffle", "en": "Shuffle the queue", "zh": "随机打乱队列顺序", "perms": [], "params": [], "examples": ["/shuffle"]}, {"cog": "Music", "name": "loop", "en": "Set the loop mode; leave empty to switch to the next mode", "zh": "设置循环模式，不填就切到下一种", "perms": [], "params": [{"name": "mode", "en": "Off, repeat this song, or repeat the whole queue", "required": false, "zh": "模式", "zhd": "关闭、单曲循环或整个队列循环"}], "examples": ["/loop single", "/loop"]}, {"cog": "Music", "name": "volume", "en": "Show or set the volume, 0-150", "zh": "查看或调整音量，0–150", "perms": [], "params": [{"name": "level", "en": "Volume in percent; 30-100 sounds best; leave empty to show it", "required": false, "zh": "音量", "zhd": "音量百分比，30–100 效果最好；不填就显示当前音量"}], "examples": ["/volume 60"]}, {"cog": "Music", "name": "move", "en": "Move a song to another place in the queue", "zh": "把队列里的一首歌挪到别的位置", "perms": [], "params": [{"name": "from_pos", "en": "The song to move; pick from the queue", "required": true, "zh": "歌曲", "zhd": "要挪的歌，可以从队列里选"}, {"name": "to_pos", "en": "Where to put it", "required": true, "zh": "新位置", "zhd": "挪到第几位"}], "examples": ["/move 5 1"]}, {"cog": "Music", "name": "playlist save", "en": "Save the current queue under a name", "zh": "把当前队列存成存档", "perms": [], "params": [{"name": "name", "en": "A name for the saved queue; default is default", "required": false, "zh": "名字", "zhd": "存档的名字，默认 default"}], "examples": ["/playlist save 周末歌单"]}, {"cog": "Music", "name": "playlist load", "en": "Add a saved queue to the queue", "zh": "把一个存档加进播放队列", "perms": [], "params": [{"name": "name", "en": "The saved queue to load; pick from the list", "required": false, "zh": "名字", "zhd": "要载入的存档，可以从列表里选"}], "examples": ["/playlist load 周末歌单"]}, {"cog": "Music", "name": "playlist list", "en": "List the saved queues", "zh": "查看已保存的存档", "perms": [], "params": [], "examples": ["/playlist list"]}, {"cog": "Music", "name": "playlist delete", "en": "Delete a saved queue", "zh": "删除一个存档", "perms": [], "params": [{"name": "name", "en": "The saved queue to delete; pick from the list", "required": true, "zh": "名字", "zhd": "要删除的存档，可以从列表里选"}], "examples": ["/playlist delete 周末歌单"]}, {"cog": "Music", "name": "join", "en": "Have the bot join your voice channel", "zh": "让机器人加入你所在的语音频道", "perms": [], "params": [], "examples": ["/join"]}, {"cog": "ReactionRoles", "name": "roles list", "en": "List this server's role panels", "zh": "列出这个服务器的身份组面板", "perms": ["manage_roles"], "params": [], "examples": ["/roles list"]}, {"cog": "ReactionRoles", "name": "roles add", "en": "Add a role button to a panel", "zh": "给面板加一个身份组按钮", "perms": ["manage_roles"], "params": [{"name": "panel", "en": "The panel to change; pick from the list", "required": true, "zh": "面板", "zhd": "要改的面板，可以从列表里选"}, {"name": "emoji", "en": "The emoji on the button, such as 🎮", "required": true, "zh": "表情", "zhd": "按钮上的 emoji，比如 🎮"}, {"name": "role", "en": "The role members get from the button", "required": true, "zh": "身份组", "zhd": "成员点按钮领到的身份组"}], "examples": ["/roles add 游戏身份组 🎮 @游戏"]}, {"cog": "ReactionRoles", "name": "roles remove", "en": "Take a role button off a panel", "zh": "从面板上去掉一个身份组按钮", "perms": ["manage_roles"], "params": [{"name": "panel", "en": "The panel to change; pick from the list", "required": true, "zh": "面板", "zhd": "要改的面板，可以从列表里选"}, {"name": "role", "en": "The role to take off; pick from the list", "required": true, "zh": "身份组", "zhd": "要去掉的身份组，可以从列表里选"}], "examples": ["/roles remove 游戏身份组 🎮"]}, {"cog": "ReactionRoles", "name": "roles exclusive", "en": "Let members pick one role or several on a panel", "zh": "把面板切换成单选或多选", "perms": ["manage_roles"], "params": [{"name": "panel", "en": "The panel to change; pick from the list", "required": true, "zh": "面板", "zhd": "要改的面板，可以从列表里选"}, {"name": "enabled", "en": "True lets members keep only one role", "required": true, "zh": "单选", "zhd": "选 True 就只能领一个，选 False 就能领多个"}], "examples": ["/roles exclusive 颜色 True"]}, {"cog": "ReactionRoles", "name": "roles delete", "en": "Delete a role panel and its message", "zh": "删除一个身份组面板和它的消息", "perms": ["manage_roles"], "params": [{"name": "panel", "en": "The panel to delete; pick from the list", "required": true, "zh": "面板", "zhd": "要删除的面板，可以从列表里选"}], "examples": ["/roles delete 游戏身份组"]}, {"cog": "ServerLog", "name": "serverlog ignore", "en": "Stop logging messages in a channel", "zh": "不再记录一个频道里的消息", "perms": ["manage_guild"], "params": [{"name": "channel", "en": "The channel to skip", "required": true, "zh": "频道", "zhd": "要忽略的频道"}], "examples": ["/serverlog ignore #机器人频道"]}, {"cog": "ServerLog", "name": "serverlog unignore", "en": "Log messages in a skipped channel again", "zh": "恢复记录一个频道里的消息", "perms": ["manage_guild"], "params": [{"name": "channel", "en": "The channel to log again", "required": true, "zh": "频道", "zhd": "要恢复记录的频道"}], "examples": ["/serverlog unignore #机器人频道"]}, {"cog": "Welcome", "name": "welcome setup", "en": "Pick the welcome and farewell channels and the auto roles", "zh": "选择欢迎频道、道别频道和新成员的自动身份组", "perms": ["manage_guild"], "params": [], "examples": ["/welcome setup"]}, {"cog": "Welcome", "name": "welcome test", "en": "Preview the welcome message with yourself as the new member", "zh": "用你自己当新成员，预览欢迎消息", "perms": ["manage_guild"], "params": [], "examples": ["/welcome test"]}];
+const GROUPS = [
+    ['Music', '音乐', 'Music', '在语音频道里放歌，队列可以存档下次再放。', 'Play music in voice channels and save queues for later.', 'music', '音乐系统', 'Music'],
+    ['Leveling', '等级', 'Levels', '聊天涨经验，查看等级卡和排行榜。', 'Chat to earn XP, then check cards and the leaderboard.', 'leveling', '等级系统', 'Leveling'],
+    ['Welcome', '迎新', 'Welcomes', '选欢迎频道，用自己预览欢迎消息。', 'Pick the welcome channel and preview the message on yourself.', 'welcome', '欢迎新成员', 'Welcome'],
+    ['Giveaway', '抽奖', 'Giveaways', '发起、提前结束和重抽。', 'Start, end early and reroll.', 'giveaway', '抽奖', 'Giveaways'],
+    ['ReactionRoles', '身份组面板', 'Role panels', '成员点按钮自己领身份组。', 'Members pick their own roles with buttons.', 'roles', '领取身份组', 'Role panels'],
+    ['Moderation', '管理', 'Moderation', '踢出、封禁、禁言、警告和管理记录。', 'Kick, ban, time out, warn and look up cases.', 'moderation', '管理模块', 'Moderation'],
+    ['AutoMod', '自动审核', 'AutoMod', '违禁词、允许的链接和跳过的频道。', 'Banned words, allowed links and skipped channels.', 'automod', '自动审核', 'AutoMod'],
+    ['ServerLog', '服务器日志', 'Server log', '选择不记录哪些频道。', 'Choose channels to leave out of the log.', 'serverlog', '服务器事件日志', 'Server log'],
+    ['General', '通用', 'General', '状态、头像和掷骰子。', 'Status, avatars and dice.', null],
+    ['System', '系统', 'System', '帮助和指令开关。', 'Help and command switches.', 'utility', '指令管理', 'Commands'],
+];
+const COG = { CommandToggle: 'System', Help: 'System' };
+const PERM = {
+    manage_guild: ['管理服务器', 'Manage Server'], kick_members: ['踢出成员', 'Kick Members'], ban_members: ['封禁成员', 'Ban Members'],
+    moderate_members: ['禁言成员', 'Timeout Members'], manage_messages: ['管理消息', 'Manage Messages'],
+    manage_channels: ['管理频道', 'Manage Channels'], manage_roles: ['管理身份组', 'Manage Roles'],
+};
+DATA.forEach(c => { c.group = COG[c.cog] || c.cog; c.id = c.name.replace(/ /g, '-'); });
+const ORDER = GROUPS.flatMap(g => DATA.filter(c => c.group === g[0]));
+const root = document.documentElement;
+const $ = id => document.getElementById(id);
+const zh = () => root.dataset.lang === 'zh';
+const L = (a, b) => zh() ? a : b;
+const esc = s => String(s ?? '').replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+const desc = c => L(c.zh || c.en, c.en);
+const pname = p => L(p.zh || p.name, p.name);
+const pdesc = p => L(p.zhd || p.en, p.en);
+const permOf = c => c.perms.length ? L(...PERM[c.perms[0]]) : null;
+const groupPerm = rows => { const k = rows[0]?.perms[0] || ''; return k && rows.every(c => (c.perms[0] || '') === k) ? L(...PERM[k]) : null; };
+const examples = c => zh() ? c.examples : c.examples.filter(e => !/[　-鿿＀-￯]/.test(e));
+const norm = s => String(s || '').toLowerCase();
+const query = () => norm($('q').value).replace(/^\//, '').trim();
+function hl(text, q) {
+    const s = String(text ?? '');
+    if (!q) return esc(s);
+    const i = norm(s).indexOf(q);
+    return i < 0 ? esc(s) : esc(s.slice(0, i)) + '<mark>' + esc(s.slice(i, i + q.length)) + '</mark>' + esc(s.slice(i + q.length));
+}
+const matches = (c, q) => !q || [c.name, c.zh, c.en, ...c.params.flatMap(p => [p.name, p.zh, p.zhd, p.en])].some(s => norm(s).includes(q));
+function cmdHtml(c, q) {
+    const parts = c.name.split(' ');
+    return parts.length > 1
+        ? `<span class="cmd"><span class="pre">/${hl(parts[0], q)}</span> ${hl(parts.slice(1).join(' '), q)}</span>`
+        : `<span class="cmd">/${hl(c.name, q)}</span>`;
+}
+
+let sel = null, focusOpt = 0;
+let visible = [];
+
+function renderList() {
+    const q = query();
+    visible = ORDER.filter(c => matches(c, q));
+    if (sel && !visible.includes(sel) && visible.length) sel = visible[0];
+    const narrow = matchMedia('(max-width: 1079px)').matches;
+    let html = '';
+    GROUPS.forEach(g => {
+        const rows = visible.filter(c => c.group === g[0]);
+        if (!rows.length) return;
+        const all = DATA.filter(c => c.group === g[0]);
+        const shared = groupPerm(all);
+        html += `<section class="sec" id="g-${g[0]}" data-group="${g[0]}"><div class="sec-head"><h2>${esc(L(g[1], g[2]))}<small>${q ? L(`${rows.length} / ${all.length} 条`, `${rows.length} of ${all.length}`) : L(`${all.length} 条`, `${all.length}`)}</small></h2>
+            <p>${esc(L(g[3], g[4]))}${shared ? L(` 这一组默认需要 <b>${esc(shared)}</b> 权限。`, ` All of these need <b>${esc(shared)}</b> by default.`) : ''}</p></div><div class="rows">`;
+        rows.forEach(c => {
+            const on = c === sel;
+            const perm = !shared && permOf(c) ? `<span class="perm">${L('需要', 'Needs')} ${esc(permOf(c))}</span>` : '<span></span>';
+            html += `<button type="button" class="row" role="option" id="r-${c.id}" data-id="${c.id}" aria-selected="${on}" title="${esc(desc(c))}">${cmdHtml(c, q)}<span class="desc">${hl(desc(c), q)}</span>${perm}</button>`;
+            if (on && narrow) html += `<div class="inline-panel">${detail(c)}</div>`;
+        });
+        html += `</div></section>`;
+    });
+    if (!html) {
+        html = `<div class="empty"><img class="empty-stk" src="/files/rin-confused.png" alt="" width="88" height="88"><div>${L(`没有和「${esc($('q').value)}」有关的指令。试试功能名：`, `Nothing matches “${esc($('q').value)}”. Try a feature:`)}<div class="sugg">${(zh() ? ['音乐', '封禁', '欢迎', '抽奖'] : ['music', 'ban', 'welcome', 'giveaway']).map(s => `<button type="button" data-q="${s}">${s}</button>`).join('')}</div></div></div>`;
+    }
+    $('list').innerHTML = html;
+    $('found').textContent = q ? (visible.length ? L(`找到 ${visible.length} 条`, `${visible.length} found`) : '') : L(`共 ${DATA.length} 条，按功能分组。按 / 键直接搜索。`, `${DATA.length} commands, grouped by feature. Press / to search.`);
+    $('clear').hidden = !q;
+    $('clear').textContent = L('清空', 'Clear');
+    renderChannels();
+}
+
+function dcm(c) {
+    const req = c.params.filter(p => p.required);
+    const opt = c.params.filter(p => !p.required);
+    const cur = c.params[focusOpt];
+    const shown = cur && !cur.required ? [...req, cur] : req;
+    const slots = shown.map(p => `<span class="slot ${p === cur ? 'on' : ''}">${esc(pname(p))}</span>`).join('');
+    const rest = opt.length - (cur && !cur.required ? 1 : 0);
+    const pop = cur
+        ? `<div class="dcm-opt"><b>${esc(pname(cur))}</b><span class="need">${cur.required ? L('必填', 'required') : L('可不填', 'optional')}</span><span class="d">${esc(pdesc(cur))}</span></div>`
+        : `<div class="dcm-opt"><b>/${esc(c.name)}</b><span class="d">${esc(desc(c))}</span></div>`;
+    return `<div class="dcm" aria-label="${L('在 Discord 输入框里的样子', 'How it looks in the Discord message box')}">
+        <div class="dcm-pop"><div class="dcm-app"><img src="/files/rin-avatar.png" alt="">${L('小凛', 'Rin')}</div>${pop}</div>
+        <div class="dcm-in"><span class="c">/${esc(c.name)}</span>${slots}${rest > 0 ? `<span class="more">${L(`+${rest} 个可不填`, `+${rest} optional`)}</span>` : ''}</div></div>`;
+}
+function detail(c) {
+    const g = GROUPS.find(x => x[0] === c.group);
+    const params = c.params.length ? `<div class="block"><h4>${L('参数', 'Options')}</h4><ul class="params">${c.params.map((p, i) => `<li><button type="button" data-opt="${i}" class="${i === focusOpt ? 'on' : ''}" title="${L('在上面的输入框里看它的位置', 'Show it in the box above')}"><span class="pn">${esc(pname(p))}<span class="tag">${p.required ? L('必填', 'required') : L('可不填', 'optional')}</span></span><span class="pd">${esc(pdesc(p))}</span></button></li>`).join('')}</ul></div>` : '';
+    const ex = examples(c);
+    const exHtml = ex.length ? `<div class="block"><h4>${L('例子', 'Examples')}</h4><ul class="ex">${ex.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>` : '';
+    const who = permOf(c)
+        ? `<p class="who"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>${L(`需要 <b>${esc(permOf(c))}</b> 权限`, `Needs <b>${esc(permOf(c))}</b>`)}</p>`
+        : `<p class="who">${L('所有人都能用', 'Everyone can use it')}</p>`;
+    const perm = permOf(c)
+        ? `<p class="note">${L('想让更多人或更少人能用，在 Discord 的「服务器设置 › 整合 › 小凛」里改。', 'To let more or fewer people use it, go to Server Settings › Integrations › Rin in Discord.')}</p>`
+        : '';
+    const dash = g && g[5] ? `<a href="#" class="note-link">${L(`在控制台的「${g[6]}」里也能设置`, `Also set up in the dashboard under ${g[7]}`)}</a>` : '';
+    return `${who}${dcm(c)}${params}${exHtml}<div class="actions"><button type="button" class="copy" data-copy="/${esc(c.name)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>${L('复制', 'Copy')} /${esc(c.name)}</button>${dash}</div>${perm}`;
+}
+function renderPanel() {
+    const c = sel;
+    $('panel').innerHTML = c ? `<div><h3>/${esc(c.name)}</h3><p class="lead">${esc(desc(c))}</p></div>${detail(c)}` : '';
+}
+function renderChannels() {
+    $('chan-list').innerHTML = GROUPS.map(g => {
+        const n = visible.filter(c => c.group === g[0]).length;
+        return n ? `<a href="#g-${g[0]}" data-spy="g-${g[0]}"><span class="h" aria-hidden="true">#</span>${esc(L(g[1], g[2]))}<span class="n">${n}</span></a>` : '';
+    }).join('');
+    spy();
+}
+function select(c, {scroll = false, focus = false} = {}) {
+    sel = c; focusOpt = 0;
+    history.replaceState(null, '', '#' + c.id);
+    renderList(); renderPanel();
+    const row = $('r-' + c.id);
+    if (row && scroll) row.scrollIntoView({block: 'nearest'});
+    if (row && focus) row.focus({preventScroll: !scroll});
+}
+function renderAll() {
+    renderList(); renderPanel();
+    document.querySelectorAll('[data-lang-btn]').forEach(b => { b.textContent = zh() ? 'EN' : '中文'; });
+    $('theme-btn').textContent = root.dataset.theme === 'dark' ? '白天' : '夜间';
+    $('q').placeholder = L('搜索指令、功能或参数', 'Search commands, features or options');
+}
+
+let spyIO;
+function spy() {
+    if (spyIO) spyIO.disconnect();
+    spyIO = new IntersectionObserver(es => es.forEach(e => {
+        if (!e.isIntersecting) return;
+        document.querySelectorAll('[data-spy]').forEach(a => a.classList.toggle('on', a.dataset.spy === e.target.id));
+    }), {rootMargin: '-30% 0px -60% 0px'});
+    document.querySelectorAll('.sec').forEach(s => spyIO.observe(s));
+}
+
+let toastTimer;
+document.addEventListener('click', e => {
+    const t = e.target.closest('button');
+    if (!t) return;
+    if (t.dataset.id) select(DATA.find(c => c.id === t.dataset.id));
+    else if (t.dataset.opt) { focusOpt = +t.dataset.opt; renderPanel(); if (matchMedia('(max-width: 1079px)').matches) renderList(); }
+    else if (t.dataset.q) { $('q').value = t.dataset.q; renderList(); $('q').focus(); }
+    else if (t.id === 'clear') { $('q').value = ''; renderList(); $('q').focus(); }
+    else if (t.hasAttribute('data-lang-btn')) { root.dataset.lang = zh() ? 'en' : 'zh'; renderAll(); }
+    else if (t.id === 'theme-btn') { root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark'; renderAll(); }
+    else if (t.dataset.copy) {
+        navigator.clipboard?.writeText(t.dataset.copy).catch(() => {});
+        $('toast').textContent = L(`已复制 ${t.dataset.copy}，在 Discord 里粘贴后选中它`, `Copied ${t.dataset.copy}. Paste it in Discord and pick it from the list`);
+        $('toast').classList.add('show');
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => $('toast').classList.remove('show'), 2200);
+    }
+});
+document.addEventListener('mouseover', e => {
+    const t = e.target.closest('[data-opt]');
+    if (t && +t.dataset.opt !== focusOpt && !matchMedia('(max-width: 1079px)').matches) {
+        focusOpt = +t.dataset.opt;
+        $('panel').querySelector('.dcm').outerHTML = dcm(sel);
+        $('panel').querySelectorAll('[data-opt]').forEach(b => b.classList.toggle('on', +b.dataset.opt === focusOpt));
+    }
+});
+$('q').addEventListener('input', () => { renderList(); renderPanel(); });
+document.addEventListener('keydown', e => {
+    const a = document.activeElement;
+    if (e.key === '/' && !/INPUT|TEXTAREA/.test(a.tagName)) { e.preventDefault(); $('q').focus(); $('q').select(); return; }
+    if (a === $('q') && e.key === 'Escape') { $('q').value = ''; renderList(); return; }
+    if (a === $('q') && e.key === 'Enter' && visible.length) { e.preventDefault(); select(visible[0], {scroll: true}); return; }
+    const inList = a === $('q') || a.classList.contains('row');
+    if (inList && (e.key === 'ArrowDown' || e.key === 'ArrowUp') && visible.length) {
+        e.preventDefault();
+        const i = visible.indexOf(sel);
+        const next = visible[Math.max(0, Math.min(visible.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)))];
+        select(next, {scroll: true, focus: a !== $('q')});
+    }
+});
+matchMedia('(max-width: 1079px)').addEventListener('change', () => renderList());
+
+const fromHash = DATA.find(c => c.id === decodeURIComponent(location.hash.slice(1)));
+sel = fromHash || ORDER[0];
+renderAll();
+if (fromHash) $('r-' + fromHash.id)?.scrollIntoView({block: 'center'});
+</script>
+</body>
+</html>
