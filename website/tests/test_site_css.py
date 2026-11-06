@@ -64,6 +64,14 @@ class PageCssTests(unittest.TestCase):
     def test_legal_pages_use_the_page_scale(self):
         self.assertLessEqual(font_sizes(self.read('legal.css')), PAGE_SIZES)
 
+    def test_commands_page_uses_the_page_scale(self):
+        css = self.read('commands.css')
+        self.assertLessEqual(font_sizes(css), PAGE_SIZES)
+        self.assertIn('var(--muted)', re.search(r'\.search \.slash\s*\{([^}]*)\}', css).group(1))
+        panel = re.search(r'\.panel\s*\{([^}]*)\}', css).group(1)
+        self.assertIn('max-height', panel)
+        self.assertIn('overflow-y: auto', panel)
+
     def test_legal_prose_is_narrow_and_the_table_is_wider(self):
         css = self.read('legal.css')
         self.assertRegex(css, r'max-width:\s*38em')

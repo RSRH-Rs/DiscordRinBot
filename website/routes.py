@@ -43,6 +43,20 @@ def suggest_page(path: str) -> Optional[str]:
     return matches[0] if matches else None
 
 
+COMMAND_CATALOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "commands.json")
+
+
+def command_sections(commands: list) -> list:
+    """指令大全的分组：每组的指令，以及整组共用的默认权限（各不相同时为 None）。"""
+    sections = []
+    for group in site_data.COMMAND_GROUPS:
+        rows = [c for c in commands if c["group"] == group["key"]]
+        first = rows[0]["perms"][0] if rows and rows[0]["perms"] else None
+        shared = first if first and all(c["perms"][:1] == [first] for c in rows) else None
+        sections.append({"group": group, "rows": rows, "shared": shared})
+    return sections
+
+
 # Shared aiohttp session — created at app startup, closed at shutdown
 _session: Optional[aiohttp.ClientSession] = None
 
@@ -902,6 +916,17 @@ def setup_routes(app, discord):
         except Exception:
             is_logged_in = False
         return await render_template(template, is_logged_in=is_logged_in, **ctx)
+
+    with open(COMMAND_CATALOG_PATH, encoding="utf-8") as f:
+        command_catalog = json.load(f)["commands"]
+    sections = command_sections(command_catalog)
+
+    @app.route("/commands")
+    async def commands_page():
+        return await _site_page(
+            "commands.html", sections=sections, commands=command_catalog,
+            groups=site_data.COMMAND_GROUPS, perm_labels=site_data.PERM_LABELS,
+        )
 
     @app.route("/privacy")
     async def privacy():

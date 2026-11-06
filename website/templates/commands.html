@@ -1,0 +1,84 @@
+{%- set active_nav = 'commands' -%}
+{%- extends '_site_base.html' -%}
+{%- from '_site_macros.html' import t -%}
+{%- macro hl(text, lang=None) -%}<span{% if lang %} data-l="{{ lang }}"{% if lang == 'en' %} lang="en"{% endif %}{% endif %} data-hl data-text="{{ text }}">{{ text }}</span>{%- endmacro -%}
+
+{% block title %}指令大全 · 小凛Rinbot{% endblock %}
+{% block description %}小凛的全部斜杠指令：怎么填、谁能用，按功能分组，可以搜索。{% endblock %}
+{% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/commands.css') }}">
+{%- endblock %}
+
+{% block side_channels %}
+        <div class="chan-head">{{ t('小凛的服务器', 'Rin’s server') }}</div>
+        <div class="chan-cat">{{ t('指令', 'Commands') }}</div>
+        {%- for s in sections %}
+        <a href="#g-{{ s.group.key }}" data-spy="g-{{ s.group.key }}" data-chan="{{ s.group.key }}"><span class="h" aria-hidden="true">#</span>{{ t(s.group.zh, s.group.en) }}<span class="n">{{ s.rows|length }}</span></a>
+        {%- endfor %}
+{%- endblock %}
+
+{% block content %}
+<div class="wrap cmds">
+    <div class="head">
+        <h1>{{ t('指令大全', 'Commands') }}</h1>
+        <p>{{ t('在 Discord 里输入 / 就能用。点一条指令，看它在输入框里怎么填。', 'Type / in Discord to use them. Pick one to see how to fill it in.') }}</p>
+    </div>
+    <div class="grid">
+        <div class="list-col">
+            <label class="search">
+                <span class="slash" aria-hidden="true">/</span>
+                <input id="q" type="search" autocomplete="off" spellcheck="false" aria-controls="list" placeholder="搜索指令、功能或参数" aria-label="搜索指令、功能或参数">
+                <button type="button" class="clear" id="clear" hidden>{{ t('清空', 'Clear') }}</button>
+            </label>
+            <p class="found" id="found" role="status">{{ t('共 ' ~ commands|length ~ ' 条，按功能分组。按 / 键直接搜索。', commands|length ~ ' commands, grouped by feature. Press / to search.') }}</p>
+            <div id="list" role="listbox" aria-label="指令" data-i18n-aria="list">
+                {%- for s in sections %}
+                {%- set g = s.group %}
+                <section class="sec" id="g-{{ g.key }}" data-group="{{ g.key }}" data-total="{{ s.rows|length }}">
+                    <div class="sec-head">
+                        <h2>{{ t(g.zh, g.en) }}<small data-count>{{ t(s.rows|length ~ ' 条', s.rows|length) }}</small></h2>
+                        <p>{{ t(g.desc_zh, g.desc_en) }}{% if s.shared %}{{ t('这一组默认需要 <b>' ~ perm_labels[s.shared][0] ~ '</b> 权限。', ' All of these need <b>' ~ perm_labels[s.shared][1] ~ '</b> by default.') }}{% endif %}</p>
+                    </div>
+                    <div class="rows">
+                        {%- for c in s.rows %}
+                        <button type="button" class="row" role="option" id="r-{{ c.id }}" data-id="{{ c.id }}" aria-selected="false">
+                            <span class="cmd">
+                                {%- if ' ' in c.name %}{% set parts = c.name.split(' ', 1) %}<span class="pre">{{ hl('/' ~ parts[0]) }}</span> {{ hl(parts[1]) }}
+                                {%- else %}{{ hl('/' ~ c.name) }}{% endif -%}
+                            </span>
+                            <span class="desc" title="{{ c.zh }}">{{ hl(c.zh, 'zh') }}{{ hl(c.en, 'en') }}</span>
+                            {%- if not s.shared and c.perms %}
+                            <span class="perm">{{ t('需要 ' ~ perm_labels[c.perms[0]][0], 'Needs ' ~ perm_labels[c.perms[0]][1]) }}</span>
+                            {%- else %}
+                            <span></span>
+                            {%- endif %}
+                        </button>
+                        {%- endfor %}
+                    </div>
+                </section>
+                {%- endfor %}
+                <div class="empty" id="empty" hidden>
+                    <img src="{{ url_for('static', filename='images/rin/confused-480.webp') }}" alt="" width="88" height="88" loading="lazy" decoding="async">
+                    <div>
+                        <p><span data-l="zh">没有和「<b data-q-echo></b>」有关的指令。试试功能名：</span><span data-l="en" lang="en">Nothing matches “<b data-q-echo></b>”. Try a feature:</span></p>
+                        <div class="sugg">
+                            {%- for zh, en in [('音乐', 'music'), ('封禁', 'ban'), ('欢迎', 'welcome'), ('抽奖', 'giveaway')] %}
+                            <button type="button" data-q-zh="{{ zh }}" data-q-en="{{ en }}">{{ t(zh, en) }}</button>
+                            {%- endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <aside class="panel" id="panel" aria-live="polite" data-avatar="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" hidden></aside>
+    </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script type="application/json" id="commands-data">{{ {'commands': commands, 'groups': groups, 'perm_labels': perm_labels}|tojson }}</script>
+{%- endblock %}
+
+{% block attr_i18n %}{"zh": {"title": "指令大全 · 小凛Rinbot", "description": "小凛的全部斜杠指令：怎么填、谁能用，按功能分组，可以搜索。", "toggle": "Switch to English", "list": "指令"}, "en": {"title": "Commands · 小凛Rinbot", "description": "All of Rin’s slash commands: how to fill them in and who can use them, grouped by feature and searchable.", "toggle": "切换到中文", "list": "Commands"}}{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/commands.js') }}"></script>
+{%- endblock %}

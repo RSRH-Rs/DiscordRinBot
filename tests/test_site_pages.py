@@ -102,3 +102,27 @@ async def test_404_escapes_and_shortens_the_path(client):
 async def test_api_misses_stay_json(client):
     r = await client.get("/api/nope")
     assert r.status_code == 404 and (await r.get_json()) == {"error": "not found"}
+
+
+async def test_commands_page(client):
+    import json
+    import re
+    r = await client.get("/commands")
+    html = await r.get_data(as_text=True)
+    assert r.status_code == 200
+    assert html.count('data-l="zh"') == html.count('data-l="en"')
+    assert html.count('role="option"') == 68
+    assert re.findall(r'<section class="sec" id="g-(\w+)"', html) == [
+        "Music", "Leveling", "Welcome", "Giveaway", "ReactionRoles", "Moderation", "AutoMod", "ServerLog", "General", "System"]
+    row = re.search(r'<button[^>]*id="r-automod-whitelist-add".*?</button>', html, re.S).group(0)
+    assert 'class="pre"' in row
+    data = json.loads(re.search(r'<script type="application/json" id="commands-data">(.*?)</script>', html, re.S).group(1))
+    assert len(data["commands"]) == 68 and len(data["groups"]) == 10 and "ban_members" in data["perm_labels"]
+    automod = re.search(r'<section class="sec" id="g-AutoMod".*?</section>', html, re.S).group(0)
+    intro = re.search(r'<div class="sec-head">.*?</div>', automod, re.S).group(0)
+    assert intro.count("管理服务器") == 1 and 'class="perm"' not in automod
+    moderation = re.search(r'<section class="sec" id="g-Moderation".*?</section>', html, re.S).group(0)
+    assert 'class="perm"' in moderation
+    nav = re.search(r'<nav class="nav".*?</nav>', html, re.S).group(0)
+    assert re.search(r'<a href="/commands" class="nav-link" aria-current="page">', nav)
+    assert 'class="has-side"' in html and 'data-spy="g-Music"' in html
