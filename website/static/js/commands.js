@@ -40,6 +40,13 @@ window.RinCommands = (() => {
         return {shown, rest: optional - (cur && !cur.required ? 1 : 0)};
     }
 
+    /* 一条指令默认需要的全部权限，按当前语言连成一句；不需要权限时为 null */
+    function permText(perms, labels, lang) {
+        if (!perms || !perms.length) return null;
+        const i = lang === 'zh' ? 0 : 1;
+        return perms.map(p => labels[p][i]).join(lang === 'zh' ? '、' : ', ');
+    }
+
     function step(ids, current, delta) {
         if (!ids.length) return null;
         const i = ids.indexOf(current);
@@ -53,7 +60,7 @@ window.RinCommands = (() => {
         return id && ids.includes(id) ? id : null;
     }
 
-    const api = {normalize, matches, highlight, examplesFor, slotsFor, step, idFromHash};
+    const api = {normalize, matches, highlight, examplesFor, slotsFor, permText, step, idFromHash};
     const dataEl = document.getElementById('commands-data');
     if (!dataEl) return api;
 
@@ -75,7 +82,7 @@ window.RinCommands = (() => {
     const pname = p => L(p.zh || p.name, p.name);
     const pdesc = p => L(p.zh_desc || p.en, p.en);
     const desc = c => L(c.zh || c.en, c.en);
-    const permOf = c => c.perms && c.perms.length ? L(...data.perm_labels[c.perms[0]]) : null;
+    const permOf = c => permText(c.perms, data.perm_labels, lang());
 
     function filter() {
         const term = q.value;

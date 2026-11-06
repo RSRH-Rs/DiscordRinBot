@@ -47,12 +47,12 @@ COMMAND_CATALOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 
 
 def command_sections(commands: list) -> list:
-    """指令大全的分组：每组的指令，以及整组共用的默认权限（各不相同时为 None）。"""
+    """指令大全的分组：每组的指令，以及整组共用的默认权限列表（各不相同或没有权限时为 None）。"""
     sections = []
     for group in site_data.COMMAND_GROUPS:
         rows = [c for c in commands if c["group"] == group["key"]]
-        first = rows[0]["perms"][0] if rows and rows[0]["perms"] else None
-        shared = first if first and all(c["perms"][:1] == [first] for c in rows) else None
+        first = rows[0]["perms"] if rows else []
+        shared = first if first and all(c["perms"] == first for c in rows) else None
         sections.append({"group": group, "rows": rows, "shared": shared})
     return sections
 
@@ -926,6 +926,7 @@ def setup_routes(app, discord):
         return await _site_page(
             "commands.html", sections=sections, commands=command_catalog,
             groups=site_data.COMMAND_GROUPS, perm_labels=site_data.PERM_LABELS,
+            perm_text=site_data.perm_text,
         )
 
     @app.route("/permissions")

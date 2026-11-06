@@ -54,3 +54,10 @@ test('arrow keys clamp and hashes are safe', () => {
     assert.equal(C.idFromHash('#automod-whitelist-add', ['automod-whitelist-add']), 'automod-whitelist-add');
     for (const h of ['#nope', '#%zz', '', '#', '#ban%20']) assert.equal(C.idFromHash(h, ['ban']), null);
 });
+
+test('a command needing several permissions names all of them', () => {
+    const labels = {ban_members: ['封禁成员', 'Ban Members'], manage_messages: ['管理消息', 'Manage Messages']};
+    assert.equal(C.permText(['ban_members', 'manage_messages'], labels, 'zh'), '封禁成员、管理消息');
+    assert.equal(C.permText(['ban_members', 'manage_messages'], labels, 'en'), 'Ban Members, Manage Messages');
+    assert.equal(C.permText([], labels, 'zh'), null);
+});

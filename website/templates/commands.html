@@ -37,7 +37,7 @@
                 <section class="sec" id="g-{{ g.key }}" data-group="{{ g.key }}" data-total="{{ s.rows|length }}">
                     <div class="sec-head">
                         <h2>{{ t(g.zh, g.en) }}<small data-count>{{ t(s.rows|length ~ ' 条', s.rows|length) }}</small></h2>
-                        <p>{{ t(g.desc_zh, g.desc_en) }}{% if s.shared %}{{ t('这一组默认需要 <b>' ~ perm_labels[s.shared][0] ~ '</b> 权限。', ' All of these need <b>' ~ perm_labels[s.shared][1] ~ '</b> by default.') }}{% endif %}</p>
+                        <p>{{ t(g.desc_zh, g.desc_en) }}{% if s.shared %}{% set pt = perm_text(s.shared) %}{{ t('这一组默认需要 <b>' ~ pt[0] ~ '</b> 权限。', ' All of these need <b>' ~ pt[1] ~ '</b> by default.') }}{% endif %}</p>
                     </div>
                     <div class="rows">
                         {%- for c in s.rows %}
@@ -48,7 +48,8 @@
                             </span>
                             <span class="desc" title="{{ c.zh }}">{{ hl(c.zh, 'zh') }}{{ hl(c.en, 'en') }}</span>
                             {%- if not s.shared and c.perms %}
-                            <span class="perm">{{ t('需要 ' ~ perm_labels[c.perms[0]][0], 'Needs ' ~ perm_labels[c.perms[0]][1]) }}</span>
+                            {%- set pt = perm_text(c.perms) %}
+                            <span class="perm">{{ t('需要 ' ~ pt[0], 'Needs ' ~ pt[1]) }}</span>
                             {%- else %}
                             <span></span>
                             {%- endif %}

@@ -30,3 +30,9 @@ def test_groups_are_complete():
     assert len(keys) == 10 == len(set(keys)) and keys[0] == "Music" and keys[-1] == "System"
     for entry in sd.PERMISSIONS + sd.COMMAND_GROUPS:
         assert all(entry[k] for k in entry if k.endswith(("zh", "en")) and k not in ("dashboard_zh", "dashboard_en"))
+
+
+def test_perm_text_names_every_permission():
+    assert sd.perm_text(["ban_members"]) == ("封禁成员", "Ban Members")
+    assert sd.perm_text(["ban_members", "manage_messages"]) == ("封禁成员、管理消息", "Ban Members, Manage Messages")
+    assert sd.perm_text([]) == ("", "")

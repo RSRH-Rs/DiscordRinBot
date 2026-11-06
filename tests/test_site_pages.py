@@ -146,3 +146,13 @@ async def test_permissions_page(client):
     nav = re.search(r'<footer.*?</footer>', html, re.S).group(0)
     assert re.search(r'<a href="/permissions" aria-current="page">', nav)
     assert 'class="has-side"' not in html
+
+
+def test_command_sections_compare_every_permission():
+    def cmd(name, perms):
+        return {"name": name, "group": "Moderation", "perms": perms}
+    both = ["kick_members", "ban_members"]
+    mod = lambda cmds: next(s for s in routes.command_sections(cmds) if s["group"]["key"] == "Moderation")
+    assert mod([cmd("a", both), cmd("b", list(both))])["shared"] == both
+    assert mod([cmd("a", both), cmd("b", ["kick_members"])])["shared"] is None
+    assert mod([cmd("a", []), cmd("b", [])])["shared"] is None

@@ -141,3 +141,8 @@ PERM_LABELS = {
     "manage_channels": ("管理频道", "Manage Channels"),
     "manage_roles": ("管理身份组", "Manage Roles"),
 }
+
+
+def perm_text(perms: list) -> tuple:
+    """一条指令默认需要的全部权限，中英各一句：("封禁成员、管理消息", "Ban Members, Manage Messages")。"""
+    return "、".join(PERM_LABELS[p][0] for p in perms), ", ".join(PERM_LABELS[p][1] for p in perms)
