@@ -188,9 +188,9 @@ Tests cover core logic and use temporary SQLite databases only. They never conne
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q                       # bot, core and website pages: 593 tests
-cd website && python -m pytest -q tests   # dashboard: 131 tests
-node --test tests/*.cjs                   # dashboard and site UI: 116 tests (from website/)
+python -m pytest -q                       # bot, core and website pages: 596 tests
+cd website && python -m pytest -q tests   # dashboard: 134 tests
+node --test tests/*.cjs                   # dashboard and site UI: 120 tests (from website/)
 ```
 
 After changing a slash command, regenerate the website's command list with `python website/tools/build_commands.py`; `tests/test_command_catalog.py` fails until you do.

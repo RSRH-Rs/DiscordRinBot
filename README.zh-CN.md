@@ -188,9 +188,9 @@ cd website && python -m hypercorn main:app --bind 127.0.0.1:5000
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q                       # Bot、核心逻辑和官网页面：593 个测试
-cd website && python -m pytest -q tests   # 仪表盘：131 个测试
-node --test tests/*.cjs                   # 仪表盘和官网界面：116 个测试（在 website/ 下运行）
+python -m pytest -q                       # Bot、核心逻辑和官网页面：596 个测试
+cd website && python -m pytest -q tests   # 仪表盘：134 个测试
+node --test tests/*.cjs                   # 仪表盘和官网界面：120 个测试（在 website/ 下运行）
 ```
 
 改了斜杠指令以后，运行 `python website/tools/build_commands.py` 重新生成官网的指令清单；不重新生成，`tests/test_command_catalog.py` 会失败。
