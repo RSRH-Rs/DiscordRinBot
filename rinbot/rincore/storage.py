@@ -31,6 +31,7 @@ DB_FILES = {
         "globalsettings": "globalsettings.db",
         "music": "music.db",
         "sync": "sync.db",
+        "guildcleanup": "guildcleanup.db",
     }.items()
 }
 
