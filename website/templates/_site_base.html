@@ -1,0 +1,97 @@
+{%- from '_site_macros.html' import t -%}
+{%- set dash_zh = '进入控制台' if is_logged_in else '登录控制台' -%}
+{%- set dash_en = 'Open dashboard' if is_logged_in else 'Dashboard login' -%}
+{%- set has_side = self.side_channels()|trim|length > 0 -%}
+<!DOCTYPE html>
+<html lang="zh-CN" data-lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script>
+    /* 在绘制前定好语言，避免中英闪烁。规则：记住的选择 > 浏览器首选语言 > 英文 */
+    (function () {
+        function pick(stored, languages) {
+            if (stored === 'zh' || stored === 'en') return stored;
+            return /^zh/i.test((languages && languages[0]) || '') ? 'zh' : 'en';
+        }
+        window.rinPickLang = pick;
+        var stored = null;
+        try { stored = localStorage.getItem('rinbot_lang'); } catch (e) {}
+        var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
+        var lang = pick(stored, langs), root = document.documentElement;
+        root.setAttribute('data-lang', lang);
+        root.lang = lang === 'zh' ? 'zh-CN' : 'en';
+        root.classList.add('js');
+    })();
+    </script>
+    <meta name="theme-color" content="#F7F7F8" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#17171B" media="(prefers-color-scheme: dark)">
+    <script>try{var t=localStorage.getItem('rin-theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;var c=t==='dark'?'#17171B':'#F7F7F8';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.content=c})}}catch(e){}</script>
+    <title>{% block title %}小凛Rinbot{% endblock %}</title>
+    <meta name="description" content="{% block description %}小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。{% endblock %}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/site.css') }}">
+    {%- block head %}{% endblock %}
+</head>
+<body{% if has_side %} class="has-side"{% endif %}>
+
+{%- if has_side %}
+<aside class="side" aria-label="Channels">
+    <div class="rail">
+        <a href="/" class="home"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="48" height="48"><span class="tip">{{ t('小凛 RinBot', 'Rin') }}</span></a>
+        <span class="sep" aria-hidden="true"></span>
+        <a href="{{ invite_url }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="tip">{{ t('邀请小凛', 'Invite Rin') }}</span></a>
+        <a href="/dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="tip">{{ t('控制台', 'Dashboard') }}</span></a>
+        <a href="https://github.com/RSRH-Rs/DiscordRinBot" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg><span class="tip">GitHub</span></a>
+    </div>
+    <nav class="chan" aria-label="Sections">
+{%- block side_channels %}{% endblock %}
+    </nav>
+</aside>
+{%- endif %}
+
+<nav class="nav" id="nav" aria-label="RinBot">
+    <div class="wrap nav-in">
+        <a href="/" class="brand"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34">小凛 RinBot</a>
+        <div class="nav-r">
+            <button type="button" class="nav-link" id="lang-toggle" onclick="rinSetLang(document.documentElement.getAttribute('data-lang') === 'zh' ? 'en' : 'zh')">{{ t('EN', '中文') }}</button>
+            <a href="/dashboard" class="nav-link"><span class="long">{{ t(dash_zh, dash_en) }}</span><span class="short">{{ t('控制台', 'Dashboard') }}</span></a>
+            <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn">{{ t('邀请小凛', 'Invite Rin') }}</a>
+        </div>
+    </div>
+</nav>
+
+<main>
+{%- block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+    <div class="wrap">
+        <div class="footer-top">
+            <div>
+                <a href="/" class="brand"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34" loading="lazy">小凛 RinBot</a>
+                <p class="tagline">{{ t('一个 Discord 机器人，代码开源在 GitHub。', 'A Discord bot. The code is open source on GitHub.') }}</p>
+                <p class="motto" lang="en">All in one, one for all.</p>
+            </div>
+            <div class="footer-links">
+                <a href="/dashboard">{{ t('控制台', 'Dashboard') }}</a>
+                <a href="{{ invite_url }}" target="_blank" rel="noopener">{{ t('邀请小凛', 'Invite Rin') }}</a>
+                <a href="https://github.com/RSRH-Rs/DiscordRinBot" target="_blank" rel="noopener">GitHub</a>
+                <a href="https://github.com/RSRH-Rs/DiscordRinBot/issues" target="_blank" rel="noopener">{{ t('反馈问题', 'Report an issue') }}</a>
+            </div>
+        </div>
+        <div class="footer-bot">
+            <span>&copy; 2026 RinBot</span>
+            <span>Created by Milk Chocolate</span>
+        </div>
+    </div>
+</footer>
+
+<script type="application/json" id="attr-i18n">{% block attr_i18n %}{}{% endblock %}</script>
+<script src="{{ url_for('static', filename='js/site.js') }}"></script>
+{%- block scripts %}{% endblock %}
+</body>
+</html>

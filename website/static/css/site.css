@@ -1,0 +1,291 @@
+/* 官网公共外壳：颜色、导航、按钮、宽屏侧栏、页脚。和控制台同一套颜色，首页和各个官网页面共用。 */
+
+:root {
+    /* 和控制台同一套颜色：九成是白和灰，樱粉只给能点的和选中的东西 */
+    --bg: #F7F7F8;
+    --panel: #FFFFFF;
+    --side: #F0F0F2;
+    --line: #E4E4E8;
+    --text: #18181B;
+    --muted: #5F5F68;
+    --accent: #D6336C;
+    --accent-hover: #C42A60;
+    --on-accent: #FFFFFF;
+    --accent-soft: #FDECF2;
+    --accent-text: #B32457;
+    --ok: #1A7A43;
+    --ok-soft: #E7F5EC;
+    --cur: #FFFFFF;
+    --hover: #E7E7EA;
+    --off: #C9C9CF;
+    --shadow-sm: 0 1px 2px rgba(24, 24, 27, .06), 0 1px 1px rgba(24, 24, 27, .04);
+    --accent-shadow: rgba(214, 51, 108, .45);
+    --card-shadow: 0 0 0 1px rgba(24, 24, 27, .06), 0 28px 50px -28px rgba(214, 51, 108, .35);
+    --panel-end: #FAFAFB;
+    --wash-a: rgba(255, 190, 207, .28);
+    --wash-b: rgba(255, 214, 170, .12);
+    --glow-strength: 1;
+    --apricot: #FFB37A;
+    /* Discord 浅色主题 */
+    --dc-bg: #FFFFFF;
+    --dc-deep: #F2F3F5;
+    --dc-gold: #8C5D00;
+    --dc-line: #E3E5E8;
+    --dc-text: #313338;
+    --dc-muted: #5C5E66;
+    --dc-name: #060607;
+    --dc-mention: #4752C4;
+    --dc-mention-bg: rgba(88, 101, 242, .12);
+    --dc-btn: #6D6F78;
+    --dc-gone: #80848E;
+    /* 极淡的颗粒，让底色不是一块平涂 */
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .25 0 0 0 0 .35 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --blurple: #5865F2;
+    --leaf: #23A55A;
+    --font: 'Fredoka', "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    /* 官网新页面用到的：输入框、提示、搜索高亮、Discord 输入框 */
+    --field: #FFFFFF;
+    --field-line: #8A8A93;
+    --warn: #A15C00;
+    --warn-soft: #FFF4E0;
+    --row-hover: #EFEFF2;
+    --mark: #FFE7A3;
+    --dc-input: #EBEDEF;
+    --dc-slot: #DFE1E5;
+    /* 正文阅读用系统字体，标题和品牌用 Fredoka */
+    --read: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --display: 'Fredoka', var(--read);
+    color-scheme: light;
+}
+/* 夜间：和控制台一样，手动选了夜间，或者没选过而系统是深色 */
+:root[data-theme="dark"] {
+    --bg: #17171B;
+    --panel: #1F1F24;
+    --side: #121215;
+    --line: #2C2C33;
+    --text: #EDEDF0;
+    --muted: #9A9AA5;
+    --accent: #FF6FA3;
+    --accent-hover: #FF8DB7;
+    --on-accent: #2A0A17;
+    --accent-soft: #3A1A28;
+    --accent-text: #FF8DB7;
+    --ok: #3DD68C;
+    --ok-soft: #13291D;
+    --cur: #303038;
+    --hover: #28282F;
+    --off: #44444C;
+    --shadow-sm: none;
+    --accent-shadow: rgba(0, 0, 0, .55);
+    --card-shadow: 0 0 0 1px rgba(255, 255, 255, .05), 0 28px 50px -28px rgba(0, 0, 0, .7);
+    --panel-end: #1B1B20;
+    --wash-a: rgba(255, 111, 163, .1);
+    --wash-b: rgba(255, 179, 122, .05);
+    --glow-strength: .5;
+    /* Discord 深色主题 */
+    --dc-bg: #313338;
+    --dc-deep: #2B2D31;
+    --dc-gold: #F0B232;
+    --dc-line: #3F4147;
+    --dc-text: #DBDEE1;
+    --dc-muted: #B5BAC1;
+    --dc-name: #F2F3F5;
+    --dc-mention: #C9CDFB;
+    --dc-mention-bg: rgba(88, 101, 242, .3);
+    --dc-btn: #4E5058;
+    --dc-gone: #949BA4;
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .25 0 0 0 0 .35 0 0 0 .025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    --field: #17171B;
+    --field-line: #6A6A74;
+    --warn: #F5B94A;
+    --warn-soft: #33270F;
+    --row-hover: #1F1F25;
+    --mark: #5A4512;
+    --dc-input: #383A40;
+    --dc-slot: #4E5058;
+    color-scheme: dark;
+}
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --bg: #17171B;
+        --panel: #1F1F24;
+        --side: #121215;
+        --line: #2C2C33;
+        --text: #EDEDF0;
+        --muted: #9A9AA5;
+        --accent: #FF6FA3;
+        --accent-hover: #FF8DB7;
+        --on-accent: #2A0A17;
+        --accent-soft: #3A1A28;
+        --accent-text: #FF8DB7;
+        --ok: #3DD68C;
+        --ok-soft: #13291D;
+        --cur: #303038;
+        --hover: #28282F;
+        --off: #44444C;
+        --shadow-sm: none;
+        --accent-shadow: rgba(0, 0, 0, .55);
+        --card-shadow: 0 0 0 1px rgba(255, 255, 255, .05), 0 28px 50px -28px rgba(0, 0, 0, .7);
+        --panel-end: #1B1B20;
+        --wash-a: rgba(255, 111, 163, .1);
+        --wash-b: rgba(255, 179, 122, .05);
+        --glow-strength: .5;
+        /* Discord 深色主题 */
+        --dc-bg: #313338;
+        --dc-deep: #2B2D31;
+        --dc-gold: #F0B232;
+        --dc-line: #3F4147;
+        --dc-text: #DBDEE1;
+        --dc-muted: #B5BAC1;
+        --dc-name: #F2F3F5;
+        --dc-mention: #C9CDFB;
+        --dc-mention-bg: rgba(88, 101, 242, .3);
+        --dc-btn: #4E5058;
+        --dc-gone: #949BA4;
+        --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .25 0 0 0 0 .35 0 0 0 .025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        --field: #17171B;
+        --field-line: #6A6A74;
+        --warn: #F5B94A;
+        --warn-soft: #33270F;
+        --row-hover: #1F1F25;
+        --mark: #5A4512;
+        --dc-input: #383A40;
+        --dc-slot: #4E5058;
+        color-scheme: dark;
+    }
+}
+html[data-lang="zh"] [data-l="en"],
+html[data-lang="en"] [data-l="zh"] { display: none !important; }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+body {
+    font-family: var(--font); font-size: 16px; line-height: 1.7;
+    background: var(--bg); color: var(--text);
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+}
+a { color: inherit; }
+img { display: block; max-width: 100%; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+
+/* ── 按钮 ── */
+.btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: inherit; font-weight: 600; font-size: 16px; line-height: 1.2;
+    text-decoration: none; border-radius: 10px; padding: 14px 24px;
+    background: var(--accent); color: var(--on-accent); border: 0; cursor: pointer;
+    box-shadow: 0 8px 18px -10px var(--accent-shadow);
+    transition: background .15s;
+}
+.btn:hover { background: var(--accent-hover); }
+.btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.btn-ghost { background: var(--panel); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
+.btn-ghost:hover { background: var(--accent-soft); }
+.link {
+    font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px;
+    text-underline-offset: 5px; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.link:hover { text-decoration-color: var(--accent); }
+
+/* ── 导航 ── */
+.nav {
+    position: sticky; top: 0; z-index: 50;
+    background: var(--bg);
+    background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(14px);
+    border-bottom: 1px solid transparent; transition: border-color .2s;
+}
+.nav.scrolled { border-bottom-color: var(--line); }
+.nav-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; white-space: nowrap; }
+.brand img { width: 34px; height: 34px; border-radius: 50%; }
+.nav-r { display: flex; align-items: center; gap: 6px; }
+.nav-link {
+    font: inherit; font-weight: 600; font-size: 15px; color: var(--muted);
+    background: none; border: 0; cursor: pointer; text-decoration: none;
+    padding: 8px 12px; border-radius: 8px; white-space: nowrap;
+}
+.nav-link:hover { color: var(--text); background: var(--hover); }
+.nav .btn { padding: 9px 16px; font-size: 15px; border-radius: 8px; }
+.short { display: none; }
+section[id] { scroll-margin-top: 72px; }
+
+/* ── 宽屏左侧：Discord 客户端式的服务器栏和频道列表，频道就是导航 ── */
+.side { display: none; }
+.rail { width: 72px; flex-shrink: 0; background: var(--hover); padding: 12px 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.rail a {
+    position: relative; width: 48px; height: 48px; border-radius: 50%;
+    display: grid; place-items: center; background: var(--bg); color: var(--muted);
+    transition: border-radius .15s, background .15s, color .15s;
+}
+.rail a:hover, .rail a.home { border-radius: 16px; }
+.rail a:hover { background: var(--accent); color: var(--on-accent); }
+.rail a.home::before {
+    content: ''; position: absolute; left: -12px; top: 4px; width: 4px; height: 40px;
+    border-radius: 0 4px 4px 0; background: var(--text);
+}
+.rail img { width: 48px; height: 48px; border-radius: inherit; }
+.rail svg { width: 22px; height: 22px; }
+.rail .sep { width: 32px; height: 2px; background: var(--off); border-radius: 1px; }
+.tip {
+    display: none; position: absolute; left: 60px; top: 50%; transform: translateY(-50%); z-index: 2;
+    background: var(--text); color: var(--bg); font-size: 14px; font-weight: 600; line-height: 1.3;
+    padding: 6px 10px; border-radius: 6px; white-space: nowrap; pointer-events: none;
+}
+.rail a:hover .tip, .rail a:focus-visible .tip { display: block; }
+.chan { flex: 1; min-width: 0; background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
+.chan-head { height: 64px; flex-shrink: 0; display: flex; align-items: center; padding: 0 16px; font-weight: 700; border-bottom: 1px solid var(--line); }
+.chan-cat { font-size: 12px; font-weight: 700; color: var(--muted); padding: 20px 16px 6px; }
+.chan a {
+    display: flex; align-items: center; gap: 8px; margin: 1px 8px; padding: 7px 10px; border-radius: 6px;
+    color: var(--muted); text-decoration: none; font-weight: 500; font-size: 15px;
+}
+.chan a .h { color: var(--muted); opacity: .7; font-weight: 700; width: 12px; }
+.chan a:hover { background: var(--hover); color: var(--text); }
+.chan a.on { background: var(--cur); color: var(--text); box-shadow: var(--shadow-sm); }
+.me { margin-top: auto; background: var(--side); border-top: 1px solid var(--line); padding: 10px 12px; display: flex; gap: 10px; align-items: center; font-size: 14px; }
+.me .pic { position: relative; flex-shrink: 0; }
+.me .pic img { width: 34px; height: 34px; border-radius: 50%; }
+.me .pic::after {
+    content: ''; position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px;
+    border-radius: 50%; background: var(--leaf); border: 3px solid var(--side);
+}
+.me b { display: block; font-weight: 600; }
+.me small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; }
+.me small b { display: inline; }
+
+/* 只有带侧栏的页面（首页、指令大全）在宽屏上让出左边 312px */
+@media (min-width: 1440px) {
+    body.has-side { padding-left: 312px; }
+    .has-side .side { display: flex; position: fixed; top: 0; bottom: 0; left: 0; width: 312px; z-index: 60; }
+    .has-side .nav .brand { display: none; }
+    .has-side .nav-in { justify-content: flex-end; }
+    .has-side .wrap { max-width: 1320px; }
+}
+
+/* ── 页脚 ── */
+.footer { border-top: 1px solid var(--line); padding: 40px 0 32px; font-size: 15px; }
+.footer-top { display: flex; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 28px; }
+.footer .tagline { color: var(--muted); margin-top: 8px; max-width: 22em; }
+.motto { font-weight: 600; color: var(--accent-text); margin-top: 6px; }
+.footer-links { display: flex; gap: 8px 24px; flex-wrap: wrap; align-items: flex-start; }
+.footer-links a { font-weight: 600; color: var(--muted); text-decoration: none; }
+.footer-links a:hover { color: var(--text); }
+.footer-bot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 14px; }
+
+@media (max-width: 600px) {
+    .wrap { padding: 0 16px; }
+    .nav-in { height: 58px; gap: 8px; }
+    .brand { font-size: 16px; gap: 8px; }
+    .brand img { width: 30px; height: 30px; }
+    .nav-r { gap: 0; }
+    .nav-link { font-size: 14px; padding: 8px; }
+    .nav .btn { padding: 8px 12px; font-size: 14px; }
+    .long { display: none; }
+    .short { display: inline; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+    html { scroll-behavior: auto; }
+}

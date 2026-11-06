@@ -15,8 +15,11 @@ class HomepageThemeTests(unittest.TestCase):
         css = (ROOT / 'static/css/console.css').read_text(encoding='utf-8')
         self.console_light = declarations(block(css, ':root'))
         self.console_dark = declarations(block(css, ':root[data-theme="dark"]'))
-        self.html = (ROOT / 'templates/index.html').read_text(encoding='utf-8')
-        style = self.html[self.html.index('<style>'):self.html.index('</style>')]
+        # 首页的颜色和绘制前脚本都在公共外壳里：颜色在 site.css，脚本在 _site_base.html
+        self.html = (ROOT / 'templates/_site_base.html').read_text(encoding='utf-8')
+        self.page = (ROOT / 'templates/index.html').read_text(encoding='utf-8')
+        style = (ROOT / 'static/css/site.css').read_text(encoding='utf-8')
+        self.site_css = style
         self.home_light = declarations(block(style, ':root'))
         self.home_dark = declarations(block(style, ':root[data-theme="dark"]'))
         media = style[style.index('@media (prefers-color-scheme: dark)'):]
@@ -32,7 +35,7 @@ class HomepageThemeTests(unittest.TestCase):
         self.assertEqual(self.home_system_dark, self.home_dark)
 
     def test_theme_boots_before_styles(self):
-        self.assertLess(self.html.index("localStorage.getItem('rin-theme')"), self.html.index('<style>'))
+        self.assertLess(self.html.index("localStorage.getItem('rin-theme')"), self.html.index('css/site.css'))
 
     def test_manual_theme_sets_the_address_bar_colour(self):
         # The metas come first so the boot script can point both at the saved palette's background.
@@ -41,8 +44,9 @@ class HomepageThemeTests(unittest.TestCase):
 
     def test_no_old_palette_left(self):
         for old in OLD:
-            with self.subTest(old=old):
-                self.assertNotIn(old, self.html)
+            for name, text in [('base', self.html), ('index', self.page), ('site.css', self.site_css)]:
+                with self.subTest(old=old, file=name):
+                    self.assertNotIn(old, text)
 
     def test_discord_mock_and_side_text_meet_aa_in_both_palettes(self):
         for label, palette in [('light', self.home_light), ('dark', self.home_dark)]:

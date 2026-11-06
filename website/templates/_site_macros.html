@@ -1,0 +1,8 @@
+{#- 官网各页面共用的宏：成对的中英文字、贴纸和头像。 -#}
+{%- macro t(zh, en) -%}<span data-l="zh">{{ zh|safe }}</span><span data-l="en" lang="en">{{ en|safe }}</span>{%- endmacro -%}
+{%- macro sticker(name, size, cls='') -%}
+<img{% if cls %} class="{{ cls }}"{% endif %} src="{{ url_for('static', filename='images/rin/' ~ name ~ '-480.webp') }}" srcset="{{ url_for('static', filename='images/rin/' ~ name ~ '-480.webp') }} 480w, {{ url_for('static', filename='images/rin/' ~ name ~ '-960.webp') }} 960w" sizes="{{ size }}px" alt="" width="{{ size }}" height="{{ size }}" loading="lazy" decoding="async">
+{%- endmacro -%}
+{%- macro rin_av() -%}<div class="av"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="40" height="40" loading="lazy" decoding="async"></div>{%- endmacro -%}
+{%- macro demo_av(file) -%}<div class="av"><img src="{{ url_for('static', filename='images/demo/' ~ file) }}" alt="" width="40" height="40" loading="lazy" decoding="async"></div>{%- endmacro -%}
+{%- macro chips(cmds) -%}<ul class="chips" aria-label="Slash commands">{% for c in cmds %}<li>{{ c }}</li>{% endfor %}</ul>{%- endmacro -%}

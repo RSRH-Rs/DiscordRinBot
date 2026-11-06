@@ -1,282 +1,18 @@
-{%- macro t(zh, en) -%}<span data-l="zh">{{ zh|safe }}</span><span data-l="en" lang="en">{{ en|safe }}</span>{%- endmacro -%}
-{%- macro sticker(name, size, cls='') -%}
-<img{% if cls %} class="{{ cls }}"{% endif %} src="{{ url_for('static', filename='images/rin/' ~ name ~ '-480.webp') }}" srcset="{{ url_for('static', filename='images/rin/' ~ name ~ '-480.webp') }} 480w, {{ url_for('static', filename='images/rin/' ~ name ~ '-960.webp') }} 960w" sizes="{{ size }}px" alt="" width="{{ size }}" height="{{ size }}" loading="lazy" decoding="async">
-{%- endmacro -%}
-{%- macro rin_av() -%}<div class="av"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="40" height="40" loading="lazy" decoding="async"></div>{%- endmacro -%}
-{%- macro demo_av(file) -%}<div class="av"><img src="{{ url_for('static', filename='images/demo/' ~ file) }}" alt="" width="40" height="40" loading="lazy" decoding="async"></div>{%- endmacro -%}
-{%- macro chips(cmds) -%}<ul class="chips" aria-label="Slash commands">{% for c in cmds %}<li>{{ c }}</li>{% endfor %}</ul>{%- endmacro -%}
+{%- set active_nav = 'home' -%}
+{%- extends '_site_base.html' -%}
+{%- from '_site_macros.html' import t, sticker, rin_av, demo_av, chips -%}
 {%- set dash_zh = '进入控制台' if is_logged_in else '登录控制台' -%}
 {%- set dash_en = 'Open dashboard' if is_logged_in else 'Dashboard login' -%}
-<!DOCTYPE html>
-<html lang="zh-CN" data-lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script>
-    /* 在绘制前定好语言，避免中英闪烁。规则：记住的选择 > 浏览器首选语言 > 英文 */
-    (function () {
-        function pick(stored, languages) {
-            if (stored === 'zh' || stored === 'en') return stored;
-            return /^zh/i.test((languages && languages[0]) || '') ? 'zh' : 'en';
-        }
-        window.rinPickLang = pick;
-        var stored = null;
-        try { stored = localStorage.getItem('rinbot_lang'); } catch (e) {}
-        var langs = navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language];
-        var lang = pick(stored, langs), root = document.documentElement;
-        root.setAttribute('data-lang', lang);
-        root.lang = lang === 'zh' ? 'zh-CN' : 'en';
-        root.classList.add('js');
-    })();
-    </script>
-    <meta name="theme-color" content="#F7F7F8" media="(prefers-color-scheme: light)">
-    <meta name="theme-color" content="#17171B" media="(prefers-color-scheme: dark)">
-    <script>try{var t=localStorage.getItem('rin-theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;var c=t==='dark'?'#17171B':'#F7F7F8';document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){m.content=c})}}catch(e){}</script>
-    <title>小凛Rinbot</title>
-    <meta name="description" content="小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。">
-    <link rel="shortcut icon" href="{{ url_for('static', filename='rin_bot_web_icon.ico') }}" type="image/x-icon">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
-    <style>
-    :root {
-        /* 和控制台同一套颜色：九成是白和灰，樱粉只给能点的和选中的东西 */
-        --bg: #F7F7F8;
-        --panel: #FFFFFF;
-        --side: #F0F0F2;
-        --line: #E4E4E8;
-        --text: #18181B;
-        --muted: #5F5F68;
-        --accent: #D6336C;
-        --accent-hover: #C42A60;
-        --on-accent: #FFFFFF;
-        --accent-soft: #FDECF2;
-        --accent-text: #B32457;
-        --ok: #1A7A43;
-        --ok-soft: #E7F5EC;
-        --cur: #FFFFFF;
-        --hover: #E7E7EA;
-        --off: #C9C9CF;
-        --shadow-sm: 0 1px 2px rgba(24, 24, 27, .06), 0 1px 1px rgba(24, 24, 27, .04);
-        --accent-shadow: rgba(214, 51, 108, .45);
-        --card-shadow: 0 0 0 1px rgba(24, 24, 27, .06), 0 28px 50px -28px rgba(214, 51, 108, .35);
-        --panel-end: #FAFAFB;
-        --wash-a: rgba(255, 190, 207, .28);
-        --wash-b: rgba(255, 214, 170, .12);
-        --glow-strength: 1;
-        --apricot: #FFB37A;
-        /* Discord 浅色主题 */
-        --dc-bg: #FFFFFF;
-        --dc-deep: #F2F3F5;
-        --dc-gold: #8C5D00;
-        --dc-line: #E3E5E8;
-        --dc-text: #313338;
-        --dc-muted: #5C5E66;
-        --dc-name: #060607;
-        --dc-mention: #4752C4;
-        --dc-mention-bg: rgba(88, 101, 242, .12);
-        --dc-btn: #6D6F78;
-        --dc-gone: #80848E;
-        /* 极淡的颗粒，让底色不是一块平涂 */
-        --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .25 0 0 0 0 .35 0 0 0 .05 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        --blurple: #5865F2;
-        --leaf: #23A55A;
-        --font: 'Fredoka', "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
-        color-scheme: light;
-    }
-    /* 夜间：和控制台一样，手动选了夜间，或者没选过而系统是深色 */
-    :root[data-theme="dark"] {
-        --bg: #17171B;
-        --panel: #1F1F24;
-        --side: #121215;
-        --line: #2C2C33;
-        --text: #EDEDF0;
-        --muted: #9A9AA5;
-        --accent: #FF6FA3;
-        --accent-hover: #FF8DB7;
-        --on-accent: #2A0A17;
-        --accent-soft: #3A1A28;
-        --accent-text: #FF8DB7;
-        --ok: #3DD68C;
-        --ok-soft: #13291D;
-        --cur: #303038;
-        --hover: #28282F;
-        --off: #44444C;
-        --shadow-sm: none;
-        --accent-shadow: rgba(0, 0, 0, .55);
-        --card-shadow: 0 0 0 1px rgba(255, 255, 255, .05), 0 28px 50px -28px rgba(0, 0, 0, .7);
-        --panel-end: #1B1B20;
-        --wash-a: rgba(255, 111, 163, .1);
-        --wash-b: rgba(255, 179, 122, .05);
-        --glow-strength: .5;
-        /* Discord 深色主题 */
-        --dc-bg: #313338;
-        --dc-deep: #2B2D31;
-        --dc-gold: #F0B232;
-        --dc-line: #3F4147;
-        --dc-text: #DBDEE1;
-        --dc-muted: #B5BAC1;
-        --dc-name: #F2F3F5;
-        --dc-mention: #C9CDFB;
-        --dc-mention-bg: rgba(88, 101, 242, .3);
-        --dc-btn: #4E5058;
-        --dc-gone: #949BA4;
-        --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .25 0 0 0 0 .35 0 0 0 .025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        color-scheme: dark;
-    }
-    @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) {
-            --bg: #17171B;
-            --panel: #1F1F24;
-            --side: #121215;
-            --line: #2C2C33;
-            --text: #EDEDF0;
-            --muted: #9A9AA5;
-            --accent: #FF6FA3;
-            --accent-hover: #FF8DB7;
-            --on-accent: #2A0A17;
-            --accent-soft: #3A1A28;
-            --accent-text: #FF8DB7;
-            --ok: #3DD68C;
-            --ok-soft: #13291D;
-            --cur: #303038;
-            --hover: #28282F;
-            --off: #44444C;
-            --shadow-sm: none;
-            --accent-shadow: rgba(0, 0, 0, .55);
-            --card-shadow: 0 0 0 1px rgba(255, 255, 255, .05), 0 28px 50px -28px rgba(0, 0, 0, .7);
-            --panel-end: #1B1B20;
-            --wash-a: rgba(255, 111, 163, .1);
-            --wash-b: rgba(255, 179, 122, .05);
-            --glow-strength: .5;
-            /* Discord 深色主题 */
-            --dc-bg: #313338;
-            --dc-deep: #2B2D31;
-            --dc-gold: #F0B232;
-            --dc-line: #3F4147;
-            --dc-text: #DBDEE1;
-            --dc-muted: #B5BAC1;
-            --dc-name: #F2F3F5;
-            --dc-mention: #C9CDFB;
-            --dc-mention-bg: rgba(88, 101, 242, .3);
-            --dc-btn: #4E5058;
-            --dc-gone: #949BA4;
-            --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .55 0 0 0 0 .25 0 0 0 0 .35 0 0 0 .025 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-            color-scheme: dark;
-        }
-    }
-    html[data-lang="zh"] [data-l="en"],
-    html[data-lang="en"] [data-l="zh"] { display: none !important; }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+{% block head %}
+    <style>
     body {
-        font-family: var(--font); font-size: 16px; line-height: 1.7;
         background:
             var(--grain),
             radial-gradient(900px 620px at 85% -8%, var(--wash-a), transparent 62%),
             radial-gradient(760px 560px at -8% 30%, var(--wash-b), transparent 60%),
             var(--bg);
         background-size: 180px 180px, auto, auto, auto;
-        color: var(--text);
-        -webkit-font-smoothing: antialiased; overflow-x: hidden;
-    }
-    a { color: inherit; }
-    img { display: block; max-width: 100%; }
-    :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
-    .wrap { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
-
-    /* ── 按钮 ── */
-    .btn {
-        display: inline-flex; align-items: center; gap: 8px;
-        font: inherit; font-weight: 600; font-size: 16px; line-height: 1.2;
-        text-decoration: none; border-radius: 10px; padding: 14px 24px;
-        background: var(--accent); color: var(--on-accent); border: 0; cursor: pointer;
-        box-shadow: 0 8px 18px -10px var(--accent-shadow);
-        transition: background .15s;
-    }
-    .btn:hover { background: var(--accent-hover); }
-    .btn svg { width: 18px; height: 18px; flex-shrink: 0; }
-    .btn-ghost { background: var(--panel); color: var(--text); box-shadow: inset 0 0 0 1px var(--line); }
-    .btn-ghost:hover { background: var(--accent-soft); }
-    .link {
-        font-weight: 600; text-decoration: underline; text-decoration-thickness: 2px;
-        text-underline-offset: 5px; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
-    }
-    .link:hover { text-decoration-color: var(--accent); }
-
-    /* ── 导航 ── */
-    .nav {
-        position: sticky; top: 0; z-index: 50;
-        background: var(--bg);
-        background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(14px);
-        border-bottom: 1px solid transparent; transition: border-color .2s;
-    }
-    .nav.scrolled { border-bottom-color: var(--line); }
-    .nav-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 64px; }
-    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; text-decoration: none; white-space: nowrap; }
-    .brand img { width: 34px; height: 34px; border-radius: 50%; }
-    .nav-r { display: flex; align-items: center; gap: 6px; }
-    .nav-link {
-        font: inherit; font-weight: 600; font-size: 15px; color: var(--muted);
-        background: none; border: 0; cursor: pointer; text-decoration: none;
-        padding: 8px 12px; border-radius: 8px; white-space: nowrap;
-    }
-    .nav-link:hover { color: var(--text); background: var(--hover); }
-    .nav .btn { padding: 9px 16px; font-size: 15px; border-radius: 8px; }
-    .short { display: none; }
-    section[id] { scroll-margin-top: 72px; }
-
-    /* ── 宽屏左侧：Discord 客户端式的服务器栏和频道列表，频道就是导航 ── */
-    .side { display: none; }
-    .rail { width: 72px; flex-shrink: 0; background: var(--hover); padding: 12px 0; display: flex; flex-direction: column; align-items: center; gap: 8px; }
-    .rail a {
-        position: relative; width: 48px; height: 48px; border-radius: 50%;
-        display: grid; place-items: center; background: var(--bg); color: var(--muted);
-        transition: border-radius .15s, background .15s, color .15s;
-    }
-    .rail a:hover, .rail a.home { border-radius: 16px; }
-    .rail a:hover { background: var(--accent); color: var(--on-accent); }
-    .rail a.home::before {
-        content: ''; position: absolute; left: -12px; top: 4px; width: 4px; height: 40px;
-        border-radius: 0 4px 4px 0; background: var(--text);
-    }
-    .rail img { width: 48px; height: 48px; border-radius: inherit; }
-    .rail svg { width: 22px; height: 22px; }
-    .rail .sep { width: 32px; height: 2px; background: var(--off); border-radius: 1px; }
-    .tip {
-        display: none; position: absolute; left: 60px; top: 50%; transform: translateY(-50%); z-index: 2;
-        background: var(--text); color: var(--bg); font-size: 14px; font-weight: 600; line-height: 1.3;
-        padding: 6px 10px; border-radius: 6px; white-space: nowrap; pointer-events: none;
-    }
-    .rail a:hover .tip, .rail a:focus-visible .tip { display: block; }
-    .chan { flex: 1; min-width: 0; background: var(--side); border-right: 1px solid var(--line); display: flex; flex-direction: column; }
-    .chan-head { height: 64px; flex-shrink: 0; display: flex; align-items: center; padding: 0 16px; font-weight: 700; border-bottom: 1px solid var(--line); }
-    .chan-cat { font-size: 12px; font-weight: 700; color: var(--muted); padding: 20px 16px 6px; }
-    .chan a {
-        display: flex; align-items: center; gap: 8px; margin: 1px 8px; padding: 7px 10px; border-radius: 6px;
-        color: var(--muted); text-decoration: none; font-weight: 500; font-size: 15px;
-    }
-    .chan a .h { color: var(--muted); opacity: .7; font-weight: 700; width: 12px; }
-    .chan a:hover { background: var(--hover); color: var(--text); }
-    .chan a.on { background: var(--cur); color: var(--text); box-shadow: var(--shadow-sm); }
-    .me { margin-top: auto; background: var(--side); border-top: 1px solid var(--line); padding: 10px 12px; display: flex; gap: 10px; align-items: center; font-size: 14px; }
-    .me .pic { position: relative; flex-shrink: 0; }
-    .me .pic img { width: 34px; height: 34px; border-radius: 50%; }
-    .me .pic::after {
-        content: ''; position: absolute; right: -2px; bottom: -2px; width: 10px; height: 10px;
-        border-radius: 50%; background: var(--leaf); border: 3px solid var(--side);
-    }
-    .me b { display: block; font-weight: 600; }
-    .me small { display: block; color: var(--muted); font-size: 12px; line-height: 1.3; }
-    .me small b { display: inline; }
-
-    @media (min-width: 1440px) {
-        body { padding-left: 312px; }
-        .side { display: flex; position: fixed; top: 0; bottom: 0; left: 0; width: 312px; z-index: 60; }
-        .nav .brand { display: none; }
-        .nav-in { justify-content: flex-end; }
-        .wrap { max-width: 1320px; }
     }
 
     /* ── 对话面板：Discord 浅色主题 ── */
@@ -528,42 +264,14 @@
         .note { display: none; }
     }
 
-    /* ── 页脚 ── */
-    .footer { border-top: 1px solid var(--line); padding: 40px 0 32px; font-size: 15px; }
-    .footer-top { display: flex; justify-content: space-between; gap: 32px; flex-wrap: wrap; margin-bottom: 28px; }
-    .footer .tagline { color: var(--muted); margin-top: 8px; max-width: 22em; }
-    .motto { font-weight: 600; color: var(--accent-text); margin-top: 6px; }
-    .footer-links { display: flex; gap: 8px 24px; flex-wrap: wrap; align-items: flex-start; }
-    .footer-links a { font-weight: 600; color: var(--muted); text-decoration: none; }
-    .footer-links a:hover { color: var(--text); }
-    .footer-bot { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 14px; }
-
     @media (max-width: 600px) {
-        .wrap { padding: 0 16px; }
-        .nav-in { height: 58px; gap: 8px; }
-        .brand { font-size: 16px; gap: 8px; }
-        .brand img { width: 30px; height: 30px; }
-        .nav-r { gap: 0; }
-        .nav-link { font-size: 14px; padding: 8px; }
-        .nav .btn { padding: 8px 12px; font-size: 14px; }
-        .long { display: none; }
-        .short { display: inline; }
         .hero .lead, .scene-text p { font-size: 16px; }
         .chat-body { padding: 16px 14px 18px; }
     }
     </style>
-</head>
-<body>
+{%- endblock %}
 
-<aside class="side" aria-label="Channels">
-    <div class="rail">
-        <a href="/" class="home"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="48" height="48"><span class="tip">{{ t('小凛 RinBot', 'Rin') }}</span></a>
-        <span class="sep" aria-hidden="true"></span>
-        <a href="{{ invite_url }}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="tip">{{ t('邀请小凛', 'Invite Rin') }}</span></a>
-        <a href="/dashboard"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg><span class="tip">{{ t('控制台', 'Dashboard') }}</span></a>
-        <a href="https://github.com/RSRH-Rs/DiscordRinBot" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.46-1.16-1.11-1.47-1.11-1.47-.9-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.09.63-1.34-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.5 9.5 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></svg><span class="tip">GitHub</span></a>
-    </div>
-    <nav class="chan" aria-label="Sections">
+{% block side_channels %}
         <div class="chan-head">{{ t('小凛的服务器', 'Rin’s server') }}</div>
         <div class="chan-cat">{{ t('文字频道', 'Text channels') }}</div>
         <a href="#lobby" data-spy="lobby" class="on" aria-current="true"><span class="h" aria-hidden="true">#</span>{{ t('大厅', 'lobby') }}</a>
@@ -575,21 +283,9 @@
             <span class="pic"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34"></span>
             <span><b>{{ t('小凛', 'Rin') }}</b><small>{{ t('在 <b data-stat="servers">12</b> 个服务器里', 'In <b data-stat="servers">12</b> servers') }}</small></span>
         </div>
-    </nav>
-</aside>
+{%- endblock %}
 
-<nav class="nav" id="nav" aria-label="RinBot">
-    <div class="wrap nav-in">
-        <a href="/" class="brand"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34">小凛 RinBot</a>
-        <div class="nav-r">
-            <button type="button" class="nav-link" id="lang-toggle" onclick="rinSetLang(document.documentElement.getAttribute('data-lang') === 'zh' ? 'en' : 'zh')">{{ t('EN', '中文') }}</button>
-            <a href="/dashboard" class="nav-link"><span class="long">{{ t(dash_zh, dash_en) }}</span><span class="short">{{ t('控制台', 'Dashboard') }}</span></a>
-            <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn">{{ t('邀请小凛', 'Invite Rin') }}</a>
-        </div>
-    </div>
-</nav>
-
-<main>
+{% block content %}
 <div class="wrap">
     <section class="hero" id="lobby" aria-labelledby="hero-title">
         <div>
@@ -811,67 +507,27 @@
     </div>
 </section>
 
-</main>
+{%- endblock %}
 
-<footer class="footer">
-    <div class="wrap">
-        <div class="footer-top">
-            <div>
-                <a href="/" class="brand"><img src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="34" height="34" loading="lazy">小凛 RinBot</a>
-                <p class="tagline">{{ t('一个 Discord 机器人，代码开源在 GitHub。', 'A Discord bot. The code is open source on GitHub.') }}</p>
-                <p class="motto" lang="en">All in one, one for all.</p>
-            </div>
-            <div class="footer-links">
-                <a href="/dashboard">{{ t('控制台', 'Dashboard') }}</a>
-                <a href="{{ invite_url }}" target="_blank" rel="noopener">{{ t('邀请小凛', 'Invite Rin') }}</a>
-                <a href="https://github.com/RSRH-Rs/DiscordRinBot" target="_blank" rel="noopener">GitHub</a>
-                <a href="https://github.com/RSRH-Rs/DiscordRinBot/issues" target="_blank" rel="noopener">{{ t('反馈问题', 'Report an issue') }}</a>
-            </div>
-        </div>
-        <div class="footer-bot">
-            <span>&copy; 2026 RinBot</span>
-            <span>Created by Milk Chocolate</span>
-        </div>
-    </div>
-</footer>
-
-<script>
-/* 属性和标题这类没法用成对 span 的文字 */
-var ATTR_I18N = {
-    zh: {
-        title: '小凛Rinbot',
-        description: '小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。',
-        toggle: 'Switch to English',
-        sticker: '小凛的贴纸',
-        cover: 'YOASOBI《夜に駆ける》封面'
+{% block attr_i18n %}{
+    "zh": {
+        "title": "小凛Rinbot",
+        "description": "小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。",
+        "toggle": "Switch to English",
+        "sticker": "小凛的贴纸",
+        "cover": "YOASOBI《夜に駆ける》封面"
     },
-    en: {
-        title: '小凛Rinbot',
-        description: 'Rin is a Discord bot that plays music, welcomes new members, runs giveaways and levels, and helps moderate by the rules you set.',
-        toggle: '切换到中文',
-        sticker: 'A sticker of Rin',
-        cover: 'Cover of 夜に駆ける by YOASOBI'
+    "en": {
+        "title": "小凛Rinbot",
+        "description": "Rin is a Discord bot that plays music, welcomes new members, runs giveaways and levels, and helps moderate by the rules you set.",
+        "toggle": "切换到中文",
+        "sticker": "A sticker of Rin",
+        "cover": "Cover of 夜に駆ける by YOASOBI"
     }
-};
+}{% endblock %}
 
-function applyLangAttrs(lang) {
-    var t = ATTR_I18N[lang];
-    document.title = t.title;
-    document.querySelector('meta[name="description"]').setAttribute('content', t.description);
-    document.getElementById('lang-toggle').setAttribute('aria-label', t.toggle);
-    document.querySelectorAll('[data-i18n-alt]').forEach(function (el) {
-        el.setAttribute('alt', t[el.getAttribute('data-i18n-alt')]);
-    });
-}
-function rinSetLang(lang) {
-    var root = document.documentElement;
-    root.setAttribute('data-lang', lang);
-    root.lang = lang === 'zh' ? 'zh-CN' : 'en';
-    try { localStorage.setItem('rinbot_lang', lang); } catch (e) {}
-    applyLangAttrs(lang);
-}
-applyLangAttrs(document.documentElement.getAttribute('data-lang'));
-
+{% block scripts %}
+<script>
 /* 场景进入视口时让最后一条消息出现；贴纸离开视口时暂停动画 */
 if ('IntersectionObserver' in window) {
     var seenIO = new IntersectionObserver(function (entries) {
@@ -894,29 +550,5 @@ if (window.fetch) fetch('/api/stats').then(function (r) { return r.ok ? r.json()
         document.querySelectorAll('[data-stat="servers"]').forEach(function (el) { el.textContent = d.servers; });
     }
 }).catch(function () {});
-
-/* 宽屏侧栏：滚到哪个区块，就高亮哪个频道 */
-var spyLinks = document.querySelectorAll('[data-spy]');
-if ('IntersectionObserver' in window) {
-    var spyIO = new IntersectionObserver(function (entries) {
-        entries.forEach(function (e) {
-            if (!e.isIntersecting) return;
-            spyLinks.forEach(function (a) {
-                var on = a.getAttribute('data-spy') === e.target.id;
-                a.classList.toggle('on', on);
-                if (on) a.setAttribute('aria-current', 'true'); else a.removeAttribute('aria-current');
-            });
-        });
-    }, { rootMargin: '-45% 0px -50% 0px' });
-    spyLinks.forEach(function (a) {
-        var target = document.getElementById(a.getAttribute('data-spy'));
-        if (target) spyIO.observe(target);
-    });
-}
-
-/* 导航滚动后加一条底线 */
-var nav = document.getElementById('nav');
-addEventListener('scroll', function () { nav.classList.toggle('scrolled', scrollY > 8); }, { passive: true });
 </script>
-</body>
-</html>
+{%- endblock %}

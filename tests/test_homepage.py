@@ -71,6 +71,13 @@ def page():
     return render(False)
 
 
+@pytest.fixture(scope="module")
+def styles(page):
+    """首页自己的 <style> 加上外壳 site.css：颜色、导航、页脚和宽屏侧栏都在 site.css 里。"""
+    inline = "\n".join(re.findall(r"<style>(.*?)</style>", page, re.S))
+    return inline + "\n" + (STATIC_DIR / "css" / "site.css").read_text(encoding="utf-8")
+
+
 def test_invite_links_exact(page):
     invites = [a for t, a in tags(page) if t == "a" and "discord.com/oauth2" in a.get("href", "")]
     assert len(invites) >= 4
@@ -131,9 +138,8 @@ def test_scenes_present(page):
     assert page.count("confused-blink-") >= 1
 
 
-def test_hidden_states_gated_by_js(page):
-    css = "\n".join(re.findall(r"<style>(.*?)</style>", page, re.S))
-    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+def test_hidden_states_gated_by_js(styles):
+    css = re.sub(r"/\*.*?\*/", "", styles, flags=re.S)
     css = re.sub(r"@keyframes[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}", "", css)
     for selector, body in re.findall(r"([^{}]+)\{([^{}]*)\}", css):
         if re.search(r"opacity\s*:\s*0(?![.\d])", body):
@@ -141,12 +147,11 @@ def test_hidden_states_gated_by_js(page):
                 assert sel.strip().startswith(("html.js", ".js")), sel.strip()
 
 
-def test_reduced_motion_block_present(page):
-    css = "\n".join(re.findall(r"<style>(.*?)</style>", page, re.S))
-    m = re.search(r"@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{(.*?)\n    \}", css, re.S)
-    assert m, "missing prefers-reduced-motion block"
+def test_reduced_motion_block_present(styles):
+    blocks = re.findall(r"@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{(.*?)\n\s*\}", styles, re.S)
+    assert blocks, "missing prefers-reduced-motion block"
     for cls in (".stk-blink", ".stk-bob", ".stk-sway"):
-        assert cls in m.group(1), cls
+        assert any(cls in b for b in blocks), cls
 
 
 def test_reveal_setup_runs_before_fetch(page):
@@ -184,14 +189,21 @@ def _palette(page, selector):
 
 @pytest.mark.parametrize("selector", [":root", ':root[data-theme="dark"]'])
 @pytest.mark.parametrize("fg,bg", TEXT_PAIRS)
-def test_text_colors_meet_contrast(page, selector, fg, bg):
-    tokens = _palette(page, selector)
+def test_text_colors_meet_contrast(styles, selector, fg, bg):
+    tokens = _palette(styles, selector)
     assert _contrast(tokens[fg], tokens[bg]) >= 4.5, (selector, fg, bg)
 
 
-def test_pink_text_uses_the_text_shade(page):
+def test_pink_text_uses_the_text_shade(styles):
     # 樱粉 --accent 只给按钮和装饰；当文字用时要换成对比度够的 --accent-text
-    assert "var(--accent-text)" in re.search(r"\.motto\s*\{([^}]*)\}", page).group(1)
+    assert "var(--accent-text)" in re.search(r"\.motto\s*\{([^}]*)\}", styles).group(1)
+
+
+def test_page_extends_the_site_base():
+    # 导航、页脚、颜色和语言脚本都在外壳里，首页只留自己的内容
+    source = (ROOT / "website" / "templates" / "index.html").read_text(encoding="utf-8")
+    assert "{%- extends '_site_base.html' -%}" in "\n".join(source.splitlines()[:3])
+    assert '<nav class="nav"' not in source and "<footer" not in source and ":root {" not in source
 
 
 def test_overview_links_point_to_sections(page):
@@ -230,10 +242,10 @@ def test_sidebar_channels_link_to_sections(page):
         assert h in ids, h
 
 
-def test_sidebar_only_on_wide_screens(page):
-    css = "\n".join(re.findall(r"<style>(.*?)</style>", page, re.S))
+def test_sidebar_only_on_wide_screens(styles):
+    css = styles
     assert re.search(r"\.side \{[^}]*display:\s*none", css)
-    wide = re.search(r"@media \(min-width: 1440px\) \{(.*?)\n    \}", css, re.S)
+    wide = re.search(r"@media \(min-width: 1440px\) \{(.*?)\n\s*\}", css, re.S)
     assert wide and ".side" in wide.group(1) and "padding-left" in wide.group(1)
 
 
