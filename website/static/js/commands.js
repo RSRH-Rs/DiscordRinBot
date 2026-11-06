@@ -53,6 +53,17 @@ window.RinCommands = (() => {
         return Promise.resolve().then(() => clipboard.writeText(text)).then(() => true, () => false);
     }
 
+    /* 读屏器听到的一行：选中了哪条、它做什么 */
+    function announceText(cmd, lang) {
+        return lang === 'zh' ? `已选中 /${cmd.name}：${cmd.zh || cmd.en}` : `Selected /${cmd.name}: ${cmd.en}`;
+    }
+
+    /* 屏幕宽度跨过断点时通知；Safari 14 以前的 MediaQueryList 只有 addListener */
+    function onMediaChange(mql, fn) {
+        if (typeof mql.addEventListener === 'function') mql.addEventListener('change', fn);
+        else mql.addListener(fn);
+    }
+
     function step(ids, current, delta) {
         if (!ids.length) return null;
         const i = ids.indexOf(current);
@@ -66,7 +77,7 @@ window.RinCommands = (() => {
         return id && ids.includes(id) ? id : null;
     }
 
-    const api = {normalize, matches, highlight, examplesFor, slotsFor, permText, copyText, step, idFromHash};
+    const api = {normalize, matches, highlight, examplesFor, slotsFor, permText, copyText, announceText, onMediaChange, step, idFromHash};
     const dataEl = document.getElementById('commands-data');
     if (!dataEl) return api;
 
@@ -150,7 +161,9 @@ window.RinCommands = (() => {
 
     function render() {
         list.querySelectorAll('.inline-panel').forEach(el => el.remove());
-        list.querySelectorAll('.row').forEach(row => row.setAttribute('aria-selected', String(row.dataset.id === sel)));
+        list.querySelectorAll('.row').forEach(row => {
+            if (row.dataset.id === sel) row.setAttribute('aria-current', 'true'); else row.removeAttribute('aria-current');
+        });
         const c = byId.get(sel);
         if (!c || !visible.includes(sel)) { panel.hidden = true; return; }
         if (narrow.matches) {
@@ -169,6 +182,7 @@ window.RinCommands = (() => {
         sel = id; focusOpt = 0;
         if (writeHash) history.replaceState(null, '', '#' + id);
         render();
+        if (byId.has(id)) $('sel-status').textContent = announceText(byId.get(id), lang());
         const row = $('r-' + id);
         if (row && scroll) row.scrollIntoView({block: 'nearest'});
         if (row && focus) row.focus({preventScroll: !scroll});
@@ -241,7 +255,7 @@ window.RinCommands = (() => {
             select(id, {scroll: true, writeHash: false});
         }
     });
-    narrow.addEventListener('change', render);
+    onMediaChange(narrow, render);
 
     const fromHash = idFromHash(location.hash, ids);
     sel = fromHash || ids[0];

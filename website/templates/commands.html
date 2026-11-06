@@ -31,7 +31,8 @@
                 <button type="button" class="clear" id="clear" hidden>{{ t('清空', 'Clear') }}</button>
             </label>
             <p class="found" id="found" role="status">{{ t('共 ' ~ commands|length ~ ' 条，按功能分组。按 / 键直接搜索。', commands|length ~ ' commands, grouped by feature. Press / to search.') }}</p>
-            <div id="list" role="listbox" aria-label="指令" data-i18n-aria="list">
+            <p class="sr-only" id="sel-status" role="status" aria-live="polite"></p>
+            <div id="list">
                 {%- for s in sections %}
                 {%- set g = s.group %}
                 <section class="sec" id="g-{{ g.key }}" data-group="{{ g.key }}" data-total="{{ s.rows|length }}">
@@ -41,7 +42,7 @@
                     </div>
                     <div class="rows">
                         {%- for c in s.rows %}
-                        <button type="button" class="row" role="option" id="r-{{ c.id }}" data-id="{{ c.id }}" aria-selected="false">
+                        <button type="button" class="row" id="r-{{ c.id }}" data-id="{{ c.id }}">
                             <span class="cmd">
                                 {%- if ' ' in c.name %}{% set parts = c.name.split(' ', 1) %}<span class="pre">{{ hl('/' ~ parts[0]) }}</span> {{ hl(parts[1]) }}
                                 {%- else %}{{ hl('/' ~ c.name) }}{% endif -%}
@@ -71,14 +72,14 @@
                 </div>
             </div>
         </div>
-        <aside class="panel" id="panel" aria-live="polite" data-avatar="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" hidden></aside>
+        <aside class="panel" id="panel" data-avatar="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" hidden></aside>
     </div>
 </div>
 <div class="toast" id="toast" role="status"></div>
 <script type="application/json" id="commands-data">{{ {'commands': commands, 'groups': groups, 'perm_labels': perm_labels}|tojson }}</script>
 {%- endblock %}
 
-{% block attr_i18n %}{"zh": {"title": "指令大全 · 小凛Rinbot", "description": "小凛的全部斜杠指令：怎么填、谁能用，按功能分组，可以搜索。", "toggle": "Switch to English", "list": "指令"}, "en": {"title": "Commands · 小凛Rinbot", "description": "All of Rin’s slash commands: how to fill them in and who can use them, grouped by feature and searchable.", "toggle": "切换到中文", "list": "Commands"}}{% endblock %}
+{% block attr_i18n %}{"zh": {"title": "指令大全 · 小凛Rinbot", "description": "小凛的全部斜杠指令：怎么填、谁能用，按功能分组，可以搜索。", "toggle": "Switch to English"}, "en": {"title": "Commands · 小凛Rinbot", "description": "All of Rin’s slash commands: how to fill them in and who can use them, grouped by feature and searchable.", "toggle": "切换到中文"}}{% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/commands.js') }}"></script>

@@ -69,3 +69,15 @@ test('copying only reports success when the clipboard accepted it', async () => 
     assert.equal(await C.copyText('/ban', undefined), false);
     assert.equal(await C.copyText('/ban', {}), false);
 });
+
+test('the selection is announced as one short line', () => {
+    assert.equal(C.announceText(ban, 'zh'), '已选中 /ban：封禁一名成员');
+    assert.equal(C.announceText(ban, 'en'), 'Selected /ban: Ban a member');
+});
+
+test('width changes are heard on old Safari too', () => {
+    const calls = [];
+    C.onMediaChange({addEventListener: (type, fn) => calls.push(['modern', type, fn])}, 'f1');
+    C.onMediaChange({addListener: fn => calls.push(['legacy', fn])}, 'f2');
+    assert.deepEqual(JSON.parse(JSON.stringify(calls)), [['modern', 'change', 'f1'], ['legacy', 'f2']]);
+});

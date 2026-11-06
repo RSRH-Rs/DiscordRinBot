@@ -111,7 +111,12 @@ async def test_commands_page(client):
     html = await r.get_data(as_text=True)
     assert r.status_code == 200
     assert html.count('data-l="zh"') == html.count('data-l="en"')
-    assert html.count('role="option"') == 68
+    # 列表是普通按钮：listbox 里不能放标题和介绍段落；选中项用 aria-current 标出
+    assert 'role="listbox"' not in html and 'role="option"' not in html
+    assert html.count('<button type="button" class="row"') == 68
+    # 详情栏不整块播报，只由一行隐藏的状态播报选中了哪条
+    assert 'aria-live' not in re.search(r'<aside class="panel"[^>]*>', html).group(0)
+    assert re.search(r'<p class="sr-only" id="sel-status" role="status"', html)
     assert re.findall(r'<section class="sec" id="g-(\w+)"', html) == [
         "Music", "Leveling", "Welcome", "Giveaway", "ReactionRoles", "Moderation", "AutoMod", "ServerLog", "General", "System"]
     row = re.search(r'<button[^>]*id="r-automod-whitelist-add".*?</button>', html, re.S).group(0)

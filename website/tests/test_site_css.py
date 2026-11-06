@@ -94,6 +94,12 @@ class PageCssTests(unittest.TestCase):
         self.assertTrue(rule)
         self.assertIn('display: none', rule.group(1))
 
+    def test_commands_selection_is_styled_by_aria_current(self):
+        css = self.read('commands.css')
+        self.assertIn('.row[aria-current="true"]', css)
+        self.assertNotIn('aria-selected', css)
+        self.assertIn('.sr-only', css)
+
     def test_legal_prose_is_narrow_and_the_table_is_wider(self):
         css = self.read('legal.css')
         self.assertRegex(css, r'max-width:\s*38em')
