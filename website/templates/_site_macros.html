@@ -1,4 +1,6 @@
 {#- 官网各页面共用的宏：成对的中英文字、贴纸和头像。 -#}
+{#- t()：中英两段原样输出（|safe），里面可以写 <b>、<code>、链接这类标签。
+    只能传写在模板里的固定文案；请求里的东西（路径、查询参数、用户名）不能传进来，要放在 t() 外面让 Jinja 转义。 -#}
 {%- macro t(zh, en) -%}<span data-l="zh">{{ zh|safe }}</span><span data-l="en" lang="en">{{ en|safe }}</span>{%- endmacro -%}
 {%- macro sticker(name, size, cls='') -%}
 <img{% if cls %} class="{{ cls }}"{% endif %} src="{{ url_for('static', filename='images/rin/' ~ name ~ '-480.webp') }}" srcset="{{ url_for('static', filename='images/rin/' ~ name ~ '-480.webp') }} 480w, {{ url_for('static', filename='images/rin/' ~ name ~ '-960.webp') }} 960w" sizes="{{ size }}px" alt="" width="{{ size }}" height="{{ size }}" loading="lazy" decoding="async">

@@ -949,7 +949,8 @@ def setup_routes(app, discord):
         if request.path.startswith("/api/"):
             return jsonify({"error": "not found"}), 404
         page = await _site_page(
-            "not_found.html", host=request.host, path=request.path[:80],
+            "not_found.html", host=request.host,
+            path=request.path[:80] + ("…" if len(request.path) > 80 else ""),
             suggestion=suggest_page(request.path),
         )
         return page, 404

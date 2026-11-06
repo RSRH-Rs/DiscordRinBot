@@ -156,3 +156,12 @@ def test_command_sections_compare_every_permission():
     assert mod([cmd("a", both), cmd("b", list(both))])["shared"] == both
     assert mod([cmd("a", both), cmd("b", ["kick_members"])])["shared"] is None
     assert mod([cmd("a", []), cmd("b", [])])["shared"] is None
+
+
+async def test_404_marks_a_cut_address(client):
+    import re
+    shown = lambda html: re.search(r'<span class="path">(.*?)</span>', html).group(1)
+    long_html = await (await client.get("/" + "y" * 200)).get_data(as_text=True)
+    assert shown(long_html).endswith("y…") and shown(long_html).count("y") == 79
+    short_html = await (await client.get("/comands")).get_data(as_text=True)
+    assert shown(short_html).endswith("/comands")
