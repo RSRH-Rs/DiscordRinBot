@@ -5,6 +5,7 @@
 {%- set dash_en = 'Open dashboard' if is_logged_in else 'Dashboard login' -%}
 
 {% block head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/home-widgets.css') }}">
     <style>
     body {
         background:
@@ -303,12 +304,24 @@
         </div>
 
         <div class="stage left hero-stage">
-            <div class="stk stk-sway" aria-hidden="true">
-                <img src="{{ url_for('static', filename='images/rin/welcome-480.webp') }}" srcset="{{ url_for('static', filename='images/rin/welcome-480.webp') }} 480w, {{ url_for('static', filename='images/rin/welcome-960.webp') }} 960w" sizes="280px" alt="" width="280" height="280" fetchpriority="high">
+            <button type="button" class="stk stk-sway stk-poke" aria-label="戳一下小凛" data-i18n-aria="poke">
+                <img src="{{ url_for('static', filename='images/rin/welcome-480.webp') }}" srcset="{{ url_for('static', filename='images/rin/welcome-480.webp') }} 480w, {{ url_for('static', filename='images/rin/welcome-960.webp') }} 960w" data-poke-srcset="{{ url_for('static', filename='images/rin/confused-480.webp') }} 480w, {{ url_for('static', filename='images/rin/confused-960.webp') }} 960w" sizes="280px" alt="" width="280" height="280" fetchpriority="high">
                 <span class="spark s1"></span><span class="spark pink s2"></span>
-            </div>
+            </button>
+            <p class="rin-say"><span class="say-shown" aria-hidden="true"></span><span class="say-sr" aria-live="polite"></span></p>
+            <template id="rin-lines">
+                <p data-line>{{ t('别戳啦，我在放歌呢。', 'Hey, no poking. I’m playing music.') }}</p>
+                <p data-line>{{ t('今天又拦下一条广告，快夸我。', 'I stopped another spam link today. Go on, praise me.') }}</p>
+                <p data-line>{{ t('新人的欢迎卡都是我发的哦。', 'I’m the one who sends new members their welcome cards.') }}</p>
+                <p data-line>{{ t('抽奖我从来不偷看结果。', 'I never peek at giveaway results.') }}</p>
+                <p data-line>{{ t('发消息能涨经验，不过一分钟只算一次。', 'Chatting earns XP, but only once a minute.') }}</p>
+                <p data-line>{{ t('想改我的设置？去网页控制台就行。', 'Want to change my settings? Use the web dashboard.') }}</p>
+                <p data-line="angry">{{ t('再戳我就给你记一次警告了！', 'Poke me again and that’s a warning!') }}</p>
+            </template>
             <div class="chat hero-chat">
-                <div class="chat-head"><span><span class="hash">#</span>{{ t('大厅', 'lobby') }}</span></div>
+                <div class="chat-head"><span><span class="hash">#</span>{{ t('大厅', 'lobby') }}</span>
+                    <button type="button" class="chat-pause" aria-pressed="false"><svg class="i-pause" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/><rect x="9.5" y="2.5" width="3" height="11" rx="1" fill="currentColor"/></svg><svg class="i-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8v10.4a.8.8 0 0 0 1.2.7l8.4-5.2a.8.8 0 0 0 0-1.4L5.7 2.1a.8.8 0 0 0-1.2.7z" fill="currentColor"/></svg><span class="say-sr">{{ t('暂停聊天', 'Pause chat') }}</span></button>
+                </div>
                 <div class="chat-body">
                     <div class="msg">
                         <div class="av"><img src="{{ url_for('static', filename='images/demo/avatar-milk.jpg') }}" alt="" width="40" height="40"></div>
@@ -326,6 +339,23 @@
                         <div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span><br>{{ t('欢迎 <b>Starlight</b>！先去 #自我介绍 打个招呼吧～', 'Welcome, <b>Starlight</b>! Come say hi in #introductions.') }}</div>
                     </div>
                 </div>
+                <div class="typing" aria-hidden="true"><i></i><i></i><i></i>{{ t('<b>小凛</b> 正在输入…', '<b>Rin</b> is typing…') }}</div>
+                {#- 首屏那段放完后轮播的剧情：自动审核、抽奖、升级 -#}
+                <template data-scene>
+                    <div class="msg" data-deleted>{{ demo_av('avatar-gamer.jpg') }}<div><span class="nm">spam_bot_9</span><br>{{ t('免费 Nitro 点这里', 'Free Nitro here') }} discord-gift.xyz/…</div></div>
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span><br>{{ t('🔗 @spam_bot_9 不允许在此发送链接。', '🔗 @spam_bot_9, links aren’t allowed here.') }}</div></div>
+                </template>
+                <template data-scene>
+                    <div class="msg">{{ demo_av('avatar-milk.jpg') }}<div><span class="nm">Milk</span><br><span class="cmd">/giveaway start</span></div></div>
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span>
+                        <div class="embed leaf"><div class="embed-title">{{ t('🎉 抽奖活动！', '🎉 Giveaway!') }}</div><div class="dim">{{ t('Nitro 一个月，2 天后开奖', '1 month of Nitro, ends in 2 days') }}</div></div>
+                        <div class="dbtns"><span class="dbtn go">{{ t('🎉 参加抽奖! (23人)', '🎉 Enter! (23)') }}</span></div>
+                    </div></div>
+                </template>
+                <template data-scene>
+                    <div class="msg">{{ demo_av('avatar-starlight.jpg') }}<div><span class="nm">Starlight</span><br>{{ t('大家晚上好～', 'Evening, everyone!') }}</div></div>
+                    <div class="msg">{{ rin_av() }}<div><span class="nm rin">小凛</span><span class="bot-tag">BOT</span><br>{{ t('🎉 恭喜 <span class="role">@Starlight</span>！你升级到了 <b>Level 2</b>！✨', '🎉 Congrats <span class="role">@Starlight</span>! You reached <b>Level 2</b>! ✨') }}</div></div>
+                </template>
             </div>
         </div>
     </section>
@@ -522,14 +552,16 @@
         "description": "小凛是一个 Discord 机器人：放歌、迎新、抽奖、等级，还会按你定的规则帮忙管理服务器。",
         "toggle": "Switch to English",
         "sticker": "小凛的贴纸",
-        "cover": "YOASOBI《夜に駆ける》封面"
+        "cover": "YOASOBI《夜に駆ける》封面",
+        "poke": "戳一下小凛"
     },
     "en": {
         "title": "小凛Rinbot",
         "description": "Rin is a Discord bot that plays music, welcomes new members, runs giveaways and levels, and helps moderate by the rules you set.",
         "toggle": "切换到中文",
         "sticker": "A sticker of Rin",
-        "cover": "Cover of 夜に駆ける by YOASOBI"
+        "cover": "Cover of 夜に駆ける by YOASOBI",
+        "poke": "Poke Rin"
     }
 }{% endblock %}
 
@@ -558,4 +590,5 @@ if (window.fetch) fetch('/api/stats').then(function (r) { return r.ok ? r.json()
     }
 }).catch(function () {});
 </script>
+<script src="{{ url_for('static', filename='js/home-widgets.js') }}"></script>
 {%- endblock %}
