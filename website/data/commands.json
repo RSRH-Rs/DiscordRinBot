@@ -1,0 +1,1479 @@
+{
+  "commands": [
+    {
+      "name": "play",
+      "id": "play",
+      "group": "Music",
+      "en": "Play a song, link, playlist or Spotify link, or add it to the queue",
+      "zh": "播放歌曲、链接、歌单或 Spotify 链接，正在播放时加入队列",
+      "perms": [],
+      "params": [
+        {
+          "name": "query",
+          "required": true,
+          "en": "A song name, song link or playlist link",
+          "zh": "歌曲",
+          "zh_desc": "歌名、歌曲链接或歌单链接"
+        }
+      ],
+      "examples": [
+        "/play 晴天 周杰伦",
+        "/play https://youtu.be/..."
+      ]
+    },
+    {
+      "name": "search",
+      "id": "search",
+      "group": "Music",
+      "en": "Search for songs and pick one to play",
+      "zh": "搜索歌曲，从结果里选一首播放",
+      "perms": [],
+      "params": [
+        {
+          "name": "query",
+          "required": true,
+          "en": "A song name or artist to search for",
+          "zh": "关键词",
+          "zh_desc": "要搜索的歌名或歌手"
+        }
+      ],
+      "examples": [
+        "/search 七里香"
+      ]
+    },
+    {
+      "name": "skip",
+      "id": "skip",
+      "group": "Music",
+      "en": "Skip the current song, or vote to skip it",
+      "zh": "跳过当前歌曲，人多时发起投票",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/skip"
+      ]
+    },
+    {
+      "name": "pause",
+      "id": "pause",
+      "group": "Music",
+      "en": "Pause the music",
+      "zh": "暂停播放",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/pause"
+      ]
+    },
+    {
+      "name": "resume",
+      "id": "resume",
+      "group": "Music",
+      "en": "Resume the music",
+      "zh": "继续播放",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/resume"
+      ]
+    },
+    {
+      "name": "stop",
+      "id": "stop",
+      "group": "Music",
+      "en": "Stop the music, clear the queue and leave the voice channel",
+      "zh": "停止播放、清空队列并离开语音频道",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/stop"
+      ]
+    },
+    {
+      "name": "nowplaying",
+      "id": "nowplaying",
+      "group": "Music",
+      "en": "Show the song that is playing",
+      "zh": "查看正在播放的歌曲",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/nowplaying"
+      ]
+    },
+    {
+      "name": "queue",
+      "id": "queue",
+      "group": "Music",
+      "en": "Show the queue",
+      "zh": "查看播放队列",
+      "perms": [],
+      "params": [
+        {
+          "name": "page",
+          "required": false,
+          "en": "Which page of the queue to show",
+          "zh": "页码",
+          "zh_desc": "看第几页"
+        }
+      ],
+      "examples": [
+        "/queue",
+        "/queue 2"
+      ]
+    },
+    {
+      "name": "remove",
+      "id": "remove",
+      "group": "Music",
+      "en": "Remove a song from the queue",
+      "zh": "从队列里移除一首歌",
+      "perms": [],
+      "params": [
+        {
+          "name": "position",
+          "required": true,
+          "en": "The song to remove; pick from the queue",
+          "zh": "歌曲",
+          "zh_desc": "要移除的歌，可以从队列里选"
+        }
+      ],
+      "examples": [
+        "/remove 3"
+      ]
+    },
+    {
+      "name": "clear",
+      "id": "clear",
+      "group": "Music",
+      "en": "Clear the queue without stopping the current song",
+      "zh": "清空播放队列，当前这首继续播",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/clear"
+      ]
+    },
+    {
+      "name": "shuffle",
+      "id": "shuffle",
+      "group": "Music",
+      "en": "Shuffle the queue",
+      "zh": "随机打乱队列顺序",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/shuffle"
+      ]
+    },
+    {
+      "name": "loop",
+      "id": "loop",
+      "group": "Music",
+      "en": "Set the loop mode; leave empty to switch to the next mode",
+      "zh": "设置循环模式，不填就切到下一种",
+      "perms": [],
+      "params": [
+        {
+          "name": "mode",
+          "required": false,
+          "en": "Off, repeat this song, or repeat the whole queue",
+          "zh": "模式",
+          "zh_desc": "关闭、单曲循环或整个队列循环"
+        }
+      ],
+      "examples": [
+        "/loop single",
+        "/loop"
+      ]
+    },
+    {
+      "name": "volume",
+      "id": "volume",
+      "group": "Music",
+      "en": "Show or set the volume, 0-150",
+      "zh": "查看或调整音量，0–150",
+      "perms": [],
+      "params": [
+        {
+          "name": "level",
+          "required": false,
+          "en": "Volume in percent; 30-100 sounds best; leave empty to show it",
+          "zh": "音量",
+          "zh_desc": "音量百分比，30–100 效果最好；不填就显示当前音量"
+        }
+      ],
+      "examples": [
+        "/volume 60"
+      ]
+    },
+    {
+      "name": "move",
+      "id": "move",
+      "group": "Music",
+      "en": "Move a song to another place in the queue",
+      "zh": "把队列里的一首歌挪到别的位置",
+      "perms": [],
+      "params": [
+        {
+          "name": "from_pos",
+          "required": true,
+          "en": "The song to move; pick from the queue",
+          "zh": "歌曲",
+          "zh_desc": "要挪的歌，可以从队列里选"
+        },
+        {
+          "name": "to_pos",
+          "required": true,
+          "en": "Where to put it",
+          "zh": "新位置",
+          "zh_desc": "挪到第几位"
+        }
+      ],
+      "examples": [
+        "/move 5 1"
+      ]
+    },
+    {
+      "name": "playlist save",
+      "id": "playlist-save",
+      "group": "Music",
+      "en": "Save the current queue under a name",
+      "zh": "把当前队列存成存档",
+      "perms": [],
+      "params": [
+        {
+          "name": "name",
+          "required": false,
+          "en": "A name for the saved queue; default is default",
+          "zh": "名字",
+          "zh_desc": "存档的名字，默认 default"
+        }
+      ],
+      "examples": [
+        "/playlist save 周末歌单"
+      ]
+    },
+    {
+      "name": "playlist load",
+      "id": "playlist-load",
+      "group": "Music",
+      "en": "Add a saved queue to the queue",
+      "zh": "把一个存档加进播放队列",
+      "perms": [],
+      "params": [
+        {
+          "name": "name",
+          "required": false,
+          "en": "The saved queue to load; pick from the list",
+          "zh": "名字",
+          "zh_desc": "要载入的存档，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/playlist load 周末歌单"
+      ]
+    },
+    {
+      "name": "playlist list",
+      "id": "playlist-list",
+      "group": "Music",
+      "en": "List the saved queues",
+      "zh": "查看已保存的存档",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/playlist list"
+      ]
+    },
+    {
+      "name": "playlist delete",
+      "id": "playlist-delete",
+      "group": "Music",
+      "en": "Delete a saved queue",
+      "zh": "删除一个存档",
+      "perms": [],
+      "params": [
+        {
+          "name": "name",
+          "required": true,
+          "en": "The saved queue to delete; pick from the list",
+          "zh": "名字",
+          "zh_desc": "要删除的存档，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/playlist delete 周末歌单"
+      ]
+    },
+    {
+      "name": "join",
+      "id": "join",
+      "group": "Music",
+      "en": "Have the bot join your voice channel",
+      "zh": "让机器人加入你所在的语音频道",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/join"
+      ]
+    },
+    {
+      "name": "rank",
+      "id": "rank",
+      "group": "Leveling",
+      "en": "Show a level card",
+      "zh": "查看等级卡片",
+      "perms": [],
+      "params": [
+        {
+          "name": "member",
+          "required": false,
+          "en": "Whose card; default yours",
+          "zh": "成员",
+          "zh_desc": "看谁的等级，默认是你自己"
+        }
+      ],
+      "examples": [
+        "/rank",
+        "/rank @小明"
+      ]
+    },
+    {
+      "name": "leaderboard",
+      "id": "leaderboard",
+      "group": "Leveling",
+      "en": "Show this server's level leaderboard",
+      "zh": "查看这个服务器的等级排行榜",
+      "perms": [],
+      "params": [
+        {
+          "name": "page",
+          "required": false,
+          "en": "Which page to show",
+          "zh": "页码",
+          "zh_desc": "看第几页"
+        }
+      ],
+      "examples": [
+        "/leaderboard",
+        "/leaderboard 2"
+      ]
+    },
+    {
+      "name": "welcome setup",
+      "id": "welcome-setup",
+      "group": "Welcome",
+      "en": "Pick the welcome and farewell channels and the auto roles",
+      "zh": "选择欢迎频道、道别频道和新成员的自动身份组",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [],
+      "examples": [
+        "/welcome setup"
+      ]
+    },
+    {
+      "name": "welcome test",
+      "id": "welcome-test",
+      "group": "Welcome",
+      "en": "Preview the welcome message with yourself as the new member",
+      "zh": "用你自己当新成员，预览欢迎消息",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [],
+      "examples": [
+        "/welcome test"
+      ]
+    },
+    {
+      "name": "giveaway start",
+      "id": "giveaway-start",
+      "group": "Giveaway",
+      "en": "Start a giveaway in this channel",
+      "zh": "在这个频道发起一个抽奖",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "duration",
+          "required": true,
+          "en": "How long it runs, up to 365 days",
+          "zh": "时长",
+          "zh_desc": "抽奖持续多久，最长 365 天"
+        },
+        {
+          "name": "prize",
+          "required": true,
+          "en": "What the winners get",
+          "zh": "奖品",
+          "zh_desc": "中奖者能得到什么"
+        },
+        {
+          "name": "winners",
+          "required": false,
+          "en": "How many winners, 1-20",
+          "zh": "中奖人数",
+          "zh_desc": "抽出几个人，1–20"
+        }
+      ],
+      "examples": [
+        "/giveaway start 1d 1 Nitro 一个月"
+      ]
+    },
+    {
+      "name": "giveaway end",
+      "id": "giveaway-end",
+      "group": "Giveaway",
+      "en": "End a running giveaway now",
+      "zh": "提前结束一个进行中的抽奖",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "giveaway",
+          "required": true,
+          "en": "The giveaway to end; pick from the list",
+          "zh": "抽奖",
+          "zh_desc": "要结束的抽奖，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/giveaway end 3"
+      ]
+    },
+    {
+      "name": "giveaway reroll",
+      "id": "giveaway-reroll",
+      "group": "Giveaway",
+      "en": "Draw new winners for an ended giveaway",
+      "zh": "给已结束的抽奖重新抽中奖者",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "giveaway",
+          "required": true,
+          "en": "The ended giveaway; pick from the list",
+          "zh": "抽奖",
+          "zh_desc": "已结束的抽奖，可以从列表里选"
+        },
+        {
+          "name": "count",
+          "required": false,
+          "en": "How many new winners, 1-20",
+          "zh": "人数",
+          "zh_desc": "重新抽几个人，1–20"
+        }
+      ],
+      "examples": [
+        "/giveaway reroll 3",
+        "/giveaway reroll 3 2"
+      ]
+    },
+    {
+      "name": "giveaway list",
+      "id": "giveaway-list",
+      "group": "Giveaway",
+      "en": "List this server's recent giveaways",
+      "zh": "查看这个服务器最近的抽奖",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [],
+      "examples": [
+        "/giveaway list"
+      ]
+    },
+    {
+      "name": "roles list",
+      "id": "roles-list",
+      "group": "ReactionRoles",
+      "en": "List this server's role panels",
+      "zh": "列出这个服务器的身份组面板",
+      "perms": [
+        "manage_roles"
+      ],
+      "params": [],
+      "examples": [
+        "/roles list"
+      ]
+    },
+    {
+      "name": "roles add",
+      "id": "roles-add",
+      "group": "ReactionRoles",
+      "en": "Add a role button to a panel",
+      "zh": "给面板加一个身份组按钮",
+      "perms": [
+        "manage_roles"
+      ],
+      "params": [
+        {
+          "name": "panel",
+          "required": true,
+          "en": "The panel to change; pick from the list",
+          "zh": "面板",
+          "zh_desc": "要改的面板，可以从列表里选"
+        },
+        {
+          "name": "emoji",
+          "required": true,
+          "en": "The emoji on the button, such as 🎮",
+          "zh": "表情",
+          "zh_desc": "按钮上的 emoji，比如 🎮"
+        },
+        {
+          "name": "role",
+          "required": true,
+          "en": "The role members get from the button",
+          "zh": "身份组",
+          "zh_desc": "成员点按钮领到的身份组"
+        }
+      ],
+      "examples": [
+        "/roles add 游戏身份组 🎮 @游戏"
+      ]
+    },
+    {
+      "name": "roles remove",
+      "id": "roles-remove",
+      "group": "ReactionRoles",
+      "en": "Take a role button off a panel",
+      "zh": "从面板上去掉一个身份组按钮",
+      "perms": [
+        "manage_roles"
+      ],
+      "params": [
+        {
+          "name": "panel",
+          "required": true,
+          "en": "The panel to change; pick from the list",
+          "zh": "面板",
+          "zh_desc": "要改的面板，可以从列表里选"
+        },
+        {
+          "name": "role",
+          "required": true,
+          "en": "The role to take off; pick from the list",
+          "zh": "身份组",
+          "zh_desc": "要去掉的身份组，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/roles remove 游戏身份组 🎮"
+      ]
+    },
+    {
+      "name": "roles exclusive",
+      "id": "roles-exclusive",
+      "group": "ReactionRoles",
+      "en": "Let members pick one role or several on a panel",
+      "zh": "把面板切换成单选或多选",
+      "perms": [
+        "manage_roles"
+      ],
+      "params": [
+        {
+          "name": "panel",
+          "required": true,
+          "en": "The panel to change; pick from the list",
+          "zh": "面板",
+          "zh_desc": "要改的面板，可以从列表里选"
+        },
+        {
+          "name": "enabled",
+          "required": true,
+          "en": "True lets members keep only one role",
+          "zh": "单选",
+          "zh_desc": "选 True 就只能领一个，选 False 就能领多个"
+        }
+      ],
+      "examples": [
+        "/roles exclusive 颜色 True"
+      ]
+    },
+    {
+      "name": "roles delete",
+      "id": "roles-delete",
+      "group": "ReactionRoles",
+      "en": "Delete a role panel and its message",
+      "zh": "删除一个身份组面板和它的消息",
+      "perms": [
+        "manage_roles"
+      ],
+      "params": [
+        {
+          "name": "panel",
+          "required": true,
+          "en": "The panel to delete; pick from the list",
+          "zh": "面板",
+          "zh_desc": "要删除的面板，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/roles delete 游戏身份组"
+      ]
+    },
+    {
+      "name": "kick",
+      "id": "kick",
+      "group": "Moderation",
+      "en": "Kick a member from the server",
+      "zh": "把一名成员踢出服务器",
+      "perms": [
+        "kick_members"
+      ],
+      "params": [
+        {
+          "name": "member",
+          "required": true,
+          "en": "The member to kick",
+          "zh": "成员",
+          "zh_desc": "要踢出的成员"
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "en": "Why they are kicked",
+          "zh": "原因",
+          "zh_desc": "踢出的原因，会私信告诉对方"
+        }
+      ],
+      "examples": [
+        "/kick @小明 多次刷屏"
+      ]
+    },
+    {
+      "name": "ban",
+      "id": "ban",
+      "group": "Moderation",
+      "en": "Ban a member; add a duration for a temporary ban",
+      "zh": "封禁一名成员，填了时长就是临时封禁",
+      "perms": [
+        "ban_members"
+      ],
+      "params": [
+        {
+          "name": "member",
+          "required": true,
+          "en": "The member or user ID to ban",
+          "zh": "成员",
+          "zh_desc": "要封禁的成员，也可以填用户 ID"
+        },
+        {
+          "name": "duration",
+          "required": false,
+          "en": "How long, such as 1d or 7d; leave empty to ban for good",
+          "zh": "时长",
+          "zh_desc": "封禁多久，如 1d、7d；不填就是永久"
+        },
+        {
+          "name": "delete_days",
+          "required": false,
+          "en": "Also delete their messages from the last 0-7 days",
+          "zh": "清理天数",
+          "zh_desc": "同时删除他最近几天发的消息，0–7 天"
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "en": "Why they are banned",
+          "zh": "原因",
+          "zh_desc": "封禁的原因，会私信告诉对方"
+        }
+      ],
+      "examples": [
+        "/ban @小明 7d 刷屏",
+        "/ban 123456789012345678 发广告"
+      ]
+    },
+    {
+      "name": "unban",
+      "id": "unban",
+      "group": "Moderation",
+      "en": "Lift a ban",
+      "zh": "解除封禁",
+      "perms": [
+        "ban_members"
+      ],
+      "params": [
+        {
+          "name": "user",
+          "required": true,
+          "en": "Who to unban; pick from the ban list or enter a user ID",
+          "zh": "用户",
+          "zh_desc": "要解封的人，可以从封禁名单里选，也可以填用户 ID"
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "en": "Why the ban is lifted",
+          "zh": "原因",
+          "zh_desc": "解封的原因"
+        }
+      ],
+      "examples": [
+        "/unban 小明"
+      ]
+    },
+    {
+      "name": "mute",
+      "id": "mute",
+      "group": "Moderation",
+      "en": "Time out a member",
+      "zh": "禁言一名成员（Discord 超时）",
+      "perms": [
+        "moderate_members"
+      ],
+      "params": [
+        {
+          "name": "member",
+          "required": true,
+          "en": "The member to time out",
+          "zh": "成员",
+          "zh_desc": "要禁言的成员"
+        },
+        {
+          "name": "duration",
+          "required": false,
+          "en": "How long, up to 28 days; default 10 minutes",
+          "zh": "时长",
+          "zh_desc": "禁言多久，最长 28 天，默认 10 分钟"
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "en": "Why they are timed out",
+          "zh": "原因",
+          "zh_desc": "禁言的原因"
+        }
+      ],
+      "examples": [
+        "/mute @小明 1h 刷屏"
+      ]
+    },
+    {
+      "name": "unmute",
+      "id": "unmute",
+      "group": "Moderation",
+      "en": "Remove a member's timeout",
+      "zh": "解除成员的禁言",
+      "perms": [
+        "moderate_members"
+      ],
+      "params": [
+        {
+          "name": "member",
+          "required": true,
+          "en": "The member to free",
+          "zh": "成员",
+          "zh_desc": "要解除禁言的成员"
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "en": "Why the timeout is removed",
+          "zh": "原因",
+          "zh_desc": "解除的原因"
+        }
+      ],
+      "examples": [
+        "/unmute @小明"
+      ]
+    },
+    {
+      "name": "warn",
+      "id": "warn",
+      "group": "Moderation",
+      "en": "Warn a member; enough warnings trigger an automatic punishment",
+      "zh": "警告一名成员，警告次数够了会自动处罚",
+      "perms": [
+        "manage_messages"
+      ],
+      "params": [
+        {
+          "name": "member",
+          "required": true,
+          "en": "The member to warn",
+          "zh": "成员",
+          "zh_desc": "要警告的成员"
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "en": "Why they are warned",
+          "zh": "原因",
+          "zh_desc": "警告的原因，会私信告诉对方"
+        }
+      ],
+      "examples": [
+        "/warn @小明 请不要刷屏"
+      ]
+    },
+    {
+      "name": "warnings list",
+      "id": "warnings-list",
+      "group": "Moderation",
+      "en": "Show a member's warnings",
+      "zh": "查看一名成员的警告记录",
+      "perms": [
+        "manage_messages"
+      ],
+      "params": [
+        {
+          "name": "member",
+          "required": true,
+          "en": "The member to look up",
+          "zh": "成员",
+          "zh_desc": "要查看的成员"
+        }
+      ],
+      "examples": [
+        "/warnings list @小明"
+      ]
+    },
+    {
+      "name": "warnings remove",
+      "id": "warnings-remove",
+      "group": "Moderation",
+      "en": "Delete one warning",
+      "zh": "删除一条警告",
+      "perms": [
+        "manage_messages"
+      ],
+      "params": [
+        {
+          "name": "warning",
+          "required": true,
+          "en": "The warning to delete; pick from the list",
+          "zh": "警告",
+          "zh_desc": "要删除的警告，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/warnings remove 12"
+      ]
+    },
+    {
+      "name": "warnings clear",
+      "id": "warnings-clear",
+      "group": "Moderation",
+      "en": "Delete all of a member's warnings",
+      "zh": "清空一名成员的所有警告",
+      "perms": [
+        "manage_messages"
+      ],
+      "params": [
+        {
+          "name": "member",
+          "required": true,
+          "en": "The member whose warnings are cleared",
+          "zh": "成员",
+          "zh_desc": "要清空警告的成员"
+        }
+      ],
+      "examples": [
+        "/warnings clear @小明"
+      ]
+    },
+    {
+      "name": "purge",
+      "id": "purge",
+      "group": "Moderation",
+      "en": "Delete recent messages in this channel",
+      "zh": "批量删除这个频道最近的消息",
+      "perms": [
+        "manage_messages"
+      ],
+      "params": [
+        {
+          "name": "amount",
+          "required": true,
+          "en": "How many messages, 1-500",
+          "zh": "条数",
+          "zh_desc": "删除多少条，1–500"
+        },
+        {
+          "name": "member",
+          "required": false,
+          "en": "Only delete messages from this member",
+          "zh": "成员",
+          "zh_desc": "只删除这个成员的消息（可选）"
+        }
+      ],
+      "examples": [
+        "/purge 50",
+        "/purge 100 @小明"
+      ]
+    },
+    {
+      "name": "slowmode",
+      "id": "slowmode",
+      "group": "Moderation",
+      "en": "Set slow mode for this channel",
+      "zh": "设置这个频道的慢速模式",
+      "perms": [
+        "manage_channels"
+      ],
+      "params": [
+        {
+          "name": "duration",
+          "required": false,
+          "en": "Time between messages, up to 6 hours; 0 turns it off",
+          "zh": "间隔",
+          "zh_desc": "每条消息之间至少隔多久，最长 6 小时；填 0 关闭"
+        }
+      ],
+      "examples": [
+        "/slowmode 30s",
+        "/slowmode 0"
+      ]
+    },
+    {
+      "name": "lock",
+      "id": "lock",
+      "group": "Moderation",
+      "en": "Stop members from sending messages in a channel",
+      "zh": "锁定频道，普通成员不能发言",
+      "perms": [
+        "manage_channels"
+      ],
+      "params": [
+        {
+          "name": "channel",
+          "required": false,
+          "en": "The channel to lock; default this one",
+          "zh": "频道",
+          "zh_desc": "要锁定的频道，默认当前频道"
+        },
+        {
+          "name": "reason",
+          "required": false,
+          "en": "Why it is locked",
+          "zh": "原因",
+          "zh_desc": "锁定的原因"
+        }
+      ],
+      "examples": [
+        "/lock",
+        "/lock #公告 维护中"
+      ]
+    },
+    {
+      "name": "unlock",
+      "id": "unlock",
+      "group": "Moderation",
+      "en": "Let members send messages in a locked channel again",
+      "zh": "解锁频道，恢复普通成员发言",
+      "perms": [
+        "manage_channels"
+      ],
+      "params": [
+        {
+          "name": "channel",
+          "required": false,
+          "en": "The channel to unlock; default this one",
+          "zh": "频道",
+          "zh_desc": "要解锁的频道，默认当前频道"
+        }
+      ],
+      "examples": [
+        "/unlock"
+      ]
+    },
+    {
+      "name": "case list",
+      "id": "case-list",
+      "group": "Moderation",
+      "en": "List moderation cases, optionally for one member",
+      "zh": "查看管理记录，可以只看一个成员的",
+      "perms": [
+        "manage_messages"
+      ],
+      "params": [
+        {
+          "name": "member",
+          "required": false,
+          "en": "Only show cases for this member",
+          "zh": "成员",
+          "zh_desc": "只看这个成员的案件（可选）"
+        },
+        {
+          "name": "page",
+          "required": false,
+          "en": "Which page to show",
+          "zh": "页码",
+          "zh_desc": "看第几页"
+        }
+      ],
+      "examples": [
+        "/case list",
+        "/case list @小明"
+      ]
+    },
+    {
+      "name": "case view",
+      "id": "case-view",
+      "group": "Moderation",
+      "en": "Show one case",
+      "zh": "查看一个案件",
+      "perms": [
+        "manage_messages"
+      ],
+      "params": [
+        {
+          "name": "case",
+          "required": true,
+          "en": "The case to show; pick from the list",
+          "zh": "案件",
+          "zh_desc": "要查看的案件，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/case view 12"
+      ]
+    },
+    {
+      "name": "case reason",
+      "id": "case-reason",
+      "group": "Moderation",
+      "en": "Change the reason of a case",
+      "zh": "修改一个案件的原因",
+      "perms": [
+        "manage_messages"
+      ],
+      "params": [
+        {
+          "name": "case",
+          "required": true,
+          "en": "The case to change; pick from the list",
+          "zh": "案件",
+          "zh_desc": "要修改的案件，可以从列表里选"
+        },
+        {
+          "name": "reason",
+          "required": true,
+          "en": "The new reason",
+          "zh": "原因",
+          "zh_desc": "新的原因"
+        }
+      ],
+      "examples": [
+        "/case reason 12 发广告"
+      ]
+    },
+    {
+      "name": "case duration",
+      "id": "case-duration",
+      "group": "Moderation",
+      "en": "Change how long an active timeout or temporary ban lasts",
+      "zh": "修改还在生效的禁言或临时封禁的时长",
+      "perms": [
+        "manage_messages"
+      ],
+      "params": [
+        {
+          "name": "case",
+          "required": true,
+          "en": "The active timeout or temporary ban; pick from the list",
+          "zh": "案件",
+          "zh_desc": "还在生效的禁言或临时封禁，可以从列表里选"
+        },
+        {
+          "name": "duration",
+          "required": true,
+          "en": "The new length, counted from now",
+          "zh": "时长",
+          "zh_desc": "新的时长，从现在算起"
+        }
+      ],
+      "examples": [
+        "/case duration 12 2h"
+      ]
+    },
+    {
+      "name": "automod status",
+      "id": "automod-status",
+      "group": "AutoMod",
+      "en": "Show the automatic moderation settings",
+      "zh": "查看自动审核的设置",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [],
+      "examples": [
+        "/automod status"
+      ]
+    },
+    {
+      "name": "automod words add",
+      "id": "automod-words-add",
+      "group": "AutoMod",
+      "en": "Add a banned word",
+      "zh": "添加一个违禁词",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "word",
+          "required": true,
+          "en": "The word to ban",
+          "zh": "违禁词",
+          "zh_desc": "要禁止的词"
+        }
+      ],
+      "examples": [
+        "/automod words add 广告"
+      ]
+    },
+    {
+      "name": "automod words remove",
+      "id": "automod-words-remove",
+      "group": "AutoMod",
+      "en": "Remove a banned word",
+      "zh": "移除一个违禁词",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "word",
+          "required": true,
+          "en": "The word to remove; pick from the list",
+          "zh": "违禁词",
+          "zh_desc": "要移除的词，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/automod words remove 广告"
+      ]
+    },
+    {
+      "name": "automod words list",
+      "id": "automod-words-list",
+      "group": "AutoMod",
+      "en": "Show the banned words",
+      "zh": "查看违禁词",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [],
+      "examples": [
+        "/automod words list"
+      ]
+    },
+    {
+      "name": "automod whitelist add",
+      "id": "automod-whitelist-add",
+      "group": "AutoMod",
+      "en": "Allow links to a domain",
+      "zh": "允许某个域名的链接",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "domain",
+          "required": true,
+          "en": "A domain such as youtube.com",
+          "zh": "域名",
+          "zh_desc": "如 youtube.com"
+        }
+      ],
+      "examples": [
+        "/automod whitelist add youtube.com"
+      ]
+    },
+    {
+      "name": "automod whitelist remove",
+      "id": "automod-whitelist-remove",
+      "group": "AutoMod",
+      "en": "Stop allowing links to a domain",
+      "zh": "不再允许某个域名的链接",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "domain",
+          "required": true,
+          "en": "The domain to remove; pick from the list",
+          "zh": "域名",
+          "zh_desc": "要移除的域名，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/automod whitelist remove youtube.com"
+      ]
+    },
+    {
+      "name": "automod whitelist list",
+      "id": "automod-whitelist-list",
+      "group": "AutoMod",
+      "en": "Show the allowed domains",
+      "zh": "查看允许的域名",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [],
+      "examples": [
+        "/automod whitelist list"
+      ]
+    },
+    {
+      "name": "automod ignore add",
+      "id": "automod-ignore-add",
+      "group": "AutoMod",
+      "en": "Skip a channel or role",
+      "zh": "让自动审核跳过一个频道或身份组",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "channel",
+          "required": false,
+          "en": "A channel to skip",
+          "zh": "频道",
+          "zh_desc": "要跳过的频道"
+        },
+        {
+          "name": "role",
+          "required": false,
+          "en": "A role to skip",
+          "zh": "身份组",
+          "zh_desc": "要跳过的身份组"
+        }
+      ],
+      "examples": [
+        "/automod ignore add #管理员频道"
+      ]
+    },
+    {
+      "name": "automod ignore remove",
+      "id": "automod-ignore-remove",
+      "group": "AutoMod",
+      "en": "Stop skipping a channel or role",
+      "zh": "不再跳过一个频道或身份组",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "channel",
+          "required": false,
+          "en": "The channel to stop skipping",
+          "zh": "频道",
+          "zh_desc": "不再跳过的频道"
+        },
+        {
+          "name": "role",
+          "required": false,
+          "en": "The role to stop skipping",
+          "zh": "身份组",
+          "zh_desc": "不再跳过的身份组"
+        }
+      ],
+      "examples": [
+        "/automod ignore remove @管理员"
+      ]
+    },
+    {
+      "name": "automod ignore list",
+      "id": "automod-ignore-list",
+      "group": "AutoMod",
+      "en": "Show the skipped channels and roles",
+      "zh": "查看跳过的频道和身份组",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [],
+      "examples": [
+        "/automod ignore list"
+      ]
+    },
+    {
+      "name": "serverlog ignore",
+      "id": "serverlog-ignore",
+      "group": "ServerLog",
+      "en": "Stop logging messages in a channel",
+      "zh": "不再记录一个频道里的消息",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "channel",
+          "required": true,
+          "en": "The channel to skip",
+          "zh": "频道",
+          "zh_desc": "要忽略的频道"
+        }
+      ],
+      "examples": [
+        "/serverlog ignore #机器人频道"
+      ]
+    },
+    {
+      "name": "serverlog unignore",
+      "id": "serverlog-unignore",
+      "group": "ServerLog",
+      "en": "Log messages in a skipped channel again",
+      "zh": "恢复记录一个频道里的消息",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "channel",
+          "required": true,
+          "en": "The channel to log again",
+          "zh": "频道",
+          "zh_desc": "要恢复记录的频道"
+        }
+      ],
+      "examples": [
+        "/serverlog unignore #机器人频道"
+      ]
+    },
+    {
+      "name": "status",
+      "id": "status",
+      "group": "General",
+      "en": "Show how the bot is doing",
+      "zh": "查看小凛的运行状态",
+      "perms": [],
+      "params": [],
+      "examples": [
+        "/status"
+      ]
+    },
+    {
+      "name": "roll",
+      "id": "roll",
+      "group": "General",
+      "en": "Roll a die",
+      "zh": "掷一个骰子",
+      "perms": [],
+      "params": [
+        {
+          "name": "sides",
+          "required": false,
+          "en": "How many sides, 2-1000; default 6",
+          "zh": "面数",
+          "zh_desc": "骰子有几个面，2–1000，默认 6"
+        }
+      ],
+      "examples": [
+        "/roll",
+        "/roll 20"
+      ]
+    },
+    {
+      "name": "avatar",
+      "id": "avatar",
+      "group": "General",
+      "en": "Show someone's avatar in full size",
+      "zh": "查看某人的大图头像",
+      "perms": [],
+      "params": [
+        {
+          "name": "member",
+          "required": false,
+          "en": "Whose avatar; default yours",
+          "zh": "成员",
+          "zh_desc": "看谁的头像，默认是你自己"
+        }
+      ],
+      "examples": [
+        "/avatar @小明"
+      ]
+    },
+    {
+      "name": "commands disable",
+      "id": "commands-disable",
+      "group": "System",
+      "en": "Turn a command off for this server",
+      "zh": "在这个服务器停用一条指令",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "command",
+          "required": true,
+          "en": "The command to turn off; pick from the list",
+          "zh": "指令",
+          "zh_desc": "要停用的指令，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/commands disable roll"
+      ]
+    },
+    {
+      "name": "commands enable",
+      "id": "commands-enable",
+      "group": "System",
+      "en": "Turn a command back on",
+      "zh": "重新启用一条指令",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [
+        {
+          "name": "command",
+          "required": true,
+          "en": "The command to turn on; pick from the list",
+          "zh": "指令",
+          "zh_desc": "要启用的指令，可以从列表里选"
+        }
+      ],
+      "examples": [
+        "/commands enable roll"
+      ]
+    },
+    {
+      "name": "commands list",
+      "id": "commands-list",
+      "group": "System",
+      "en": "Show the commands turned off here",
+      "zh": "查看这个服务器停用了哪些指令",
+      "perms": [
+        "manage_guild"
+      ],
+      "params": [],
+      "examples": [
+        "/commands list"
+      ]
+    },
+    {
+      "name": "help",
+      "id": "help",
+      "group": "System",
+      "en": "Open the command menu, or explain one command",
+      "zh": "打开指令菜单，或者查看一条指令的用法",
+      "perms": [],
+      "params": [
+        {
+          "name": "command",
+          "required": false,
+          "en": "A command to explain, such as ban or warnings clear",
+          "zh": "指令",
+          "zh_desc": "想了解的指令，如 ban、warnings clear"
+        }
+      ],
+      "examples": [
+        "/help",
+        "/help ban"
+      ]
+    }
+  ]
+}
