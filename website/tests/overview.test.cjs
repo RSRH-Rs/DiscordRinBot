@@ -20,13 +20,17 @@ function card(slug, toggle) {
     return Object.assign(node({dataset: {row: slug}}), {parts,
         querySelector: sel => sel === '[data-summary]' ? parts.summary : sel === '[data-state]' ? parts.state : sel === 'input[data-toggle]' ? parts.input : null});
 }
-function overview({dirty = false, api, nodes = {}, cards = []} = {}) {
+function overview({dirty = false, api, nodes = {}, cards = [], checkup = null} = {}) {
     const calls = {api: [], invalidate: [], toast: [], refresh: 0};
     const listeners = {};
     const Console = {
         tr: (key, vars) => vars ? key + JSON.stringify(vars) : key,
         channelName: (id, list) => list.find(c => c.id === String(id))?.name ?? null,
-        api: async (...args) => { calls.api.push(args); return api ? api(...args) : {ok: true, config_state: 'enabled'}; },
+        api: async (...args) => {
+            calls.api.push(args);
+            if (args[0] === '/checkup') { if (checkup instanceof Error) throw checkup; if (checkup) return checkup; }
+            return api ? api(...args) : {ok: true, config_state: 'enabled'};
+        },
         invalidate: slug => calls.invalidate.push(slug),
         toast: (...args) => calls.toast.push(args),
         refreshModules: () => { calls.refresh++; },
@@ -205,3 +209,58 @@ test('a successful poll after a failed first load brings the cards back', async 
     assert.equal(nodes['ov-modules'].hidden, false);
 });
 
+
+const problem = perm => ({code: 'missing_perm', perm, lose: 'x'});
+const NOTICES = [{slug: 'welcome', text: 'a'}, {slug: 'botlog', text: 'b'}, {slug: 'serverlog', text: 'c'}];
+
+test('mergeChecks puts blockers first and caps at three', () => {
+    const {Overview} = overview();
+    const merged = plain(Overview.mergeChecks({available: true, blockers: [problem('A')], warnings: [problem('B')]}, NOTICES));
+    assert.equal(merged.length, 3);
+    assert.deepEqual(merged.map(n => n.text), ['overview.missing_perm{"perm":"A","lose":"x"}', 'overview.missing_perm{"perm":"B","lose":"x"}', 'a']);
+    assert.deepEqual(merged.slice(0, 2).map(n => n.href), ['/permissions', '/permissions']);
+    assert.equal(merged[2].slug, 'welcome');
+});
+
+test('mergeChecks ignores unavailable checkups', () => {
+    const {Overview} = overview();
+    assert.deepEqual(plain(Overview.mergeChecks({available: false, blockers: [problem('A')], warnings: []}, NOTICES)), NOTICES);
+    assert.deepEqual(plain(Overview.mergeChecks(null, NOTICES)), NOTICES);
+});
+
+test('render shows checkup notices linking to the permissions page', async () => {
+    const {nodes, cards} = overviewPage();
+    const {Overview, calls} = overview({nodes, cards, checkup: {available: true, blockers: [problem('Send Messages')], warnings: []}});
+    await Overview.render({modules: [{slug: 'roles', summary: {panels: 1}}]});
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(nodes['ov-attention'].hidden, false);
+    const [label, link] = nodes['ov-attention'].children[0].children;
+    assert.equal(link.href, '/permissions');
+    assert.equal(link.textContent, 'overview.attention_go');
+    assert.equal(label.textContent, 'overview.missing_perm{"perm":"Send Messages","lose":"x"}');
+    await Overview.render({modules: [{slug: 'roles', summary: {panels: 1}}]});
+    assert.equal(calls.api.filter(c => c[0] === '/checkup').length, 1);
+});
+
+test('render skips the checkup when the request fails', async () => {
+    const {nodes, cards} = overviewPage();
+    const {Overview} = overview({nodes, cards, checkup: new Error('502')});
+    await Overview.render({modules: [{slug: 'botlog', summary: {channel_id: 0}}]});
+    assert.equal(nodes['ov-attention'].children.length, 1);
+    assert.equal(nodes['ov-attention'].children[0].children[1].dataset.mod, 'botlog');
+});
+
+test('module rows update while the checkup is still pending', async () => {
+    const {nodes, cards} = overviewPage();
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    const {Overview} = overview({nodes, cards, api: async path => path === '/checkup' ? gate : {ok: true}});
+    await Overview.render(modulesData(1));
+    assert.equal(cards[0].parts.input.checked, true);
+    assert.equal(nodes['ov-modules'].hidden, false);
+    assert.equal(nodes['ov-attention'].hidden, true);
+    release({available: true, blockers: [problem('Send Messages')], warnings: []});
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(nodes['ov-attention'].hidden, false);
+    assert.equal(nodes['ov-attention'].children[0].children[1].href, '/permissions');
+});

@@ -53,13 +53,24 @@ window.Overview = (() => {
             .filter(a => a.summary?.warn).slice(0, 3).map(a => ({slug: a.slug, text: a.summary.text}));
     }
 
-    function notice({slug, text}) {
+    // Permission problems from the checkup come first; the list stays capped at three.
+    function mergeChecks(checkup, notices) {
+        if (!checkup?.available) return notices;
+        const found = [...(checkup.blockers || []), ...(checkup.warnings || [])]
+            .map(({perm, lose}) => ({text: tr('overview.missing_perm', {perm, lose}), href: '/permissions'}));
+        return [...found, ...notices].slice(0, 3);
+    }
+
+    // {slug, text} links to a module page; {href, text} is a checkup problem linking to the permissions page.
+    function notice({slug, href, text}) {
         const line = document.createElement('p');
         line.className = 'notice notice--warn';
         const label = document.createElement('span');
-        label.textContent = tr('overview.attention_item', {module: tr('nav.module.' + slug), text});
+        label.textContent = href ? text : tr('overview.attention_item', {module: tr('nav.module.' + slug), text});
         const link = document.createElement('a');
-        link.href = '#' + slug; link.dataset.mod = slug; link.textContent = tr('overview.attention_go');
+        if (href) link.href = href;
+        else { link.href = '#' + slug; link.dataset.mod = slug; }
+        link.textContent = tr('overview.attention_go');
         line.append(label, link);
         return line;
     }
@@ -116,13 +127,19 @@ window.Overview = (() => {
         el('ov-facts').textContent = facts.join(' · ');
     }
 
-    let rendered = false;
+    let rendered = false, checkupRequest = null, checkupData = null, moduleNotices = [];
+    function showNotices() {
+        const box = el('ov-attention'), notices = mergeChecks(checkupData, moduleNotices);
+        if (box) { box.replaceChildren(...notices.map(notice)); box.hidden = !notices.length; }
+    }
     async function render(data) {
+        // Asked once and never awaited here: a slow or failed checkup only changes the notices when it arrives.
+        checkupRequest ||= Console.api('/checkup').catch(() => null).then(result => { checkupData = result; showNotices(); });
         let list = null;
         try { list = await Console.channels(); } catch { /* summaries fall back to blurbs */ }
         if (!list?.length) list = null;
-        const notices = attention(data.modules, list), box = el('ov-attention');
-        if (box) { box.replaceChildren(...notices.map(notice)); box.hidden = !notices.length; }
+        moduleNotices = attention(data.modules, list);
+        showNotices();
         for (const m of data.modules) {
             const row = document.querySelector(`[data-row="${m.slug}"]`);
             if (!row) continue;
@@ -170,5 +187,5 @@ window.Overview = (() => {
         loadInfo();
     });
 
-    return {TOGGLE_SLUGS, summaryText, attention, toggle, joinDuration, render};
+    return {TOGGLE_SLUGS, summaryText, attention, mergeChecks, toggle, joinDuration, render};
 })();

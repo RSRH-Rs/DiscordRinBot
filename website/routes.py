@@ -23,6 +23,7 @@ from PIL import Image, UnidentifiedImageError
 import config
 from config import BOT_TOKEN
 from i18n import tr
+from permcheck import checkup as permission_checkup
 import site_data
 
 try:
@@ -874,6 +875,26 @@ async def _validate_guild_resources(
                     return False
 
     return True
+
+
+CHECKUP_TTL = 60  # 秒
+_checkup_cache = {}  # gid -> (取得时间, 体检结果)
+
+
+async def _bot_permission_checkup(gid):
+    """小凛在这个服务器缺哪些权限；Discord 读不到时 available 为 False，这种结果不缓存。"""
+    cached = _checkup_cache.get(gid)
+    if cached and time.monotonic() - cached[0] < CHECKUP_TTL:
+        return cached[1]
+    me = await discord_api_get("/users/@me")
+    bot_id = (me or {}).get("id")
+    roles = await discord_api_get(f"/guilds/{gid}/roles") if bot_id else None
+    member = await discord_api_get(f"/guilds/{gid}/members/{bot_id}") if roles is not None else None
+    if member is None:
+        return {"available": False, "blockers": [], "warnings": []}
+    result = permission_checkup(roles, member, gid)
+    _checkup_cache[gid] = (time.monotonic(), result)
+    return result
 
 
 def setup_routes(app, discord):
@@ -2886,3 +2907,9 @@ def setup_routes(app, discord):
         except Exception as e:
             print(f"[api_commands_bulk_toggle] {traceback.format_exc()}")
             return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/guild/<string:gid>/checkup")
+    async def api_checkup(gid):
+        if not (gid.isascii() and gid.isdigit() and await check_guild_access(discord, gid)):
+            return jsonify({"error": "unauthorized"}), 401
+        return jsonify(await _bot_permission_checkup(gid))

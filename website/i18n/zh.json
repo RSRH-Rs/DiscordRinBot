@@ -219,6 +219,7 @@
     "sends_to": "发到 #{channel}",
     "logs_to": "记录到 #{channel}",
     "channel_deleted": "小凛看不到这个频道，可能被删除或权限变了，去重新选一个",
+    "missing_perm": "缺少“{perm}”：{lose}",
     "welcome": {
       "unset": "还没选欢迎频道",
       "roles": "自动给 {n} 个身份组",
