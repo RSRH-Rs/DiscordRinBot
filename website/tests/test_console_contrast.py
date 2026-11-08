@@ -169,6 +169,13 @@ class ConsoleContrastTests(unittest.TestCase):
         self.assertIn('img-line', self.light)
         self.assertIn('img-line', self.dark)
 
+    def test_page_rhythm(self):
+        self.assertIn('margin-bottom: 16px', rule(self.css, '.note:not(:last-child)'))
+        self.assertIn('margin-top: 24px', rule(self.css, '.actions + .section-hint'))
+        self.assertRegex(self.css, r'\.tab-panel:has\(> \.section \+ \.section\)\s*\{[^}]*gap: 32px')
+        self.assertNotIn('margin-bottom', rule(self.css, '.section-head'))
+        self.assertIn('margin-top: 8px', rule(self.css, ':is(.section-title, .section-hint, .section-head) + :is(.list, .case-list, .lb-list)'))
+
     def test_no_important(self):
         self.assertNotIn('!important', self.css)
 

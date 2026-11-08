@@ -144,7 +144,7 @@
             const last = row.lastElementChild;
             if (!near(box(last).right, box(row).right)) add('F', 'roles/role-row', `${name(last)} ends at ${Math.round(box(last).right)}, row at ${Math.round(box(row).right)}`);
             row.querySelector('.emoji-trigger')?.click();
-            const picker = await until(() => open('.emoji-picker'));
+            const picker = await until(() => open('.emoji-picker')); await sleep(200);
             if (picker) {
                 audit(picker, 'roles/emoji-picker');
                 const tabs = picker.querySelector('.ep-tabs'), s = getComputedStyle(picker);
@@ -157,7 +157,7 @@
         // The longest list is the one that overflows its popup, which is where a shrinking field shows.
         const longest = [...page.querySelectorAll('.search-select')].sort((a, b) => (b.querySelector('select')?.options.length || 0) - (a.querySelector('select')?.options.length || 0))[0];
         longest?.querySelector('.select-trigger')?.click();
-        const popup = await until(() => open('.select-popup'));
+        const popup = await until(() => open('.select-popup')); await sleep(200);
         if (popup) audit(popup, 'roles/select-popup'); else skipped.push('roles/select-popup');
         close();
         await until(() => open('.select-popup'), false);
