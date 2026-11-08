@@ -66,6 +66,17 @@
     .hero .lead { font-size: 18px; line-height: 1.75; color: var(--muted); word-break: keep-all; margin-bottom: 32px; }
     .lead .s { display: block; text-wrap: balance; }
     .actions { display: flex; align-items: center; gap: 12px 14px; flex-wrap: wrap; }
+    /* 小凛从邀请按钮后面探出半个头，只响应悬停和键盘聚焦 */
+    .peek { position: relative; display: inline-flex; isolation: isolate; }
+    .peek-rin {
+        position: absolute; z-index: -1; top: 0; left: 50%; margin-left: -18px; width: 36px; height: 36px; border-radius: 50%;
+        pointer-events: none; transform: translateY(8px); transition: transform .15s ease-out;
+    }
+    @media (hover: hover) {
+        .peek:hover .peek-rin { transform: translateY(-18px); transition: transform .28s cubic-bezier(.34, 1.56, .64, 1); }
+    }
+    .peek:has(.btn:focus-visible) .peek-rin { transform: translateY(-18px); transition: transform .28s cubic-bezier(.34, 1.56, .64, 1); }
+    @media (prefers-reduced-motion: reduce) { .peek-rin { display: none; } }
     /* 服务器数前面一颗 Discord 的「在线」绿点 */
     .count { margin-top: 32px; color: var(--muted); font-size: 15px; display: flex; align-items: center; gap: 9px; }
     .count::before {
@@ -295,7 +306,7 @@
             <h1 id="hero-title">{{ t('你的服务器<br>小凛来值班', 'Your server<br>Rin’s on duty') }}</h1>
             <p class="lead">{{ t('<span class="s">我是小凛，平时在语音频道放歌，有新人进来就发张欢迎卡。</span><span class="s">有人刷屏发广告，我先删掉，再记到日志里。</span>', '<span class="s">I’m Rin. I play music in voice channels and post a welcome card when someone joins.</span><span class="s">If someone floods the chat or posts scam links, I delete it and note it in your log.</span>') }}</p>
             <div class="actions">
-                <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ t('邀请小凛', 'Invite Rin') }}</a>
+                <span class="peek"><img class="peek-rin" src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="36" height="36" loading="lazy" decoding="async"><a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ t('邀请小凛', 'Invite Rin') }}</a></span>
                 <a href="/dashboard" class="btn btn-ghost">{{ t(dash_zh, dash_en) }}</a>
             </div>
             <p class="before-invite"><a href="/permissions" class="link">{{ t('邀请前看看小凛要哪些权限', 'See what Rin asks for before inviting') }}</a></p>
@@ -526,7 +537,7 @@
                 <h2 id="dashboard-title">{{ t('在网页上设置', 'Set it up on the web') }}</h2>
                 <p>{{ t('用 Discord 账号登录，选好服务器，上面这些功能的开关都在那里。', 'Log in with Discord, pick your server, and every feature above has its switches there.') }}</p>
                 <div class="actions" style="margin-top:26px">
-                    <a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ t('邀请小凛', 'Invite Rin') }}</a>
+                    <span class="peek"><img class="peek-rin" src="{{ url_for('static', filename='images/rin/bot-avatar-96.webp') }}" alt="" width="36" height="36" loading="lazy" decoding="async"><a href="{{ invite_url }}" target="_blank" rel="noopener" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>{{ t('邀请小凛', 'Invite Rin') }}</a></span>
                     <a href="/dashboard" class="btn btn-ghost">{{ t(dash_zh, dash_en) }}</a>
                 </div>
                 <ul class="facts">

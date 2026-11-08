@@ -55,5 +55,24 @@ class HomepageThemeTests(unittest.TestCase):
                     self.assertGreaterEqual(ratio(palette[fg].strip(), palette[bg].strip()), 4.5)
 
 
+
+class InvitePeekTests(unittest.TestCase):
+    def setUp(self):
+        self.html = (ROOT / 'templates/index.html').read_text(encoding='utf-8')
+
+    def test_rin_peeks_over_both_invite_buttons(self):
+        images = re.findall(r'<img class="peek-rin"[^>]*>', self.html)
+        self.assertEqual(len(images), 2)
+        for image in images:
+            self.assertIn('bot-avatar-96.webp', image)
+            self.assertIn('alt=""', image)
+            self.assertIn('width="36"', image)
+
+    def test_peek_answers_hover_only_and_never_takes_clicks(self):
+        self.assertRegex(self.html, r'@media \(hover: hover\)\s*\{\s*\.peek:hover \.peek-rin')
+        self.assertRegex(re.search(r'\.peek-rin\s*\{([^}]*)\}', self.html).group(1), r'pointer-events:\s*none')
+        self.assertIn('cubic-bezier(.34, 1.56, .64, 1)', self.html)
+
+
 if __name__ == '__main__':
     unittest.main()
