@@ -1,10 +1,10 @@
 /* 指令大全：左边是列表，右边是吸顶的详情栏；整页唯一显眼的是详情里的 Discord 输入框。 */
 .cmds { padding-top: 44px; padding-bottom: 96px; font-family: var(--read); font-size: 15px; line-height: 1.6; }
-.cmds .head h1 { font: 600 40px/1.15 var(--display); margin-bottom: 8px; }
+.cmds .head h1 { font: 600 40px/1.15 var(--title); margin-bottom: 8px; }
 .cmds .head p { color: var(--muted); max-width: 56ch; }
 .cmds .grid { margin-top: 28px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 48px; align-items: start; }
 .cmds mark { background: var(--mark); color: inherit; border-radius: 3px; padding: 0 1px; }
-.chan a .n { margin-left: auto; font-size: 12.5px; opacity: .8; }
+.chan a .n { margin-left: auto; font-size: 13px; opacity: .8; }
 /* 只给读屏器听的一行：选中了哪条指令 */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 /* 这些元素自己设了 display，搜索时隐藏要写明 */
@@ -13,7 +13,7 @@
 /* 搜索框：吸在导航下面，上下各留一条底色，滚动的列表不会从缝里露出来 */
 .search { position: sticky; top: 76px; z-index: 5; display: flex; align-items: center; gap: 10px; background: var(--field); border: 1px solid var(--field-line); border-radius: 12px; padding: 0 8px 0 14px; height: 48px; box-shadow: 0 0 0 6px var(--bg), 0 -12px 0 6px var(--bg); cursor: text; }
 .search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft), 0 0 0 6px var(--bg), 0 -12px 0 6px var(--bg); }
-.search .slash { font: 600 19px var(--display); color: var(--muted); }
+.search .slash { font: 600 18px var(--display); color: var(--muted); }
 .search input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: inherit; font-size: 16px; color: var(--text); }
 .search input::placeholder { color: var(--muted); }
 .search input::-webkit-search-cancel-button { display: none; }
@@ -31,7 +31,7 @@ html:not(.js) .cmds .found { display: none; }
 #list .sec { scroll-margin-top: 140px; }
 .sec-head, .empty { grid-column: 1 / -1; }
 .sec-head { margin: 28px 0 8px; }
-.sec-head h2 { font: 600 19px var(--display); display: flex; align-items: baseline; gap: 8px; }
+.sec-head h2 { font: 600 18px var(--display); display: flex; align-items: baseline; gap: 8px; }
 .sec-head h2 small { font: 500 14px var(--read); color: var(--muted); }
 .sec-head p { color: var(--muted); font-size: 14px; margin-top: 2px; }
 .sec-head p b { color: var(--text); font-weight: 600; }
@@ -44,7 +44,7 @@ html:not(.js) .cmds .found { display: none; }
 .row .pre { color: var(--muted); font-weight: 600; }
 .row .desc { color: var(--muted); font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .row[aria-current="true"] .desc { color: var(--text); }
-.row .perm { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.row .perm { font-size: 13px; color: var(--muted); white-space: nowrap; }
 
 .empty { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 16px; align-items: center; padding: 24px 0; color: var(--muted); }
 .empty[hidden] { display: none; }
@@ -57,7 +57,7 @@ html:not(.js) .cmds .found { display: none; }
 /* 详情栏：比屏幕高时在栏内滚动 */
 .panel { position: sticky; top: 88px; display: grid; gap: 18px; max-height: calc(100vh - 104px); overflow-y: auto; overscroll-behavior: contain; padding: 0 6px 12px 0; margin-right: -6px; scrollbar-width: thin; }
 .panel[hidden] { display: none; }
-.panel h3 { font: 600 24px/1.2 var(--display); overflow-wrap: anywhere; }
+.panel h3 { font: 600 24px/1.2 var(--title); overflow-wrap: anywhere; }
 .panel .lead { margin-top: 4px; color: var(--muted); }
 .inline-panel { grid-column: 1 / -1; display: grid; gap: 18px; padding: 6px 0 22px; border-bottom: 1px solid var(--line); }
 .who { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--muted); }
@@ -67,24 +67,24 @@ html:not(.js) .cmds .found { display: none; }
 /* Discord 输入框：整页唯一显眼的地方 */
 .dcm { background: var(--dc-bg); color: var(--dc-text); border: 1px solid var(--line); border-radius: 12px; padding: 12px; box-shadow: var(--shadow-sm); }
 .dcm-pop { background: var(--dc-deep); border-radius: 8px; padding: 10px 12px 12px; margin-bottom: 8px; font-size: 14px; }
-.dcm-app { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--dc-muted); margin-bottom: 6px; }
+.dcm-app { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; color: var(--dc-muted); margin-bottom: 6px; }
 .dcm-app img { width: 16px; height: 16px; border-radius: 50%; }
 .dcm-opt b { color: var(--dc-name); font-weight: 700; }
-.dcm-opt .need { font-size: 12.5px; color: var(--dc-muted); margin-left: 6px; }
+.dcm-opt .need { font-size: 13px; color: var(--dc-muted); margin-left: 6px; }
 .dcm-opt .d { display: block; color: var(--dc-muted); margin-top: 1px; }
 .dcm-in { background: var(--dc-input); border-radius: 8px; padding: 9px 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 15px; min-height: 44px; }
 .dcm-in .c { font-weight: 700; color: var(--dc-name); margin-right: 2px; }
 .slot { display: inline-flex; align-items: center; background: var(--dc-slot); border-radius: 4px; padding: 1px 7px; font-size: 14px; color: var(--dc-name); transition: box-shadow .12s; }
 .slot::after { content: ':'; color: var(--dc-muted); margin-left: 1px; }
 .slot.on { box-shadow: 0 0 0 2px var(--accent); }
-.more { font-size: 12.5px; color: var(--dc-muted); padding: 1px 4px; }
+.more { font-size: 13px; color: var(--dc-muted); padding: 1px 4px; }
 
 .block h4 { font-size: 14px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
 .params { list-style: none; border-top: 1px solid var(--line); }
 .params button { width: 100%; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; align-items: baseline; padding: 8px 0; border: 0; border-bottom: 1px solid var(--line); background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
 .params button:hover .pn, .params button.on .pn { color: var(--accent-text); }
 .pn { font-weight: 600; }
-.pn .tag { font-weight: 500; font-size: 12.5px; color: var(--muted); margin-left: 6px; }
+.pn .tag { font-weight: 500; font-size: 13px; color: var(--muted); margin-left: 6px; }
 .pd { color: var(--muted); }
 .ex { list-style: none; display: grid; gap: 2px; }
 .ex li { padding: 3px 0 3px 12px; border-left: 2px solid var(--line); overflow-wrap: anywhere; }

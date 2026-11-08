@@ -144,6 +144,13 @@ class ConsoleContrastTests(unittest.TestCase):
     def test_text_button_has_no_resting_underline(self):
         self.assertNotIn('underline', rule(self.css, '.btn--text'))
 
+    def test_mixed_script_spacing(self):
+        self.assertRegex(self.css, r'text-autospace:\s*normal')
+
+    def test_latin_face_comes_first(self):
+        stack = self.light['font-body']
+        self.assertLess(stack.index('Segoe UI'), stack.index('Microsoft YaHei'))
+
     def test_no_important(self):
         self.assertNotIn('!important', self.css)
 

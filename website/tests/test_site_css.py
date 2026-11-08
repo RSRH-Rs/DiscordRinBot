@@ -51,6 +51,18 @@ class SiteCssTests(unittest.TestCase):
     def test_button_press(self):
         self.assertRegex(self.css, r'\.btn:active\s*\{[^}]*scale\(\.97\)')
 
+    def test_titles_use_the_rounded_face_without_faux_bold(self):
+        self.assertRegex(self.css, r"--title:\s*'Fredoka',\s*'ZCOOL KuaiLe'")
+        self.assertRegex(self.css, r'font-synthesis:\s*none')
+
+    def test_chinese_titles_get_room(self):
+        body = re.search(r'html\[data-lang="zh"\][^{]*h1[^{]*\{([^}]*)\}', self.css).group(1)
+        self.assertIn('line-height: 1.3', body)
+        self.assertIn('letter-spacing: .02em', body)
+
+    def test_mixed_script_spacing(self):
+        self.assertRegex(self.css, r'text-autospace:\s*normal')
+
     def test_reduced_motion_turns_off_transitions(self):
         blocks = re.findall(r'@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{(.*?)\n\}', self.css, re.S)
         self.assertTrue(blocks)
@@ -58,7 +70,7 @@ class SiteCssTests(unittest.TestCase):
         self.assertIn('animation: none', blocks[0])
 
 
-PAGE_SIZES = {12.5, 14, 15, 16, 19, 24, 32, 40}
+PAGE_SIZES = {13, 14, 15, 16, 18, 24, 32, 40}
 
 
 class PageCssTests(unittest.TestCase):

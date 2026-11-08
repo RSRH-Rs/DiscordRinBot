@@ -32,7 +32,7 @@
     --scrim: rgba(24, 24, 27, .4);
     --shadow-sm: 0 1px 2px rgba(24, 24, 27, .06), 0 1px 1px rgba(24, 24, 27, .04);
     --shadow-pop: 0 12px 32px rgba(24, 24, 27, .16), 0 2px 6px rgba(24, 24, 27, .06);
-    --font-body: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", system-ui, sans-serif;
+    --font-body: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
     --font-display: "Fredoka", var(--font-body);
     --side-w: 252px;
     --content-w: 680px;
@@ -114,6 +114,7 @@
 /* ── Base ───────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
+html { text-autospace: normal; }
 body {
     background: var(--bg);
     color: var(--text);
@@ -121,6 +122,8 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 h1, h2, h3, h4, p { margin: 0; }
+h1, h2, h3 { text-wrap: balance; }
+p { text-wrap: pretty; }
 a { color: inherit; text-decoration: none; }
 ul { margin: 0; padding: 0; list-style: none; }
 button, input, select, textarea { font: inherit; color: inherit; }
@@ -130,6 +133,7 @@ img { max-width: 100%; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .icon { flex-shrink: 0; vertical-align: middle; }
 .display { font-family: var(--font-display); font-weight: 600; }
+.stat-value, .lb-rank, .item-meta, .count, .tn { font-variant-numeric: tabular-nums; }
 
 /* ── Shell ──────────────────────────────────────────── */
 .shell { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); height: 100dvh; }
