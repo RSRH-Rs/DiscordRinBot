@@ -151,6 +151,24 @@ class ConsoleContrastTests(unittest.TestCase):
         stack = self.light['font-body']
         self.assertLess(stack.index('Segoe UI'), stack.index('Microsoft YaHei'))
 
+    def test_segments_slide(self):
+        self.assertRegex(self.css, r'\.seg::before\s*\{[^}]*transition:\s*transform')
+        self.assertIn('.seg-option:nth-child(5)[aria-pressed="true"]', self.css)
+        self.assertRegex(self.css, r'\.theme-switch::before\s*\{[^}]*transition:\s*transform')
+
+    def test_chip_remove_grows_its_hit_area(self):
+        self.assertIn('inset: -4px', rule(self.css, '.chip-remove::after'))
+
+    def test_toggle_stretches_while_pressed(self):
+        self.assertRegex(self.css, r'\.tog input:active \+ \.tog-track::after\s*\{[^}]*width: 20px')
+
+    def test_popups_ease_in(self):
+        self.assertRegex(self.css, r'@starting-style\s*\{\s*\.select-popup, \.palette, \.switcher-pop, \.emoji-picker\s*\{[^}]*scale\(\.97\)')
+
+    def test_avatars_keep_an_edge_in_both_themes(self):
+        self.assertIn('img-line', self.light)
+        self.assertIn('img-line', self.dark)
+
     def test_no_important(self):
         self.assertNotIn('!important', self.css)
 

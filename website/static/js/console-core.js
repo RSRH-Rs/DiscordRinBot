@@ -17,13 +17,20 @@ window.Console = (() => {
     const api = (path, method, body) => request(`/api/guild/${window.GID}${path}`, method, body);
     const apiGlobal = (path, method, body) => request(path, method, body);
 
-    let toastTimer = null;
+    let toastTimer = null, toastFor = 0, toastHover = false;
+    const armToast = node => { clearTimeout(toastTimer); toastTimer = setTimeout(() => node.classList.remove('is-shown'), toastFor); };
     function toast(message, kind = 'info') {
         const node = el('toast'); if (!node) return;
+        if (!toastHover) {
+            // Hovering holds the message so a long error can be read; leaving starts its full time again.
+            toastHover = true;
+            node.addEventListener('mouseenter', () => clearTimeout(toastTimer));
+            node.addEventListener('mouseleave', () => armToast(node));
+        }
         node.textContent = message;
         node.className = 'toast is-shown' + (kind === 'info' ? '' : ' toast--' + kind);
-        clearTimeout(toastTimer);
-        toastTimer = setTimeout(() => node.classList.remove('is-shown'), kind === 'bad' ? 6000 : 3000);
+        toastFor = kind === 'bad' ? 6000 : 3000;
+        armToast(node);
     }
 
     const caches = {};

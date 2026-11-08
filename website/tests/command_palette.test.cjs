@@ -64,6 +64,13 @@ test('filter finds 违禁 and caps at the limit', () => {
     assert.equal(Palette.filter(entries, '管理与安全').length, 4);
 });
 
+test('the shortcut hint matches the platform', () => {
+    const {Palette} = palette();
+    assert.equal(Palette.shortcutLabel('MacIntel'), '⌘K');
+    assert.equal(Palette.shortcutLabel('iPad'), '⌘K');
+    assert.equal(Palette.shortcutLabel('Win32'), 'Ctrl K');
+});
+
 test('Ctrl K opens and closes; during IME composition it does nothing', () => {
     const {nodes, key} = palette();
     const composing = key({ctrlKey: true, isComposing: true});

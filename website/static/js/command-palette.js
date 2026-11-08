@@ -3,6 +3,7 @@ window.CommandPalette = (() => {
     const el = id => document.getElementById(id);
     const tr = key => DashboardUI.tr(key);
     let shown = [], index = 0, opener = null;
+    const shortcutLabel = platform => /Mac|iPhone|iPad/.test(platform) ? '⌘K' : 'Ctrl K';
 
     function collect(pages) {
         const out = [], seen = new Set();
@@ -96,6 +97,8 @@ window.CommandPalette = (() => {
     document.addEventListener('DOMContentLoaded', () => {
         if (!el('palette')) return;
         el('palette-btn')?.addEventListener('click', open);
+        const hint = el('palette-btn')?.querySelector?.('kbd');
+        if (hint) hint.textContent = shortcutLabel(navigator.platform);
         el('palette-input').addEventListener('input', update);
         el('palette').addEventListener('click', e => {
             const item = e.target.closest?.('[data-index]');
@@ -103,5 +106,5 @@ window.CommandPalette = (() => {
             else if (e.target === el('palette')) close();
         });
     });
-    return {collect, filter, open, close, jump};
+    return {collect, filter, open, close, jump, shortcutLabel};
 })();

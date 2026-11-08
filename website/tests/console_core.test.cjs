@@ -6,7 +6,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const source = fs.readFileSync(path.join(__dirname, '../static/js/console-core.js'), 'utf8');
 
-function core({dirty = false, fetchImpl, nodes = {}} = {}) {
+function core({dirty = false, fetchImpl, nodes = {}, extra = {}} = {}) {
     const calls = {shake: 0, fetch: []};
     const ctx = vm.createContext({
         document: {addEventListener() {}, querySelectorAll: () => [{id: 'pg-welcome'}], getElementById: id => nodes[id] || null},
@@ -18,11 +18,28 @@ function core({dirty = false, fetchImpl, nodes = {}} = {}) {
         DashboardExtras: {},
         fetch: async (...args) => { calls.fetch.push(args); return fetchImpl ? fetchImpl(...args) : {ok: true, json: async () => []}; },
         GID: '123',
+        ...extra,
     });
     ctx.window = ctx;
     vm.runInContext(source, ctx);
     return {Console: ctx.Console, calls};
 }
+
+test('hovering a toast pauses its timer', () => {
+    const timers = [], handlers = {}, removed = [];
+    const toast = {classList: {remove: c => removed.push(c)}, addEventListener: (type, fn) => { handlers[type] = fn; }};
+    const live = () => timers.filter(t => t.live);
+    const {Console} = core({nodes: {toast}, extra: {setTimeout: (fn, ms) => { const t = {fn, ms, live: true}; timers.push(t); return t; }, clearTimeout: t => { if (t) t.live = false; }}});
+    Console.toast('saved');
+    assert.equal(live().length, 1);
+    handlers.mouseenter();
+    assert.equal(live().length, 0);
+    handlers.mouseleave();
+    assert.equal(live().length, 1);
+    assert.equal(live()[0].ms, 3000);
+    live()[0].fn();
+    assert.deepEqual([...removed], ['is-shown']);
+});
 
 test('duration.split maps presets, exact units and rounds odd values to minutes', () => {
     const {Console} = core();
