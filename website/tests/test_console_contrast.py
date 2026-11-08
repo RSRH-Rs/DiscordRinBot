@@ -7,6 +7,7 @@ CSS = Path(__file__).resolve().parents[1] / 'static/css/console.css'
 PAIRS = [
     ('text', 'bg'), ('text', 'panel'), ('text', 'side'), ('text', 'cur'), ('muted', 'bg'), ('muted', 'panel'), ('muted', 'side'),
     ('on-accent', 'accent'), ('on-accent', 'accent-hover'), ('accent-text', 'accent-soft'), ('accent-text', 'panel'),
+    ('accent-text', 'accent-soft-hover'), ('bad', 'bad-soft-hover'),
     ('ok', 'ok-soft'), ('ok', 'panel'), ('warn', 'warn-soft'), ('bad', 'bad-soft'), ('bar-text', 'bar'), ('#FFFFFF', '#4752C4'),
 ]
 NON_TEXT = [('field-line', 'field'), ('field-line', 'panel'), ('field-line', 'bg')]
@@ -123,6 +124,25 @@ class ConsoleContrastTests(unittest.TestCase):
                 if float(size) not in ALLOWED_SIZES:
                     bad.append((' '.join(selector.split()), size))
         self.assertEqual(bad, [])
+
+    def test_button_press_and_hover(self):
+        self.assertNotRegex(self.css, r'transition:\s*all')
+        self.assertRegex(self.css, r'\.btn:active:not\(:disabled,\s*\[aria-busy="true"\]\)\s*\{[^}]*scale\(\.97\)')
+        hover = self.css[self.css.index('@media (hover: hover)'):]
+        self.assertIn('.btn--secondary:hover', hover)
+        outside = self.css[:self.css.index('@media (hover: hover)')]
+        self.assertNotIn('.btn--secondary:hover', outside)
+
+    def test_buttons_have_two_sizes(self):
+        small = rule(self.css, '.btn--sm')
+        self.assertIn('min-height: 32px', small)
+        self.assertIn('font-size: 13px', small)
+        self.assertNotRegex(self.css, r'\.server-row\.is-unjoined \.btn\s*\{[^}]*font-size')
+        self.assertNotRegex(rule(self.css, '.cmd-bulk'), 'font-(size|weight)|min-height')
+        self.assertNotIn('.variable-tools button', self.css)
+
+    def test_text_button_has_no_resting_underline(self):
+        self.assertNotIn('underline', rule(self.css, '.btn--text'))
 
     def test_no_important(self):
         self.assertNotIn('!important', self.css)

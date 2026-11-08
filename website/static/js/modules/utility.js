@@ -34,7 +34,7 @@ window.CommandToggles = (() => {
             summary.textContent = cogLabel(cog) + ' · ' + tr('utility.group_count', {n: commands.length});
             const editable = commands.filter(c => !c.protected), allOn = editable.length > 0 && editable.every(c => c.enabled);
             const bulk = document.createElement('button');
-            bulk.type = 'button'; bulk.className = 'btn btn--text cmd-bulk';
+            bulk.type = 'button'; bulk.className = 'btn btn--text btn--sm cmd-bulk';
             bulk.textContent = tr(allOn ? (filtering ? 'utility.bulk_off_filtered' : 'utility.bulk_off') : (filtering ? 'utility.bulk_on_filtered' : 'utility.bulk_on'), {n: editable.length});
             bulk.disabled = saving || !editable.length;
             bulk.addEventListener('click', e => { e.preventDefault(); toggleCategory(cog, !allOn); });

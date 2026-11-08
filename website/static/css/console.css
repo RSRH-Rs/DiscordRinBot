@@ -16,6 +16,7 @@
     --accent-hover: #C42A60;
     --on-accent: #FFFFFF;
     --accent-soft: #FDECF2;
+    --accent-soft-hover: #FBDDE8;
     --accent-text: #B32457;
     --ok: #1A7A43;
     --ok-soft: #E7F5EC;
@@ -23,6 +24,7 @@
     --warn-soft: #FFF4E0;
     --bad: #B42318;
     --bad-soft: #FDECEA;
+    --bad-soft-hover: #FAD9D5;
     --cur: #FFFFFF;
     --hover: #E7E7EA;
     --bar: #18181B;
@@ -36,6 +38,11 @@
     --content-w: 680px;
     --radius: 12px;
     --control-h: 40px;
+    --ease-out: cubic-bezier(.22, 1, .36, 1);
+    --dur-fast: 120ms;
+    --dur-base: 160ms;
+    --dur-slow: 200ms;
+    --btn-fg: currentColor;
     color-scheme: light;
 }
 /* Night palette: chosen by the appearance switch, or by the system when the viewer has not picked day. */
@@ -52,6 +59,7 @@
     --accent-hover: #FF8DB7;
     --on-accent: #2A0A17;
     --accent-soft: #3A1A28;
+    --accent-soft-hover: #4A2233;
     --accent-text: #FF8DB7;
     --ok: #3DD68C;
     --ok-soft: #13291D;
@@ -59,6 +67,7 @@
     --warn-soft: #33270F;
     --bad: #FF8A80;
     --bad-soft: #3A1715;
+    --bad-soft-hover: #4A1F1C;
     --cur: #303038;
     --hover: #28282F;
     --bar: #EDEDF0;
@@ -82,6 +91,7 @@
         --accent-hover: #FF8DB7;
         --on-accent: #2A0A17;
         --accent-soft: #3A1A28;
+        --accent-soft-hover: #4A2233;
         --accent-text: #FF8DB7;
         --ok: #3DD68C;
         --ok-soft: #13291D;
@@ -89,6 +99,7 @@
         --warn-soft: #33270F;
         --bad: #FF8A80;
         --bad-soft: #3A1715;
+        --bad-soft-hover: #4A1F1C;
         --cur: #303038;
         --hover: #28282F;
         --bar: #EDEDF0;
@@ -305,6 +316,7 @@ img { max-width: 100%; }
 .tog[aria-busy="true"] .tog-track { opacity: .6; }
 
 .btn {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -313,18 +325,38 @@ img { max-width: 100%; }
     padding: 0 16px;
     border: 0;
     border-radius: 8px;
+    color: var(--btn-fg);
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease, transform 150ms var(--ease-out);
 }
+.btn:active:not(:disabled, [aria-busy="true"]) { transform: scale(.97); transition-duration: 60ms; }
 .btn:disabled { opacity: .55; cursor: not-allowed; }
-.btn--primary { background: var(--accent); color: var(--on-accent); }
-.btn--primary:hover:not(:disabled) { background: var(--accent-hover); }
-.btn--secondary { background: var(--accent-soft); color: var(--accent-text); }
-.btn--text { background: none; padding-inline: 4px; color: var(--accent-text); text-decoration: underline; }
-.btn--danger { background: var(--bad-soft); color: var(--bad); }
-.btn--icon { padding: 6px; min-height: 32px; background: none; color: var(--muted); }
-.btn--icon:hover { color: var(--text); background: var(--line); }
+.btn:not(.btn--icon, .btn--text):has(> svg:first-child) { padding-inline-start: 12px; }
+.btn--primary { --btn-fg: var(--on-accent); background: var(--accent); }
+.btn--secondary { --btn-fg: var(--accent-text); background: var(--accent-soft); }
+/* A text button acts on this page, so it has no underline; links, which go elsewhere, keep theirs. The outer edges
+   pull back by the padding so the words line up with the content above while the hover fill still has room. */
+.btn--text { --btn-fg: var(--accent-text); padding-inline: 8px; background: none; }
+.btn--text:first-child { margin-inline-start: -8px; }
+.btn--text:last-child { margin-inline-end: -8px; }
+.btn--text:active:not(:disabled, [aria-busy="true"]) { transform: none; background: color-mix(in srgb, currentColor 16%, transparent); }
+.btn--danger { --btn-fg: var(--bad); background: var(--bad-soft); }
+.btn--icon { --btn-fg: var(--muted); padding: 6px; min-height: 32px; background: none; }
+.btn--icon:active:not(:disabled, [aria-busy="true"]) { transform: none; background: var(--hover); }
+.btn--sm { min-height: 32px; padding-inline: 12px; font-size: 13px; }
+.btn--text.btn--sm { padding-inline: 8px; }
+@media (hover: hover) {
+    .btn--primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn--secondary:hover:not(:disabled) { background: var(--accent-soft-hover); }
+    .btn--danger:hover:not(:disabled) { background: var(--bad-soft-hover); }
+    .btn--discord:hover { background: #3C45A5; }
+    .btn--text:hover:not(:disabled) { background: color-mix(in srgb, currentColor 9%, transparent); }
+    .btn--icon:hover { --btn-fg: var(--text); background: var(--line); }
+}
 .btn:has(+ .sr-only:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
 .actions > .section-hint { margin: 0; }
@@ -392,7 +424,7 @@ img { max-width: 100%; }
 .unsaved-bar.is-shaking { animation: bar-shake .4s; }
 .unsaved-text { flex: 1; min-width: 0; }
 .unsaved-error { flex-basis: 100%; order: 3; color: var(--bar-text); font-size: 13px; }
-.unsaved-bar .btn--text { color: var(--bar-text); }
+.unsaved-bar .btn--text { --btn-fg: var(--bar-text); }
 @keyframes bar-shake { 20%, 60% { translate: -6px 0; } 40%, 80% { translate: 6px 0; } }
 
 .toast {
@@ -471,7 +503,7 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .server-go { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; color: var(--accent-text); font-size: 13px; }
 .server-row.is-unjoined .server-icon { background: var(--line); color: var(--muted); }
 .server-row.is-unjoined .server-icon img { filter: grayscale(.4); }
-.server-row.is-unjoined .btn { flex-shrink: 0; font-size: 13px; }
+.server-row.is-unjoined .btn { flex-shrink: 0; }
 
 /* Page: overview */
 .hero { display: flex; align-items: center; gap: 16px; margin: 0 0 24px; }
@@ -515,8 +547,7 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .fold[open] > summary::before { transform: rotate(45deg); }
 .fold[open] > .list, .fold[open] > .item-list { margin-top: 4px; }
 .upload-preview { display: block; width: min(100%, 440px); max-height: 220px; object-fit: contain; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); }
-.variable-tools { display: flex; flex-wrap: wrap; gap: 4px; }
-.variable-tools button { padding: 4px 8px; border: 1px solid var(--accent-soft); border-radius: 4px; background: var(--accent-soft); color: var(--accent-text); font-size: 13px; cursor: pointer; }
+.variable-tools { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .message-preview { position: sticky; top: 24px; min-width: 0; max-height: calc(100dvh - 48px); overflow-y: auto; }
 .message-preview > summary { padding: 0 0 8px; font-size: 16px; font-weight: 600; cursor: pointer; }
@@ -583,7 +614,7 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .cmd-card span { font-size: 13px; color: var(--muted); }
 .command-search .select { width: 150px; }
 .cmd-group > summary { justify-content: flex-start; }
-.cmd-bulk { margin-left: auto; min-height: 28px; font-weight: 400; font-size: 13px; }
+.cmd-bulk { margin-left: auto; }
 
 /* Page: global settings */
 .settings-panel[hidden] { display: none; }
@@ -638,8 +669,7 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .gate h1 { font-size: 22px; margin-bottom: 8px; }
 .gate p { color: var(--muted); }
 .gate-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 24px; }
-.btn--discord { background: #4752C4; color: #FFFFFF; }
-.btn--discord:hover { background: #3C45A5; }
+.btn--discord { --btn-fg: #FFFFFF; background: #4752C4; }
 .gate-notes { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; margin-top: 16px; font-size: 13px; color: var(--muted); }
 .gate-notes li { display: inline-flex; align-items: center; gap: 4px; }
 .gate-notes .icon { color: var(--ok); }
@@ -667,6 +697,7 @@ a.server-row:hover .server-name { color: var(--accent-text); }
     .search-btn { min-height: 44px; }
     .switcher-item { min-height: 44px; }
     .btn--icon { min-width: 44px; min-height: 44px; }
+    .btn--sm { min-height: 44px; }
     .user-logout { align-items: center; justify-content: center; min-width: 44px; min-height: 44px; }
     .theme-switch button { position: relative; width: 44px; height: 36px; }
     .theme-switch button::after { content: ""; position: absolute; inset: -4px 0; }

@@ -45,6 +45,12 @@ class SiteCssTests(unittest.TestCase):
     def test_shell_keeps_the_homepage_font_sizes(self):
         self.assertLessEqual(font_sizes(self.css), {12, 14, 15, 16, 18})
 
+    def test_focus_ring_keeps_the_element_radius(self):
+        self.assertNotRegex(self.css, r':focus-visible\s*\{[^}]*border-radius')
+
+    def test_button_press(self):
+        self.assertRegex(self.css, r'\.btn:active\s*\{[^}]*scale\(\.97\)')
+
     def test_reduced_motion_turns_off_transitions(self):
         blocks = re.findall(r'@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{(.*?)\n\}', self.css, re.S)
         self.assertTrue(blocks)

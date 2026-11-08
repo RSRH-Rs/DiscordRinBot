@@ -77,7 +77,7 @@ window.DashboardPreview = (() => {
     function tools(input,tokens){
         const bar=document.createElement('div');bar.className='variable-tools';
         tokens.forEach(token=>{
-            const button=document.createElement('button');button.type='button';
+            const button=document.createElement('button');button.type='button';button.className='btn btn--secondary btn--sm';
             button.textContent=({'%member%':'@新成员','%server%':'服务器名','%avatar%':'成员头像','%server_avatar%':'服务器头像'})[token]||token;
             button.title='插入 '+token;
             button.setAttribute('aria-label','插入 '+token);button.onclick=()=>insertToken(input,token);bar.append(button);
