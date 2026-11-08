@@ -367,6 +367,11 @@ img { max-width: 100%; }
     .btn--icon:hover { --btn-fg: var(--text); background: var(--line); }
 }
 .btn:has(+ .sr-only:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+.confirm-pop { position: fixed; z-index: 130; width: max-content; max-width: min(320px, calc(100vw - 32px)); padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow-pop); transform-origin: top right; transition: opacity var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out); }
+.confirm-pop[data-side="top"] { transform-origin: bottom right; }
+@starting-style { .confirm-pop { opacity: 0; transform: scale(.97); } }
+.confirm-text { overflow-wrap: anywhere; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
 .actions > .section-hint { margin: 0; }
 .actions > .unit { min-width: 0; overflow-wrap: anywhere; }

@@ -51,6 +51,7 @@
     "saved": "已保存"
   },
   "common": {
+    "cancel": "取消",
     "retry": "重试",
     "load_failed": "读取失败了，点重试再来一次。",
     "count": "{n} 个",

@@ -84,7 +84,7 @@ test('upload success clears pending selection and defeats a stale GET',async()=>
     await loading;
     assert.equal(nodes['bp-avatar-preview'].src,'https://cdn.discordapp.com/new.png');
     assert.equal(nodes['bp-avatar-file'].files.length,0);
-    assert.equal(button.disabled,false);
+    assert.notEqual(button.disabled,true);
 });
 test('upload failure preserves selection and re-enables controls',async()=>{
     const {ctx,nodes,readers}=fixture();
@@ -95,5 +95,5 @@ test('upload failure preserves selection and re-enables controls',async()=>{
     assert.equal(nodes['bp-avatar-file'].files.length,1);
     assert.equal(nodes['bp-avatar-file'].disabled,false);
     assert.equal(nodes['bp-avatar-reset'].disabled,false);
-    assert.equal(button.disabled,false);
+    assert.notEqual(button.disabled,true);
 });

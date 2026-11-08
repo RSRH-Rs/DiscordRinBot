@@ -93,3 +93,118 @@ test('a button removed from the page mid-task is harmless', async () => {
     assert.equal(await run, 'gone');
     assert.equal(active.size, 0);
 });
+
+// A small DOM for the bubble: nodes know their children, and listeners are kept per target so tests can fire them.
+function makeDom({innerHeight = 800, innerWidth = 1200, rect = {top: 100, bottom: 140, left: 300, right: 400}, size = {width: 240, height: 100}} = {}) {
+    const bags = {doc: {}, win: {}};
+    const on = bag => (type, fn) => { (bag[type] ||= []).push(fn); };
+    const off = bag => (type, fn) => { bag[type] = (bag[type] || []).filter(f => f !== fn); };
+    const make = tag => {
+        const attrs = new Map(), handlers = {};
+        const node = {
+            tag, className: '', textContent: '', style: {}, children: [], parent: null, handlers,
+            append(...kids) { kids.forEach(kid => { kid.parent = node; node.children.push(kid); }); },
+            remove() { if (node.parent) node.parent.children.splice(node.parent.children.indexOf(node), 1); node.parent = null; },
+            setAttribute: (n, v) => attrs.set(n, String(v)), getAttribute: n => attrs.has(n) ? attrs.get(n) : null,
+            addEventListener: (type, fn) => { handlers[type] = fn; },
+            focus() { document.activeElement = node; },
+            click() { node.onclick?.(); },
+            contains(other) { for (let n = other; n; n = n.parent) if (n === node) return true; return false; },
+            getBoundingClientRect: () => size,
+        };
+        return node;
+    };
+    const document = {activeElement: null, body: make('body'), createElement: make, addEventListener: on(bags.doc), removeEventListener: off(bags.doc)};
+    const anchor = make('button');
+    anchor.getBoundingClientRect = () => rect;
+    const fire = (where, type, event = {}) => (bags[where][type] || []).slice().forEach(fn => fn(event));
+    const extra = {document, innerHeight, innerWidth, addEventListener: on(bags.win), removeEventListener: off(bags.win)};
+    return {document, anchor, fire, extra, bubble: () => document.body.children.at(-1), parts: () => { const b = document.body.children.at(-1); return {cancel: b.children[1].children[0], ok: b.children[1].children[1]}; }};
+}
+const ASK = {message: 'Sure?', action: 'Do it'};
+
+test('the action button resolves true and returns focus', async () => {
+    const dom = makeDom(), {Console} = load(dom.extra);
+    const answer = Console.confirm(dom.anchor, ASK);
+    dom.parts().ok.click();
+    assert.equal(await answer, true);
+    assert.equal(dom.document.activeElement, dom.anchor);
+    assert.equal(dom.document.body.children.length, 0);
+});
+
+test('the action button is named after the action and shows danger', () => {
+    const dom = makeDom(), {Console} = load(dom.extra);
+    Console.confirm(dom.anchor, {...ASK, danger: true});
+    assert.equal(dom.parts().ok.textContent, 'Do it');
+    assert.match(dom.parts().ok.className, /btn--danger/);
+});
+
+for (const [name, dismiss] of [
+    ['cancel', dom => dom.parts().cancel.click()],
+    ['Escape', dom => dom.bubble().handlers.keydown({key: 'Escape', preventDefault() {}})],
+    ['an outside click', dom => dom.fire('doc', 'mousedown', {target: {parent: null}})],
+]) {
+    test(`${name} resolves false`, async () => {
+        const dom = makeDom(), {Console} = load(dom.extra);
+        const answer = Console.confirm(dom.anchor, ASK);
+        dismiss(dom);
+        assert.equal(await answer, false);
+        assert.equal(dom.document.body.children.length, 0);
+    });
+}
+
+test('a click inside the bubble does not dismiss it', () => {
+    const dom = makeDom(), {Console} = load(dom.extra);
+    Console.confirm(dom.anchor, ASK);
+    dom.fire('doc', 'mousedown', {target: dom.parts().ok});
+    assert.equal(dom.document.body.children.length, 1);
+});
+
+test('opening a second bubble cancels the first', async () => {
+    const dom = makeDom(), {Console} = load(dom.extra);
+    const first = Console.confirm(dom.anchor, ASK);
+    Console.confirm(dom.anchor, ASK);
+    assert.equal(await first, false);
+    assert.equal(dom.document.body.children.length, 1);
+});
+
+for (const type of ['scroll', 'resize']) {
+    test(`${type} cancels the bubble`, async () => {
+        const dom = makeDom(), {Console} = load(dom.extra);
+        const answer = Console.confirm(dom.anchor, ASK);
+        dom.fire('win', type);
+        assert.equal(await answer, false);
+    });
+}
+
+test('focus starts on cancel and Tab stays inside', () => {
+    const dom = makeDom(), {Console} = load(dom.extra);
+    Console.confirm(dom.anchor, ASK);
+    const {cancel, ok} = dom.parts(), key = {key: 'Tab', preventDefault() {}};
+    assert.equal(dom.bubble().getAttribute('role'), 'alertdialog');
+    assert.equal(dom.document.activeElement, cancel);
+    dom.bubble().handlers.keydown(key);
+    assert.equal(dom.document.activeElement, ok);
+    dom.bubble().handlers.keydown(key);
+    assert.equal(dom.document.activeElement, cancel);
+});
+
+test('sits below the anchor, right-aligned, when there is room', () => {
+    const dom = makeDom(), {Console} = load(dom.extra);
+    Console.confirm(dom.anchor, ASK);
+    assert.equal(dom.bubble().style.top, '148px');
+    assert.equal(dom.bubble().style.left, '160px');
+});
+
+test('flips above the anchor when there is no room below', () => {
+    const dom = makeDom({innerHeight: 200, rect: {top: 150, bottom: 190, left: 300, right: 400}}), {Console} = load(dom.extra);
+    Console.confirm(dom.anchor, ASK);
+    assert.equal(dom.bubble().style.top, '42px');
+    assert.equal(dom.bubble().getAttribute('data-side'), 'top');
+});
+
+test('never runs off the left edge of a narrow screen', () => {
+    const dom = makeDom({innerWidth: 320, rect: {top: 100, bottom: 140, left: 8, right: 100}}), {Console} = load(dom.extra);
+    Console.confirm(dom.anchor, ASK);
+    assert.equal(dom.bubble().style.left, '16px');
+});

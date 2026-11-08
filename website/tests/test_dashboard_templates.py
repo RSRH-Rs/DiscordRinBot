@@ -568,4 +568,11 @@ class DashboardTemplateTests(unittest.TestCase):
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
         self.assertIn('background: var(--field)',re.search(r'\n\.emoji-trigger\s*\{([^}]*)\}',css).group(1))
 
+class RiskyActionTests(unittest.TestCase):
+    def test_risky_actions_use_the_bubble(self):
+        from pathlib import Path
+        site = Path(__file__).resolve().parents[1]
+        for name in ['templates/settings.html', 'static/js/message-preview.js', 'static/js/modules/welcome.js']:
+            self.assertNotRegex((site / name).read_text(encoding='utf-8'), r'(?<![.\w])confirm\(|window\.confirm\(', name)
+
 if __name__=='__main__':unittest.main()

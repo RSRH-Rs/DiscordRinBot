@@ -83,8 +83,8 @@ window.DashboardPreview = (() => {
             button.setAttribute('aria-label','插入 '+token);button.onclick=()=>insertToken(input,token);bar.append(button);
         });input.after(bar);
     }
-    function sample(kind){
-        if(!window.confirm('这会替换当前的标题和正文，其他设置不会改变。要套用示例吗？'))return;
+    async function sample(kind,button){
+        if(!await Console.confirm(button,{message:'这会替换当前的标题和正文，其他设置不会改变。要套用示例吗？',action:'套用示例'}))return;
         if(kind==='welcome'){
             el('w-title').value='欢迎来到 '+(document.body?.dataset.currentGuild||'');
             el('w-msg').value='欢迎 %member% 来到 %server%！\n先坐下来聊聊天吧，大家都在等你哦～';
@@ -99,7 +99,7 @@ window.DashboardPreview = (() => {
     document.addEventListener('DOMContentLoaded',()=>{
         for(const kind of ['welcome','roles']){
             const root=el('pg-'+kind);if(!root)continue;
-            const button=document.createElement('button');button.type='button';button.className='btn btn--text';button.textContent='用小凛的示例';button.onclick=()=>sample(kind);
+            const button=document.createElement('button');button.type='button';button.className='btn btn--text';button.textContent='用小凛的示例';button.onclick=()=>sample(kind,button);
             root.querySelector('[data-sample-slot]').append(button);
             root.addEventListener('input',refresh);root.addEventListener('change',refresh);
         }

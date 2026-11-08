@@ -81,8 +81,8 @@ async function validateWelcomeImageFile(file) {
         });
     }
     async function clear(kind) {
-        if (!window.confirm(tr('welcome.image.clear_confirm'))) return;
         const button = el(`w-${kind}-clear`);
+        if (!await Console.confirm(button, {message: tr('welcome.image.clear_confirm'), action: tr('welcome.image.clear'), danger: true})) return;
         await Console.busy(button, async () => {
             try {
                 const response = await fetch(`/api/guild/${window.GID}/welcome/image/${kind}`, {method: 'DELETE'});
