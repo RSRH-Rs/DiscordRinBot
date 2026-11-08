@@ -19,7 +19,7 @@ function fixture() {
     const ctx = vm.createContext({
         document:{getElementById:id=>nodes[id]},
         DashboardUI:{clean(){},changed(){},saving:(_id,action)=>action()},
-        FileReader:class {readAsDataURL(file){readers.push(()=>{this.result=file.data;this.onload();});}},
+        Console:{busy:(button,task)=>task(),toast(){}},FileReader:class {readAsDataURL(file){readers.push(()=>{this.result=file.data;this.onload();});}},
         fetch:async()=>({ok:true,json:async()=>({avatar_url:'https://cdn.discordapp.com/current.png'})}),
     });
     ctx.window=ctx;

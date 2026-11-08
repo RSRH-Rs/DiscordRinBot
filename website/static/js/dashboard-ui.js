@@ -34,7 +34,6 @@ window.DashboardUI = (() => {
         bar.classList.toggle('is-open', open);
         bar.setAttribute('aria-hidden', String(!open));
         for (const id of ['unsaved-save', 'unsaved-reset']) { const button = el(id); if (button) button.disabled = busy || !open; }
-        const save = el('unsaved-save'); if (save) save.textContent = busy ? tr('bar.saving') : tr('bar.save');
         const text = el('unsaved-text'); if (text && !blockedTimer) text.textContent = tr('bar.unsaved');
         if (!open) { const error = el('unsaved-error'); if (error) { error.hidden = true; error.textContent = ''; } }
     }
@@ -222,7 +221,7 @@ window.DashboardUI = (() => {
         for (const event of ['input', 'change']) document.addEventListener(event, e => {
             const root = e.target.closest('[data-draft]'); if (root) refresh(root);
         });
-        el('unsaved-save')?.addEventListener('click', () => save());
+        el('unsaved-save')?.addEventListener('click', event => { if (window.Console?.busy) Console.busy(event.currentTarget, save); else save(); });
         el('unsaved-reset')?.addEventListener('click', () => reset());
         el('menuBtn')?.addEventListener('click', toggleSidebar);
         document.querySelector('.drawer-backdrop')?.addEventListener('click', () => closeSidebar());

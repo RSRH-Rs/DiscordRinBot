@@ -32,8 +32,7 @@
         if (end <= now) return Console.toast(tr('giveaway.end_past'), 'bad');
         if (end > now + 365 * 86400) return Console.toast(tr('giveaway.end_far'), 'bad');
         const button = el('gw-create-btn');
-        await DashboardUI.saving('pg-giveaway', async () => {
-            button.disabled = true; button.textContent = tr('giveaway.creating');
+        await DashboardUI.saving('pg-giveaway', () => Console.busy(button, async () => {
             try {
                 const result = await Console.api('/giveaway/create', 'POST', {prize, winners_count: +el('gw-winners').value, channel_id: channel, end_time: end, restrict_role: role !== '0' ? role : null});
                 if (!result.ok) throw new Error(result.error || tr('giveaway.create_failed_plain'));
@@ -43,8 +42,7 @@
                 await loadList().catch(() => {});
                 Console.refreshModules();
             } catch (e) { Console.toast(tr('giveaway.create_failed', {reason: e.message}), 'bad'); }
-            finally { button.disabled = false; button.textContent = tr('giveaway.create'); }
-        });
+        }));
     }
 
     Console.module({

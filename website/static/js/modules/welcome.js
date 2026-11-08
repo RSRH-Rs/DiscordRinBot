@@ -66,32 +66,33 @@ async function validateWelcomeImageFile(file) {
         const input = el(`w-${kind}-file`), button = el(`w-${kind}-upload`), file = input.files?.[0];
         const error = await validateWelcomeImageFile(file);
         if (error) { Console.toast(error, 'bad'); return; }
-        button.disabled = true; button.textContent = tr('welcome.image.uploading');
-        try {
-            const form = new FormData(); form.append('image', file);
-            const response = await fetch(`/api/guild/${window.GID}/welcome/image/${kind}`, {method: 'POST', body: form});
-            const result = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(result.error || tr('common.request_failed', {status: response.status}));
-            input.value = '';
-            setImageState(kind, true, `${result.image_url}?v=${Date.now()}`);
-            Console.toast(tr('welcome.image.upload_done'), 'ok');
-        } catch (e) {
-            Console.toast(tr('welcome.image.upload_failed', {reason: e.message}), 'bad');
-        } finally { button.disabled = false; button.textContent = tr('welcome.image.upload'); }
+        await Console.busy(button, async () => {
+            try {
+                const form = new FormData(); form.append('image', file);
+                const response = await fetch(`/api/guild/${window.GID}/welcome/image/${kind}`, {method: 'POST', body: form});
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.error || tr('common.request_failed', {status: response.status}));
+                input.value = '';
+                setImageState(kind, true, `${result.image_url}?v=${Date.now()}`);
+                Console.toast(tr('welcome.image.upload_done'), 'ok');
+            } catch (e) {
+                Console.toast(tr('welcome.image.upload_failed', {reason: e.message}), 'bad');
+        }
+        });
     }
     async function clear(kind) {
         if (!window.confirm(tr('welcome.image.clear_confirm'))) return;
         const button = el(`w-${kind}-clear`);
-        button.disabled = true;
-        try {
-            const response = await fetch(`/api/guild/${window.GID}/welcome/image/${kind}`, {method: 'DELETE'});
-            const result = await response.json().catch(() => ({}));
-            if (!response.ok) throw new Error(result.error || tr('common.request_failed', {status: response.status}));
-            el(`w-${kind}-file`).value = '';
-            setImageState(kind, false);
-            Console.toast(tr('welcome.image.cleared'), 'ok');
-        } catch (e) { Console.toast(tr('welcome.image.clear_failed', {reason: e.message}), 'bad'); }
-        finally { button.disabled = false; }
+        await Console.busy(button, async () => {
+            try {
+                const response = await fetch(`/api/guild/${window.GID}/welcome/image/${kind}`, {method: 'DELETE'});
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(result.error || tr('common.request_failed', {status: response.status}));
+                el(`w-${kind}-file`).value = '';
+                setImageState(kind, false);
+                Console.toast(tr('welcome.image.cleared'), 'ok');
+            } catch (e) { Console.toast(tr('welcome.image.clear_failed', {reason: e.message}), 'bad'); }
+        });
     }
     function renderRoles(roles, selected) {
         const box = el('w-roles');

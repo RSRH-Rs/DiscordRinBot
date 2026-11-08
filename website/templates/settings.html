@@ -133,6 +133,7 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/console-controls.js') }}?v=20261108a"></script>
     <script>
     const AVATAR_MAX_BYTES=5*1024*1024;
     const AVATAR_TYPES=new Set(['image/png','image/jpeg','image/gif','image/webp']);
@@ -163,25 +164,25 @@
         }catch(e){throw e;}
     }
     async function saveProfile(btn){
-        btn.disabled=true;
-        try{
-            await jpost('/api/bot/personalizer',{
-                bot_status:document.getElementById('bp-status').value,
-                activity_type:document.getElementById('bp-act-type').value,
-                activity_text:document.getElementById('bp-act-text').value,
-            });
-            showToast('✅ 形象已保存!');
-            DashboardUI.clean('draft-profile');
-        }catch(e){showToast('❌ '+e.message);}
-        btn.disabled=false;
+        await Console.busy(btn,async()=>{
+            try{
+                await jpost('/api/bot/personalizer',{
+                    bot_status:document.getElementById('bp-status').value,
+                    activity_type:document.getElementById('bp-act-type').value,
+                    activity_text:document.getElementById('bp-act-text').value,
+                });
+                showToast('✅ 形象已保存!');
+                DashboardUI.clean('draft-profile');
+            }catch(e){showToast('❌ '+e.message);}
+        });
     }
     async function saveUsername(btn){
         const name=document.getElementById('bp-username').value.trim();
         if(name.length<2||name.length>32){showToast('❌ 用户名需 2–32 字符');return;}
-        btn.disabled=true;
-        try{ await jpost('/api/bot/username',{username:name}); showToast('✅ 用户名已更新!'); DashboardUI.clean('draft-username'); }
-        catch(e){showToast('❌ '+e.message);}
-        btn.disabled=false;
+        await Console.busy(btn,async()=>{
+            try{ await jpost('/api/bot/username',{username:name}); showToast('✅ 用户名已更新!'); DashboardUI.clean('draft-username'); }
+            catch(e){showToast('❌ '+e.message);}
+        });
     }
     let currentAvatarUrl=document.getElementById('bp-avatar-preview').dataset.fallback;
     let currentAvatarState='正在读取小凛的当前头像…';
@@ -246,21 +247,22 @@
         if(!f){showToast('❌ 请先选择图片');return;}
         const err=avatarFileError(f);
         if(err){showToast('❌ '+err);return;}
-        btn.disabled=true;
+        await Console.busy(btn,async()=>{
         const fileInput=document.getElementById('bp-avatar-file');
-        const resetButton=document.getElementById('bp-avatar-reset');
-        fileInput.disabled=true;
-        resetButton.disabled=true;
-        try{
-            const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});
-            const d=await jpost('/api/bot/avatar',{avatar:b64});
-            avatarIdentityVersion++;
-            currentAvatarUrl=d.avatar_url||b64;
-            currentAvatarState='头像已更新，这是小凛现在使用的头像。';
-            resetAvatarSelection();
-            showToast('✅ 头像已更新!');
-        }catch(e){showToast('❌ '+e.message);}
-        finally{btn.disabled=false;fileInput.disabled=false;resetButton.disabled=false;}
+            const resetButton=document.getElementById('bp-avatar-reset');
+            fileInput.disabled=true;
+            resetButton.disabled=true;
+            try{
+                const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f);});
+                const d=await jpost('/api/bot/avatar',{avatar:b64});
+                avatarIdentityVersion++;
+                currentAvatarUrl=d.avatar_url||b64;
+                currentAvatarState='头像已更新，这是小凛现在使用的头像。';
+                resetAvatarSelection();
+                showToast('✅ 头像已更新!');
+            }catch(e){showToast('❌ '+e.message);}
+        finally{fileInput.disabled=false;resetButton.disabled=false;}
+        });
     }
 
     /* ── 健康状态 ── */
@@ -307,10 +309,10 @@
         const msg=document.getElementById('ann-msg').value.trim();
         if(!msg){showToast('❌ 公告内容不能为空');return;}
         if(!confirm('确定向所有服务器发送这条公告？')) return;
-        btn.disabled=true;
-        try{ await jpost('/api/bot/announce',{message:msg}); showToast('✅ 已加入发送队列，稍后送达'); document.getElementById('ann-msg').value=''; DashboardUI.clean('draft-announce'); setTimeout(loadRecent,1500); }
-        catch(e){showToast('❌ '+e.message);}
-        btn.disabled=false;
+        await Console.busy(btn,async()=>{
+            try{ await jpost('/api/bot/announce',{message:msg}); showToast('✅ 已加入发送队列，稍后送达'); document.getElementById('ann-msg').value=''; DashboardUI.clean('draft-announce'); setTimeout(loadRecent,1500); }
+            catch(e){showToast('❌ '+e.message);}
+        });
     }
     async function loadRecent(){
         const box=document.getElementById('ann-recent');
@@ -338,13 +340,13 @@
     }
     async function saveMaint(btn){
         if(document.getElementById('maint-on').checked&&!confirm('开启后，除主人外所有人都暂时不能使用指令。确定让小凛进入维护模式吗？'))return;
-        btn.disabled=true;
-        try{
-            await jpost('/api/bot/maintenance',{maintenance:document.getElementById('maint-on').checked,message:document.getElementById('maint-msg').value});
-            showToast('✅ 维护设置已保存');
-            DashboardUI.clean('draft-maint');
-        }catch(e){showToast('❌ '+e.message);}
-        btn.disabled=false;
+        await Console.busy(btn,async()=>{
+            try{
+                await jpost('/api/bot/maintenance',{maintenance:document.getElementById('maint-on').checked,message:document.getElementById('maint-msg').value});
+                showToast('✅ 维护设置已保存');
+                DashboardUI.clean('draft-maint');
+            }catch(e){showToast('❌ '+e.message);}
+        });
     }
 
     /* ── 黑名单 ── */
@@ -365,14 +367,14 @@
         const id=document.getElementById('bl-id').value.trim();
         if(!/^\d{5,}$/.test(id)){showToast('❌ 请输入有效的用户 ID');return;}
         if(!confirm('确定将用户 '+id+' 加入黑名单吗？这会在所有服务器禁止该用户使用小凛。'))return;
-        btn.disabled=true;
-        try{
-            await jpost('/api/bot/blacklist',{user_id:id,reason:document.getElementById('bl-reason').value});
-            document.getElementById('bl-id').value='';document.getElementById('bl-reason').value='';
-            DashboardUI.clean('draft-blacklist');
-            showToast('✅ 已加入黑名单'); loadBlacklist();
-        }catch(e){showToast('❌ '+e.message);}
-        btn.disabled=false;
+        await Console.busy(btn,async()=>{
+            try{
+                await jpost('/api/bot/blacklist',{user_id:id,reason:document.getElementById('bl-reason').value});
+                document.getElementById('bl-id').value='';document.getElementById('bl-reason').value='';
+                DashboardUI.clean('draft-blacklist');
+                showToast('✅ 已加入黑名单'); loadBlacklist();
+            }catch(e){showToast('❌ '+e.message);}
+        });
     }
     async function removeBlacklist(id){
         try{ await jpost('/api/bot/blacklist/remove',{user_id:id}); showToast('✅ 已移除'); loadBlacklist(); }

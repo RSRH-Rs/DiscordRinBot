@@ -123,8 +123,7 @@
             mappings.push({emoji, role_id: select.value, role_name: select.selectedOptions[0]?.textContent || ''});
         }
         const button = el('rr-send');
-        await DashboardUI.saving('pg-roles', async () => {
-            button.disabled = true; button.textContent = tr('roles.sending');
+        await DashboardUI.saving('pg-roles', () => Console.busy(button, async () => {
             try {
                 const result = await Console.api('/reactionroles/send', 'POST', {
                     channel_id: channel, title: el('rr-title').value || tr('roles.default_title'),
@@ -138,8 +137,8 @@
                 Console.refreshModules();
             } catch (e) {
                 Console.toast(tr('roles.send_failed', {reason: e.message}), 'bad');
-            } finally { button.disabled = false; button.textContent = tr('roles.send'); }
-        });
+            }
+        }));
     }
 
     Console.module({

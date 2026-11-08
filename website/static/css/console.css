@@ -353,6 +353,11 @@ img { max-width: 100%; }
 .btn--icon:active:not(:disabled, [aria-busy="true"]) { transform: none; background: var(--hover); }
 .btn--sm { min-height: 32px; padding-inline: 12px; font-size: 13px; }
 .btn--text.btn--sm { padding-inline: 8px; }
+/* The label stays in place, invisible, so the button keeps its width while the spinner sits on top. */
+.btn[aria-busy="true"] { color: transparent; cursor: default; }
+.btn[aria-busy="true"]:disabled { opacity: 1; }
+.btn[aria-busy="true"]::after { content: ""; position: absolute; inset: 0; width: 16px; height: 16px; margin: auto; border: 2px solid var(--btn-fg); border-right-color: transparent; border-radius: 50%; animation: btn-spin .7s linear infinite; }
+@keyframes btn-spin { to { transform: rotate(360deg); } }
 @media (hover: hover) {
     .btn--primary:hover:not(:disabled) { background: var(--accent-hover); }
     .btn--secondary:hover:not(:disabled) { background: var(--accent-soft-hover); }
