@@ -8,7 +8,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![discord.py](https://img.shields.io/badge/discord.py-2.7-5865F2?logo=discord&logoColor=white)](https://github.com/Rapptz/discord.py)
-[![Tests](https://img.shields.io/badge/tests-204_passing-3FB950)](#testing)
+[![Tests](https://img.shields.io/badge/tests-911_passing-3FB950)](#testing)
 [![License](https://img.shields.io/badge/License-MIT-E8899A)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-rin--bot.com-FFB7C5)](https://rin-bot.com)
 
@@ -60,6 +60,7 @@ Public pages, in Chinese and English:
 The dashboard:
 
 - **OAuth2 login.** Detects the servers where you have Manage Server.
+- **Permission check.** The overview page compares what Rin has with what it needs and says what stops working for each missing permission.
 - **Module panels.** Configure welcome (with image uploads), auto-mod, moderation thresholds, music, bot log and server log.
 - **Reaction role builder.** Pick a channel, add emoji + role pairs, and send the panel to Discord in one click.
 - **Giveaway creator.** Set the prize, winner count, channel and end time.
@@ -188,9 +189,9 @@ Tests cover core logic and use temporary SQLite databases only. They never conne
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q                       # bot, core and website pages: 596 tests
-cd website && python -m pytest -q tests   # dashboard: 134 tests
-node --test tests/*.cjs                   # dashboard and site UI: 120 tests (from website/)
+python -m pytest -q                       # bot, core and website pages: 634 tests
+cd website && python -m pytest -q tests   # dashboard: 151 tests
+node --test tests/*.cjs                   # dashboard and site UI: 126 tests (from website/)
 ```
 
 After changing a slash command, regenerate the website's command list with `python website/tools/build_commands.py`; `tests/test_command_catalog.py` fails until you do.
@@ -210,6 +211,8 @@ Production uses push-to-deploy. `git push prod master` sends the code to a bare 
 
 If any step before the sync fails, the deploy stops and the running bot is untouched.
 
+**Before going live,** register `https://rin-bot.com/invited` as a redirect URI in the Discord Developer Portal (OAuth2 → Redirects). The invite link sends new servers there after they add Rin, and Discord rejects a redirect that is not registered.
+
 ---
 
 ## API Endpoints
@@ -220,6 +223,7 @@ Every endpoint requires OAuth2 login. `/api/guild/<id>/…` endpoints also requi
 |-------|-----------|
 | Server info | `GET /api/guild/<id>/channels` `roles` `emojis` `info` `leaderboard` |
 | Module config (GET / POST) | `/api/guild/<id>/welcome` `automod` `moderation` `music` `botlog` `serverlog` |
+| Permission check | `GET /api/guild/<id>/checkup` |
 | Actions | `POST /api/guild/<id>/reactionroles/send` `giveaway/create` `botlog/test` `serverlog/test` |
 | Records | `GET /api/guild/<id>/moderation/cases` `giveaways` `reactionroles` |
 | Commands | `GET /api/guild/<id>/commands`, `POST …/commands/toggle` `…/commands/bulk-toggle` |

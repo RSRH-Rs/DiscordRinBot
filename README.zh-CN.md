@@ -8,7 +8,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![discord.py](https://img.shields.io/badge/discord.py-2.7-5865F2?logo=discord&logoColor=white)](https://github.com/Rapptz/discord.py)
-[![Tests](https://img.shields.io/badge/tests-204_passing-3FB950)](#测试)
+[![Tests](https://img.shields.io/badge/tests-911_passing-3FB950)](#测试)
 [![License](https://img.shields.io/badge/License-MIT-E8899A)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-rin--bot.com-FFB7C5)](https://rin-bot.com)
 
@@ -60,6 +60,7 @@
 控制台：
 
 - **OAuth2 登录**：自动识别你拥有"管理服务器"权限的服务器。
+- **权限体检**：概览页对比小凛现有的权限和需要的权限，逐条说明缺哪项会少哪些功能。
 - **模块配置面板**：迎新（支持上传图片）、自动审核、管理阈值、音乐、系统日志、服务器日志。
 - **反应身份组编辑器**：选频道，添加 emoji 和身份组，一键发送到 Discord。
 - **抽奖创建**：设置奖品、中奖人数、频道和结束时间。
@@ -188,9 +189,9 @@ cd website && python -m hypercorn main:app --bind 127.0.0.1:5000
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q                       # Bot、核心逻辑和官网页面：596 个测试
-cd website && python -m pytest -q tests   # 仪表盘：134 个测试
-node --test tests/*.cjs                   # 仪表盘和官网界面：120 个测试（在 website/ 下运行）
+python -m pytest -q                       # Bot、核心逻辑和官网页面：634 个测试
+cd website && python -m pytest -q tests   # 仪表盘：151 个测试
+node --test tests/*.cjs                   # 仪表盘和官网界面：126 个测试（在 website/ 下运行）
 ```
 
 改了斜杠指令以后，运行 `python website/tools/build_commands.py` 重新生成官网的指令清单；不重新生成，`tests/test_command_catalog.py` 会失败。
@@ -210,6 +211,8 @@ node --test tests/*.cjs                   # 仪表盘和官网界面：120 个�
 
 同步之前任何一步失败都会中止部署，正在运行的 Bot 不受影响。
 
+**上线前**，先在 Discord 开发者后台（OAuth2 → Redirects）登记 `https://rin-bot.com/invited`。邀请链接会在新服务器添加小凛后跳到这个地址，没有登记的话 Discord 会拒绝跳转。
+
 ---
 
 ## API 接口
@@ -220,6 +223,7 @@ node --test tests/*.cjs                   # 仪表盘和官网界面：120 个�
 |------|------|
 | 服务器信息 | `GET /api/guild/<id>/channels` `roles` `emojis` `info` `leaderboard` |
 | 模块配置（GET / POST） | `/api/guild/<id>/welcome` `automod` `moderation` `music` `botlog` `serverlog` |
+| 权限体检 | `GET /api/guild/<id>/checkup` |
 | 操作 | `POST /api/guild/<id>/reactionroles/send` `giveaway/create` `botlog/test` `serverlog/test` |
 | 记录 | `GET /api/guild/<id>/moderation/cases` `giveaways` `reactionroles` |
 | 指令 | `GET /api/guild/<id>/commands`，`POST …/commands/toggle` `…/commands/bulk-toggle` |
