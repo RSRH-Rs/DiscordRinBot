@@ -1,4 +1,4 @@
-/* Controls shared by console pages: a button's busy state and the confirm bubble. Loaded after console-core.js, adds to window.Console. */
+/* Controls shared by console pages: a button's busy state, the confirm bubble and the character-limit ring. Loaded after console-core.js, adds to window.Console. */
 (() => {
     const SPINNER_DELAY = 150, SPINNER_MIN = 300;
     const working = new WeakSet();
@@ -75,5 +75,39 @@
         });
     }
 
-    Object.assign(window.Console, {busy, confirm});
+    const LIMIT_SHOWS_AT = .7;
+    const limitState = (length, max) => ({show: length >= max * LIMIT_SHOWS_AT, remaining: Math.max(0, max - length), full: length >= max, ratio: Math.min(1, length / max)});
+
+    // value.length and maxlength both count UTF-16 units, so an emoji uses up the same two slots in each.
+    function attachLimit(input) {
+        const max = input.maxLength;
+        if (!(max > 0)) return;
+        const field = document.createElement('span'), meter = document.createElement('span'), ring = document.createElement('span');
+        const count = document.createElement('span'), status = document.createElement('span');
+        field.className = input.tagName === 'TEXTAREA' ? 'limit-field limit-field--area' : 'limit-field';
+        meter.className = 'limit-meter'; meter.setAttribute('aria-hidden', 'true');
+        ring.className = 'limit-ring';
+        ring.innerHTML = '<svg width="20" height="20" viewBox="0 0 20 20"><circle class="limit-track" cx="10" cy="10" r="8"/><circle class="limit-fill" cx="10" cy="10" r="8"/></svg>';
+        status.className = 'sr-only'; status.setAttribute('role', 'status');
+        meter.append(ring, count);
+        input.before(field);
+        field.append(input, meter, status);
+        let announced = false;
+        const update = () => {
+            const state = limitState(input.value.length, max);
+            field.classList.toggle('is-shown', state.show);
+            field.classList.toggle('is-full', state.full);
+            field.style.setProperty('--limit', String(state.ratio));
+            count.textContent = String(state.remaining);
+            if (state.full && !announced) { announced = true; status.textContent = Console.tr('common.limit_reached', {n: max}); }
+            if (!state.full && announced) { announced = false; status.textContent = ''; }
+        };
+        input.addEventListener('input', update);
+        // Values filled in by the page or by Reset fire no input event; the ring only matters once the field is in use.
+        input.addEventListener('focus', update);
+    }
+    const initLimits = (root = document) => root.querySelectorAll('[data-limit]').forEach(attachLimit);
+    document.addEventListener('DOMContentLoaded', () => initLimits());
+
+    Object.assign(window.Console, {busy, confirm, limitState, initLimits});
 })();

@@ -575,4 +575,12 @@ class RiskyActionTests(unittest.TestCase):
         for name in ['templates/settings.html', 'static/js/message-preview.js', 'static/js/modules/welcome.js']:
             self.assertNotRegex((site / name).read_text(encoding='utf-8'), r'(?<![.\w])confirm\(|window\.confirm\(', name)
 
+class LimitFieldTests(unittest.TestCase):
+    def test_limited_fields_opt_in(self):
+        from pathlib import Path
+        site = Path(__file__).resolve().parents[1]
+        pages = (site / 'templates/server.html').read_text(encoding='utf-8') + (site / 'templates/settings.html').read_text(encoding='utf-8')
+        for field in ['w-title', 'gw-prize', 'bp-act-text', 'bp-username', 'ann-msg', 'maint-msg']:
+            self.assertIn(f'id="{field}" data-limit', pages)
+
 if __name__=='__main__':unittest.main()

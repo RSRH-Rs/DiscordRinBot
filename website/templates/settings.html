@@ -53,7 +53,7 @@
             </select>
             {% endcall %}
             {% call row(tr('settings.profile.text'), tr('settings.profile.text_hint'), 'bp-act-text') %}
-            <input class="input" id="bp-act-text" maxlength="128" placeholder="{{ tr('settings.profile.text_placeholder') }}">
+            <input class="input" id="bp-act-text" data-limit maxlength="128" placeholder="{{ tr('settings.profile.text_placeholder') }}">
             {% endcall %}
         </div>
         <div class="actions"><button type="button" class="btn btn--primary" onclick="saveProfile(this)">{{ tr('bar.save') }}</button></div>
@@ -63,7 +63,7 @@
         <h3 class="section-title">{{ tr('settings.profile.name') }}</h3>
         <div class="list">
             {% call row(tr('settings.profile.username'), tr('settings.profile.username_hint'), 'bp-username') %}
-            <input class="input" id="bp-username" minlength="2" maxlength="32" placeholder="{{ tr('settings.profile.username_placeholder') }}">
+            <input class="input" id="bp-username" data-limit minlength="2" maxlength="32" placeholder="{{ tr('settings.profile.username_placeholder') }}">
             {% endcall %}
         </div>
         <div class="actions"><button type="button" class="btn btn--primary" onclick="saveUsername(this)">{{ tr('settings.profile.username_save') }}</button></div>
@@ -96,7 +96,7 @@
         <h3 class="section-title">{{ tr('settings.admin.announce') }}</h3>
         <div class="list">
             {% call row(tr('settings.admin.announce_label'), tr('settings.admin.announce_hint'), 'ann-msg', block=True) %}
-            <textarea class="textarea" id="ann-msg" maxlength="1800" placeholder="{{ tr('settings.admin.announce_placeholder') }}"></textarea>
+            <textarea class="textarea" id="ann-msg" data-limit maxlength="1800" placeholder="{{ tr('settings.admin.announce_placeholder') }}"></textarea>
             {% endcall %}
         </div>
         <div class="actions"><button type="button" class="btn btn--primary" onclick="sendAnnounce(this)">{{ tr('settings.admin.announce_send') }}</button></div>
@@ -109,7 +109,7 @@
         <div class="list">
             {% call row(tr('settings.admin.maint_on'), tr('settings.admin.maint_on_hint'), 'maint-on', cls='row--switch') %}{{ toggle('maint-on', tr('settings.admin.maint_on')) }}{% endcall %}
             {% call row(tr('settings.admin.maint_msg'), tr('settings.admin.maint_msg_hint'), 'maint-msg') %}
-            <input class="input" id="maint-msg" maxlength="300" placeholder="{{ tr('settings.admin.maint_placeholder') }}">
+            <input class="input" id="maint-msg" data-limit maxlength="300" placeholder="{{ tr('settings.admin.maint_placeholder') }}">
             {% endcall %}
         </div>
         <div class="actions"><button type="button" class="btn btn--primary" onclick="saveMaint(this)">{{ tr('bar.save') }}</button></div>

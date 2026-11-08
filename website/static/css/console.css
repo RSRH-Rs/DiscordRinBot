@@ -43,6 +43,7 @@
     --dur-base: 160ms;
     --dur-slow: 200ms;
     --btn-fg: currentColor;
+    --limit: 0;
     color-scheme: light;
 }
 /* Night palette: chosen by the appearance switch, or by the system when the viewer has not picked day. */
@@ -292,6 +293,20 @@ img { max-width: 100%; }
 .num-field .num { width: 100%; padding-right: calc(3em + 16px); }
 .num-unit { align-self: center; justify-self: end; margin-right: 12px; pointer-events: none; color: var(--muted); font-size: 14px; white-space: nowrap; }
 .unit { font-size: 13px; color: var(--muted); }
+.limit-field { position: relative; display: inline-grid; width: 240px; max-width: 100%; flex-shrink: 0; }
+.row--block .limit-field { display: grid; width: 100%; }
+.limit-field > .input, .limit-field > .textarea, .limit-meter { grid-area: 1 / 1; }
+.limit-field > .input, .limit-field > .textarea { width: 100%; }
+.limit-field.is-shown > .input { padding-right: 48px; }
+.limit-meter { display: none; align-self: center; justify-self: end; align-items: center; gap: 4px; margin-right: 12px; pointer-events: none; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.limit-field--area .limit-meter { align-self: end; margin-bottom: 8px; }
+.limit-field.is-shown .limit-meter { display: inline-flex; }
+.limit-field.is-full .limit-meter { color: var(--bad); }
+.limit-ring svg { display: block; transform: rotate(-90deg); }
+.limit-track, .limit-fill { fill: none; stroke-width: 2.5; }
+.limit-track { stroke: var(--line); }
+.limit-fill { stroke: var(--accent); stroke-linecap: round; stroke-dasharray: 50.27; stroke-dashoffset: calc(50.27 * (1 - var(--limit))); transition: stroke-dashoffset var(--dur-fast) var(--ease-out); }
+.limit-field.is-full .limit-fill { stroke: var(--bad); }
 
 .tog { position: relative; display: inline-flex; flex-shrink: 0; width: 40px; height: 22px; cursor: pointer; }
 .tog--head { width: auto; flex-direction: row-reverse; align-items: center; gap: 8px; margin-top: 4px; }

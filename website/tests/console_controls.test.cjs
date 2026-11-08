@@ -102,8 +102,10 @@ function makeDom({innerHeight = 800, innerWidth = 1200, rect = {top: 100, bottom
     const make = tag => {
         const attrs = new Map(), handlers = {};
         const node = {
-            tag, className: '', textContent: '', style: {}, children: [], parent: null, handlers,
-            append(...kids) { kids.forEach(kid => { kid.parent = node; node.children.push(kid); }); },
+            tag, className: '', textContent: '', style: {setProperty(k, v) { this[k] = v; }}, children: [], parent: null, handlers, classes: new Set(),
+            classList: {toggle: (c, on) => { if (on) node.classes.add(c); else node.classes.delete(c); }, contains: c => node.classes.has(c)},
+            append(...kids) { kids.forEach(kid => { kid.remove(); kid.parent = node; node.children.push(kid); }); },
+            before(other) { const list = node.parent.children; list.splice(list.indexOf(node), 0, other); other.parent = node.parent; },
             remove() { if (node.parent) node.parent.children.splice(node.parent.children.indexOf(node), 1); node.parent = null; },
             setAttribute: (n, v) => attrs.set(n, String(v)), getAttribute: n => attrs.has(n) ? attrs.get(n) : null,
             addEventListener: (type, fn) => { handlers[type] = fn; },
@@ -207,4 +209,66 @@ test('never runs off the left edge of a narrow screen', () => {
     const dom = makeDom({innerWidth: 320, rect: {top: 100, bottom: 140, left: 8, right: 100}}), {Console} = load(dom.extra);
     Console.confirm(dom.anchor, ASK);
     assert.equal(dom.bubble().style.left, '16px');
+});
+
+function limitField(value, maxLength) {
+    const dom = makeDom(), {Console} = load(dom.extra);
+    const input = dom.document.createElement('input');
+    Object.assign(input, {value, maxLength});
+    dom.document.body.append(input);
+    Console.initLimits({querySelectorAll: () => [input]});
+    const field = input.parent, [, meter, status] = field.children;
+    return {input, field, meter, status, type: () => input.handlers.input()};
+}
+
+test('the ring appears at 70 percent', () => {
+    const {Console} = load();
+    assert.equal(Console.limitState(69, 100).show, false);
+    assert.equal(Console.limitState(70, 100).show, true);
+    const end = Console.limitState(100, 100);
+    assert.equal(end.remaining, 0);
+    assert.equal(end.full, true);
+    assert.equal(end.ratio, 1);
+});
+
+test('typing past the threshold shows the ring and what is left', () => {
+    const {input, field, meter, type} = limitField('', 10);
+    type();
+    assert.equal(field.classList.contains('is-shown'), false);
+    input.value = 'x'.repeat(8);
+    type();
+    assert.equal(field.classList.contains('is-shown'), true);
+    assert.equal(meter.children[1].textContent, '2');
+    assert.equal(field.style['--limit'], '0.8');
+});
+
+test('emoji count the same way maxlength does', () => {
+    const {input, field, meter, type} = limitField('', 20);
+    input.value = '😀'.repeat(10);
+    type();
+    assert.equal(meter.children[1].textContent, '0');
+    assert.equal(field.classList.contains('is-full'), true);
+});
+
+test('the limit is announced once until the text drops below it', () => {
+    const {input, status, type} = limitField('x'.repeat(9), 10);
+    input.value = 'x'.repeat(10);
+    type();
+    assert.equal(status.textContent, 'common.limit_reached:10');
+    status.textContent = 'read';
+    type();
+    assert.equal(status.textContent, 'read');
+    input.value = 'x'.repeat(9);
+    type();
+    assert.equal(status.textContent, '');
+    input.value = 'x'.repeat(10);
+    type();
+    assert.equal(status.textContent, 'common.limit_reached:10');
+});
+
+test('a value restored by reset is measured on focus', () => {
+    const {input, field} = limitField('', 10);
+    input.value = 'x'.repeat(10);
+    input.handlers.focus();
+    assert.equal(field.classList.contains('is-full'), true);
 });

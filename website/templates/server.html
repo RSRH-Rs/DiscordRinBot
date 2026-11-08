@@ -103,7 +103,7 @@
             {% endcall %}
             {% call tab_panel('welcome', 'appearance') %}
                         <div class="list">
-                {% call row(tr('welcome.title'), None, 'w-title', block=True) %}<input class="input" id="w-title" maxlength="200" placeholder="{{ tr('welcome.title_placeholder') }}">{% endcall %}
+                {% call row(tr('welcome.title'), None, 'w-title', block=True) %}<input class="input" id="w-title" data-limit maxlength="200" placeholder="{{ tr('welcome.title_placeholder') }}">{% endcall %}
                 {% call row(tr('welcome.thumb'), tr('welcome.thumb_hint'), 'w-thumb', block=True) %}<input class="input" id="w-thumb" placeholder="%avatar%">{% endcall %}
                 {{ upload('welcome') }}
                 {% call row(tr('welcome.image_url'), tr('welcome.image_url_hint'), 'w-image', block=True) %}<input class="input" id="w-image" placeholder="{{ tr('welcome.image_url_placeholder') }}">{% endcall %}
@@ -276,7 +276,7 @@
     <div class="section">
         <h3 class="section-title">{{ tr('giveaway.new') }}</h3>
         <div class="list">
-            {% call row(tr('giveaway.prize'), None, 'gw-prize', block=True) %}<input class="input" id="gw-prize" maxlength="200" placeholder="{{ tr('giveaway.prize_placeholder') }}">{% endcall %}
+            {% call row(tr('giveaway.prize'), None, 'gw-prize', block=True) %}<input class="input" id="gw-prize" data-limit maxlength="200" placeholder="{{ tr('giveaway.prize_placeholder') }}">{% endcall %}
             {% call row(tr('giveaway.winners'), None, 'gw-winners') %}{{ num('gw-winners', tr('giveaway.winners_unit'), 1, 20, 1) }}{% endcall %}
             {% call row(tr('giveaway.channel'), None, 'gw-ch') %}<select class="select" id="gw-ch" data-search="{{ tr('giveaway.channel') }}"><option value="0">{{ tr('giveaway.pick_channel') }}</option></select>{% endcall %}
             {% call row(tr('giveaway.role'), tr('giveaway.role_hint'), 'gw-role') %}<select class="select" id="gw-role" data-search="{{ tr('giveaway.role') }}"><option value="0">{{ tr('common.no_limit') }}</option></select>{% endcall %}

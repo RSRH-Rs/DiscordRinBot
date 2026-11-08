@@ -51,6 +51,7 @@
     "saved": "已保存"
   },
   "common": {
+    "limit_reached": "已到 {n} 字上限",
     "cancel": "取消",
     "retry": "重试",
     "load_failed": "读取失败了，点重试再来一次。",
