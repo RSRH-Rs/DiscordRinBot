@@ -272,7 +272,7 @@ function routed() {
         DashboardExtras: {createHashRouter: o => { options = o; return {navigate: (id, {tab} = {}) => { o.show(id, false); o.showTab(id, tab); return true; }, current: () => 'a'}; }},
     }});
     handlers.DOMContentLoaded.forEach(fn => fn());
-    return {Console, options, page: slug => pages.find(p => p.dataset.slug === slug)};
+    return {Console, options, handlers, page: slug => pages.find(p => p.dataset.slug === slug)};
 }
 
 test('switching pages animates except on first paint and instant jumps', () => {
@@ -323,4 +323,13 @@ test('only a panel that was hidden fades in', () => {
     const hidden = tabbed({hidden: true});
     hidden.Console.selectTab('x', 'a');
     assert.equal(hidden.panel.freshened, true);
+});
+
+test('tab ink is measured again when a draft dot changes a tab', () => {
+    const r = routed();
+    const tab = {offsetLeft: 0, offsetWidth: 46};
+    const tabs = {style: {setProperty(k, v) { this[k] = v; }}, classList: {add() {}}, querySelector: () => tab};
+    r.page('a').querySelector = sel => sel === '.tabs' ? tabs : null;
+    r.handlers['dashboard:drafts-changed'].forEach(fn => fn());
+    assert.equal(tabs.style['--ink-w'], '46');
 });

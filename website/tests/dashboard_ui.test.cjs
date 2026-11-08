@@ -73,7 +73,7 @@ function fixture() {
         return e;
     }
     const bar = nodes.get('unsaved-bar');
-    return {ui, a, b, bar, ctx, nodes, unload, key, field};
+    return {ctx, ui, a, b, bar, ctx, nodes, unload, key, field};
 }
 
 test('editing/reverting fields and tags updates draft and departure warnings', () => {
@@ -165,18 +165,55 @@ test('ctrl+s prevents default always and saves only when dirty', async () => {
     assert.equal(saves, 1);
 });
 
-test('reset and save are disabled while saving', async () => {
+test('saving disables reset but leaves the focused save button focusable', async () => {
     const {ui, a, nodes} = fixture();
     let finish; ui.onSave(a, () => new Promise(r => { finish = r; }));
     a.fields[0].value = 'x'; ui.changed(a);
     const pending = ui.save();
-    assert.equal(nodes.get('unsaved-save').disabled, true);
+    assert.equal(nodes.get('unsaved-save').disabled, false);
     assert.equal(nodes.get('unsaved-reset').disabled, true);
     finish(); await pending;
     assert.equal(ui.dirty(a), false);
     a.fields[0].value = 'again'; ui.changed(a);
     assert.equal(nodes.get('unsaved-save').disabled, false);
     assert.equal(nodes.get('unsaved-reset').disabled, false);
+});
+
+test('focus returns once a saving form stops being inert', async () => {
+    const {ui, a, ctx} = fixture();
+    const button = {isConnected: true, focused: 0, focus() { this.focused++; }};
+    ctx.document.body = {};
+    ctx.document.activeElement = button;
+    ui.onSave(a, async () => { ctx.document.activeElement = ctx.document.body; });
+    a.fields[0].value = 'x'; ui.changed(a);
+    await ui.save();
+    assert.equal(button.focused, 1);
+});
+
+test('focus the user moved during a save is left alone', async () => {
+    const {ui, a, ctx} = fixture();
+    const button = {isConnected: true, focused: 0, focus() { this.focused++; }};
+    ctx.document.body = {};
+    ctx.document.activeElement = button;
+    ui.onSave(a, async () => { ctx.document.activeElement = {other: true}; });
+    a.fields[0].value = 'x'; ui.changed(a);
+    await ui.save();
+    assert.equal(button.focused, 0);
+});
+
+test('Ctrl+S shows the same busy state as clicking save', async () => {
+    const {ctx, ui, a, nodes, key} = fixture();
+    const used = [];
+    let saved = 0;
+    ctx.Console = {busy: (button, task) => { used.push(button); return task(); }};
+    ui.onSave(a, async () => { saved++; });
+    key();
+    assert.equal(used.length, 0);
+    a.fields[0].value = 'x'; ui.changed(a);
+    key();
+    await new Promise(setImmediate);
+    assert.equal(used[0], nodes.get('unsaved-save'));
+    assert.equal(saved, 1);
 });
 
 test('save failure keeps bar open with reason', async () => {

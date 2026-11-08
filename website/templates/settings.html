@@ -132,8 +132,8 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261108a"></script>
-<script src="{{ url_for('static', filename='js/console-controls.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261108b"></script>
+<script src="{{ url_for('static', filename='js/console-controls.js') }}?v=20261108b"></script>
     <script>
     const AVATAR_MAX_BYTES=5*1024*1024;
     const AVATAR_TYPES=new Set(['image/png','image/jpeg','image/gif','image/webp']);
@@ -306,11 +306,12 @@
     /* ── 全局公告 ── */
     function esc(s){const d=document.createElement('div');d.textContent=s==null?'':String(s);return d.innerHTML;}
     async function sendAnnounce(btn){
+        if(Console.isBusy(btn))return;
         const msg=document.getElementById('ann-msg').value.trim();
         if(!msg){showToast('❌ 公告内容不能为空');return;}
         if(!await Console.confirm(btn,{message:'确定向所有服务器发送这条公告？',action:'发送公告'})) return;
         await Console.busy(btn,async()=>{
-            try{ await jpost('/api/bot/announce',{message:msg}); showToast('✅ 已加入发送队列，稍后送达'); document.getElementById('ann-msg').value=''; DashboardUI.clean('draft-announce'); setTimeout(loadRecent,1500); }
+            try{ await jpost('/api/bot/announce',{message:msg}); showToast('✅ 已加入发送队列，稍后送达'); document.getElementById('ann-msg').value=''; document.getElementById('ann-msg').dispatchEvent(new Event('input',{bubbles:true})); DashboardUI.clean('draft-announce'); setTimeout(loadRecent,1500); }
             catch(e){showToast('❌ '+e.message);}
         });
     }
@@ -339,6 +340,7 @@
         }catch(e){throw e;}
     }
     async function saveMaint(btn){
+        if(Console.isBusy(btn))return;
         if(document.getElementById('maint-on').checked&&!await Console.confirm(btn,{message:'开启后，除主人外所有人都暂时不能使用指令。确定让小凛进入维护模式吗？',action:'进入维护模式',danger:true}))return;
         await Console.busy(btn,async()=>{
             try{
@@ -364,6 +366,7 @@
         const button=document.createElement('button');button.type='button';button.className='btn btn--secondary';button.textContent='重试';button.onclick=retry;box.append(text,button);
     }
     async function addBlacklist(btn){
+        if(Console.isBusy(btn))return;
         const id=document.getElementById('bl-id').value.trim();
         if(!/^\d{5,}$/.test(id)){showToast('❌ 请输入有效的用户 ID');return;}
         if(!await Console.confirm(btn,{message:'确定将用户 '+id+' 加入黑名单吗？这会在所有服务器禁止该用户使用小凛。',action:'加入黑名单',danger:true}))return;

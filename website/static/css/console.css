@@ -149,7 +149,7 @@ img { max-width: 100%; }
 
 .brand-row { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-bottom: 4px; min-height: 36px; padding: 4px 8px; border-radius: 8px; color: var(--text); }
 .brand-row:hover { background: var(--hover); }
-.brand-row img, .server-icon img, .switcher-btn img, .avatar-prev { outline: 1px solid var(--img-line); outline-offset: -1px; }
+.brand-row img, .server-icon img, .switcher-btn img, .avatar-prev, .user-avatar { outline: 1px solid var(--img-line); outline-offset: -1px; }
 .brand-row img { width: 24px; height: 24px; flex-shrink: 0; border-radius: 50%; }
 .brand-name { min-width: 0; font: 16px/1.2 var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .brand-home { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; margin-left: auto; font-size: 12px; color: var(--muted); }
@@ -260,6 +260,7 @@ img { max-width: 100%; }
 .page.is-active { display: block; }
 .page.is-entering { animation: page-in var(--dur-base) var(--ease-out); }
 .is-fresh { animation: fade-in var(--dur-fast) ease-out; }
+.page.is-entering.is-fresh { animation: page-in var(--dur-base) var(--ease-out), fade-in var(--dur-fast) ease-out; }
 @keyframes page-in { from { opacity: 0; transform: translateY(4px); } }
 @keyframes fade-in { from { opacity: 0; } }
 @keyframes skeleton-in { from { opacity: 0; } }
@@ -316,7 +317,8 @@ img { max-width: 100%; }
 .limit-field > .input, .limit-field > .textarea { width: 100%; }
 .limit-field.is-shown > .input { padding-right: 48px; }
 .limit-meter { display: none; align-self: center; justify-self: end; align-items: center; gap: 4px; margin-right: 12px; pointer-events: none; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
-.limit-field--area .limit-meter { align-self: end; margin-bottom: 8px; }
+.limit-field--area .limit-meter { align-self: end; margin-right: 24px; margin-bottom: 8px; }
+.limit-field--area.is-shown > .textarea { padding-bottom: 32px; }
 .limit-field.is-shown .limit-meter { display: inline-flex; }
 .limit-field.is-full .limit-meter { color: var(--bad); }
 .limit-ring svg { display: block; transform: rotate(-90deg); }
@@ -384,7 +386,7 @@ img { max-width: 100%; }
 .btn--text:active:not(:disabled, [aria-busy="true"]) { transform: none; background: color-mix(in srgb, currentColor 16%, transparent); }
 .btn--danger { --btn-fg: var(--bad); background: var(--bad-soft); }
 .btn--icon { --btn-fg: var(--muted); padding: 6px; min-height: 32px; background: none; }
-.btn--icon:active:not(:disabled, [aria-busy="true"]) { transform: none; background: var(--hover); }
+.btn--icon:active:not(:disabled, [aria-busy="true"]) { transform: none; background: color-mix(in srgb, currentColor 16%, transparent); }
 .btn--sm { min-height: 32px; padding-inline: 12px; font-size: 13px; }
 .btn--text.btn--sm { padding-inline: 8px; }
 /* The label stays in place, invisible, so the button keeps its width while the spinner sits on top. */
@@ -439,7 +441,7 @@ img { max-width: 100%; }
 .chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 4px 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 13px; overflow-wrap: anywhere; }
 .chip-remove { position: relative; display: flex; padding: 2px; border: 0; border-radius: 50%; background: none; color: inherit; cursor: pointer; }
 .chip-remove:hover { background: var(--panel); }
-.chip-remove::after { content: ""; position: absolute; inset: -4px; }
+.chip-remove::after { content: ""; position: absolute; inset: -6px; }
 .chip, .rr-row { transition: opacity 140ms ease-out; }
 @starting-style {
     .chip, .rr-row { opacity: 0; }
@@ -688,7 +690,8 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .cmd-card span { font-size: 13px; color: var(--muted); }
 .command-search .select { width: 150px; }
 .cmd-group > summary { justify-content: flex-start; }
-.cmd-bulk { margin-left: auto; }
+/* The group name is a bare text node, so this button counts as :first-child; say auto with enough weight to win. */
+.btn--text.cmd-bulk { margin-inline-start: auto; }
 
 /* Page: global settings */
 .settings-panel[hidden] { display: none; }
@@ -792,7 +795,7 @@ a.server-row:hover .server-name { color: var(--accent-text); }
     .content { padding: 24px 16px calc(140px + env(safe-area-inset-bottom)); }
     .row { flex-direction: column; align-items: stretch; gap: 8px; }
     .row-control { flex-wrap: wrap; }
-    .row-control > .input, .row-control > .select, .row-control > .search-select, .row-control > .textarea { width: 100%; }
+    .row-control > .input, .row-control > .select, .row-control > .search-select, .row-control > .textarea, .row-control > .limit-field { width: 100%; }
     .row--switch { flex-direction: row; align-items: center; }
     /* A sentence of fields ([5 秒] 内发 [5 条]) stays on one line; its fields shrink to 96px first. */
     .row--sentence .row-control { flex-wrap: nowrap; }
@@ -812,7 +815,8 @@ a.server-row:hover .server-name { color: var(--accent-text); }
     @view-transition { navigation: none; }
     ::view-transition-group(*), ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
     .fold::details-content { transition: none; }
-    *, *::before, *::after { animation: none; transition: none; }
+    /* The #_ only adds weight: this has to beat every class-level animation in the sheet. */
+    *:not(#_), *:not(#_)::before, *:not(#_)::after { animation: none; transition: none; }
     .unsaved-bar, .unsaved-bar.is-open, .sidebar, .shell.is-drawer-open .sidebar, .tog-track, .tog-track::after { transition: none; }
     .unsaved-bar.is-shaking, .skeleton, .page[aria-busy="true"] .list { animation: none; }
     .row.is-flash { animation: none; background: var(--accent-soft); }

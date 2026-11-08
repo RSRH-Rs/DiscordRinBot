@@ -33,7 +33,10 @@ window.DashboardUI = (() => {
         const open = barRoots().some(dirty), busy = [...drafts.values()].some(s => s.saving);
         bar.classList.toggle('is-open', open);
         bar.setAttribute('aria-hidden', String(!open));
-        for (const id of ['unsaved-save', 'unsaved-reset']) { const button = el(id); if (button) button.disabled = busy || !open; }
+        const reset = el('unsaved-reset'), saveButton = el('unsaved-save');
+        if (reset) reset.disabled = busy || !open;
+        // Save stays enabled while saving so it keeps keyboard focus; save() itself ignores a second press.
+        if (saveButton) saveButton.disabled = !open;
         const text = el('unsaved-text'); if (text && !blockedTimer) text.textContent = tr('bar.unsaved');
         if (!open) { const error = el('unsaved-error'); if (error) { error.hidden = true; error.textContent = ''; } }
     }
@@ -125,6 +128,11 @@ window.DashboardUI = (() => {
         try { await saving(root, handler); clean(root); }
         catch (e) { if (error) { error.textContent = tr('bar.save_failed', {reason: e.message}); error.hidden = false; } }
     }
+    // Clicking Save and pressing Ctrl+S show the same spinner on the button.
+    function saveFromBar() {
+        const button = el('unsaved-save');
+        return button && window.Console?.busy ? Console.busy(button, save) : save();
+    }
     function shake() {
         const bar = el('unsaved-bar'), text = el('unsaved-text');
         if (!bar) return;
@@ -156,10 +164,14 @@ window.DashboardUI = (() => {
         const state = drafts.get(root);
         if (state.saving) return;
         state.saving = true;
-        const wasInert = root.inert;
+        const wasInert = root.inert, focused = document.activeElement;
         root.inert = true; root.setAttribute('aria-busy', 'true'); refresh(root);
         try { return await action(); }
-        finally { state.saving = false; root.inert = wasInert || !!state.unread; root.removeAttribute('aria-busy'); refresh(root); }
+        finally {
+            state.saving = false; root.inert = wasInert || !!state.unread; root.removeAttribute('aria-busy'); refresh(root);
+            // Going inert drops focus to the page; put it back unless the person has since moved it.
+            if (!root.inert && focused?.isConnected && document.activeElement === document.body) focused.focus({preventScroll: true});
+        }
     }
     async function loading(id, action, retry) {
         const root = rootOf(id);
@@ -199,7 +211,7 @@ window.DashboardUI = (() => {
     document.addEventListener('keydown', e => {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
             e.preventDefault();
-            if (!e.isComposing && activeRoot()) save();
+            if (!e.isComposing && activeRoot()) saveFromBar();
             return;
         }
         const side = document.querySelector('.shell.is-drawer-open .sidebar');
@@ -227,7 +239,7 @@ window.DashboardUI = (() => {
         for (const event of ['input', 'change']) document.addEventListener(event, e => {
             const root = e.target.closest('[data-draft]'); if (root) refresh(root);
         });
-        el('unsaved-save')?.addEventListener('click', event => { if (window.Console?.busy) Console.busy(event.currentTarget, save); else save(); });
+        el('unsaved-save')?.addEventListener('click', saveFromBar);
         el('unsaved-reset')?.addEventListener('click', () => reset());
         el('menuBtn')?.addEventListener('click', toggleSidebar);
         document.querySelector('.drawer-backdrop')?.addEventListener('click', () => closeSidebar());

@@ -82,6 +82,7 @@ async function validateWelcomeImageFile(file) {
     }
     async function clear(kind) {
         const button = el(`w-${kind}-clear`);
+        if (Console.isBusy(button)) return;
         if (!await Console.confirm(button, {message: tr('welcome.image.clear_confirm'), action: tr('welcome.image.clear'), danger: true})) return;
         await Console.busy(button, async () => {
             try {

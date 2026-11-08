@@ -138,7 +138,7 @@ class ConsoleContrastTests(unittest.TestCase):
         self.assertIn('min-height: 32px', small)
         self.assertIn('font-size: 13px', small)
         self.assertNotRegex(self.css, r'\.server-row\.is-unjoined \.btn\s*\{[^}]*font-size')
-        self.assertNotRegex(rule(self.css, '.cmd-bulk'), 'font-(size|weight)|min-height')
+        self.assertNotRegex(rule(self.css, '.btn--text.cmd-bulk'), 'font-(size|weight)|min-height')
         self.assertNotIn('.variable-tools button', self.css)
 
     def test_text_button_has_no_resting_underline(self):
@@ -157,7 +157,7 @@ class ConsoleContrastTests(unittest.TestCase):
         self.assertRegex(self.css, r'\.theme-switch::before\s*\{[^}]*transition:\s*transform')
 
     def test_chip_remove_grows_its_hit_area(self):
-        self.assertIn('inset: -4px', rule(self.css, '.chip-remove::after'))
+        self.assertIn('inset: -6px', rule(self.css, '.chip-remove::after'))
 
     def test_toggle_stretches_while_pressed(self):
         self.assertRegex(self.css, r'\.tog input:active \+ \.tog-track::after\s*\{[^}]*width: 20px')
@@ -188,6 +188,30 @@ class ConsoleContrastTests(unittest.TestCase):
 
     def test_skeleton_waits_before_showing(self):
         self.assertRegex(self.css, r'skeleton-in[^;]*\.15s')
+
+    def test_bulk_switch_stays_on_the_right(self):
+        self.assertIn('margin-inline-start: auto', rule(self.css, '.btn--text.cmd-bulk'))
+
+    def test_ring_clears_textarea_text(self):
+        self.assertIn('padding-bottom: 32px', rule(self.css, '.limit-field--area.is-shown > .textarea'))
+
+    def test_loaded_content_can_fade_on_an_entering_page(self):
+        self.assertIn('fade-in', rule(self.css, '.page.is-entering.is-fresh'))
+        self.assertIn('page-in', rule(self.css, '.page.is-entering.is-fresh'))
+
+    def test_reduced_motion_outranks_every_class_rule(self):
+        tail = self.css[self.css.index('@media (prefers-reduced-motion: reduce)'):]
+        self.assertIn('*:not(#_), *:not(#_)::before, *:not(#_)::after { animation: none; transition: none; }', tail)
+
+    def test_limited_fields_fill_the_row_on_phones(self):
+        self.assertRegex(self.css, r'\.row-control > \.limit-field[^{]*\{\s*width: 100%')
+
+    def test_pressing_an_icon_button_goes_past_its_hover(self):
+        body = rule(self.css, '.btn--icon:active:not(:disabled, [aria-busy="true"])')
+        self.assertIn('color-mix(in srgb, currentColor 16%, transparent)', body)
+
+    def test_user_avatar_keeps_its_edge_on_any_background(self):
+        self.assertRegex(self.css, r'\.user-avatar[^{}]*\{[^}]*outline: 1px solid var\(--img-line\)')
 
     def test_no_important(self):
         self.assertNotIn('!important', self.css)

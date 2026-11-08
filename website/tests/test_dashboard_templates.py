@@ -254,7 +254,7 @@ class DashboardTemplateTests(unittest.TestCase):
             html,_=self.render(name)
             for value in ['light','','dark']:
                 self.assertEqual(html.count(f'data-theme-set="{value}"'),1,f'{name} {value!r}')
-            self.assertIn('js/theme.js?v=20261108a',html)
+            self.assertIn('js/theme.js?v=20261108b',html)
 
     def test_role_panel_preview_matches_the_bot(self):
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
@@ -574,6 +574,26 @@ class RiskyActionTests(unittest.TestCase):
         site = Path(__file__).resolve().parents[1]
         for name in ['templates/settings.html', 'static/js/message-preview.js', 'static/js/modules/welcome.js']:
             self.assertNotRegex((site / name).read_text(encoding='utf-8'), r'(?<![.\w])confirm\(|window\.confirm\(', name)
+
+class BusyGuardTests(unittest.TestCase):
+    def setUp(self):
+        from pathlib import Path
+        self.site = Path(__file__).resolve().parents[1]
+
+    def test_a_busy_button_cannot_ask_again(self):
+        settings = (self.site / 'templates/settings.html').read_text(encoding='utf-8')
+        for name in ['sendAnnounce', 'saveMaint', 'addBlacklist']:
+            self.assertIn(f'async function {name}(btn){{\n        if(Console.isBusy(btn))return;', settings)
+        welcome = (self.site / 'static/js/modules/welcome.js').read_text(encoding='utf-8')
+        self.assertRegex(welcome, r"const button = el\(`w-\$\{kind\}-clear`\);\n\s*if \(Console\.isBusy\(button\)\) return;")
+
+    def test_cleared_limited_fields_tell_their_ring(self):
+        giveaway = (self.site / 'static/js/modules/giveaway.js').read_text(encoding='utf-8')
+        self.assertRegex(giveaway, r"el\('gw-prize'\)\.value = '';\s*el\('gw-prize'\)\.dispatchEvent")
+        settings = (self.site / 'templates/settings.html').read_text(encoding='utf-8')
+        self.assertRegex(settings, r"getElementById\('ann-msg'\)\.value='';\s*document\.getElementById\('ann-msg'\)\.dispatchEvent")
+        preview = (self.site / 'static/js/message-preview.js').read_text(encoding='utf-8')
+        self.assertIn("el('w-title').dispatchEvent", preview)
 
 class LimitFieldTests(unittest.TestCase):
     def test_limited_fields_opt_in(self):

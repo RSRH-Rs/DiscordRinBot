@@ -36,6 +36,8 @@
             const box = document.createElement('div'), text = document.createElement('p'), row = document.createElement('div');
             const cancel = document.createElement('button'), ok = document.createElement('button');
             box.className = 'confirm-pop'; box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-label', message);
+            // Clicking the text would otherwise send focus to the page, out of reach of the key handling below.
+            box.tabIndex = -1;
             text.className = 'confirm-text'; text.textContent = message;
             row.className = 'confirm-actions';
             cancel.type = 'button'; cancel.className = 'btn btn--text btn--sm'; cancel.textContent = Console.tr('common.cancel');
@@ -61,11 +63,12 @@
                 if (event.key === 'Tab') { event.preventDefault(); (document.activeElement === cancel ? ok : cancel).focus(); }
             });
 
-            const at = anchor.getBoundingClientRect(), size = box.getBoundingClientRect();
-            const below = at.bottom + GAP + size.height <= window.innerHeight - GAP, above = at.top - GAP - size.height >= GAP;
-            box.style.left = `${Math.max(EDGE, Math.min(at.right, window.innerWidth - EDGE) - size.width)}px`;
+            // offsetWidth/Height ignore the entry scale, which getBoundingClientRect would measure mid-animation.
+            const at = anchor.getBoundingClientRect(), width = box.offsetWidth, height = box.offsetHeight;
+            const below = at.bottom + GAP + height <= window.innerHeight - GAP, above = at.top - GAP - height >= GAP;
+            box.style.left = `${Math.max(EDGE, Math.min(at.right, window.innerWidth - EDGE) - width)}px`;
             if (below || !above) box.style.top = `${at.bottom + GAP}px`;
-            else { box.style.top = `${at.top - GAP - size.height}px`; box.setAttribute('data-side', 'top'); }
+            else { box.style.top = `${at.top - GAP - height}px`; box.setAttribute('data-side', 'top'); }
 
             cancel.focus({preventScroll: true});
             // Registered last: the click that opened the bubble must not close it, and focusing must not count as a scroll.
@@ -103,7 +106,7 @@
             if (!state.full && announced) { announced = false; status.textContent = ''; }
         };
         input.addEventListener('input', update);
-        // Values filled in by the page or by Reset fire no input event; the ring only matters once the field is in use.
+        // Values the page fills in on load fire no input event; the ring only matters once the field is in use.
         input.addEventListener('focus', update);
     }
     const initLimits = (root = document) => root.querySelectorAll('[data-limit]').forEach(attachLimit);
@@ -119,5 +122,7 @@
         return {text: Console.tr('giveaway.left_minutes', {m: minutes, s: String(left % 60).padStart(2, '0')}), every: 1000};
     }
 
-    Object.assign(window.Console, {busy, confirm, limitState, initLimits, countdown});
+    const isBusy = button => working.has(button);
+
+    Object.assign(window.Console, {busy, isBusy, confirm, limitState, initLimits, countdown});
 })();

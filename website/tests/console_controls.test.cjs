@@ -95,7 +95,7 @@ test('a button removed from the page mid-task is harmless', async () => {
 });
 
 // A small DOM for the bubble: nodes know their children, and listeners are kept per target so tests can fire them.
-function makeDom({innerHeight = 800, innerWidth = 1200, rect = {top: 100, bottom: 140, left: 300, right: 400}, size = {width: 240, height: 100}} = {}) {
+function makeDom({innerHeight = 800, innerWidth = 1200, rect = {top: 100, bottom: 140, left: 300, right: 400}, size = {width: 240, height: 100}, scale = 1} = {}) {
     const bags = {doc: {}, win: {}};
     const on = bag => (type, fn) => { (bag[type] ||= []).push(fn); };
     const off = bag => (type, fn) => { bag[type] = (bag[type] || []).filter(f => f !== fn); };
@@ -112,7 +112,8 @@ function makeDom({innerHeight = 800, innerWidth = 1200, rect = {top: 100, bottom
             focus() { document.activeElement = node; },
             click() { node.onclick?.(); },
             contains(other) { for (let n = other; n; n = n.parent) if (n === node) return true; return false; },
-            getBoundingClientRect: () => size,
+            offsetWidth: size.width, offsetHeight: size.height,
+            getBoundingClientRect: () => ({width: size.width * scale, height: size.height * scale}),
         };
         return node;
     };
@@ -205,6 +206,25 @@ test('flips above the anchor when there is no room below', () => {
     assert.equal(dom.bubble().getAttribute('data-side'), 'top');
 });
 
+test('lines up by its full width, not the width it has while scaling in', () => {
+    const dom = makeDom({scale: .97}), {Console} = load(dom.extra);
+    Console.confirm(dom.anchor, ASK);
+    assert.equal(dom.bubble().style.left, '160px');
+});
+
+test('decides whether it fits by its full height', () => {
+    const dom = makeDom({scale: .97, innerHeight: 305, rect: {top: 150, bottom: 190, left: 300, right: 400}}), {Console} = load(dom.extra);
+    Console.confirm(dom.anchor, ASK);
+    assert.equal(dom.bubble().getAttribute('data-side'), 'top');
+    assert.equal(dom.bubble().style.top, '42px');
+});
+
+test('the bubble can hold focus, so keys still work after clicking its text', () => {
+    const dom = makeDom(), {Console} = load(dom.extra);
+    Console.confirm(dom.anchor, ASK);
+    assert.equal(dom.bubble().tabIndex, -1);
+});
+
 test('never runs off the left edge of a narrow screen', () => {
     const dom = makeDom({innerWidth: 320, rect: {top: 100, bottom: 140, left: 8, right: 100}}), {Console} = load(dom.extra);
     Console.confirm(dom.anchor, ASK);
@@ -285,4 +305,14 @@ test('countdown picks the right tier at each boundary', () => {
     same(cd(1), ['giveaway.left_minutes:0,01', 1000]);
     same(cd(0), ['giveaway.drawing', 0]);
     same(cd(-5), ['giveaway.drawing', 0]);
+});
+
+test('isBusy reports whether a task is running', async () => {
+    const {Console} = load(), button = makeButton(), done = deferred();
+    assert.equal(Console.isBusy(button), false);
+    const run = Console.busy(button, () => done.promise);
+    assert.equal(Console.isBusy(button), true);
+    done.resolve();
+    await run;
+    assert.equal(Console.isBusy(button), false);
 });

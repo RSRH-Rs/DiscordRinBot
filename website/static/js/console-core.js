@@ -240,6 +240,8 @@ window.Console = (() => {
                 const panel = page.querySelector(`[data-panel="${tab.dataset.tab}"]`), dot = tab.querySelector('.tab-dot');
                 if (dot) dot.hidden = !DashboardUI.changedWithin(page, panel);
             });
+            // A dot changes its tab's width, which the underline has to follow.
+            syncTabInk(page.querySelector('.tabs'));
         });
     }
     // Switching server or going back to the homepage obeys the same draft guard as in-page links; invites and

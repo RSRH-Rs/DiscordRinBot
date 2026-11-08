@@ -55,6 +55,7 @@
                 const result = await Console.api('/giveaway/create', 'POST', {prize, winners_count: +el('gw-winners').value, channel_id: channel, end_time: end, restrict_role: role !== '0' ? role : null});
                 if (!result.ok) throw new Error(result.error || tr('giveaway.create_failed_plain'));
                 el('gw-prize').value = '';
+                el('gw-prize').dispatchEvent(new Event('input', {bubbles: true}));
                 DashboardUI.clean('pg-giveaway');
                 Console.toast(tr('giveaway.created'), 'ok');
                 await loadList().catch(() => {});
