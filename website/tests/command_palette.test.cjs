@@ -33,7 +33,7 @@ function palette({go = () => true} = {}) {
             addEventListener(type, fn) { (listeners[type] ||= []).push(fn); }, createElement: tag => el({tagName: tag}), activeElement: null},
         DashboardUI: {tr: key => ({'nav.overview': '概览', 'palette.empty': '没有找到'})[key] || key, closeSidebar: (...args) => calls.drawer.push(args)},
         DashboardExtras: {matches: (text, query) => text.toLowerCase().includes(query.trim().toLowerCase())},
-        Console: {go: (...args) => { calls.go.push(args); return go(...args); }},
+        Console: {go: (slug, tab, options) => { calls.go.push([slug, tab]); calls.goOptions = options; return go(slug, tab); }},
         setTimeout: (fn, ms) => { timers.push([fn, ms]); return timers.length; },
     });
     ctx.window = ctx;
@@ -62,6 +62,12 @@ test('filter finds 违禁 and caps at the limit', () => {
     assert.deepEqual(plain(Palette.filter(entries, ' 违禁 ').map(e => e.label)), ['自动审核 › 违禁词', '自动审核 › 违禁词列表']);
     assert.equal(Palette.filter(entries, '', 2).length, 2);
     assert.equal(Palette.filter(entries, '管理与安全').length, 4);
+});
+
+test('jumping from the palette skips the page animation', () => {
+    const {Palette, pages, calls} = palette();
+    Palette.jump(Palette.collect(pages)[0]);
+    assert.equal(calls.goOptions.instant, true);
 });
 
 test('the shortcut hint matches the platform', () => {

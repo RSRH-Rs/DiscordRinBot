@@ -176,6 +176,19 @@ class ConsoleContrastTests(unittest.TestCase):
         self.assertNotIn('margin-bottom', rule(self.css, '.section-head'))
         self.assertIn('margin-top: 8px', rule(self.css, ':is(.section-title, .section-hint, .section-head) + :is(.list, .case-list, .lb-list)'))
 
+    def test_transitions_respect_reduced_motion(self):
+        tail = self.css[self.css.index('@media (prefers-reduced-motion: reduce)'):]
+        self.assertIn('navigation: none', tail)
+        self.assertIn('::view-transition-old(root)', tail)
+
+    def test_page_entry_leaves_no_transform(self):
+        self.assertNotIn('both', rule(self.css, '.page.is-entering'))
+        self.assertIn('@view-transition', self.css)
+        self.assertIn('view-transition-name', rule(self.css, '.sidebar'))
+
+    def test_skeleton_waits_before_showing(self):
+        self.assertRegex(self.css, r'skeleton-in[^;]*\.15s')
+
     def test_no_important(self):
         self.assertNotIn('!important', self.css)
 

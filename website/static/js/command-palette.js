@@ -64,7 +64,7 @@ window.CommandPalette = (() => {
     // Goes to the page and tab first; when unsaved changes block the page switch, nothing else happens.
     function jump(entry) {
         close();
-        if (!Console.go(entry.slug, entry.tab)) return false;
+        if (!Console.go(entry.slug, entry.tab, {instant: true})) return false;
         DashboardUI.closeSidebar?.(false);
         const row = entry.row?.closest('.row');
         if (row) {

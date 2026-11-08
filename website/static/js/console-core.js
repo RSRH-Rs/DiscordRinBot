@@ -173,7 +173,7 @@ window.Console = (() => {
         const state = modules.get(slug);
         if (state && !DashboardUI.dirty('pg-' + slug)) state.loaded = false;
     }
-    let router = null;
+    let router = null, instantNext = false, justShown = false;
     // The hidden page heading, the mobile top bar and the browser tab all name the current page.
     function setTitles(name) {
         for (const id of ['page-title', 'topbar-title']) { const node = el(id); if (node) node.textContent = name; }
@@ -182,7 +182,13 @@ window.Console = (() => {
     function show(slug, initial) {
         window.DashboardExtras?.closeSelects?.();
         DashboardUI.closeSidebar(false);
-        document.querySelectorAll('.page').forEach(page => page.classList.toggle('is-active', page.dataset.slug === slug));
+        // The page fades in only when someone changed page by hand: not on first paint, not on a keyboard jump.
+        const animate = !initial && !instantNext;
+        justShown = true;
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.toggle('is-active', page.dataset.slug === slug);
+            page.classList.toggle('is-entering', animate && page.dataset.slug === slug);
+        });
         document.querySelectorAll('.load-feedback[data-for-module]').forEach(f => { f.hidden = f.dataset.forModule !== 'pg-' + slug; });
         document.querySelectorAll('#side-modules [data-mod]').forEach(link => {
             if (link.dataset.mod === slug) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current');
@@ -195,18 +201,36 @@ window.Console = (() => {
         load(slug);
         document.dispatchEvent(new CustomEvent('console:page', {detail: {slug}}));
     }
-    const go = (slug, tab = null) => router?.navigate(slug, {tab}) || false;
+    function go(slug, tab = null, {instant = false} = {}) {
+        instantNext = instant;
+        try { return router?.navigate(slug, {tab}) || false; }
+        finally { instantNext = false; }
+    }
+    // The underline under the tabs is one element that slides; a hidden page has no size yet, so it is measured again on show.
+    function syncTabInk(tabs) {
+        const on = tabs?.querySelector('[role="tab"][aria-selected="true"]');
+        if (!on?.offsetWidth) return;
+        tabs.style.setProperty('--ink-x', `${on.offsetLeft}px`);
+        tabs.style.setProperty('--ink-w', String(on.offsetWidth));
+        tabs.classList.add('has-ink');
+    }
+    document.addEventListener('console:page', event => syncTabInk(el('pg-' + event.detail.slug)?.querySelector('.tabs')));
     // Shows one tab panel of a page; unknown tabs fall back to the first. Pages without tabs return null.
     function selectTab(slug, tab) {
+        const arrivedWithPage = justShown;
+        justShown = false;
         const page = el('pg-' + slug); if (!page) return null;
         const panels = [...page.querySelectorAll('[data-panel]')]; if (!panels.length) return null;
         const active = panels.find(p => p.dataset.panel === tab) || panels[0];
+        const fade = active.hidden && !arrivedWithPage && !instantNext;
         panels.forEach(p => { p.hidden = p !== active; });
+        if (fade) DashboardUI.freshen(active);
         page.querySelectorAll('[role="tab"][data-tab]').forEach(t => {
             const on = t.dataset.tab === active.dataset.panel;
             t.setAttribute('aria-selected', String(on));
             t.tabIndex = on ? 0 : -1;
         });
+        syncTabInk(page.querySelector('.tabs'));
         return active.dataset.panel;
     }
     // A dot on every tab whose panel holds unsaved changes.
@@ -333,5 +357,5 @@ window.Console = (() => {
     });
 
     return {tr, api, apiGlobal, toast, escapeHtml, channels, roles, commands, channelName, channelOptions, roleOptions,
-        duration, dependencies, module, load, invalidate, go, selectTab, setTitles, leaveClick, refreshModules, stateLabel, dotState};
+        duration, dependencies, module, load, invalidate, go, selectTab, syncTabInk, setTitles, leaveClick, refreshModules, stateLabel, dotState};
 })();

@@ -211,6 +211,7 @@ html[data-lang="zh"] .doc p { max-width: 34em; }
 
 /* ── 导航 ── */
 .nav {
+    view-transition-name: site-nav;
     position: sticky; top: 0; z-index: 50;
     background: var(--bg);
     background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(14px);
@@ -309,7 +310,11 @@ section[id] { scroll-margin-top: 72px; }
     .short { display: inline; }
 }
 
+@view-transition { navigation: auto; }
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: 180ms; }
 @media (prefers-reduced-motion: reduce) {
+    @view-transition { navigation: none; }
+    ::view-transition-group(*), ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
     *, *::before, *::after { transition: none !important; animation: none !important; }
     html { scroll-behavior: auto; }
 }

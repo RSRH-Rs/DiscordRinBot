@@ -12,7 +12,7 @@ function core({dirty = false, fetchImpl, nodes = {}, extra = {}} = {}) {
         document: {addEventListener() {}, querySelectorAll: () => [{id: 'pg-welcome'}], getElementById: id => nodes[id] || null},
         DashboardUI: {
             tr: (key, vars = {}) => key === 'common.request_failed' ? `请求失败 (${vars.status})` : key,
-            dirty: () => dirty, shake: () => { calls.shake++; },
+            dirty: () => dirty, shake: () => { calls.shake++; }, freshen: node => { node.freshened = true; },
             confirmLeave: roots => { calls.confirm = (calls.confirm || 0) + 1; return !dirty; },
         },
         DashboardExtras: {},
@@ -138,7 +138,7 @@ test('selectTab shows one panel and marks its tab', () => {
     const tab = id => ({dataset: {tab: id}, attrs: {}, tabIndex: 0, setAttribute(k, v) { this.attrs[k] = v; }});
     const panelsList = ['message', 'card', 'farewell'].map(panel), tabsList = ['message', 'card', 'farewell'].map(tab);
     const emojiButton = {dataset: {tab: 'custom'}, attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }};
-    const page = {querySelectorAll: sel => sel === '[data-panel]' ? panelsList : sel === '[role="tab"][data-tab]' ? tabsList : sel === '[data-tab]' ? [...tabsList, emojiButton] : []};
+    const page = {querySelector: () => null, querySelectorAll: sel => sel === '[data-panel]' ? panelsList : sel === '[role="tab"][data-tab]' ? tabsList : sel === '[data-tab]' ? [...tabsList, emojiButton] : []};
     const {Console} = core({nodes: {'pg-welcome': page}});
     assert.equal(Console.selectTab('welcome', 'card'), 'card');
     assert.deepEqual(panelsList.map(p => p.hidden), [true, false, true]);
@@ -256,3 +256,71 @@ test('modifier clicks on a switcher server keep the current page in the new tab'
     assert.equal(link.href, '/dashboard/server/456#automod/rules');
 });
 
+
+function routed() {
+    const handlers = {};
+    let options;
+    const makePage = slug => { const classes = new Set(); return {dataset: {slug}, classes, classList: {toggle: (c, on) => { if (on) classes.add(c); else classes.delete(c); }}, querySelector: () => null, querySelectorAll: () => []}; };
+    const pages = [makePage('a'), makePage('b')];
+    const document = {
+        addEventListener: (type, fn) => { (handlers[type] ||= []).push(fn); }, dispatchEvent() {},
+        querySelectorAll: sel => sel.startsWith('.page') ? pages : [], getElementById: id => pages.find(p => `pg-${p.dataset.slug}` === id) || null,
+    };
+    const {Console} = core({extra: {
+        document, CustomEvent: class {}, setInterval() {},
+        DashboardUI: {tr: key => key, dirty: () => false, confirmSwitch: () => true, closeSidebar() {}, freshen() {}},
+        DashboardExtras: {createHashRouter: o => { options = o; return {navigate: (id, {tab} = {}) => { o.show(id, false); o.showTab(id, tab); return true; }, current: () => 'a'}; }},
+    }});
+    handlers.DOMContentLoaded.forEach(fn => fn());
+    return {Console, options, page: slug => pages.find(p => p.dataset.slug === slug)};
+}
+
+test('switching pages animates except on first paint and instant jumps', () => {
+    const r = routed();
+    r.options.show('a', true);
+    assert.equal(r.page('a').classes.has('is-entering'), false);
+    r.options.show('b', false);
+    assert.equal(r.page('b').classes.has('is-entering'), true);
+    r.Console.go('a', null, {instant: true});
+    assert.equal(r.page('a').classes.has('is-entering'), false);
+    assert.equal(r.page('b').classes.has('is-entering'), false);
+    r.Console.go('b');
+    assert.equal(r.page('b').classes.has('is-entering'), true);
+});
+
+function tabbed({width = 64, hidden = false} = {}) {
+    const handlers = {}, classes = new Set();
+    const tab = {dataset: {tab: 'a'}, offsetLeft: 12, offsetWidth: width, setAttribute() {}};
+    const tabs = {style: {setProperty(k, v) { this[k] = v; }}, classList: {add: c => classes.add(c)}, querySelector: () => tab};
+    const panel = {dataset: {panel: 'a'}, hidden};
+    const page = {querySelectorAll: sel => sel === '[data-panel]' ? [panel] : [tab], querySelector: () => tabs};
+    const document = {addEventListener: (type, fn) => { (handlers[type] ||= []).push(fn); }, querySelectorAll: () => [], getElementById: id => id === 'pg-x' ? page : null};
+    const {Console} = core({extra: {document}});
+    return {Console, tab, tabs, panel, classes, fire: event => handlers['console:page'].forEach(fn => fn(event))};
+}
+
+test('tab ink follows the selected tab', () => {
+    const t = tabbed();
+    t.Console.selectTab('x', 'a');
+    assert.equal(t.tabs.style['--ink-x'], '12px');
+    assert.equal(t.tabs.style['--ink-w'], '64');
+    assert.equal(t.classes.has('has-ink'), true);
+});
+
+test('ink measured on a hidden page is redone when the page shows', () => {
+    const t = tabbed({width: 0});
+    t.Console.selectTab('x', 'a');
+    assert.equal(t.tabs.style['--ink-w'], undefined);
+    t.tab.offsetWidth = 64;
+    t.fire({detail: {slug: 'x'}});
+    assert.equal(t.tabs.style['--ink-w'], '64');
+});
+
+test('only a panel that was hidden fades in', () => {
+    const shown = tabbed();
+    shown.Console.selectTab('x', 'a');
+    assert.equal(shown.panel.freshened, undefined);
+    const hidden = tabbed({hidden: true});
+    hidden.Console.selectTab('x', 'a');
+    assert.equal(hidden.panel.freshened, true);
+});

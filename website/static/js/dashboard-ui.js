@@ -144,6 +144,12 @@ window.DashboardUI = (() => {
         shake();
         return false;
     }
+    // Fades a block in once; only its own animation ends it, not one bubbling up from inside.
+    function freshen(node) {
+        const done = event => { if (event.target !== node) return; node.classList.remove('is-fresh'); node.removeEventListener('animationend', done); };
+        node.classList.add('is-fresh');
+        node.addEventListener('animationend', done);
+    }
     async function saving(id, action) {
         const root = rootOf(id); if (!root) return action();
         register(root);
@@ -164,7 +170,7 @@ window.DashboardUI = (() => {
         document.getElementById(feedbackId)?.remove();
         root.inert = true;
         root.setAttribute('aria-busy', 'true');
-        try { await action(); state.unread = false; clean(root); root.inert = state.saving; }
+        try { await action(); state.unread = false; clean(root); root.inert = state.saving; freshen(root); }
         catch (e) {
             const feedback = document.createElement('div');
             feedback.id = feedbackId; feedback.className = 'load-feedback'; feedback.setAttribute('role', 'alert');
@@ -227,5 +233,5 @@ window.DashboardUI = (() => {
         document.querySelector('.drawer-backdrop')?.addEventListener('click', () => closeSidebar());
         window.matchMedia('(min-width:860px)').addEventListener('change', e => { if (e.matches) closeSidebar(false); });
     });
-    return {tr, snapshot, clean, changed, changedWithin, dirty, confirmSwitch, confirmLeave, saving, loading, onSave, save, reset, shake, renderTags, toggleSidebar, closeSidebar};
+    return {tr, snapshot, clean, changed, changedWithin, dirty, confirmSwitch, confirmLeave, freshen, saving, loading, onSave, save, reset, shake, renderTags, toggleSidebar, closeSidebar};
 })();

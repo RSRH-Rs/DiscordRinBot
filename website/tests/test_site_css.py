@@ -63,6 +63,11 @@ class SiteCssTests(unittest.TestCase):
     def test_mixed_script_spacing(self):
         self.assertRegex(self.css, r'text-autospace:\s*normal')
 
+    def test_cross_page_fade_keeps_the_nav_still(self):
+        self.assertIn('@view-transition', self.css)
+        self.assertIn('navigation: none', self.css)
+        self.assertRegex(self.css, r'\.nav\s*\{[^}]*view-transition-name')
+
     def test_reduced_motion_turns_off_transitions(self):
         blocks = re.findall(r'@media\s*\(prefers-reduced-motion:\s*reduce\)\s*\{(.*?)\n\}', self.css, re.S)
         self.assertTrue(blocks)
