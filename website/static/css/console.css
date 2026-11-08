@@ -252,6 +252,7 @@ img { max-width: 100%; }
 .row-text { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .row-title { display: block; font-size: 14px; }
 .row-hint { display: block; font-size: 13px; color: var(--muted); }
+.row-hint--warn { color: var(--warn); }
 .row-control { display: flex; align-items: center; gap: 8px; flex-shrink: 0; max-width: 100%; }
 .row[aria-disabled="true"] { opacity: .5; }
 .row[aria-disabled="true"] .row-control, .row[aria-disabled="true"].row--block > :not(.row-text) { pointer-events: none; }

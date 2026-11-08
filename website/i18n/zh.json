@@ -218,7 +218,7 @@
     "runtime_note": "状态以小凛最近一次上报为准，改完配置后可能要等一会儿才更新。",
     "sends_to": "发到 #{channel}",
     "logs_to": "记录到 #{channel}",
-    "channel_deleted": "选的频道已经不在了，去重新选一个",
+    "channel_deleted": "小凛看不到这个频道，可能被删除或权限变了，去重新选一个",
     "welcome": {
       "unset": "还没选欢迎频道",
       "roles": "自动给 {n} 个身份组",

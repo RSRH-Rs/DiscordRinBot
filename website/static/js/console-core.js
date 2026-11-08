@@ -41,7 +41,18 @@ window.Console = (() => {
     const channelName = (id, list) => list.find(c => String(c.id) === String(id))?.name ?? null;
     function channelOptions(select, list, selected, emptyKey = 'common.not_set') {
         select.replaceChildren(new Option(tr(emptyKey), '0'), ...list.map(c => new Option('# ' + c.name, c.id, false, String(c.id) === String(selected))));
+        const lost = Boolean(selected) && String(selected) !== '0' && !list.some(c => String(c.id) === String(selected));
         if (!list.some(c => String(c.id) === String(selected))) select.value = '0';
+        const text = select.closest?.('.row')?.querySelector('.row-text');
+        if (!text) return;
+        const hint = text.querySelector('[data-channel-lost]');
+        if (!lost) { hint?.remove(); return; }
+        if (hint) return;
+        const note = document.createElement('span');
+        note.className = 'row-hint row-hint--warn';
+        note.setAttribute('data-channel-lost', '');
+        note.textContent = tr('overview.channel_deleted');
+        text.append(note);
     }
     function roleOptions(select, list, selected, emptyKey = 'common.no_limit') {
         select.replaceChildren(new Option(tr(emptyKey), '0'), ...list.map(r => new Option('@ ' + r.name, r.id, false, String(r.id) === String(selected))));

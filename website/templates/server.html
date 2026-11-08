@@ -41,7 +41,7 @@
     <div class="hero">
         <img src="{{ url_for('static', filename='images/rin/manage-480.webp') }}" alt="" width="88" height="88">
         <div class="hero-text">
-            <h2 id="ov-headline">{{ tr('overview.hero_default') }}</h2>
+            <h2 id="ov-headline" tabindex="-1">{{ tr('overview.hero_default') }}</h2>
             <p id="ov-facts"></p>
         </div>
         <span class="bot-status" data-bot-status data-state="unknown" role="status">{{ tr('status.unknown') }}</span>
@@ -365,17 +365,17 @@
 
 {% block scripts %}
 <script>window.GID = "{{ guild.id }}";</script>
-<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/command-palette.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/welcome.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/roles.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/music.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/automod.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/moderation.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/giveaway.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/leveling.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/utility.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/modules/logs.js') }}?v=20261104b"></script>
-<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20261104b"></script>
+<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/command-palette.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/welcome.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/roles.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/music.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/automod.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/moderation.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/giveaway.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/leveling.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/utility.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/modules/logs.js') }}?v=20261108a"></script>
+<script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20261108a"></script>
 {% endblock %}

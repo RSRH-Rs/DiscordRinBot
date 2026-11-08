@@ -174,6 +174,41 @@ test('duration options carry their label so segments can reserve the bold width'
     assert.deepEqual(options.map(o => o.dataset.label), ['1 分钟', '5 分钟', '1 小时', '1 天', '自定义']);
 });
 
+test('channelOptions warns when the saved channel is not listed', () => {
+    const hints = [];
+    const rowText = {
+        querySelector: sel => (sel === '[data-channel-lost]' ? hints[0] || null : null),
+        append(node) { hints.push(node); node.remove = () => hints.splice(hints.indexOf(node), 1); },
+    };
+    const row = {querySelector: sel => (sel === '.row-text' ? rowText : null)};
+    const select = {value: '', closest: sel => (sel === '.row' ? row : null), replaceChildren() {}};
+    const ctx = vm.createContext({
+        document: {addEventListener() {}, querySelectorAll: () => [], getElementById: () => null,
+            createElement: tag => ({tagName: tag, className: '', textContent: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }})},
+        DashboardUI: {tr: key => key, dirty: () => false},
+        DashboardExtras: {},
+        Option: class { constructor(text, value) { this.text = text; this.value = value; } },
+        fetch: async () => ({ok: true, json: async () => []}),
+        GID: '123',
+    });
+    ctx.window = ctx;
+    vm.runInContext(source, ctx);
+    const list = [{id: '7', name: 'general'}];
+    ctx.Console.channelOptions(select, list, '9');
+    assert.equal(select.value, '0');
+    assert.equal(hints.length, 1);
+    assert.equal(hints[0].textContent, 'overview.channel_deleted');
+    assert.equal(hints[0].className, 'row-hint row-hint--warn');
+    ctx.Console.channelOptions(select, list, '9');
+    assert.equal(hints.length, 1);
+    ctx.Console.channelOptions(select, list, '7');
+    assert.equal(hints.length, 0);
+    ctx.Console.channelOptions(select, list, '9');
+    ctx.Console.channelOptions(select, list, '0');
+    assert.equal(hints.length, 0);
+    assert.doesNotThrow(() => ctx.Console.channelOptions({value: '', replaceChildren() {}}, list, '9'));
+});
+
 test('modifier clicks on the brand row and switcher open a new tab without the draft check', () => {
     for (const modifier of ['ctrlKey', 'metaKey', 'shiftKey']) {
         const blocked = core({dirty: true});
@@ -203,3 +238,4 @@ test('modifier clicks on a switcher server keep the current page in the new tab'
     assert.equal(event.prevented, false);
     assert.equal(link.href, '/dashboard/server/456#automod/rules');
 });
+
