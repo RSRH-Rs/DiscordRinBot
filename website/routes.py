@@ -1061,7 +1061,7 @@ def setup_routes(app, discord):
             user = await discord.fetch_user()
             all_guilds = await discord.fetch_guilds()
             current = next((g for g in all_guilds if int(g.id) == guild_id), None)
-            if not current:
+            if not current or not has_manage_permission(current):
                 return (
                     await render_template(
                         "error.html", error="找不到该服务器或无权访问"

@@ -114,6 +114,12 @@ class CheckupAndInviteTests(unittest.IsolatedAsyncioTestCase):
         _, body = await self.checkup()
         self.assertTrue(body["available"])
 
+    async def test_server_settings_hides_console_from_non_managers(self):
+        self.guilds = [SimpleNamespace(id=123, name="Test", permissions=0)]
+        response = await self.client.get("/dashboard/server/123")
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("找不到该服务器或无权访问", await response.get_data(as_text=True))
+
     async def test_login_gate_keeps_the_server(self):
         self.signed_in = False
         html = await (await self.client.get("/dashboard/server/123")).get_data(as_text=True)
