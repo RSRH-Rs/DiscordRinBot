@@ -272,3 +272,17 @@ test('a value restored by reset is measured on focus', () => {
     input.handlers.focus();
     assert.equal(field.classList.contains('is-full'), true);
 });
+
+test('countdown picks the right tier at each boundary', () => {
+    const {Console} = load();
+    const cd = seconds => { const {text, every} = Console.countdown(seconds); return [text, every]; };
+    const same = (a, b) => assert.deepEqual([...a], b);
+    same(cd(86400), ['giveaway.left_days:1,0', 60000]);
+    same(cd(86399), ['giveaway.left_hours:23,59', 60000]);
+    same(cd(3600), ['giveaway.left_hours:1,0', 60000]);
+    same(cd(3599), ['giveaway.left_minutes:59,59', 1000]);
+    same(cd(65), ['giveaway.left_minutes:1,05', 1000]);
+    same(cd(1), ['giveaway.left_minutes:0,01', 1000]);
+    same(cd(0), ['giveaway.drawing', 0]);
+    same(cd(-5), ['giveaway.drawing', 0]);
+});

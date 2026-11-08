@@ -9,18 +9,36 @@
     const localInput = date => new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
     function setEnd(ms) { el('gw-end').value = localInput(new Date(Date.now() + ms)); el('gw-end').dispatchEvent(new Event('input', {bubbles: true})); }
 
+    // One timer for the whole list, paced by whichever running giveaway changes soonest. It stops while the tab is hidden.
+    let ticker = null;
+    function tick() {
+        clearTimeout(ticker); ticker = null;
+        if (document.hidden) return;
+        const now = Date.now() / 1000;
+        let next = 0;
+        el('gw-list').querySelectorAll('[data-end]').forEach(node => {
+            const {text, every} = Console.countdown(Number(node.dataset.end) - now);
+            node.textContent = text;
+            if (every && (!next || every < next)) next = every;
+        });
+        if (next) ticker = setTimeout(tick, next);
+    }
+
     async function loadList() {
         const box = el('gw-list');
         const list = await Console.api('/giveaways');
         if (!list?.length) {
             box.innerHTML = `<div class="empty"><img src="/static/images/rin/confused-480.webp" alt="" width="96" height="96" loading="lazy"><p>${escapeHtml(tr('giveaway.empty'))}</p></div>`;
+            tick();
             return;
         }
         box.innerHTML = list.map(g => {
             const end = new Date(g.end_time * 1000).toLocaleString('zh-CN', {dateStyle: 'medium', timeStyle: 'short'});
             const state = g.ended ? tr('giveaway.ended') : tr('giveaway.running');
-            return `<div class="case"><div class="case-head"><span class="chip chip--static${g.ended ? '' : ' chip--unban'}">${escapeHtml(state)}</span><span class="item-meta">${escapeHtml(end)}</span></div><p class="case-body"><b>#${escapeHtml(g.id)} ${escapeHtml(g.prize)}</b> · ${escapeHtml(tr('giveaway.winners_n', {n: g.winners_count}))}</p></div>`;
+            const when = g.ended ? `<span class="item-meta">${escapeHtml(end)}</span>` : `<span class="item-meta tn" data-end="${escapeHtml(g.end_time)}" title="${escapeHtml(end)}"></span>`;
+            return `<div class="case"><div class="case-head"><span class="chip chip--static${g.ended ? '' : ' chip--unban'}">${escapeHtml(state)}</span>${when}</div><p class="case-body"><b>#${escapeHtml(g.id)} ${escapeHtml(g.prize)}</b> · ${escapeHtml(tr('giveaway.winners_n', {n: g.winners_count}))}</p></div>`;
         }).join('');
+        tick();
     }
 
     async function create() {
@@ -61,6 +79,7 @@
     document.addEventListener('DOMContentLoaded', () => {
         if (!el('pg-giveaway')) return;
         el('gw-create-btn').addEventListener('click', create);
+        document.addEventListener('visibilitychange', tick);
         document.querySelectorAll('[data-end-in]').forEach(b => b.addEventListener('click', () => {
             document.querySelectorAll('[data-end-in]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
             if (b.dataset.endIn !== 'custom') setEnd(Number(b.dataset.endIn) * HOUR);

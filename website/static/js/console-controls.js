@@ -1,4 +1,4 @@
-/* Controls shared by console pages: a button's busy state, the confirm bubble and the character-limit ring. Loaded after console-core.js, adds to window.Console. */
+/* Controls shared by console pages: a button's busy state, the confirm bubble, the character-limit ring and countdown text. Loaded after console-core.js, adds to window.Console. */
 (() => {
     const SPINNER_DELAY = 150, SPINNER_MIN = 300;
     const working = new WeakSet();
@@ -109,5 +109,15 @@
     const initLimits = (root = document) => root.querySelectorAll('[data-limit]').forEach(attachLimit);
     document.addEventListener('DOMContentLoaded', () => initLimits());
 
-    Object.assign(window.Console, {busy, confirm, limitState, initLimits});
+    // What to show with this many seconds left, and how soon (ms) the text next changes; 0 means it no longer does.
+    function countdown(seconds) {
+        const left = Math.floor(seconds);
+        if (left <= 0) return {text: Console.tr('giveaway.drawing'), every: 0};
+        const days = Math.floor(left / 86400), hours = Math.floor(left / 3600), minutes = Math.floor(left / 60);
+        if (days) return {text: Console.tr('giveaway.left_days', {d: days, h: hours % 24}), every: 60000};
+        if (hours) return {text: Console.tr('giveaway.left_hours', {h: hours, m: minutes % 60}), every: 60000};
+        return {text: Console.tr('giveaway.left_minutes', {m: minutes, s: String(left % 60).padStart(2, '0')}), every: 1000};
+    }
+
+    Object.assign(window.Console, {busy, confirm, limitState, initLimits, countdown});
 })();
