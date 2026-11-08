@@ -62,6 +62,11 @@ test('a command needing several permissions names all of them', () => {
     assert.equal(C.permText([], labels, 'zh'), null);
 });
 
+test('copy status names the command', () => {
+    assert.match(C.copyStatus(true, '/play', 'zh'), /已复制 \/play/);
+    assert.match(C.copyStatus(false, '/play', 'en'), /Type \/play in Discord/);
+});
+
 test('copying only reports success when the clipboard accepted it', async () => {
     assert.equal(await C.copyText('/ban', {writeText: () => Promise.resolve()}), true);
     assert.equal(await C.copyText('/ban', {writeText: () => Promise.reject(new Error('denied'))}), false);

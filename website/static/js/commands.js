@@ -54,6 +54,10 @@ window.RinCommands = (() => {
     }
 
     /* 读屏器听到的一行：选中了哪条、它做什么 */
+    function copyStatus(ok, text, lang) {
+        if (lang === 'zh') return ok ? `已复制 ${text}，在 Discord 里粘贴后选中它` : `没能复制，请在 Discord 里直接输入 ${text}`;
+        return ok ? `Copied ${text}. Paste it in Discord and pick it from the list` : `Couldn’t copy. Type ${text} in Discord instead`;
+    }
     function announceText(cmd, lang) {
         return lang === 'zh' ? `已选中 /${cmd.name}：${cmd.zh || cmd.en}` : `Selected /${cmd.name}: ${cmd.en}`;
     }
@@ -77,7 +81,7 @@ window.RinCommands = (() => {
         return id && ids.includes(id) ? id : null;
     }
 
-    const api = {normalize, matches, highlight, examplesFor, slotsFor, permText, copyText, announceText, onMediaChange, step, idFromHash};
+    const api = {normalize, matches, highlight, examplesFor, slotsFor, permText, copyText, copyStatus, announceText, onMediaChange, step, idFromHash};
     const dataEl = document.getElementById('commands-data');
     if (!dataEl) return api;
 
@@ -153,10 +157,11 @@ window.RinCommands = (() => {
             `<li><button type="button" data-opt="${i}" class="${i === focusOpt ? 'on' : ''}" title="${L('在上面的输入框里看它的位置', 'Show it in the box above')}"><span class="pn">${esc(pname(p))}<span class="tag">${p.required ? L('必填', 'required') : L('可不填', 'optional')}</span></span><span class="pd">${esc(pdesc(p))}</span></button></li>`).join('')}</ul></div>` : '';
         const ex = examplesFor(c, lang());
         const exHtml = ex.length ? `<div class="block"><h4>${L('例子', 'Examples')}</h4><ul class="ex">${ex.map(e => `<li>${esc(e)}</li>`).join('')}</ul></div>` : '';
-        const copyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+        const copyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>'
+            + '<svg class="tick" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
         const dash = g && g.dashboard ? `<a href="/dashboard">${esc(L(`在控制台的「${g.dashboard_zh}」里也能设置`, `Also set up in the dashboard under ${g.dashboard_en}`))}</a>` : '';
         const note = perm ? `<p class="note">${L('想让更多人或更少人能用，在 Discord 的「服务器设置 › 整合 › 小凛」里改。', 'To let more or fewer people use it, go to Server Settings › Integrations › Rin in Discord.')}</p>` : '';
-        return `${who}${dcm(c)}${params}${exHtml}<div class="acts"><button type="button" class="copy" data-copy="/${esc(c.name)}">${copyIcon}${L('复制', 'Copy')} /${esc(c.name)}</button>${dash}</div>${note}`;
+        return `${who}${dcm(c)}${params}${exHtml}<div class="acts"><button type="button" class="copy" data-copy="/${esc(c.name)}"><span class="copy-ico">${copyIcon}</span>${L('复制', 'Copy')} /${esc(c.name)}</button>${dash}</div>${note}`;
     }
 
     function render() {
@@ -212,6 +217,7 @@ window.RinCommands = (() => {
         const sugg = e.target.closest('[data-q-zh]');
         if (sugg) { q.value = L(sugg.dataset.qZh, sugg.dataset.qEn); filter(); q.focus(); }
     });
+    let copyTimer = null;
     document.addEventListener('click', e => {
         const opt = e.target.closest('[data-opt]');
         if (opt) { focusParam(+opt.dataset.opt); return; }
@@ -219,9 +225,15 @@ window.RinCommands = (() => {
         if (copy) {
             const text = copy.dataset.copy;
             copyText(text, navigator.clipboard).then(ok => {
-                toast.textContent = ok
-                    ? L(`已复制 ${text}，在 Discord 里粘贴后选中它`, `Copied ${text}. Paste it in Discord and pick it from the list`)
-                    : L(`没能复制，请在 Discord 里直接输入 ${text}`, `Couldn’t copy. Type ${text} in Discord instead`);
+                const message = copyStatus(ok, text, lang());
+                if (ok) {
+                    $('sel-status').textContent = message;
+                    copy.classList.add('is-done');
+                    clearTimeout(copyTimer);
+                    copyTimer = setTimeout(() => copy.classList.remove('is-done'), 1500);
+                    return;
+                }
+                toast.textContent = message;
                 toast.classList.add('show');
                 clearTimeout(toastTimer);
                 toastTimer = setTimeout(() => toast.classList.remove('show'), 2200);

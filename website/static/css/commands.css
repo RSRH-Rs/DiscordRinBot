@@ -90,11 +90,14 @@ html:not(.js) .cmds .found { display: none; }
 .ex li { padding: 3px 0 3px 12px; border-left: 2px solid var(--line); overflow-wrap: anywhere; }
 .acts { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; font-size: 14px; }
 .copy { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--field-line); background: var(--panel); color: var(--text); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
-.copy:hover { border-color: var(--accent); color: var(--accent-text); }
-.copy svg { width: 15px; height: 15px; }
+@media (hover: hover) { .copy:hover { border-color: var(--accent); color: var(--accent-text); } }
+.copy-ico { display: grid; width: 15px; height: 15px; }
+.copy-ico svg { grid-area: 1 / 1; width: 15px; height: 15px; transition: opacity .16s ease-out, transform .16s ease-out, filter .16s ease-out; }
+.copy-ico .tick, .copy.is-done .copy-ico svg:first-child { opacity: 0; transform: scale(.6); filter: blur(2px); }
+.copy.is-done .copy-ico .tick { opacity: 1; transform: none; filter: none; color: var(--ok); }
 .acts a { color: var(--accent-text); text-underline-offset: 3px; }
 .note { font-size: 14px; color: var(--muted); }
-.toast { position: fixed; left: 50%; bottom: 24px; z-index: 95; transform: translate(-50%, 16px); opacity: 0; pointer-events: none; background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font: 14px var(--read); transition: opacity .18s, transform .18s; }
+.toast { position: fixed; left: 50%; top: 16px; z-index: 95; transform: translate(-50%, -16px); opacity: 0; pointer-events: none; background: var(--text); color: var(--bg); padding: 8px 14px; border-radius: 8px; font: 14px var(--read); transition: opacity .18s, transform .18s; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
 /* 1080px 以下：详情展开在选中的那一行下面 */

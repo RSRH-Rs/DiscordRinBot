@@ -90,6 +90,13 @@ class PageCssTests(unittest.TestCase):
         self.assertIn('max-height', panel)
         self.assertIn('overflow-y: auto', panel)
 
+    def test_copy_feedback_and_toast_position(self):
+        css = self.read('commands.css')
+        toast = re.search(r'\.toast\s*\{([^}]*)\}', css).group(1)
+        self.assertIn('top: 16px', toast)
+        self.assertNotIn('bottom', toast)
+        self.assertIn('.copy.is-done', css)
+
     def test_permissions_page_works_without_script(self):
         css = self.read('permissions.css')
         self.assertLessEqual(font_sizes(css), PAGE_SIZES)
