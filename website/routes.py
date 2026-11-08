@@ -898,7 +898,8 @@ async def _bot_permission_checkup(gid):
 
 
 def setup_routes(app, discord):
-    app.jinja_env.globals["invite_url"] = site_data.invite_url()
+    app.jinja_env.globals["invite_url"] = site_data.console_invite_url()
+    app.jinja_env.globals["console_invite_url"] = site_data.console_invite_url
 
     @app.before_serving
     async def startup():
@@ -976,10 +977,24 @@ def setup_routes(app, discord):
         )
         return page, 404
 
+    @app.route("/invited")
+    async def invited():
+        global _bot_guilds_cache
+        guild_id = request.args.get("guild_id", "")
+        if request.args.get("error") or not (guild_id.isascii() and guild_id.isdigit()):
+            return redirect("/")
+        _bot_guilds_cache = (0.0, set())  # 刚邀请进来，别让旧缓存把这个服务器当成没加入
+        if await discord.authorized:
+            return redirect(f"/dashboard/server/{guild_id}")
+        return redirect(f"/login?guild={guild_id}")
+
     @app.route("/login")
     async def login():
+        guild = request.args.get("guild", "")
         session.clear()
         session.permanent = True
+        if guild.isascii() and guild.isdigit():
+            session["post_login_guild"] = guild
         return await discord.create_session(scope=["identify", "guilds"])
 
     @app.route("/callback")
@@ -989,6 +1004,9 @@ def setup_routes(app, discord):
         except Exception as e:
             session.clear()
             return await render_template("error.html", error=str(e)), 400
+        guild = session.pop("post_login_guild", "")
+        if isinstance(guild, str) and guild.isascii() and guild.isdigit():
+            return redirect(f"/dashboard/server/{guild}")
         return redirect(url_for("dashboard"))
 
     @app.route("/dashboard")
@@ -1039,7 +1057,7 @@ def setup_routes(app, discord):
     async def server_settings(guild_id):
         try:
             if not await discord.authorized:
-                return await render_template("login_gate.html")
+                return await render_template("login_gate.html", guild_id=guild_id)
             user = await discord.fetch_user()
             all_guilds = await discord.fetch_guilds()
             current = next((g for g in all_guilds if int(g.id) == guild_id), None)

@@ -3,16 +3,37 @@
 模板和测试都从这里读，改一处就够了。
 """
 
+from urllib.parse import quote
+
 CLIENT_ID = 1352551616427069492
 INVITE_PERMISSIONS = 1374694796438
 
 
+INVITE_BASE = "https://discord.com/oauth2/authorize"
+INVITED_URL = "https://rin-bot.com/invited"
+
+
+def _invite_query(permissions: int, scope: str) -> str:
+    return (
+        f"{INVITE_BASE}?client_id={CLIENT_ID}"
+        f"&permissions={permissions}&integration_type=0&scope={scope}"
+    )
+
+
 def invite_url(permissions: int = INVITE_PERMISSIONS) -> str:
     """邀请小凛的链接；permissions 是 Discord 权限位的整数。"""
-    return (
-        f"https://discord.com/oauth2/authorize?client_id={CLIENT_ID}"
-        f"&permissions={permissions}&integration_type=0&scope=bot+applications.commands"
+    return _invite_query(permissions, "bot+applications.commands")
+
+
+def console_invite_url(guild_id=None) -> str:
+    """官网和控制台用的邀请链接：邀请完成后回到 /invited；guild_id 可预选服务器。"""
+    url = (
+        _invite_query(INVITE_PERMISSIONS, "bot+applications.commands+identify")
+        + f"&response_type=code&redirect_uri={quote(INVITED_URL, safe='')}"
     )
+    if guild_id:
+        url += f"&guild_id={guild_id}&disable_guild_select=true"
+    return url
 
 
 # 邀请权限页的五组，顺序就是页面上的顺序

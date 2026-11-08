@@ -18,6 +18,16 @@ def test_invite_url_is_unchanged():
     assert "permissions=6&" in sd.invite_url(6)
 
 
+def test_console_invite_returns_to_the_site():
+    url = sd.console_invite_url()
+    assert "scope=bot+applications.commands+identify" in url and "response_type=code" in url
+    assert "redirect_uri=https%3A%2F%2Frin-bot.com%2Finvited" in url and "permissions=1374694796438" in url
+
+
+def test_console_invite_can_preselect_a_server():
+    assert "&guild_id=5&disable_guild_select=true" in sd.console_invite_url(5)
+
+
 def test_never_bits_are_not_requested():
     assert [n["bit"] for n in sd.NEVER] == [3, 5, 17, 29]
     assert all(not sd.INVITE_PERMISSIONS >> n["bit"] & 1 for n in sd.NEVER)

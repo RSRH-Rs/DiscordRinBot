@@ -144,7 +144,7 @@ async def test_permissions_page(client):
     bits = [int(b) for b in re.findall(r'<input type="checkbox" data-bit="(\d+)" checked', html)]
     assert bits == [p["bit"] for p in site_data.PERMISSIONS]
     side = re.search(r'<aside class="side-sum".*?</aside>', html, re.S).group(0)
-    assert htmllib.unescape(re.search(r'<a class="btn"[^>]*href="([^"]+)"', side).group(1)) == site_data.invite_url()
+    assert htmllib.unescape(re.search(r'<a class="btn"[^>]*href="([^"]+)"', side).group(1)) == site_data.console_invite_url()
     assert 'id="role-order"' in html
     for entry in site_data.NEVER:
         assert entry["zh"] in html and entry["en"] in html

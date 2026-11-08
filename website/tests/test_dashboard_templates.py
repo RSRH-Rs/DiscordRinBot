@@ -11,6 +11,7 @@ import sys
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT))
 import i18n  # noqa: E402
+import site_data  # noqa: E402
 
 class Parser(HTMLParser):
     def __init__(self):
@@ -27,7 +28,7 @@ class Parser(HTMLParser):
 class DashboardTemplateTests(unittest.TestCase):
     def render(self, name):
         env=Environment(loader=FileSystemLoader(ROOT/'templates'),autoescape=True)
-        env.globals.update(url_for=lambda endpoint,filename:'/static/'+filename,tr=i18n.tr,console_strings=i18n.console_strings)
+        env.globals.update(url_for=lambda endpoint,filename:'/static/'+filename,tr=i18n.tr,console_strings=i18n.console_strings,console_invite_url=site_data.console_invite_url)
         guild=dict(id='123',name='小凛 <img src=x>',icon_url=None,bot_joined=True)
         html=env.get_template(name).render(guild=guild,guilds=[dict(guild,id='456',bot_joined=False),guild],user=dict(name='测试',avatar_url='/avatar.png'),is_owner=True)
         parser=Parser();parser.feed(html)
@@ -45,6 +46,13 @@ class DashboardTemplateTests(unittest.TestCase):
             self.assertIn('console.css?v=20261108',html)
             self.assertIn('dashboard-ui.js?v=20261108',html)
             self.assertIn('console-core.js?v=20261108',html)
+    def test_invite_macro_escapes_guild_id(self):
+        env=Environment(loader=FileSystemLoader(ROOT/'templates'),autoescape=True)
+        env.globals.update(console_invite_url=site_data.console_invite_url)
+        out=env.from_string("{% from '_console_macros.html' import invite_url %}{{ invite_url(gid) }}").render(gid='5"><script>')
+        self.assertNotIn('<script>',out)
+        self.assertIn('&lt;script&gt;',out)
+
     def test_invites_do_not_request_administrator_and_match_homepage(self):
         html,p=self.render('dashboard.html')
         invites=[link for link in p.links if link.startswith('https://discord.com/oauth2/authorize')]

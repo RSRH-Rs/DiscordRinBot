@@ -1,4 +1,5 @@
 """Permission checkup, the invite return and the console's access page; a fake Discord only."""
+import time
 import unittest
 from pathlib import Path
 from types import SimpleNamespace
@@ -112,6 +113,60 @@ class CheckupAndInviteTests(unittest.IsolatedAsyncioTestCase):
         routes.discord_api_get.side_effect = good
         _, body = await self.checkup()
         self.assertTrue(body["available"])
+
+    async def test_login_gate_keeps_the_server(self):
+        self.signed_in = False
+        html = await (await self.client.get("/dashboard/server/123")).get_data(as_text=True)
+        self.assertIn('href="/login?guild=123"', html)
+        html = await (await self.client.get("/dashboard")).get_data(as_text=True)
+        self.assertIn('href="/login"', html)
+
+    async def test_invited_forgets_the_joined_cache(self):
+        with patch.object(routes, "_bot_guilds_cache", (time.time(), {1})):
+            await self.client.get("/invited?guild_id=5")
+            self.assertEqual(routes._bot_guilds_cache[0], 0.0)
+
+    async def test_invited_signed_in_redirects_to_server(self):
+        response = await self.client.get("/invited?guild_id=5&code=x")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.headers["Location"], "/dashboard/server/5")
+
+    async def test_invited_signed_out_goes_through_login(self):
+        self.signed_in = False
+        response = await self.client.get("/invited?guild_id=5&code=x")
+        self.assertEqual(response.headers["Location"], "/login?guild=5")
+
+    async def test_invited_rejects_bad_ids(self):
+        for bad in ("abc", "//evil.example"):
+            response = await self.client.get("/invited", query_string={"guild_id": bad})
+            self.assertEqual(response.headers["Location"], "/", bad)
+
+    async def test_invited_cancelled_goes_home(self):
+        response = await self.client.get("/invited?guild_id=5&error=access_denied")
+        self.assertEqual(response.headers["Location"], "/")
+
+    async def test_login_keeps_guild_after_clearing_session(self):
+        async with self.client.session_transaction() as sess:
+            sess["stale"] = "old"
+        response = await self.client.get("/login?guild=5")
+        self.assertEqual(response.status_code, 302)
+        async with self.client.session_transaction() as sess:
+            self.assertNotIn("stale", sess)
+            self.assertEqual(sess["post_login_guild"], "5")
+
+    async def test_callback_uses_and_clears_guild(self):
+        async with self.client.session_transaction() as sess:
+            sess["post_login_guild"] = "5"
+        response = await self.client.get("/callback")
+        self.assertEqual(response.headers["Location"], "/dashboard/server/5")
+        async with self.client.session_transaction() as sess:
+            self.assertNotIn("post_login_guild", sess)
+
+    async def test_callback_ignores_non_numeric_guild(self):
+        async with self.client.session_transaction() as sess:
+            sess["post_login_guild"] = "../x"
+        response = await self.client.get("/callback")
+        self.assertEqual(response.headers["Location"], "/dashboard")
 
 
 if __name__ == "__main__":
