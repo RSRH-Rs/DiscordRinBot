@@ -136,6 +136,19 @@ test('reset restores saved values and fires change', () => {
     assert.equal(ui.dirty(a), false);
 });
 
+test('a page with its own reset takes over and ends clean', () => {
+    const {ui, a, field} = fixture();
+    const extra = field({id: 'row-1', value: 'added'});
+    ui.onReset(a, () => { a.fields.pop(); a.fields[0].value = 'original'; });
+    a.fields.push(extra); a.fields[0].value = 'edited'; ui.changed(a);
+    assert.equal(ui.dirty(a), true);
+    ui.reset(a);
+    assert.equal(a.fields.length, 1);
+    assert.equal(a.fields[0].value, 'original');
+    assert.deepEqual([...a.fields[0].dispatched], []);
+    assert.equal(ui.dirty(a), false);
+});
+
 test('reset restores unnamed checkboxes one by one', () => {
     const {ui, a, field} = fixture();
     const boxes = [true, true, true, false].map(checked => field({type: 'checkbox', checked, id: '', name: '', className: ''}));

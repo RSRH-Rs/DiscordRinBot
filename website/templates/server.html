@@ -299,12 +299,31 @@
     </div>
 </section>
 
-<section class="page" id="pg-leveling" data-slug="leveling" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.leveling') }}">
-    {{ page_head(tr('nav.module.leveling'), tr('leveling.intro')) }}
-    <div class="section">
-        <h3 class="section-title">{{ tr('leveling.board') }}</h3>
+<section class="page" id="pg-leveling" data-slug="leveling" data-group="{{ tr('nav.group.community') }}" data-title="{{ tr('nav.module.leveling') }}" data-draft>
+    {{ page_head(tr('nav.module.leveling'), tr('leveling.intro'), 'lv-enabled', tr('leveling.master')) }}
+    {{ tabs('leveling', [('settings', tr('leveling.tab.settings')), ('board', tr('leveling.tab.board'))]) }}
+    {% call tab_panel('leveling', 'settings') %}
+        <div class="section">
+            <div class="list">
+                {% call row(tr('leveling.notify'), None, 'lv-mode', depends='lv-enabled') %}<select class="select" id="lv-mode"><option value="here">{{ tr('leveling.notify_here') }}</option><option value="channel">{{ tr('leveling.notify_channel') }}</option><option value="off">{{ tr('leveling.notify_off') }}</option></select>{% endcall %}
+                <div class="lv-channel-row" id="lv-channel-row" hidden>
+                    {% call row(tr('leveling.channel'), None, 'lv-channel', depends='lv-enabled') %}<select class="select" id="lv-channel" data-search="{{ tr('leveling.channel') }}"><option value="0">{{ tr('common.not_set') }}</option></select>{% endcall %}
+                    <div class="lv-note lv-note--bad" id="lv-channel-error" hidden></div>
+                </div>
+            </div>
+        </div>
+        <div class="section">
+            <h3 class="section-title">{{ tr('leveling.rewards') }}</h3>
+            <p class="section-hint">{{ tr('leveling.rewards_hint') }}</p>
+            <p class="note note--warn" id="lv-no-permission" hidden>{{ icon('triangle-alert') }}<span>{{ tr('leveling.warn.no_permission') }}</span></p>
+            <p class="section-hint" id="lv-empty" hidden>{{ tr('leveling.no_rewards') }}</p>
+            <div class="lv-rewards" id="lv-rewards" data-depends-on="lv-enabled"></div>
+            <div class="actions"><button type="button" class="btn btn--secondary" id="lv-add">{{ icon('plus') }}{{ tr('leveling.add') }}</button><span class="unit" id="lv-limit" hidden>{{ tr('leveling.max') }}</span></div>
+        </div>
+    {% endcall %}
+    {% call tab_panel('leveling', 'board') %}
         <div class="lb-list" id="lb-list"></div>
-    </div>
+    {% endcall %}
 </section>
 
 <section class="page" id="pg-utility" data-slug="utility" data-group="{{ tr('nav.group.tools') }}" data-title="{{ tr('nav.module.utility') }}">
@@ -356,7 +375,7 @@
 
 {% block scripts %}
 <script>window.GID = "{{ guild.id }}";</script>
-<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261108b"></script>
+<script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261108c"></script>
 <script src="{{ url_for('static', filename='js/console-controls.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/command-palette.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261108c"></script>
@@ -366,7 +385,7 @@
 <script src="{{ url_for('static', filename='js/modules/automod.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/modules/moderation.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/modules/giveaway.js') }}?v=20261108b"></script>
-<script src="{{ url_for('static', filename='js/modules/leveling.js') }}?v=20261108b"></script>
+<script src="{{ url_for('static', filename='js/modules/leveling.js') }}?v=20261108d"></script>
 <script src="{{ url_for('static', filename='js/modules/utility.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/modules/logs.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/message-preview.js') }}?v=20261108b"></script>

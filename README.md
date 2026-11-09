@@ -8,7 +8,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![discord.py](https://img.shields.io/badge/discord.py-2.7-5865F2?logo=discord&logoColor=white)](https://github.com/Rapptz/discord.py)
-[![Tests](https://img.shields.io/badge/tests-994_passing-3FB950)](#testing)
+[![Tests](https://img.shields.io/badge/tests-1090_passing-3FB950)](#testing)
 [![License](https://img.shields.io/badge/License-MIT-E8899A)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-rin--bot.com-FFB7C5)](https://rin-bot.com)
 
@@ -189,9 +189,9 @@ Tests cover core logic and use temporary SQLite databases only. They never conne
 
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest -q                       # bot, core and website pages: 634 tests
-cd website && python -m pytest -q tests   # dashboard: 187 tests
-node --test tests/*.cjs                   # dashboard and site UI: 173 tests (from website/)
+python -m pytest -q                       # bot, core and website pages: 667 tests
+cd website && python -m pytest -q tests   # dashboard: 209 tests
+node --test tests/*.cjs                   # dashboard and site UI: 214 tests (from website/)
 ```
 
 After changing a slash command, regenerate the website's command list with `python website/tools/build_commands.py`; `tests/test_command_catalog.py` fails until you do.

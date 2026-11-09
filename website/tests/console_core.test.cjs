@@ -79,6 +79,25 @@ test('channels() dedupes concurrent requests and caches the result', async () =>
     assert.equal(Console.channelName('9', a), null);
 });
 
+test('an empty list is asked for again instead of being kept', async () => {
+    let answer = [];
+    const {Console, calls} = core({fetchImpl: async () => ({ok: true, json: async () => answer})});
+    assert.equal((await Console.roles()).length, 0);
+    answer = [{id: '1', name: 'back'}];
+    assert.equal((await Console.roles()).length, 1);
+    assert.equal(calls.fetch.length, 2);
+});
+
+test('module hands its reset to the draft bar', () => {
+    const resets = [];
+    const {Console} = core({extra: {DashboardUI: {tr: key => key, onSave() {}, onReset: (id, fn) => resets.push([id, fn])}}});
+    const reset = () => {};
+    Console.module({slug: 'leveling', reset});
+    assert.equal(resets.length, 1);
+    assert.equal(resets[0][0], 'pg-leveling');
+    assert.equal(resets[0][1], reset);
+});
+
 test('switcher links are guarded by the draft check', () => {
     const blocked = core({dirty: true});
     const link = {dataset: {}, href: '/dashboard'};

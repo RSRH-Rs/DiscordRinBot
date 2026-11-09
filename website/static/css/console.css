@@ -645,6 +645,18 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .rr-list:empty { display: none; }
 .rr-row { display: grid; grid-template-columns: 44px minmax(0, 1fr) 36px; align-items: center; gap: 8px; }
 .rr-row .search-select { width: 100%; }
+.lv-channel-row > .row { border-top: 1px solid var(--line); }
+.lv-rewards { display: flex; flex-direction: column; margin-top: 12px; }
+.lv-rewards:empty { display: none; }
+.lv-reward { position: relative; display: grid; grid-template-columns: 104px 12px minmax(0, 1fr) 36px; align-items: center; column-gap: 8px; padding-bottom: 16px; }
+.lv-reward:last-child { padding-bottom: 0; }
+.lv-reward:not(:last-child)::before { content: ""; position: absolute; left: 20px; top: var(--control-h); bottom: 0; border-left: 1px solid var(--field-line); }
+.lv-reward .num-field { width: 100%; min-width: 0; }
+.lv-reward .search-select { width: 100%; }
+.lv-reward .num { font-variant-numeric: tabular-nums; }
+.lv-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); outline: 1px solid var(--img-line); outline-offset: -1px; }
+.lv-note { grid-column: 3 / -1; margin-top: 4px; font-size: 13px; color: var(--warn); }
+.lv-note--bad { color: var(--bad); }
 .emoji-trigger { width: 44px; height: var(--control-h); display: flex; align-items: center; justify-content: center; border: 1px solid var(--field-line); border-radius: 8px; background: var(--field); font-size: 16px; cursor: pointer; }
 .emoji-trigger:hover { border-color: var(--accent); background: var(--accent-soft); }
 .emoji-trigger img { width: 22px; height: 22px; }
@@ -796,6 +808,7 @@ a.server-row:hover .server-name { color: var(--accent-text); }
     .hero img { width: 64px; height: 64px; margin: 0; }
     .hero .bot-status { grid-column: 2; justify-self: start; margin: 0; }
     .rr-row { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+    .lv-reward { grid-template-columns: 96px 12px minmax(0, 1fr) 44px; }
     .seg { display: grid; width: 100%; grid-auto-columns: minmax(0, 1fr); }
     .seg-option { padding: 0 4px; }
     .unsaved-bar { left: 0; right: 0; bottom: 0; width: auto; border-radius: 0; padding-bottom: max(8px, env(safe-area-inset-bottom)); }

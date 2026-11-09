@@ -1,6 +1,6 @@
 /* Draft lifecycle, the unsaved-changes bar and the mobile drawer. Nothing is auto-saved. */
 window.DashboardUI = (() => {
-    const drafts = new Map(), saveHandlers = new Map();
+    const drafts = new Map(), saveHandlers = new Map(), resetHandlers = new Map();
     let menuOpener = null, strings = null, blockedTimer = null;
     const rootOf = id => typeof id === 'string' ? document.getElementById(id) : id;
     const el = id => document.getElementById(id);
@@ -108,6 +108,9 @@ window.DashboardUI = (() => {
         const root = id ? rootOf(id) : activeRoot();
         const state = root && drafts.get(root);
         if (!state || state.saving) return;
+        // Rows a page adds, removes or reorders cannot be restored field by field, so such a page rebuilds itself.
+        const custom = resetHandlers.get(root);
+        if (custom) { custom(); clean(root); return; }
         for (const [key, field] of keyed(root)) {
             if (field.type === 'file' || !state.values.has(key)) continue;
             const saved = state.values.get(key);
@@ -120,6 +123,7 @@ window.DashboardUI = (() => {
         refresh(root);
     }
     function onSave(id, fn) { const root = rootOf(id); if (root) { register(root); saveHandlers.set(root, fn); } }
+    function onReset(id, fn) { const root = rootOf(id); if (root) { register(root); resetHandlers.set(root, fn); } }
     async function save() {
         const root = activeRoot(), handler = root && saveHandlers.get(root);
         if (!handler || drafts.get(root).saving) return;
@@ -245,5 +249,5 @@ window.DashboardUI = (() => {
         document.querySelector('.drawer-backdrop')?.addEventListener('click', () => closeSidebar());
         window.matchMedia('(min-width:860px)').addEventListener('change', e => { if (e.matches) closeSidebar(false); });
     });
-    return {tr, snapshot, clean, changed, changedWithin, dirty, confirmSwitch, confirmLeave, freshen, saving, loading, onSave, save, reset, shake, renderTags, toggleSidebar, closeSidebar};
+    return {tr, snapshot, clean, changed, changedWithin, dirty, confirmSwitch, confirmLeave, freshen, saving, loading, onSave, onReset, save, reset, shake, renderTags, toggleSidebar, closeSidebar};
 })();

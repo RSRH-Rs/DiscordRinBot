@@ -38,7 +38,8 @@ window.Console = (() => {
         return () => {
             const entry = caches[name] ||= {};
             if (entry.value) return Promise.resolve(entry.value);
-            entry.pending ||= api(path).then(value => { entry.value = value; return value; }).finally(() => { entry.pending = null; });
+            // An empty list can mean Discord could not be read, so it is asked for again next time.
+            entry.pending ||= api(path).then(value => { if (!Array.isArray(value) || value.length) entry.value = value; return value; }).finally(() => { entry.pending = null; });
             return entry.pending;
         };
     }
@@ -150,6 +151,7 @@ window.Console = (() => {
         const state = {def, loaded: false, pending: null};
         modules.set(def.slug, state);
         if (def.save) DashboardUI.onSave('pg-' + def.slug, async () => { await def.save(); toast(tr('toast.saved'), 'ok'); refreshModules(); });
+        if (def.reset) DashboardUI.onReset('pg-' + def.slug, def.reset);
         return state;
     }
     function load(slug) {

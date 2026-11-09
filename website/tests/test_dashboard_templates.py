@@ -88,6 +88,35 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn('最大 5 MB、4096×4096',html)
         self.assertIn('message-preview.js?v=20261108',html)
 
+    def test_leveling_page_has_settings_and_board(self):
+        html,p=self.render('server.html')
+        page=html[html.index('id="pg-leveling"'):html.index('id="pg-utility"')]
+        self.assertIn('data-draft',page[:page.index('>')])
+        for needle in ['id="lv-enabled"','id="tab-leveling-settings"','id="tab-leveling-board"','id="panel-leveling-settings"','id="panel-leveling-board"',
+                       'id="lv-mode"','id="lv-channel-row"','id="lv-channel"','id="lv-no-permission"','id="lv-empty"','id="lv-rewards"','id="lv-add"','id="lv-limit"']:
+            self.assertIn(needle,page)
+        self.assertLess(page.index('id="panel-leveling-board"'),page.index('id="lb-list"'))
+        self.assertLess(page.index('id="lv-enabled"'),page.index('id="tab-leveling-settings"'))
+        mode=page[page.index('id="lv-mode"'):page.index('</select>')]
+        self.assertEqual(re.findall(r'value="([a-z]+)"',mode),['here','channel','off'])
+        self.assertIn('data-depends-on="lv-enabled"',page)
+        add=page[:page.index('id="lv-add"')]
+        self.assertGreater(add.rindex('</div>'),add.index('id="lv-rewards"'))
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        for selector in ['.lv-reward','.lv-rewards','.lv-dot','.lv-note','.lv-note--bad']:
+            self.assertIn(selector+' {',css)
+
+    def test_leveling_rows_read_as_one_list_and_one_ladder(self):
+        html,p=self.render('server.html')
+        self.assertIn('class="lv-channel-row" id="lv-channel-row"',html)
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        # The wrapper makes its row a first child, which would otherwise lose the divider every row has.
+        divider=re.search(r'\.lv-channel-row > \.row \{([^}]*)\}',css).group(1)
+        self.assertIn('border-top: 1px solid var(--line)',divider)
+        # The joining line has to be as visible as the fields it joins, in both themes.
+        ladder=re.search(r'\.lv-reward:not\(:last-child\)::before \{([^}]*)\}',css).group(1)
+        self.assertIn('var(--field-line)',ladder)
+
     def test_the_general_page_is_gone(self):
         html,p=self.render('server.html')
         self.assertNotIn('pg-general',html)
