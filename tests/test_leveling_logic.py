@@ -1,3 +1,4 @@
+import json
 import sqlite3
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -6,7 +7,7 @@ import discord
 import pytest
 
 from cogs import leveling
-from cogs.leveling import Leveling, parse_rewards, prune_cooldowns
+from cogs.leveling import Leveling, due_role_ids, parse_rewards, prune_cooldowns
 
 GID = 123
 USER = 7
@@ -168,3 +169,158 @@ async def test_config_survives_a_restart(cog, monkeypatch):
 async def test_default_config_is_not_shared(cog):
     cog.get_config(GID)["rewards"].append((1, 1))
     assert cog.get_config(GID)["rewards"] == []
+
+
+def test_due_role_ids():
+    rewards = [(5, 1), (10, 2), (20, 3)]
+    assert due_role_ids(rewards, 4, set()) == []
+    assert due_role_ids(rewards, 5, set()) == [1]
+    assert due_role_ids(rewards, 20, {1}) == [2, 3]
+    assert due_role_ids(rewards, 20, {1, 2, 3}) == []
+
+
+class FakeMember(discord.Member):
+    id = USER
+    bot = False
+    mention = "<@7>"
+    roles = property(lambda self: self.fake_roles)
+
+    def __init__(self, role_ids=()):
+        self.fake_roles = [SimpleNamespace(id=role_id) for role_id in role_ids]
+        self.add_roles = AsyncMock()
+
+
+class FakeRole:
+    def __init__(self, role_id, position=1, managed=False):
+        self.id = role_id
+        self.position = position
+        self.managed = managed
+
+    def __lt__(self, other):
+        return self.position < other.position
+
+
+TOP_ROLE = FakeRole(99, position=10)
+
+
+def member_message(message, *owned, roles=(), manage_roles=True):
+    message.author = FakeMember(owned)
+    message.author.guild = message.guild
+    known = {role.id: role for role in roles}
+    message.guild.get_role = known.get
+    message.guild.me = SimpleNamespace(
+        top_role=TOP_ROLE, guild_permissions=SimpleNamespace(manage_roles=manage_roles)
+    )
+    return message
+
+
+def granted(message):
+    message.author.add_roles.assert_awaited_once()
+    return [role.id for role in message.author.add_roles.await_args.args]
+
+
+def rewards_json(*pairs):
+    return json.dumps([{"level": level, "role_id": str(role)} for level, role in pairs])
+
+
+async def test_reward_granted_on_level_up(cog, message):
+    await save_config(cog, rewards=rewards_json((1, 11)))
+    set_progress(cog)
+    member_message(message, roles=[FakeRole(11)])
+    await cog.on_message(message)
+    assert granted(message) == [11]
+
+
+async def test_backfill_without_level_up(cog, message):
+    await save_config(cog, rewards=rewards_json((5, 11)))
+    set_progress(cog, level=10, xp=cog.get_total_xp_for_level(10))
+    member_message(message, roles=[FakeRole(11)])
+    await cog.on_message(message)
+    assert stored_user()[1] == 10
+    assert granted(message) == [11]
+
+
+async def test_rewards_are_cumulative(cog, message):
+    await save_config(cog, rewards=rewards_json((5, 11), (10, 12), (20, 13)))
+    set_progress(cog, level=20, xp=cog.get_total_xp_for_level(20))
+    member_message(message, roles=[FakeRole(11), FakeRole(12), FakeRole(13)])
+    await cog.on_message(message)
+    assert granted(message) == [11, 12, 13]
+
+
+async def test_no_missing_role_makes_no_call(cog, message):
+    await save_config(cog, rewards=rewards_json((1, 11)))
+    set_progress(cog)
+    member_message(message, 11, roles=[FakeRole(11)])
+    await cog.on_message(message)
+    message.author.add_roles.assert_not_awaited()
+
+
+async def test_skips_when_bot_lacks_manage_roles(cog, message):
+    await save_config(cog, rewards=rewards_json((1, 11)))
+    set_progress(cog)
+    member_message(message, roles=[FakeRole(11)], manage_roles=False)
+    await cog.on_message(message)
+    message.author.add_roles.assert_not_awaited()
+
+
+async def test_skips_role_above_bot_and_managed_role(cog, message):
+    await save_config(cog, rewards=rewards_json((1, 11), (1, 12), (1, 13), (1, 14)))
+    set_progress(cog)
+    roles = [FakeRole(11), FakeRole(12, position=10), FakeRole(13, position=20), FakeRole(14, managed=True)]
+    member_message(message, roles=roles)
+    await cog.on_message(message)
+    assert granted(message) == [11]
+
+
+async def test_only_ungrantable_roles_make_no_call(cog, message):
+    await save_config(cog, rewards=rewards_json((1, 12)))
+    set_progress(cog)
+    member_message(message, roles=[FakeRole(12, position=20)])
+    await cog.on_message(message)
+    message.author.add_roles.assert_not_awaited()
+
+
+async def test_skips_deleted_role(cog, message):
+    await save_config(cog, rewards=rewards_json((1, 11), (1, 12)))
+    set_progress(cog)
+    member_message(message, roles=[FakeRole(12)])
+    await cog.on_message(message)
+    assert granted(message) == [12]
+
+
+async def test_rewards_skip_non_member_author(cog, message):
+    await save_config(cog, rewards=rewards_json((1, 11)))
+    set_progress(cog)
+    await cog.on_message(message)
+    assert stored_user()[1] == 1
+
+
+async def test_grant_failure_keeps_xp(cog, message):
+    await save_config(cog, rewards=rewards_json((1, 11)))
+    set_progress(cog)
+    member_message(message, roles=[FakeRole(11)])
+    message.author.add_roles.side_effect = discord.Forbidden(
+        SimpleNamespace(status=403, reason="no"), "no"
+    )
+    await cog.on_message(message)
+    assert stored_user()[1] == 1
+
+
+async def test_notice_failure_still_grants(cog, message):
+    await save_config(cog, rewards=rewards_json((1, 11)))
+    set_progress(cog)
+    member_message(message, roles=[FakeRole(11)])
+    message.channel.send.side_effect = discord.HTTPException(
+        SimpleNamespace(status=500, reason="boom"), "boom"
+    )
+    await cog.on_message(message)
+    assert granted(message) == [11]
+
+
+async def test_disabled_guild_grants_nothing(cog, message):
+    await save_config(cog, enabled=0, rewards=rewards_json((1, 11)))
+    set_progress(cog)
+    member_message(message, roles=[FakeRole(11)])
+    await cog.on_message(message)
+    message.author.add_roles.assert_not_awaited()

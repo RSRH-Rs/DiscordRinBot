@@ -51,6 +51,11 @@ def parse_rewards(raw):
         return []
 
 
+def due_role_ids(rewards, level, owned_ids):
+    """已达到等级、成员却还没有的身份组 id（奖励累积保留，低等级的也要补）"""
+    return [role_id for required, role_id in rewards if required <= level and role_id not in owned_ids]
+
+
 def config_from_row(row):
     return {
         "enabled": bool(row[1]),
@@ -263,6 +268,7 @@ class Leveling(commands.Cog):
         prune_cooldowns(self.cooldowns, now, self.cooldown_sec)
         xp_gain = random.randint(self.xp_min, self.xp_max)
         leveled_to = None
+        current_level = 0
 
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
@@ -296,6 +302,25 @@ class Leveling(commands.Cog):
 
         if leveled_to is not None:
             await self._send_level_notice(message, leveled_to, config)
+        if isinstance(message.author, discord.Member):
+            await self._grant_rewards(message.author, leveled_to or current_level, config)
+
+    async def _grant_rewards(self, member, level, config):
+        """补发已达到等级却缺少的奖励；小凛给不了的身份组直接跳过，不调用 Discord"""
+        due = due_role_ids(config["rewards"], level, {role.id for role in member.roles})
+        if not due:
+            return
+        guild = member.guild
+        me = guild.me
+        if not me.guild_permissions.manage_roles:
+            return
+        roles = [role for role in map(guild.get_role, due) if role and not role.managed and role < me.top_role]
+        if not roles:
+            return
+        try:
+            await member.add_roles(*roles, reason="等级奖励")
+        except (discord.Forbidden, discord.HTTPException) as e:
+            print(f"等级奖励发放失败 (guild {guild.id}): {e}")
 
     async def _send_level_notice(self, message, new_level, config):
         mode = config["notify_mode"]
