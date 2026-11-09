@@ -8,12 +8,22 @@ import io
 import os
 import aiohttp
 import aiosqlite
+import json
 import random
 import time
 import math
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DB_PATH = os.path.join(BASE_DIR, "leveling.db")
+
+CREATE_CONFIG_SQL = """CREATE TABLE IF NOT EXISTS level_config (
+    guild_id INTEGER PRIMARY KEY,
+    enabled INTEGER DEFAULT 1,
+    notify_mode TEXT DEFAULT 'here',
+    notify_channel INTEGER DEFAULT 0,
+    rewards TEXT DEFAULT '[]'
+)"""
+CONFIG_COLUMNS = "guild_id, enabled, notify_mode, notify_channel, rewards"
 
 
 # --- 辅助函数：经验值格式化 ---
@@ -27,6 +37,27 @@ def format_xp_number(num):
         return f"{num / 1_000:.1f}K".replace(".0K", "K")
     else:
         return str(num)
+
+
+def parse_rewards(raw):
+    """把存储的奖励 JSON 解析成 [(等级, 身份组 id)]；内容损坏时按没有奖励处理"""
+    try:
+        items = json.loads(raw or "[]")
+        if not isinstance(items, list):
+            raise TypeError("rewards is not a list")
+        return [(int(item["level"]), int(item["role_id"])) for item in items]
+    except (TypeError, ValueError, KeyError) as e:
+        print(f"等级奖励内容损坏，按没有奖励处理: {e!r}")
+        return []
+
+
+def config_from_row(row):
+    return {
+        "enabled": bool(row[1]),
+        "notify_mode": row[2],
+        "notify_channel": int(row[3] or 0),
+        "rewards": parse_rewards(row[4]),
+    }
 
 
 def prune_cooldowns(cooldowns, now, ttl, max_size=5000):
@@ -51,6 +82,7 @@ class Leveling(commands.Cog):
         self.xp_max = 25
         self.cooldown_sec = 60
         self.cooldowns = {}
+        self._config = {}
 
     async def cog_load(self):
         """插件加载时自动初始化数据库"""
@@ -64,8 +96,38 @@ class Leveling(commands.Cog):
                     PRIMARY KEY (guild_id, user_id)
                 )
             """)
+            await db.execute(CREATE_CONFIG_SQL)
             await db.commit()
+            cursor = await db.execute(f"SELECT {CONFIG_COLUMNS} FROM level_config")
+            self._config = {row[0]: config_from_row(row) for row in await cursor.fetchall()}
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.register("leveling", self.reload_guild)
         print("✅ 等级系统 (小凛美化版) 已准备就绪！")
+
+    def cog_unload(self):
+        watcher = getattr(self.bot, "change_watcher", None)
+        if watcher is not None:
+            watcher.unregister("leveling", self.reload_guild)
+
+    async def reload_guild(self, guild_id):
+        """网页保存后由变更日志回调：只重读该服务器的一行配置"""
+        async with aiosqlite.connect(DB_PATH) as db:
+            cursor = await db.execute(
+                f"SELECT {CONFIG_COLUMNS} FROM level_config WHERE guild_id=?", (guild_id,)
+            )
+            row = await cursor.fetchone()
+        if row:
+            self._config[guild_id] = config_from_row(row)
+        else:
+            self._config.pop(guild_id, None)
+
+    def get_config(self, guild_id):
+        """读内存；未配置的服务器返回默认值，行为和没有这项设置时一样"""
+        config = self._config.get(guild_id)
+        if config:
+            return {**config, "rewards": list(config["rewards"])}
+        return {"enabled": True, "notify_mode": "here", "notify_channel": 0, "rewards": []}
 
     # --- 🛠️ 核心经验算法 ---
     def get_total_xp_for_level(self, level):
@@ -185,6 +247,10 @@ class Leveling(commands.Cog):
         if message.author.bot or not message.guild:
             return
 
+        config = self.get_config(message.guild.id)
+        if not config["enabled"]:
+            return
+
         user_id = message.author.id
         now = time.time()
 
@@ -196,6 +262,7 @@ class Leveling(commands.Cog):
         self.cooldowns[cooldown_key] = now
         prune_cooldowns(self.cooldowns, now, self.cooldown_sec)
         xp_gain = random.randint(self.xp_min, self.xp_max)
+        leveled_to = None
 
         async with aiosqlite.connect(DB_PATH) as db:
             await db.execute(
@@ -218,22 +285,36 @@ class Leveling(commands.Cog):
                 xp_needed_for_next_lvl = self.get_total_xp_for_level(current_level + 1)
 
                 if total_xp >= xp_needed_for_next_lvl:
-                    new_level = current_level + 1
+                    leveled_to = current_level + 1
                     await db.execute(
                         "UPDATE users SET level = ? WHERE guild_id = ? AND user_id = ?",
-                        (new_level, message.guild.id, user_id),
+                        (leveled_to, message.guild.id, user_id),
                     )
-                    # 先提交经验与等级，再发升级提示（发送失败不能丢经验）
-                    await db.commit()
-                    try:
-                        await message.channel.send(
-                            f"🎉 恭喜 **{message.author.mention}**！你升级到了 **Level {new_level}**！✨"
-                        )
-                    except (discord.Forbidden, discord.HTTPException) as e:
-                        print(f"升级提示发送失败 (guild {message.guild.id}): {e}")
-                    return
 
+            # 先提交经验与等级，再调用 Discord（发送失败不能丢经验）
             await db.commit()
+
+        if leveled_to is not None:
+            await self._send_level_notice(message, leveled_to, config)
+
+    async def _send_level_notice(self, message, new_level, config):
+        mode = config["notify_mode"]
+        if mode == "off":
+            return
+        # 指定频道没了就不发：选指定频道通常就是不想在聊天区刷屏，不能改发到原频道
+        channel = (
+            message.guild.get_channel(config["notify_channel"])
+            if mode == "channel"
+            else message.channel
+        )
+        if channel is None:
+            return
+        try:
+            await channel.send(
+                f"🎉 恭喜 **{message.author.mention}**！你升级到了 **Level {new_level}**！✨"
+            )
+        except (discord.Forbidden, discord.HTTPException) as e:
+            print(f"升级提示发送失败 (guild {message.guild.id}): {e}")
 
     # --- 🖼️ Rank 指令 ---
     @commands.hybrid_command(name="rank", description="Show a level card")

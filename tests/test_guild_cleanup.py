@@ -16,7 +16,8 @@ OLD, RECENT, STAYING = 111, 222, 333  # 移出 31 天 / 移出 10 天 / 一直�
 # 库名 -> 建表语句（与线上表结构一致的最小子集）
 SCHEMAS = {
     "leveling": ["CREATE TABLE users (guild_id INTEGER, user_id INTEGER, xp INTEGER DEFAULT 0, "
-                 "level INTEGER DEFAULT 0, PRIMARY KEY (guild_id, user_id))"],
+                 "level INTEGER DEFAULT 0, PRIMARY KEY (guild_id, user_id))",
+                 "CREATE TABLE level_config (guild_id INTEGER PRIMARY KEY)"],
     "moderation": [
         "CREATE TABLE warnings (id INTEGER PRIMARY KEY AUTOINCREMENT, guild_id INTEGER NOT NULL, "
         "user_id INTEGER NOT NULL)",
@@ -53,7 +54,7 @@ SCHEMAS = {
 
 # 每张按服务器存的表：(库名, 表名)
 GUILD_TABLES = [
-    ("leveling", "users"), ("moderation", "warnings"), ("moderation", "mod_cases"),
+    ("leveling", "users"), ("leveling", "level_config"), ("moderation", "warnings"), ("moderation", "mod_cases"),
     ("moderation", "mod_config"), ("moderation", "tempbans"), ("giveaway", "giveaways"),
     ("music", "saved_queues"), ("reactionroles", "rr_panels"), ("welcome", "welcome_config"),
     ("automod", "automod_config"), ("serverlog", "serverlog_config"), ("botlog", "botlog_config"),
@@ -75,6 +76,7 @@ def _con(name):
 def _seed_guild(gid):
     with _con("leveling") as c:
         c.execute("INSERT INTO users (guild_id, user_id, xp) VALUES (?, 7, 50)", (gid,))
+        c.execute("INSERT INTO level_config (guild_id) VALUES (?)", (gid,))
     with _con("moderation") as c:
         c.execute("INSERT INTO warnings (guild_id, user_id) VALUES (?, 7)", (gid,))
         c.execute("INSERT INTO mod_cases (guild_id, user_id) VALUES (?, 7)", (gid,))

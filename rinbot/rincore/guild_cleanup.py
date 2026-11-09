@@ -37,6 +37,7 @@ _CREATE_SQL = (
 # 直接按 guild_id 删的表：(库名, 表名)
 GUILD_TABLES = (
     ("leveling", "users"),
+    ("leveling", "level_config"),
     ("moderation", "warnings"),
     ("moderation", "mod_cases"),
     ("moderation", "mod_config"),

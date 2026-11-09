@@ -7,6 +7,10 @@ import pytest
 from rincore import sync
 
 
+def test_leveling_can_notify_the_bot():
+    assert "leveling" in sync.MODULES
+
+
 async def test_notify_then_poll_dispatches_once(tmp_path):
     path = str(tmp_path / "sync.db")
     watcher = sync.ChangeWatcher(path=path)

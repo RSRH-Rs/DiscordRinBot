@@ -15,6 +15,7 @@ MODULES = (
     "welcome",
     "automod",
     "moderation",
+    "leveling",
     "music",
     "botlog",
     "serverlog",
