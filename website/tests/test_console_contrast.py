@@ -110,7 +110,7 @@ class ConsoleContrastTests(unittest.TestCase):
 
     def test_reduced_motion_overrides_every_animated_selector(self):
         block_text = self.css[self.css.index('@media (prefers-reduced-motion: reduce)'):]
-        for selector in ['.unsaved-bar', '.unsaved-bar.is-open', '.unsaved-bar.is-shaking', '.sidebar', '.shell.is-drawer-open .sidebar', '.skeleton']:
+        for selector in ['.unsaved-bar', '.unsaved-bar.is-open', '.unsaved-bar.is-shaking', '.sidebar', '.shell.is-drawer-open .sidebar', '.page[aria-busy="true"] .list']:
             self.assertIn(selector, block_text)
 
     def test_console_uses_five_font_sizes(self):

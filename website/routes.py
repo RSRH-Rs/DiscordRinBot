@@ -312,7 +312,7 @@ _MODULE_COGS = {
     "music": "Music", "welcome": "Welcome", "roles": "ReactionRoles",
     "automod": "AutoMod", "moderation": "Moderation", "giveaway": "Giveaway",
     "leveling": "Leveling", "utility": "CommandToggle", "botlog": "BotLog",
-    "serverlog": "ServerLog", "general": "General",
+    "serverlog": "ServerLog",
 }
 
 
@@ -1262,13 +1262,6 @@ def setup_routes(app, discord):
             "icon": "history",
             "db": "serverlog.db",
         },
-        {
-            "slug": "general",
-            "name": "通用工具",
-            "desc": "status / avatar / roll 等实用指令",
-            "icon": "wrench",
-            "db": None,
-        },
     ]
 
     @app.route("/api/modules")
@@ -1352,8 +1345,7 @@ def setup_routes(app, discord):
             servers = len(guild_ids)
         except Exception:
             servers = 0
-        # 统计可展示的功能模块（排除“通用工具”这类无独立 db 的）
-        modules = len([m for m in MODULES if m["slug"] != "general"])
+        modules = len(MODULES)
         commands = 0
         try:
             with open(os.path.join(BOT_DIR, "health.json"), encoding="utf-8") as f:

@@ -4,7 +4,7 @@
 {%- set module_groups = [
     ('community', [('welcome', 'smile-plus'), ('roles', 'tags'), ('leveling', 'trophy'), ('giveaway', 'gift')]),
     ('safety', [('automod', 'shield-check'), ('moderation', 'gavel'), ('botlog', 'scroll-text'), ('serverlog', 'history')]),
-    ('tools', [('music', 'music'), ('utility', 'sliders-horizontal'), ('general', 'wrench')]),
+    ('tools', [('music', 'music'), ('utility', 'sliders-horizontal')]),
 ] -%}
 {%- set toggle_slugs = ['welcome', 'automod', 'botlog', 'serverlog'] -%}
 
@@ -304,15 +304,6 @@
     <div class="section">
         <h3 class="section-title">{{ tr('leveling.board') }}</h3>
         <div class="lb-list" id="lb-list"></div>
-    </div>
-</section>
-
-<section class="page" id="pg-general" data-slug="general" data-group="{{ tr('nav.group.tools') }}" data-title="{{ tr('nav.module.general') }}">
-    {{ page_head(tr('nav.module.general'), tr('general.intro')) }}
-    <div class="cmd-grid">
-        {%- for name in ['status', 'avatar', 'roll', 'help', 'setstatus', 'setbio'] %}
-        <div class="cmd-card"><code>/{{ name }}</code><span>{{ tr('general.cmd.' ~ name) }}</span></div>
-        {%- endfor %}
     </div>
 </section>
 

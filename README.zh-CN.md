@@ -8,7 +8,7 @@
 
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)](https://python.org)
 [![discord.py](https://img.shields.io/badge/discord.py-2.7-5865F2?logo=discord&logoColor=white)](https://github.com/Rapptz/discord.py)
-[![Tests](https://img.shields.io/badge/tests-992_passing-3FB950)](#测试)
+[![Tests](https://img.shields.io/badge/tests-994_passing-3FB950)](#测试)
 [![License](https://img.shields.io/badge/License-MIT-E8899A)](LICENSE)
 [![Website](https://img.shields.io/badge/Website-rin--bot.com-FFB7C5)](https://rin-bot.com)
 
@@ -190,7 +190,7 @@ cd website && python -m hypercorn main:app --bind 127.0.0.1:5000
 ```bash
 pip install -r requirements-dev.txt
 python -m pytest -q                       # Bot、核心逻辑和官网页面：634 个测试
-cd website && python -m pytest -q tests   # 仪表盘：185 个测试
+cd website && python -m pytest -q tests   # 仪表盘：187 个测试
 node --test tests/*.cjs                   # 仪表盘和官网界面：173 个测试（在 website/ 下运行）
 ```
 

@@ -88,10 +88,23 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn('最大 5 MB、4096×4096',html)
         self.assertIn('message-preview.js?v=20261108',html)
 
+    def test_the_general_page_is_gone(self):
+        html,p=self.render('server.html')
+        self.assertNotIn('pg-general',html)
+        self.assertNotIn('"slug": "general"',(ROOT/'routes.py').read_text(encoding='utf-8'))
+        strings=json.loads((ROOT/'i18n/zh.json').read_text(encoding='utf-8'))
+        self.assertNotIn('general',strings)
+        self.assertNotIn('general',strings['nav']['module'])
+        self.assertNotIn('general',strings['module'])
+        css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
+        for gone in ['.cmd-card','.cmd-grid','.input--full','.note--bad','.skeleton']:
+            self.assertNotIn(gone,css)
+        self.assertNotIn('i-wrench',(ROOT/'static/icons.svg').read_text(encoding='utf-8'))
+
     def test_overview_lists_every_module_once_with_toggles_for_four(self):
         html,p=self.render('server.html')
         rows=re.findall(r'data-row="([a-z]+)"',html)
-        self.assertEqual(sorted(rows),sorted(['welcome','roles','leveling','giveaway','automod','moderation','botlog','serverlog','music','utility','general']))
+        self.assertEqual(sorted(rows),sorted(['welcome','roles','leveling','giveaway','automod','moderation','botlog','serverlog','music','utility']))
         self.assertEqual(re.findall(r'data-toggle="([a-z]+)"',html),['welcome','automod','botlog','serverlog'])
         self.assertLess(html.index('id="ov-headline"'),html.index('data-row='))
         self.assertIn('机器人运行日志',html)
@@ -159,10 +172,10 @@ class DashboardTemplateTests(unittest.TestCase):
     def test_overview_module_rows(self):
         html,_=self.render('server.html')
         start=html.index('id="pg-overview"');ov=html[start:html.index('</section>',start)]
-        self.assertEqual(ov.count('class="mod-row"'),11)
+        self.assertEqual(ov.count('class="mod-row"'),10)
         self.assertEqual(len(re.findall(r'<div class="list">\s*<div class="mod-row"',ov)),3)
         self.assertNotIn('mod-card',ov); self.assertNotIn('mod-grid',ov)
-        self.assertEqual(ov.count('class="mod-go"'),11)
+        self.assertEqual(ov.count('class="mod-go"'),10)
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
         self.assertNotIn('.mod-card',css); self.assertNotIn('.mod-grid',css)
         hero=re.search(r'(?:^|\n)\.hero\s*\{([^}]*)\}',css).group(1)
@@ -239,7 +252,7 @@ class DashboardTemplateTests(unittest.TestCase):
     def test_pages_carry_group_and_guild_name(self):
         html,_=self.render('server.html')
         sections=re.findall(r'<section class="page[^>]*>',html)
-        self.assertEqual(len(sections),12)
+        self.assertEqual(len(sections),11)
         for tag in sections:self.assertIn('data-group=',tag)
         self.assertIn('<body data-current-guild="小凛 &lt;img src=x&gt;"',html)
 
@@ -355,7 +368,7 @@ class DashboardTemplateTests(unittest.TestCase):
     def test_editor_pages(self):
         html,_=self.render('server.html')
         self.assertEqual(sorted(re.findall(r'<section class="page page--editor" id="pg-([a-z]+)"',html)),['roles','welcome'])
-        self.assertEqual(len(re.findall(r'<section class="page[" ]',html)),12)
+        self.assertEqual(len(re.findall(r'<section class="page[" ]',html)),11)
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
         self.assertIn('minmax(0, 680px) 320px',re.search(r'\n\.editor\s*\{([^}]*)\}',css).group(1))
         self.assertRegex(css[css.index('@media (max-width: 1199px)'):],r'\.editor\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)')
@@ -374,7 +387,7 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertIn('padding: 12px 0',re.search(r'\n\.row\s*\{([^}]*)\}',css).group(1))
         hint=re.search(r'\n\.master-hint\s*\{([^}]*)\}',css).group(1)
         self.assertNotIn('background',hint); self.assertIn('color: var(--warn)',hint)
-        for block in ['.case','.lb-list','.cmd-card','.item','.fold > summary']:
+        for block in ['.case','.lb-list','.item','.fold > summary']:
             body=re.search(r'\n'+re.escape(block)+r'\s*\{([^}]*)\}',css).group(1)
             self.assertNotIn('background: var(--panel)',body,block)
             self.assertNotIn('border-radius',body,block)
@@ -532,7 +545,7 @@ class DashboardTemplateTests(unittest.TestCase):
 
     def test_empty_lists_drop_their_hairlines(self):
         css=(ROOT/'static/css/console.css').read_text(encoding='utf-8')
-        self.assertRegex(css,r':is\(\.list, \.case-list, \.lb-list, \.item-list, \.cmd-grid\):has\(> \.empty:only-child\)\s*\{[^}]*border-block: 0')
+        self.assertRegex(css,r':is\(\.list, \.case-list, \.lb-list, \.item-list\):has\(> \.empty:only-child\)\s*\{[^}]*border-block: 0')
         self.assertNotIn('.lb-list:has(.empty)',css)
 
     def test_brand_row_is_named_by_its_text(self):

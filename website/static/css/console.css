@@ -302,7 +302,7 @@ img { max-width: 100%; }
 }
 .input, .select, .num, .select-trigger { flex-shrink: 0; height: var(--control-h); padding-block: 0; }
 .input:focus, .select:focus, .textarea:focus, .num:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
-.input--full, .row--block .input, .row--block .select, .row--block .textarea, .row--block .select-trigger { width: 100%; }
+.row--block .input, .row--block .select, .row--block .textarea, .row--block .select-trigger { width: 100%; }
 .textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
 .num { width: 120px; text-align: left; appearance: textfield; -moz-appearance: textfield; }
 .num::-webkit-inner-spin-button, .num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
@@ -435,7 +435,6 @@ img { max-width: 100%; }
 .note { display: flex; gap: 8px; align-items: flex-start; margin-top: 12px; padding: 8px 12px; border-radius: 8px; font-size: 13px; overflow-wrap: anywhere; }
 .note:not(:last-child) { margin-bottom: 16px; }
 .note--warn { background: var(--warn-soft); color: var(--warn); }
-.note--bad { background: var(--bad-soft); color: var(--bad); }
 .note--info { background: var(--accent-soft); color: var(--accent-text); }
 
 .chip { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; padding: 2px 4px 2px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-text); font-size: 13px; overflow-wrap: anywhere; }
@@ -520,17 +519,16 @@ img { max-width: 100%; }
 .toast--bad { background: var(--bad); }
 
 @keyframes shimmer { to { background-position: -200% 0; } }
-.skeleton, .page[aria-busy="true"] .list {
+.page[aria-busy="true"] .list {
     background: linear-gradient(90deg, var(--line) 25%, var(--bg) 50%, var(--line) 75%) 0 0 / 200% 100%;
     animation: shimmer 1.4s infinite linear, skeleton-in var(--dur-fast) ease-out .15s backwards;
 }
 .page[aria-busy="true"] .list > * { visibility: hidden; }
-.skeleton { height: 56px; border-radius: var(--radius); margin-bottom: 8px; }
 
 .empty { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 24px 16px; text-align: center; color: var(--muted); }
 .empty img { width: 96px; height: 96px; object-fit: contain; }
 /* A list showing only its empty state draws no hairlines, whichever list it is. */
-:is(.list, .case-list, .lb-list, .item-list, .cmd-grid):has(> .empty:only-child) { border-block: 0; }
+:is(.list, .case-list, .lb-list, .item-list):has(> .empty:only-child) { border-block: 0; }
 .load-feedback { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; padding: 8px 12px; border-radius: 8px; background: var(--bad-soft); color: var(--bad); }
 
 .tabs { position: relative; display: flex; gap: 24px; margin: 0 0 16px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
@@ -683,11 +681,6 @@ a.server-row:hover .server-name { color: var(--accent-text); }
 .lb-stat { flex-shrink: 0; font-size: 13px; color: var(--muted); }
 .lb-row--top .lb-rank { font-size: 16px; }
 .lb-row--top .lb-name { font-size: 16px; }
-.cmd-grid { display: flex; flex-direction: column; border-block: 1px solid var(--line); }
-.cmd-card { display: flex; align-items: baseline; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
-.cmd-card:first-child { border-top: 0; }
-.cmd-card code { color: var(--accent-text); }
-.cmd-card span { font-size: 13px; color: var(--muted); }
 .command-search .select { width: 150px; }
 .cmd-group > summary { justify-content: flex-start; }
 /* The group name is a bare text node, so this button counts as :first-child; say auto with enough weight to win. */
@@ -818,6 +811,6 @@ a.server-row:hover .server-name { color: var(--accent-text); }
     /* The #_ only adds weight: this has to beat every class-level animation in the sheet. */
     *:not(#_), *:not(#_)::before, *:not(#_)::after { animation: none; transition: none; }
     .unsaved-bar, .unsaved-bar.is-open, .sidebar, .shell.is-drawer-open .sidebar, .tog-track, .tog-track::after { transition: none; }
-    .unsaved-bar.is-shaking, .skeleton, .page[aria-busy="true"] .list { animation: none; }
+    .unsaved-bar.is-shaking, .page[aria-busy="true"] .list { animation: none; }
     .row.is-flash { animation: none; background: var(--accent-soft); }
 }

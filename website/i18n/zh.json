@@ -24,8 +24,7 @@
       "botlog": "机器人运行日志",
       "serverlog": "服务器事件日志",
       "music": "音乐",
-      "utility": "指令管理",
-      "general": "通用工具"
+      "utility": "指令管理"
     }
   },
   "status": {
@@ -55,14 +54,12 @@
     "cancel": "取消",
     "retry": "重试",
     "load_failed": "读取失败了，点重试再来一次。",
-    "count": "{n} 个",
     "enabled": "开启",
     "disabled": "关闭",
     "remove_item": "移除「{item}」",
     "request_failed": "请求失败（{status}）",
     "not_set": "— 未设置 —",
     "no_limit": "— 不限制 —",
-    "optional": "可选",
     "master_hint": "先打开右上角的开关，下面的设置才会生效。"
   },
   "title": {
@@ -206,9 +203,6 @@
     },
     "utility": {
       "desc": "按需开关每一条指令"
-    },
-    "general": {
-      "desc": "/status、/avatar、/roll 等实用指令"
     }
   },
   "overview": {
@@ -280,11 +274,9 @@
   "welcome": {
     "intro": "选个频道，写一句欢迎吧。",
     "enabled": "发送欢迎消息",
-    "enabled_hint": "有人加入时，小凛在你选的频道里打招呼",
     "channel": "欢迎频道",
     "message": "欢迎内文",
     "message_placeholder": "欢迎 %member% 加入 %server%！🎉",
-    "appearance": "标题和图片",
     "title": "标题",
     "title_placeholder": "欢迎来到 服务器名（默认）",
     "thumb": "缩略图",
@@ -371,7 +363,6 @@
   "automod": {
     "intro": "自动拦下违规内容和刷屏，保护服务器的聊天环境。",
     "enabled": "启用自动审核",
-    "enabled_hint": "关掉后，下面所有规则都暂停",
     "log": "日志频道",
     "log_hint": "审核记录发到这里",
     "spam": "反刷屏",
@@ -479,17 +470,6 @@
     "board": "排行榜",
     "empty": "还没有人攒到经验，大家多聊聊天吧。"
   },
-  "general": {
-    "intro": "开箱即用的实用指令，不需要额外设置。",
-    "cmd": {
-      "status": "查看服务器状态",
-      "avatar": "查看头像",
-      "roll": "掷骰子",
-      "help": "交互式帮助菜单",
-      "setstatus": "修改小凛的状态",
-      "setbio": "修改小凛的简介"
-    }
-  },
   "utility": {
     "intro": "按需开关每一条指令。",
     "tip": "开关会立即生效，不用再点保存。批量开关只影响当前筛选出来的指令。",
@@ -537,7 +517,6 @@
     "server_intro": "记录消息、成员、频道和身份组的变化。",
     "enabled": "发送运行日志",
     "server_enabled": "发送事件日志",
-    "enabled_hint": "关掉后不再往频道发",
     "channel": "日志频道",
     "channel_hint": "建议选一个只有管理员能看的频道",
     "off": "— 不发送 —",

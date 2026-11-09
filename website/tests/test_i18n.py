@@ -13,7 +13,11 @@ class ConsoleStringTests(unittest.TestCase):
         self.assertEqual(i18n.tr('bar.save'), '保存')
 
     def test_tr_interpolates(self):
-        self.assertEqual(i18n.tr('common.count', n=3), '3 个')
+        self.assertEqual(i18n.tr('overview.welcome.roles', n=3), '自动给 3 个身份组')
+
+    def test_unused_strings_are_gone(self):
+        for key in ['common.count', 'common.optional', 'welcome.enabled_hint', 'welcome.appearance', 'automod.enabled_hint', 'logs.enabled_hint']:
+            self.assertEqual(i18n.tr(key), key)
 
     def test_missing_key_returns_key(self):
         with self.assertLogs('rinbot.i18n', 'WARNING'):
