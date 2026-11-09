@@ -55,3 +55,25 @@ def test_missing_other_is_warning():
         {"code": "missing_perm", "perm": next(
             p["zh"] for p in permcheck.PERMISSIONS if p["bit"] == 40),
          "lose": "禁言相关的功能都不能用"}]
+
+
+def test_role_limits():
+    roles = [
+        {"id": "1", "name": "@everyone", "permissions": "0", "position": 0},
+        {"id": "2", "name": "Rin", "permissions": str(1 << 28), "position": 5, "managed": True},
+        {"id": "3", "name": "low", "permissions": "0", "position": 2},
+        {"id": "4", "name": "same", "permissions": "0", "position": 5},
+        {"id": "5", "name": "high", "permissions": "0", "position": 9},
+        {"id": "6", "name": "bot", "permissions": "0", "position": 1, "managed": True},
+    ]
+    result = permcheck.role_limits(roles, {"roles": ["2"]}, "1")
+    assert result == {"can_manage_roles": True, "blocked": {"2": "managed", "4": "above", "5": "above", "6": "managed"}}
+
+
+def test_role_limits_permission_bits():
+    lacking = [role(G, 0), role("5", SEND, position=3)]
+    assert permcheck.role_limits(lacking, member(["5"]), G)["can_manage_roles"] is False
+    admin = [role(G, 0), role("5", ADMIN, position=3)]
+    assert permcheck.role_limits(admin, member(["5"]), G)["can_manage_roles"] is True
+    everyone = [role(G, 1 << 28), role("5", 0, position=3)]
+    assert permcheck.role_limits(everyone, member(["5"]), G)["can_manage_roles"] is True

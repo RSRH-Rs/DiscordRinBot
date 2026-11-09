@@ -23,7 +23,7 @@ from PIL import Image, UnidentifiedImageError
 import config
 from config import BOT_TOKEN
 from i18n import tr
-from permcheck import checkup as permission_checkup
+from permcheck import checkup as permission_checkup, role_limits
 import site_data
 
 try:
@@ -522,6 +522,10 @@ async def ensure_tables():
                 guild_id INTEGER, user_id INTEGER,
                 xp INTEGER DEFAULT 0, level INTEGER DEFAULT 0,
                 PRIMARY KEY (guild_id, user_id))""")
+            await db.execute("""CREATE TABLE IF NOT EXISTS level_config (
+                guild_id INTEGER PRIMARY KEY, enabled INTEGER DEFAULT 1,
+                notify_mode TEXT DEFAULT 'here', notify_channel INTEGER DEFAULT 0,
+                rewards TEXT DEFAULT '[]')""")
             await db.commit()
         async with aiosqlite.connect(DB_BOTCONFIG) as db:
             await db.execute("""CREATE TABLE IF NOT EXISTS bot_personalizer (
@@ -895,6 +899,63 @@ async def _bot_permission_checkup(gid):
     result = permission_checkup(roles, member, gid)
     _checkup_cache[gid] = (time.monotonic(), result)
     return result
+
+
+async def _bot_role_limits(gid):
+    """小凛能发哪些身份组；读不到 Discord 时返回 None。不缓存，改完身份组顺序刷新页面就能看到。"""
+    me = await discord_api_get("/users/@me")
+    bot_id = (me or {}).get("id")
+    roles = await discord_api_get(f"/guilds/{gid}/roles") if bot_id else None
+    member = await discord_api_get(f"/guilds/{gid}/members/{bot_id}") if roles else None
+    return role_limits(roles, member, gid) if member else None
+
+
+LEVEL_NOTIFY_MODES = ("here", "channel", "off")
+MAX_LEVEL_REWARDS = 20
+MAX_REWARD_LEVEL = 999
+_SNOWFLAKE = re.compile(r"[1-9][0-9]{0,19}")
+
+
+def _is_snowflake(value):
+    return isinstance(value, str) and _SNOWFLAKE.fullmatch(value) is not None
+
+
+def _parse_leveling_body(d):
+    """校验整份等级设置，返回 (配置, 错误信息)；奖励按等级升序。"""
+    if not isinstance(d, dict) or not isinstance(d.get("enabled"), bool) or not isinstance(d.get("rewards"), list):
+        return None, "等级设置无效"
+    mode = d.get("notify_mode")
+    if mode not in LEVEL_NOTIFY_MODES:
+        return None, "升级提示设置无效"
+    channel = 0
+    if mode == "channel":
+        if not _is_snowflake(d.get("notify_channel")):
+            return None, "请选择要发到哪个频道"
+        channel = int(d["notify_channel"])
+    if len(d["rewards"]) > MAX_LEVEL_REWARDS:
+        return None, f"等级奖励最多 {MAX_LEVEL_REWARDS} 条"
+    rewards = []
+    for item in d["rewards"]:
+        if not isinstance(item, dict):
+            return None, "等级设置无效"
+        level = item.get("level")
+        if type(level) is not int or not 1 <= level <= MAX_REWARD_LEVEL:
+            return None, f"等级要在 1 到 {MAX_REWARD_LEVEL} 之间"
+        if not _is_snowflake(item.get("role_id")):
+            return None, "身份组无效"
+        rewards.append({"level": level, "role_id": item["role_id"]})
+    if len({r["level"] for r in rewards}) != len(rewards) or len({r["role_id"] for r in rewards}) != len(rewards):
+        return None, "等级奖励里有重复的等级或身份组"
+    rewards.sort(key=lambda r: r["level"])
+    return {"enabled": d["enabled"], "notify_mode": mode, "notify_channel": channel, "rewards": rewards}, None
+
+
+def _stored_level_rewards(raw):
+    try:
+        rewards = json.loads(raw or "[]")
+    except ValueError:
+        return []
+    return rewards if isinstance(rewards, list) else []
 
 
 def setup_routes(app, discord):
@@ -2144,6 +2205,62 @@ def setup_routes(app, discord):
             return jsonify({"error": str(e)}), 500
 
     # ── Leaderboard ──
+
+    @app.route("/api/guild/<string:gid>/leveling", methods=["GET"])
+    async def api_leveling_get(gid):
+        try:
+            if not gid.isascii() or not gid.isdigit() or not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            async with aiosqlite.connect(DB_LEVELING) as db:
+                db.row_factory = aiosqlite.Row
+                cur = await db.execute("SELECT * FROM level_config WHERE guild_id=?", (int(gid),))
+                row = await cur.fetchone()
+            limits = await _bot_role_limits(gid)
+            return jsonify({
+                "enabled": bool(row["enabled"]) if row else True,
+                "notify_mode": row["notify_mode"] if row else "here",
+                "notify_channel": str(row["notify_channel"] or 0) if row else "0",
+                "rewards": _stored_level_rewards(row["rewards"]) if row else [],
+                "blocked_roles": limits["blocked"] if limits else {},
+                "can_manage_roles": limits["can_manage_roles"] if limits else None,
+            })
+        except Exception as e:
+            print(f"[api_leveling_get] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/guild/<string:gid>/leveling", methods=["POST"])
+    async def api_leveling_post(gid):
+        try:
+            if not gid.isascii() or not gid.isdigit() or not await check_guild_access(discord, gid):
+                return jsonify({"error": "unauthorized"}), 401
+            cfg, error = _parse_leveling_body(await request.get_json(silent=True))
+            if error:
+                return jsonify({"error": error}), 400
+            g = int(gid)
+            # 关闭时不校验：奖励行已不可编辑，一条失效的身份组不能挡住关闭
+            if cfg["enabled"]:
+                resources = await _validate_guild_resources(
+                    g,
+                    channel_ids=[cfg["notify_channel"]],
+                    role_ids=[r["role_id"] for r in cfg["rewards"]],
+                )
+                if resources is None:
+                    return jsonify({"error": "暂时读不到 Discord，请稍后再试"}), 502
+                if not resources:
+                    return jsonify({"error": "频道或身份组不属于当前服务器"}), 400
+            async with aiosqlite.connect(DB_LEVELING) as db:
+                await db.execute(
+                    "INSERT OR REPLACE INTO level_config (guild_id, enabled, notify_mode, notify_channel, rewards) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (g, int(cfg["enabled"]), cfg["notify_mode"], cfg["notify_channel"], json.dumps(cfg["rewards"])),
+                )
+                await db.commit()
+            await _notify_bot("leveling", g)
+            audit(g, "等级设置已更新", **{"操作者": await _resolve_actor(discord)})
+            return jsonify({"ok": True})
+        except Exception as e:
+            print(f"[api_leveling_post] {traceback.format_exc()}")
+            return jsonify({"error": str(e)}), 500
 
     @app.route("/api/guild/<string:gid>/leaderboard")
     async def api_leaderboard(gid):
