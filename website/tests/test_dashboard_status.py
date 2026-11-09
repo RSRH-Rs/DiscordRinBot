@@ -106,13 +106,48 @@ class DashboardStatusTests(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await routes._guild_module_summary('giveaway',123),{'active':1})
             self.assertEqual(await routes._guild_module_summary('roles',999),{'panels':0})
 
+    LEVEL_DDL="CREATE TABLE level_config (guild_id INTEGER PRIMARY KEY, enabled INTEGER DEFAULT 1, notify_mode TEXT DEFAULT 'here', notify_channel INTEGER DEFAULT 0, rewards TEXT DEFAULT '[]')"
+
+    async def test_leveling_counts_as_on_without_row(self):
+        path=self.make_db('leveling.db',self.LEVEL_DDL,[])
+        with patch.object(routes,'DB_LEVELING',str(path)):
+            self.assertEqual(await routes._guild_module_config('leveling',123),'enabled')
+            self.assertEqual(await routes._guild_module_summary('leveling',123),{'enabled':1})
+
+    async def test_leveling_state_follows_enabled(self):
+        stored=json.dumps([{'level':5,'role_id':'1'},{'level':9,'role_id':'2'}])
+        path=self.make_db('leveling.db',self.LEVEL_DDL,[(123,0,'here',0,stored),(456,1,'off',0,'[]')])
+        with patch.object(routes,'DB_LEVELING',str(path)):
+            self.assertEqual(await routes._guild_module_config('leveling',123),'disabled')
+            self.assertEqual(await routes._guild_module_summary('leveling',123),{'rewards':2,'enabled':0})
+            self.assertEqual(await routes._guild_module_config('leveling',456),'enabled')
+
+    async def test_leveling_missing_db_counts_as_on(self):
+        missing=self.root/'missing-leveling.db'
+        with patch.object(routes,'DB_LEVELING',str(missing)):
+            self.assertEqual(await routes._guild_module_config('leveling',123),'enabled')
+            self.assertEqual(await routes._guild_module_summary('leveling',123),{'enabled':1})
+        self.assertFalse(missing.exists())
+
+    async def test_leveling_quick_toggle_creates_row(self):
+        path=self.make_db('leveling.db',self.LEVEL_DDL,[])
+        notify=self.toggle_patches(self.root/'unused.db')
+        with patch.object(routes,'DB_LEVELING',str(path)):
+            response=await self.client.post('/api/guild/123/modules/leveling/enabled',json={'enabled':False})
+        self.assertEqual(response.status_code,200)
+        with sqlite3.connect(path) as db:
+            row=db.execute('SELECT enabled,notify_mode,rewards FROM level_config WHERE guild_id=123').fetchone()
+        db.close()
+        self.assertEqual(row,(0,'here','[]'))
+        notify.assert_awaited_once_with('leveling',123)
+
     async def test_summary_missing_db_and_broken_db_are_none(self):
         missing=self.root/'missing.db'
         broken=self.root/'broken.db';broken.write_bytes(b'not a database')
         with patch.object(routes,'DB_MUSIC',str(missing)),patch.object(routes,'DB_BOTLOG',str(broken)):
             self.assertIsNone(await routes._guild_module_summary('music',123))
             self.assertIsNone(await routes._guild_module_summary('botlog',123))
-            self.assertIsNone(await routes._guild_module_summary('leveling',123))
+            self.assertIsNone(await routes._guild_module_summary('utility',123))
         self.assertFalse(missing.exists())
 
     async def test_modules_endpoint_includes_summary(self):

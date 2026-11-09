@@ -6,7 +6,7 @@
     ('safety', [('automod', 'shield-check'), ('moderation', 'gavel'), ('botlog', 'scroll-text'), ('serverlog', 'history')]),
     ('tools', [('music', 'music'), ('utility', 'sliders-horizontal')]),
 ] -%}
-{%- set toggle_slugs = ['welcome', 'automod', 'botlog', 'serverlog'] -%}
+{%- set toggle_slugs = ['welcome', 'leveling', 'automod', 'botlog', 'serverlog'] -%}
 
 {% block title %}{{ tr('nav.overview') }} · {{ guild.name }}{% endblock %}
 
@@ -359,7 +359,7 @@
 <script src="{{ url_for('static', filename='js/console-core.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/console-controls.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/command-palette.js') }}?v=20261108b"></script>
-<script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261108b"></script>
+<script src="{{ url_for('static', filename='js/modules/overview.js') }}?v=20261108c"></script>
 <script src="{{ url_for('static', filename='js/modules/welcome.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/modules/roles.js') }}?v=20261108b"></script>
 <script src="{{ url_for('static', filename='js/modules/music.js') }}?v=20261108b"></script>

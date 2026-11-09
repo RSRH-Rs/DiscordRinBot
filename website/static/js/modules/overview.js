@@ -1,7 +1,7 @@
 /* Server overview: Rin's duty card, attention notices, module cards with config summaries and quick switches. */
 window.Overview = (() => {
     const {tr} = Console;
-    const TOGGLE_SLUGS = ['welcome', 'automod', 'botlog', 'serverlog'];
+    const TOGGLE_SLUGS = ['welcome', 'leveling', 'automod', 'botlog', 'serverlog'];
     const el = id => document.getElementById(id);
 
     // Returns {text, warn} built from this server's saved config, or null to fall back to the module blurb.
@@ -25,6 +25,9 @@ window.Overview = (() => {
         } else if (slug === 'botlog' || slug === 'serverlog') {
             if (!summary.channel_id) warn = 'overview.log.unset';
             else parts.push(tr('overview.sends_to', {channel: channel(summary.channel_id)}));
+        } else if (slug === 'leveling') {
+            if (!summary.rewards) return null;
+            parts.push(tr('overview.leveling.rewards', {n: summary.rewards}));
         } else if (slug === 'automod') {
             parts.push(tr('overview.automod.rules', {n: summary.rules_on}));
             if (summary.log_channel) parts.push(tr('overview.logs_to', {channel: channel(summary.log_channel)}));

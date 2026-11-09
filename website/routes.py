@@ -346,11 +346,13 @@ async def _guild_module_config(slug: str, gid: int) -> str:
         "moderation": (DB_MODERATION, "mod_config"),
         "botlog": (DB_BOTLOG, "botlog_config"),
         "serverlog": (DB_SERVERLOG, "serverlog_config"),
+        "leveling": (DB_LEVELING, "level_config"),
     }
     if slug not in specs:
         return "available"
     filename, table = specs[slug]
-    default = "default" if slug in {"music", "moderation"} else "unconfigured"
+    # 等级系统没有配置行时也在运行，不算“还没配置”
+    default = "default" if slug in {"music", "moderation"} else "enabled" if slug == "leveling" else "unconfigured"
     if not os.path.isfile(filename):
         return default
     try:
@@ -362,7 +364,7 @@ async def _guild_module_config(slug: str, gid: int) -> str:
         if row is None:
             return default
         cfg = dict(row)
-        if slug in {"welcome", "automod", "botlog", "serverlog"}:
+        if slug in {"welcome", "automod", "botlog", "serverlog", "leveling"}:
             if not cfg.get("enabled", 1):
                 return "disabled"
             if slug == "welcome" and not (cfg.get("welcome_channel") or cfg.get("farewell_channel") or cfg.get("auto_roles")):
@@ -407,11 +409,13 @@ _SUMMARY_SPECS = {
               lambda row: {"panels": int(row["n"])}),
     "giveaway": ("DB_GIVEAWAY", "SELECT COUNT(*) AS n FROM giveaways WHERE guild_id=? AND ended=0",
                  lambda row: {"active": int(row["n"])}),
+    "leveling": ("DB_LEVELING", "SELECT * FROM level_config WHERE guild_id=?",
+                 _with_enabled(lambda row: {"rewards": len(json.loads(row["rewards"] or "[]"))})),
 }
 
 
 # 没有配置行时 bot 的实际行为：自动审核不运行，其余模块按表默认值开启。
-_ENABLED_WITHOUT_ROW = {"welcome": 1, "automod": 0, "botlog": 1, "serverlog": 1}
+_ENABLED_WITHOUT_ROW = {"welcome": 1, "automod": 0, "botlog": 1, "serverlog": 1, "leveling": 1}
 
 
 async def _guild_module_summary(slug: str, gid: int):
@@ -1362,6 +1366,7 @@ def setup_routes(app, discord):
         "automod": ("DB_AUTOMOD", "automod_config"),
         "botlog": ("DB_BOTLOG", "botlog_config"),
         "serverlog": ("DB_SERVERLOG", "serverlog_config"),
+        "leveling": ("DB_LEVELING", "level_config"),
     }
 
     @app.route("/api/guild/<string:gid>/modules/<string:slug>/enabled", methods=["POST"])

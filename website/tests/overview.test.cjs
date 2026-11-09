@@ -52,6 +52,12 @@ function overview({dirty = false, api, nodes = {}, cards = [], checkup = null} =
 }
 const plain = value => value && JSON.parse(JSON.stringify(value));
 
+test('leveling summary counts rewards and falls back to the blurb without any', () => {
+    const {Overview} = overview();
+    assert.deepEqual(plain(Overview.summaryText('leveling', {enabled: 1, rewards: 2}, channels)), {text: 'overview.leveling.rewards{"n":2}', warn: false});
+    assert.equal(Overview.summaryText('leveling', {enabled: 1}, channels), null);
+});
+
 test('summaryText describes real config and flags what is missing', () => {
     const {Overview} = overview();
     const s = (slug, summary) => plain(Overview.summaryText(slug, summary, channels));

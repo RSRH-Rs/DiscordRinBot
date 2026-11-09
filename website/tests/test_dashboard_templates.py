@@ -101,11 +101,11 @@ class DashboardTemplateTests(unittest.TestCase):
             self.assertNotIn(gone,css)
         self.assertNotIn('i-wrench',(ROOT/'static/icons.svg').read_text(encoding='utf-8'))
 
-    def test_overview_lists_every_module_once_with_toggles_for_four(self):
+    def test_overview_lists_every_module_once_with_toggles_for_five(self):
         html,p=self.render('server.html')
         rows=re.findall(r'data-row="([a-z]+)"',html)
         self.assertEqual(sorted(rows),sorted(['welcome','roles','leveling','giveaway','automod','moderation','botlog','serverlog','music','utility']))
-        self.assertEqual(re.findall(r'data-toggle="([a-z]+)"',html),['welcome','automod','botlog','serverlog'])
+        self.assertEqual(re.findall(r'data-toggle="([a-z]+)"',html),['welcome','leveling','automod','botlog','serverlog'])
         self.assertLess(html.index('id="ov-headline"'),html.index('data-row='))
         self.assertIn('机器人运行日志',html)
         self.assertIn('服务器事件日志',html)
@@ -180,7 +180,7 @@ class DashboardTemplateTests(unittest.TestCase):
         self.assertNotIn('.mod-card',css); self.assertNotIn('.mod-grid',css)
         hero=re.search(r'(?:^|\n)\.hero\s*\{([^}]*)\}',css).group(1)
         for gone in ['border:','background','box-shadow']:self.assertNotIn(gone,hero)
-        self.assertEqual(len(re.findall(r'<input type="checkbox" role="switch" data-toggle="[a-z]+" data-draft-ignore disabled',ov)),4)
+        self.assertEqual(len(re.findall(r'<input type="checkbox" role="switch" data-toggle="[a-z]+" data-draft-ignore disabled',ov)),5)
         for id_ in ['ov-attention','ov-modules','ov-error','ov-retry']:self.assertIn(f'id="{id_}"',ov)
         self.assertIn('aria-busy="true"',ov)
 
